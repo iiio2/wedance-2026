@@ -149,7 +149,7 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
     <section class="max-w-2xl mx-auto px-4 pt-10 pb-16">
@@ -168,13 +168,13 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
       <!-- ============================ STEP 1: INTENT ============================ -->
       <template v-if="step === 'intent'">
         <div class="text-center mb-8">
-          <div class="text-[10px] uppercase tracking-[0.3em] font-bold mb-3" style="color:var(--wd-amber-600);">
+          <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mb-3 text-secondary">
             Welcome to the floor
           </div>
-          <h1 class="text-4xl sm:text-5xl leading-[1.02]" style="color:var(--wd-brown-900);">
-            What brings you to <em class="italic" style="color:var(--wd-red-600);">WeDance?</em>
+          <h1 class="text-4xl sm:text-5xl leading-[1.02] text-foreground">
+            What brings you to <em class="italic text-primary">WeDance?</em>
           </h1>
-          <p class="mt-4 text-base" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <p class="mt-4 text-base text-muted-foreground font-sans">
             Pick one — we'll set up the rest around it.
           </p>
         </div>
@@ -191,22 +191,21 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
           >
             <span class="text-3xl shrink-0" aria-hidden="true">{{ p.emoji }}</span>
             <span class="min-w-0 flex-1">
-              <span class="block font-bold text-lg leading-tight" style="color:var(--wd-brown-900);">{{ p.label }}</span>
-              <span class="block text-sm mt-0.5" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ p.blurb }}</span>
+              <span class="block font-bold text-lg leading-tight text-foreground">{{ p.label }}</span>
+              <span class="block text-sm mt-0.5 text-muted-foreground font-sans">{{ p.blurb }}</span>
             </span>
-            <ArrowRight class="w-5 h-5 shrink-0 transition-transform group-hover:translate-x-1" style="color:var(--wd-red-600);" />
+            <ArrowRight class="w-5 h-5 shrink-0 transition-transform group-hover:translate-x-1 text-primary" />
           </button>
         </div>
 
-        <p v-if="error" class="text-sm font-bold text-center mt-4" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);">
+        <p v-if="error" class="text-sm font-bold text-center mt-4 text-primary font-sans">
           {{ error }}
         </p>
 
         <div class="text-center mt-8">
           <button
             type="button"
-            class="text-sm underline"
-            style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);"
+            class="text-sm underline text-secondary font-sans"
             :disabled="loading"
             @click="skip"
           >
@@ -218,18 +217,17 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
       <!-- =========================== STEP 2: DETAILS =========================== -->
       <template v-else>
         <div class="text-center mb-8">
-          <div class="text-[10px] uppercase tracking-[0.3em] font-bold mb-3" style="color:var(--wd-amber-600);">
+          <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mb-3 text-secondary">
             {{ chosen?.emoji }} {{ chosen?.label }}
           </div>
           <h1
             ref="detailsHeading"
             tabindex="-1"
-            class="text-3xl sm:text-4xl leading-[1.05] outline-none"
-            style="color:var(--wd-brown-900);"
+            class="text-3xl sm:text-4xl leading-[1.05] outline-none text-foreground"
           >
-            A couple <em class="italic" style="color:var(--wd-red-600);">details</em>
+            A couple <em class="italic text-primary">details</em>
           </h1>
-          <p class="mt-4 text-base" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <p class="mt-4 text-base text-muted-foreground font-sans">
             So we can fill your plan with the right things.
           </p>
         </div>
@@ -237,7 +235,7 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
         <form class="space-y-6" novalidate @submit.prevent="finish">
           <!-- City -->
           <div v-if="chosen?.collects.city" class="space-y-1.5">
-            <label for="onb-city" class="text-sm font-bold" style="color:var(--wd-brown-900);">Your city</label>
+            <label for="onb-city" class="text-sm font-bold text-foreground">Your city</label>
             <input
               id="onb-city"
               ref="cityInput"
@@ -254,7 +252,7 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
 
           <!-- Styles -->
           <div v-if="chosen?.collects.styles" class="space-y-2">
-            <span id="onb-styles-label" class="text-sm font-bold" style="color:var(--wd-brown-900);">Which dances?</span>
+            <span id="onb-styles-label" class="text-sm font-bold text-foreground">Which dances?</span>
             <div role="group" aria-labelledby="onb-styles-label" class="flex flex-wrap gap-2" v-bind="fieldAttrs('danceStyles', 'onb-styles-error')">
               <button
                 v-for="style in DANCE_STYLES"
@@ -274,8 +272,7 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
             <FieldError id="onb-styles-error" :message="errors.danceStyles" />
             <NuxtLink
               to="/find-your-dance"
-              class="inline-block text-xs italic hover:underline pt-1"
-              style="color:var(--wd-amber-600); font-family:var(--wd-font-display);"
+              class="inline-block text-xs italic hover:underline pt-1 text-secondary font-display"
             >
               Don't know which dance? →
             </NuxtLink>
@@ -283,7 +280,7 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
 
           <!-- Role -->
           <div v-if="chosen?.collects.role" class="space-y-2">
-            <span id="onb-role-label" class="text-sm font-bold" style="color:var(--wd-brown-900);">Do you lead or follow?</span>
+            <span id="onb-role-label" class="text-sm font-bold text-foreground">Do you lead or follow?</span>
             <div role="radiogroup" aria-labelledby="onb-role-label" class="flex gap-3" v-bind="fieldAttrs('role', 'onb-role-error')">
               <label
                 v-for="r in [{ value: 'lead', label: 'Lead' }, { value: 'follow', label: 'Follow' }, { value: 'both', label: 'Both' }]"
@@ -300,15 +297,15 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
             <FieldError id="onb-role-error" :message="errors.role" />
           </div>
 
-          <p v-if="error" class="text-sm font-bold" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);">
+          <p v-if="error" class="text-sm font-bold text-primary font-sans">
             {{ error }}
           </p>
 
           <div class="flex items-center gap-3 pt-2">
             <button
               type="button"
-              class="inline-flex items-center gap-1.5 px-4 py-3 rounded-full text-sm font-bold uppercase tracking-wider"
-              style="background:white; color:var(--wd-brown-700); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent); font-family:var(--wd-font-sans);"
+              class="inline-flex items-center gap-1.5 px-4 py-3 rounded-full text-sm font-bold uppercase tracking-wider text-muted-foreground font-sans"
+              style="background:white; border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);"
               @click="back"
             >
               <ArrowLeft class="w-4 h-4" /> Back
@@ -316,8 +313,8 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
             <button
               type="submit"
               :disabled="loading"
-              class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60"
-              style="background:var(--wd-red-600); box-shadow: 0 3px 0 -1px var(--wd-red-800); font-family:var(--wd-font-sans);"
+              class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60 bg-wd-red-600 font-sans"
+              style="box-shadow: 0 3px 0 -1px var(--wd-red-800);"
             >
               {{ loading ? 'Setting up…' : 'Take me to my plan' }}
               <ArrowRight v-if="!loading" class="w-4 h-4" />
@@ -327,8 +324,7 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
           <div class="text-center pt-1">
             <button
               type="button"
-              class="text-sm underline"
-              style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);"
+              class="text-sm underline text-secondary font-sans"
               :disabled="loading"
               @click="skip"
             >

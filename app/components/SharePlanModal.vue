@@ -195,7 +195,7 @@ async function nativeShare() {
           <p class="text-xs font-medium text-muted-foreground mb-2">What they'll see:</p>
           <div class="space-y-3">
             <div v-for="[day, dayWorkshops] in groupedByDay" :key="day">
-              <p class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">{{ day }}</p>
+              <p class="text-eyebrow font-semibold text-muted-foreground uppercase tracking-wider mb-1">{{ day }}</p>
               <div class="space-y-1">
                 <div
                   v-for="w in dayWorkshops"
@@ -207,14 +207,14 @@ async function nativeShare() {
                   <Badge
                     v-if="entryFor(w.id)?.partnerStatus === 'looking'"
                     variant="outline"
-                    class="text-[9px] px-1 py-0 bg-orange-50 text-orange-600 border-orange-200 shrink-0"
+                    class="text-tag px-1 py-0 bg-orange-50 text-orange-600 border-orange-200 shrink-0"
                   >
                     Needs partner
                   </Badge>
                   <Badge
                     v-else-if="entryFor(w.id)?.role"
                     variant="secondary"
-                    class="text-[9px] px-1 py-0 shrink-0"
+                    class="text-tag px-1 py-0 shrink-0"
                   >
                     {{ roleLabel[entryFor(w.id)!.role!] }}
                   </Badge>
@@ -223,7 +223,7 @@ async function nativeShare() {
             </div>
           </div>
 
-          <p v-if="lookingCount > 0" class="mt-3 text-[10px] text-orange-600 font-medium">
+          <p v-if="lookingCount > 0" class="mt-3 text-eyebrow text-orange-600 font-medium">
             Looking for a partner in {{ lookingCount }} {{ lookingCount === 1 ? 'workshop' : 'workshops' }}
           </p>
         </div>

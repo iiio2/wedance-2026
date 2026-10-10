@@ -116,7 +116,7 @@ const typeBadge: Record<string, { label: string; class: string }> = {
       <!-- Picked events by day -->
       <div v-else class="divide-y">
         <div v-for="day in daysWithEvents" :key="day" class="px-4 py-3">
-          <h3 class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+          <h3 class="text-eyebrow font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             {{ day }}
           </h3>
           <div class="space-y-2">
@@ -127,18 +127,18 @@ const typeBadge: Record<string, { label: string; class: string }> = {
             >
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-1.5">
-                  <span class="text-[11px] font-mono text-muted-foreground">{{ event.time }}</span>
+                  <span class="text-meta font-mono text-muted-foreground">{{ event.time }}</span>
                   <span
-                    class="px-1 py-0.5 rounded text-[9px] font-medium leading-none"
+                    class="px-1 py-0.5 rounded text-tag font-medium leading-none"
                     :class="typeBadge[event.type]?.class"
                   >
                     {{ typeBadge[event.type]?.label }}
                   </span>
                 </div>
                 <p class="text-xs font-medium mt-0.5 leading-tight">{{ event.name }}</p>
-                <p v-if="personName(event)" class="text-[10px] text-muted-foreground mt-0.5">{{ personName(event) }}</p>
+                <p v-if="personName(event)" class="text-eyebrow text-muted-foreground mt-0.5">{{ personName(event) }}</p>
                 <div class="flex items-center gap-1.5 mt-0.5">
-                  <span class="text-[10px] text-muted-foreground">{{ event.venue }}</span>
+                  <span class="text-eyebrow text-muted-foreground">{{ event.venue }}</span>
                   <span v-if="levelChilis(event.level) > 0" class="flex items-center gap-px">
                     <Flame
                       v-for="n in levelChilis(event.level)"
@@ -167,7 +167,7 @@ const typeBadge: Record<string, { label: string; class: string }> = {
               <span
                 v-for="s in styles"
                 :key="s"
-                class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground"
+                class="px-1.5 py-0.5 rounded text-eyebrow font-medium bg-muted text-muted-foreground"
               >
                 {{ s }}
               </span>

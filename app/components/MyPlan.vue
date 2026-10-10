@@ -130,14 +130,14 @@ function partnerName(entry: PlanEntry): string {
                   </Button>
                 </div>
                 <div v-if="entryFor(w.id)?.role" class="mt-1.5 flex items-center gap-1.5">
-                  <Badge variant="secondary" class="text-[10px] px-1.5 py-0">
+                  <Badge variant="secondary" class="text-eyebrow px-1.5 py-0">
                     {{ roleLabel[entryFor(w.id)!.role!] }}
                   </Badge>
                   <Badge
                     v-if="entryFor(w.id)!.partnerStatus !== 'solo'"
                     :variant="entryFor(w.id)!.partnerStatus === 'looking' ? 'outline' : 'secondary'"
                     :class="entryFor(w.id)!.partnerStatus === 'looking' ? 'bg-orange-100 text-orange-700 border-orange-200' : ''"
-                    class="text-[10px] px-1.5 py-0"
+                    class="text-eyebrow px-1.5 py-0"
                   >
                     {{ partnerName(entryFor(w.id)!) }}
                   </Badge>

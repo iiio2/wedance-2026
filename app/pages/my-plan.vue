@@ -1635,25 +1635,25 @@ function cardSummary(f: CatalogueEntry) {
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <!-- V3 header -->
     <SiteHeader />
 
     <!-- HERO -->
     <section class="max-w-4xl mx-auto px-4 pt-12 pb-6 text-center">
-      <div class="text-sm tracking-widest uppercase mb-3" style="color:var(--wd-amber-600);">
+      <div class="text-sm tracking-widest uppercase mb-3 text-secondary">
         <template v-if="isSignedIn">Hey, {{ dancerName || 'dancer' }}</template>
         <template v-else>Your plan</template>
       </div>
-      <h1 class="text-5xl sm:text-6xl leading-[0.98]" style="color:var(--wd-brown-900);">
+      <h1 class="text-5xl sm:text-6xl leading-[0.98] text-foreground">
         <template v-if="isSignedIn && dancerCity">
-          Your floor in <em class="italic" style="color:var(--wd-red-600);">{{ dancerCity }}</em>
+          Your floor in <em class="italic text-primary">{{ dancerCity }}</em>
         </template>
         <template v-else>
-          What's <em class="italic" style="color:var(--wd-red-600);">next?</em>
+          What's <em class="italic text-primary">next?</em>
         </template>
       </h1>
-      <p class="mt-5 text-base sm:text-lg leading-relaxed max-w-xl mx-auto" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <p class="mt-5 text-base sm:text-lg leading-relaxed max-w-xl mx-auto text-muted-foreground font-sans">
         <template v-if="isSignedIn && stylesLabel">
           {{ stylesLabel }} — every festival, course and social you care about, in one place.
         </template>
@@ -1670,15 +1670,15 @@ function cardSummary(f: CatalogueEntry) {
         style="background:white; border:1px solid color-mix(in srgb, var(--wd-red-600) 33.3%, transparent); box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-red-600) 13.3%, transparent), 0 8px 22px rgba(59,31,18,0.05);"
       >
         <div>
-          <div class="text-[10px] uppercase tracking-[0.3em] font-bold mb-1" style="color:var(--wd-red-600);">Finish setup</div>
-          <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mb-1 text-primary">Finish setup</div>
+          <p class="text-sm text-muted-foreground font-sans">
             Tell us what you're into and we'll fill your plan with the right festivals, classes and socials.
           </p>
         </div>
         <NuxtLink
           to="/onboarding"
-          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider shrink-0"
-          style="background:var(--wd-red-600); box-shadow: 0 3px 0 -1px var(--wd-red-800); font-family:var(--wd-font-sans);"
+          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider shrink-0 bg-wd-red-600 font-sans"
+          style="box-shadow: 0 3px 0 -1px var(--wd-red-800);"
         >
           Set up my plan <ArrowRight class="w-4 h-4" />
         </NuxtLink>
@@ -1691,9 +1691,9 @@ function cardSummary(f: CatalogueEntry) {
         class="rounded-2xl px-5 py-4 flex items-center gap-3"
         style="background:linear-gradient(135deg, var(--wd-amber-100) 0%, var(--wd-red-100) 100%); border:1px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent);"
       >
-        <Sparkles class="w-5 h-5 shrink-0" style="color:var(--wd-red-600);" />
-        <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-          <span class="font-bold" style="color:var(--wd-brown-900);">This is your home.</span>
+        <Sparkles class="w-5 h-5 shrink-0 text-primary" />
+        <p class="text-sm text-muted-foreground font-sans">
+          <span class="font-bold text-foreground">This is your home.</span>
           Come back weekly — your festivals, classes and socials live here.
         </p>
       </div>
@@ -1703,9 +1703,9 @@ function cardSummary(f: CatalogueEntry) {
     <section v-if="!isSignedIn" class="max-w-3xl mx-auto px-4 py-10" data-testid="my-plan-signed-out">
       <div class="rounded-2xl p-6 sm:p-8 bg-white border" style="border-color:color-mix(in srgb, var(--wd-red-600) 33.3%, transparent); box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-red-600) 13.3%, transparent), 0 12px 28px rgba(59, 31, 18, 0.06);">
         <div class="text-center">
-          <div class="text-[10px] uppercase tracking-[0.3em] font-bold mb-3" style="color:var(--wd-red-600);">Your dashboard</div>
-          <h2 class="text-2xl sm:text-3xl leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
-            Your picks, your partners, your tickets — <em class="italic" style="color:var(--wd-red-600);">one dashboard.</em>
+          <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mb-3 text-primary">Your dashboard</div>
+          <h2 class="text-2xl sm:text-3xl leading-tight font-display text-foreground">
+            Your picks, your partners, your tickets — <em class="italic text-primary">one dashboard.</em>
           </h2>
         </div>
 
@@ -1714,13 +1714,13 @@ function cardSummary(f: CatalogueEntry) {
           <li
             v-for="p in DASHBOARD_PILLARS"
             :key="p.key"
-            class="rounded-xl p-4 border"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:var(--wd-cream);"
+            class="rounded-xl p-4 border bg-background"
+            style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);"
             :data-testid="`my-plan-pillar-${p.key}`"
           >
-            <component :is="p.icon" class="w-5 h-5 mb-2" style="color:var(--wd-red-600);" aria-hidden="true" />
-            <div class="font-bold" style="color:var(--wd-brown-900);">{{ p.title }}</div>
-            <p class="mt-1 text-sm leading-snug" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ p.body }}</p>
+            <component :is="p.icon" class="w-5 h-5 mb-2 text-primary" aria-hidden="true" />
+            <div class="font-bold text-foreground">{{ p.title }}</div>
+            <p class="mt-1 text-sm leading-snug text-muted-foreground font-sans">{{ p.body }}</p>
           </li>
         </ul>
 
@@ -1730,10 +1730,10 @@ function cardSummary(f: CatalogueEntry) {
           style="background:linear-gradient(135deg, var(--wd-amber-100) 0%, var(--wd-red-100) 100%); border:1px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent);"
           data-testid="my-plan-next-step-promise"
         >
-          <Target class="w-5 h-5 mt-0.5 shrink-0" style="color:var(--wd-red-600);" aria-hidden="true" />
+          <Target class="w-5 h-5 mt-0.5 shrink-0 text-primary" aria-hidden="true" />
           <div>
-            <div class="font-bold" style="color:var(--wd-brown-900);">One clear next step at a time.</div>
-            <p class="mt-0.5 text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+            <div class="font-bold text-foreground">One clear next step at a time.</div>
+            <p class="mt-0.5 text-sm text-muted-foreground font-sans">
               No juggling tabs and chats — we surface the one thing to do next, like
               <span class="italic">“Grab your pass before the early-bird ends”</span> or
               <span class="italic">“Find a partner for Saturday's workshops”</span>.
@@ -1742,7 +1742,7 @@ function cardSummary(f: CatalogueEntry) {
         </div>
 
         <!-- Sign in / join -->
-        <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3" style="font-family:var(--wd-font-sans);">
+        <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 font-sans">
           <button
             type="button"
             class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
@@ -1753,15 +1753,15 @@ function cardSummary(f: CatalogueEntry) {
           </button>
           <button
             type="button"
-            class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold uppercase tracking-wider border"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); color:var(--wd-brown-900);"
+            class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold uppercase tracking-wider border text-foreground"
+            style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent);"
             @click="openAuth('signin')"
           >
             Sign in
           </button>
         </div>
-        <p class="mt-4 text-center text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-          Just looking? <NuxtLink to="/festivals" class="italic underline" style="color:var(--wd-amber-600);">Browse festivals</NuxtLink>
+        <p class="mt-4 text-center text-sm text-muted-foreground font-sans">
+          Just looking? <NuxtLink to="/festivals" class="italic underline text-secondary">Browse festivals</NuxtLink>
         </p>
       </div>
       <SignUpModal v-model:open="showAuth" :action="authAction" />
@@ -1770,11 +1770,11 @@ function cardSummary(f: CatalogueEntry) {
     <!-- SIGNED IN, EMPTY -->
     <section v-else-if="picked.length === 0 && courses.length === 0 && socials.length === 0" class="max-w-2xl mx-auto px-4 py-10">
       <div class="rounded-2xl p-10 text-center border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);">
-        <Search class="w-10 h-10 mx-auto mb-4" style="color:var(--wd-amber-600);" />
-        <p class="text-lg" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+        <Search class="w-10 h-10 mx-auto mb-4 text-secondary" />
+        <p class="text-lg font-display text-foreground">
           You haven't picked anything yet.
         </p>
-        <p class="mt-2 text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+        <p class="mt-2 text-sm text-muted-foreground font-sans">
           Start by picking one festival — the rest of the year plans itself.
         </p>
         <NuxtLink
@@ -1792,8 +1792,8 @@ function cardSummary(f: CatalogueEntry) {
       <!-- HEAT STRIP · the top 3 items across every scale, sorted by urgency. -->
       <div v-if="heatItems.length" class="rounded-2xl mb-8 p-5 sm:p-6 relative overflow-hidden" style="background:linear-gradient(135deg, var(--wd-amber-100) 0%, var(--wd-red-100) 100%); border:1px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent);">
         <div class="flex items-baseline justify-between mb-3">
-          <div class="text-xs uppercase tracking-[0.3em] font-bold" style="color:var(--wd-red-600);">This week · do these first</div>
-          <span class="text-xs" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);font-style:italic; font-size:18px;">
+          <div class="text-xs uppercase tracking-[0.3em] font-bold text-primary">This week · do these first</div>
+          <span class="text-xs text-secondary font-display italic" style="font-size:18px;">
             — 3 things across your plan
           </span>
         </div>
@@ -1808,8 +1808,8 @@ function cardSummary(f: CatalogueEntry) {
             :style="{ borderColor: item.color + '55' }"
           >
             <span class="w-2 h-2 rounded-full shrink-0 animate-pulse" :style="{ background: item.color }" />
-            <span class="font-bold text-sm" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">{{ item.label }}</span>
-            <span class="text-xs italic hidden sm:inline" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+            <span class="font-bold text-sm text-foreground font-display">{{ item.label }}</span>
+            <span class="text-xs italic hidden sm:inline text-muted-foreground font-sans">
               — {{ item.detail }}
             </span>
             <span class="ml-auto text-xs font-bold" :style="{ color: item.color }">
@@ -1824,16 +1824,15 @@ function cardSummary(f: CatalogueEntry) {
       <div class="mb-10">
         <div class="flex items-baseline justify-between mb-4">
           <div>
-            <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Goals · your compass</div>
-            <h2 class="mt-2 text-2xl leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
-              Where you're <em class="italic" style="color:var(--wd-red-600);">headed.</em>
+            <div class="text-xs uppercase tracking-[0.3em] text-secondary">Goals · your compass</div>
+            <h2 class="mt-2 text-2xl leading-tight font-display text-foreground">
+              Where you're <em class="italic text-primary">headed.</em>
             </h2>
           </div>
           <button
             v-if="!showGoalForm"
             type="button"
-            class="text-xs italic hover:underline"
-            style="color:var(--wd-amber-600); font-family:var(--wd-font-display);"
+            class="text-xs italic hover:underline text-secondary font-display"
             @click="showGoalForm = true"
           >
             + Add a goal
@@ -1842,48 +1841,47 @@ function cardSummary(f: CatalogueEntry) {
 
         <!-- Inline add-goal form -->
         <div v-if="showGoalForm" class="rounded-2xl bg-white p-6 border mb-4" style="border-color:color-mix(in srgb, var(--wd-amber-600) 33.3%, transparent); box-shadow: 0 4px 16px rgba(59,31,18,0.06);">
-          <div class="text-sm font-bold mb-4" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+          <div class="text-sm font-bold mb-4 text-foreground font-display">
             What are you working toward this year?
           </div>
           <form class="space-y-4" @submit.prevent="onGoalSubmit">
             <div>
-              <label for="goal-title" class="block text-xs font-bold uppercase tracking-widest mb-1.5" style="color:var(--wd-amber-600);">Your goal</label>
+              <label for="goal-title" class="block text-xs font-bold uppercase tracking-widest mb-1.5 text-secondary">Your goal</label>
               <input
                 id="goal-title"
                 v-model="goalFormTitle"
                 type="text"
                 placeholder="e.g. Learn Bachata Sensual"
-                class="w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2"
-                style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-sans);"
+                class="w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 bg-background text-foreground font-sans"
+                style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);"
               />
-              <p v-if="goalFormError" class="text-xs mt-1" style="color:var(--wd-red-600);">{{ goalFormError }}</p>
+              <p v-if="goalFormError" class="text-xs mt-1 text-primary">{{ goalFormError }}</p>
             </div>
             <div>
-              <label for="goal-why" class="block text-xs font-bold uppercase tracking-widest mb-1.5" style="color:var(--wd-amber-600);">
-                Why does it matter? <span class="font-normal normal-case tracking-normal" style="color:var(--wd-brown-700);">(optional)</span>
+              <label for="goal-why" class="block text-xs font-bold uppercase tracking-widest mb-1.5 text-secondary">
+                Why does it matter? <span class="font-normal normal-case tracking-normal text-muted-foreground">(optional)</span>
               </label>
               <input
                 id="goal-why"
                 v-model="goalFormWhy"
                 type="text"
                 placeholder="e.g. Feel confident on the dance floor"
-                class="w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2"
-                style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-sans);"
+                class="w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 bg-background text-foreground font-sans"
+                style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);"
               />
             </div>
             <div class="flex items-center gap-3 pt-1">
               <button
                 type="submit"
                 :disabled="!goalFormTitle.trim() || !!goalFormError"
-                class="px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-40"
-                style="background:var(--wd-red-600);"
+                class="px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-40 bg-wd-red-600"
               >
                 Add goal
               </button>
               <button
                 type="button"
-                class="px-4 py-2.5 rounded-full text-sm font-bold uppercase tracking-wider"
-                style="color:var(--wd-brown-700); background:color-mix(in srgb, var(--wd-brown-900) 6.7%, transparent);"
+                class="px-4 py-2.5 rounded-full text-sm font-bold uppercase tracking-wider text-muted-foreground"
+                style="background:color-mix(in srgb, var(--wd-brown-900) 6.7%, transparent);"
                 @click="onGoalCancel"
               >
                 Cancel
@@ -1893,8 +1891,8 @@ function cardSummary(f: CatalogueEntry) {
         </div>
 
         <div v-if="!goalsList.length && !showGoalForm" class="rounded-2xl p-6 text-center border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);">
-          <Target class="w-8 h-8 mx-auto mb-3" style="color:var(--wd-amber-600);" />
-          <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <Target class="w-8 h-8 mx-auto mb-3 text-secondary" />
+          <p class="text-sm text-muted-foreground font-sans">
             No goals yet. One year, one arc, one reason to keep showing up.
           </p>
         </div>
@@ -1908,10 +1906,10 @@ function cardSummary(f: CatalogueEntry) {
             <div class="flex items-start gap-3 mb-3">
               <component :is="g.icon" class="w-5 h-5 shrink-0" :style="{ color: g.color, 'stroke-width': 1.5 }" />
               <div class="flex-1 min-w-0">
-                <div class="text-base font-bold leading-tight" style="color:var(--wd-brown-900);">
+                <div class="text-base font-bold leading-tight text-foreground">
                   {{ g.title }}
                 </div>
-                <div class="mt-1 text-xs italic" style="color:var(--wd-brown-700); font-family:var(--wd-font-display);">
+                <div class="mt-1 text-xs italic text-muted-foreground font-display">
                   {{ g.why }}
                 </div>
               </div>
@@ -1922,20 +1920,20 @@ function cardSummary(f: CatalogueEntry) {
                 title="Remove goal"
                 @click="removeGoal(g.id)"
               >
-                <X class="w-3.5 h-3.5" style="color:var(--wd-red-600);" />
+                <X class="w-3.5 h-3.5 text-primary" />
               </button>
             </div>
             <!-- Progress bar -->
             <div class="mt-4">
               <div class="flex items-baseline justify-between mb-1">
-                <span class="text-[10px] uppercase tracking-widest font-bold" style="color:var(--wd-amber-600);">Progress</span>
+                <span class="text-eyebrow uppercase tracking-widest font-bold text-secondary">Progress</span>
                 <span class="text-xs font-black" :style="{ color: goalProgressColor(g.progress), fontFamily: 'var(--wd-font-display)' }">{{ g.progress }}%</span>
               </div>
               <div class="w-full h-2 rounded-full overflow-hidden" style="background:color-mix(in srgb, var(--wd-brown-900) 6.3%, transparent);">
                 <div class="h-full transition-all" :style="{ width: g.progress + '%', background: goalProgressColor(g.progress) }" />
               </div>
             </div>
-            <div v-if="g.nudge" class="mt-3 text-sm" style="font-family:var(--wd-font-display);font-style:italic; color:var(--wd-amber-600); font-size:17px;">
+            <div v-if="g.nudge" class="mt-3 text-sm font-display italic text-secondary" style="font-size:17px;">
               — {{ g.nudge }}
             </div>
           </div>
@@ -1944,9 +1942,9 @@ function cardSummary(f: CatalogueEntry) {
 
       <!-- YEAR · festivals section header -->
       <div class="mb-4">
-        <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">This year · festivals</div>
-        <h2 class="mt-2 text-2xl leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
-          Where you're <em class="italic" style="color:var(--wd-red-600);">going.</em>
+        <div class="text-xs uppercase tracking-[0.3em] text-secondary">This year · festivals</div>
+        <h2 class="mt-2 text-2xl leading-tight font-display text-foreground">
+          Where you're <em class="italic text-primary">going.</em>
         </h2>
       </div>
 
@@ -1957,35 +1955,35 @@ function cardSummary(f: CatalogueEntry) {
       >
         <div class="flex flex-wrap items-baseline gap-x-8 gap-y-3">
           <div>
-            <div class="text-4xl font-black leading-none" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+            <div class="text-4xl font-black leading-none font-display text-foreground">
               {{ summary.count }}
             </div>
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold mt-1" style="color:var(--wd-amber-600);">
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mt-1 text-secondary">
               Festivals this year
             </div>
           </div>
           <div v-if="summary.committed > 0">
-            <div class="text-4xl font-black leading-none" style="font-family:var(--wd-font-display); color:var(--wd-green-600);">
+            <div class="text-4xl font-black leading-none font-display text-wd-green-600">
               €{{ summary.committed }}
             </div>
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold mt-1" style="color:var(--wd-green-600);">
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mt-1 text-wd-green-600">
               Committed
             </div>
           </div>
           <div v-if="summary.pending > 0">
-            <div class="text-4xl font-black leading-none" style="font-family:var(--wd-font-display); color:var(--wd-brown-700);">
+            <div class="text-4xl font-black leading-none font-display text-muted-foreground">
               €{{ summary.pending }}
             </div>
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold mt-1" style="color:var(--wd-brown-700);">
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mt-1 text-muted-foreground">
               Still owed
             </div>
           </div>
           <div
             v-if="summary.urgentDeadlines > 0"
-            class="ml-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold"
-            style="background:color-mix(in srgb, var(--wd-red-600) 9.4%, transparent); color:var(--wd-red-600); font-family:var(--wd-font-sans);"
+            class="ml-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold text-primary font-sans"
+            style="background:color-mix(in srgb, var(--wd-red-600) 9.4%, transparent);"
           >
-            <span class="w-2 h-2 rounded-full animate-pulse" style="background:var(--wd-red-600);" />
+            <span class="w-2 h-2 rounded-full animate-pulse bg-wd-red-600" />
             {{ summary.urgentDeadlines }} early-bird deadline{{ summary.urgentDeadlines === 1 ? '' : 's' }} this week
           </div>
         </div>
@@ -1996,8 +1994,8 @@ function cardSummary(f: CatalogueEntry) {
            side rail, no drawer, just one horizontal scan of the year. -->
       <div class="mb-10">
         <div class="flex items-baseline justify-between mb-3">
-          <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Your year at a glance</div>
-          <span class="text-xs" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);font-style:italic; font-size:18px;">
+          <div class="text-xs uppercase tracking-[0.3em] text-secondary">Your year at a glance</div>
+          <span class="text-xs text-secondary font-display italic" style="font-size:18px;">
             — click a chip to jump
           </span>
         </div>
@@ -2009,7 +2007,7 @@ function cardSummary(f: CatalogueEntry) {
               class="flex flex-col items-center"
             >
               <div
-                class="text-[10px] uppercase tracking-widest font-bold mb-2"
+                class="text-eyebrow uppercase tracking-widest font-bold mb-2"
                 :style="{ color: m.entries.length ? WD.brown900 : WD.amber600, opacity: m.entries.length ? 1 : 0.5 }"
               >{{ m.label }}</div>
               <!-- Vertical rule for the month -->
@@ -2019,19 +2017,18 @@ function cardSummary(f: CatalogueEntry) {
                   v-for="e in m.entries"
                   :key="e.slug"
                   :href="`#f-${e.slug}`"
-                  class="w-full max-w-[64px] px-1.5 py-1 rounded-md text-white text-[9px] font-bold uppercase tracking-wider truncate text-center hover:scale-[1.03] transition-transform"
+                  class="w-full max-w-[64px] px-1.5 py-1 rounded-md text-white text-tag font-bold uppercase tracking-wider truncate text-center hover:scale-[1.03] transition-transform"
                   :style="{ background: e.accentColor }"
                   :title="`${e.name} · ${e.dayRange}`"
                 >{{ e.short }}</a>
                 <div
                   v-if="!m.entries.length && i !== todayMonth"
-                  class="w-1.5 h-1.5 rounded-full opacity-25"
-                  style="background:var(--wd-brown-900);"
+                  class="w-1.5 h-1.5 rounded-full opacity-25 bg-wd-brown-900"
                 />
                 <div
                   v-if="i === todayMonth && !m.entries.length"
-                  class="text-[8px] font-bold uppercase tracking-widest mt-1"
-                  style="color:var(--wd-red-600); font-family:var(--wd-font-display);font-style:italic; font-size:13px; text-transform:none; letter-spacing:normal;"
+                  class="text-[8px] font-bold uppercase tracking-widest mt-1 text-primary font-display italic"
+                  style="font-size:13px; text-transform:none; letter-spacing:normal;"
                 >you're here</div>
               </div>
             </div>
@@ -2048,17 +2045,17 @@ function cardSummary(f: CatalogueEntry) {
           :style="{ borderColor: n.festivalColor + '55', boxShadow: '0 1px 0 ' + n.festivalColor + '22, 0 6px 18px rgba(59,31,18,0.04)' }"
         >
           <span
-            class="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full"
+            class="inline-flex items-center gap-1.5 text-eyebrow font-black uppercase tracking-widest px-2.5 py-1 rounded-full"
             :style="{ background: n.festivalColor + '18', color: n.festivalColor }"
           >
             <UsersIcon class="w-3 h-3" style="stroke-width:2;" /> {{ n.dancerNames.length }} match{{ n.dancerNames.length === 1 ? '' : 'es' }}
           </span>
           <div class="min-w-0 flex-1">
-            <div class="text-sm font-bold" style="color:var(--wd-brown-900);">
+            <div class="text-sm font-bold text-foreground">
               {{ n.dancerNames.slice(0, 3).join(', ') }}<span v-if="n.dancerNames.length > 3"> and {{ n.dancerNames.length - 3 }} more</span> heading to
               <span :style="{ color: n.festivalColor }">{{ n.festivalName }}</span>.
             </div>
-            <div class="text-xs italic" style="color:var(--wd-brown-700); font-family:var(--wd-font-display);">
+            <div class="text-xs italic text-muted-foreground font-display">
               Not in your year yet — add it and you'll meet them there.
             </div>
           </div>
@@ -2072,8 +2069,7 @@ function cardSummary(f: CatalogueEntry) {
           </button>
           <button
             type="button"
-            class="text-xs italic hover:underline shrink-0"
-            style="color:var(--wd-amber-600);"
+            class="text-xs italic hover:underline shrink-0 text-secondary"
             @click="dismissFestivalNudge(n)"
           >
             Not this year
@@ -2082,8 +2078,8 @@ function cardSummary(f: CatalogueEntry) {
       </div>
 
       <div class="flex items-baseline justify-between mb-4">
-        <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Going</div>
-        <span class="text-xs" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);font-style:italic; font-size:18px;">
+        <div class="text-xs uppercase tracking-[0.3em] text-secondary">Going</div>
+        <span class="text-xs text-secondary font-display italic" style="font-size:18px;">
           — {{ picked.length }} in your year
         </span>
       </div>
@@ -2124,7 +2120,7 @@ function cardSummary(f: CatalogueEntry) {
 
             <div class="flex-1 min-w-0">
               <div class="flex items-start justify-between gap-3">
-                <h3 class="font-bold text-lg leading-tight truncate" style="color:var(--wd-brown-900);">
+                <h3 class="font-bold text-lg leading-tight truncate text-foreground">
                   {{ f.name }}
                 </h3>
                 <span
@@ -2139,13 +2135,13 @@ function cardSummary(f: CatalogueEntry) {
                 </span>
               </div>
 
-              <div class="flex items-center flex-wrap gap-x-4 gap-y-1 mt-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+              <div class="flex items-center flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-muted-foreground font-sans">
                 <span class="inline-flex items-center gap-1">
-                  <Calendar class="w-3 h-3" style="color:var(--wd-amber-600);" />
+                  <Calendar class="w-3 h-3 text-secondary" />
                   {{ formatDateRange(f.startDate, f.endDate) }}
                 </span>
                 <span class="inline-flex items-center gap-1">
-                  <MapPin class="w-3 h-3" style="color:var(--wd-amber-600);" />
+                  <MapPin class="w-3 h-3 text-secondary" />
                   {{ f.venue }}, {{ f.location }}
                 </span>
               </div>
@@ -2164,7 +2160,7 @@ function cardSummary(f: CatalogueEntry) {
                     class="w-2 h-2 rounded-full"
                     :style="{ background: i <= cardSummary(f).doneCount ? WD.green600 : (WD.brown900 + '22') }"
                   />
-                  <span class="ml-1 text-[11px] font-bold" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+                  <span class="ml-1 text-meta font-bold text-muted-foreground font-sans">
                     {{ cardSummary(f).doneCount }} of {{ cardSummary(f).totalCount }} ready
                   </span>
                 </div>
@@ -2176,7 +2172,7 @@ function cardSummary(f: CatalogueEntry) {
                   :style="toneStyle('done')"
                 >
                   <Check class="w-3 h-3" style="stroke-width:2.5;" />
-                  <span style="font-family:var(--wd-font-sans);">All planned</span>
+                  <span class="font-sans">All planned</span>
                 </span>
                 <span
                   v-else-if="cardSummary(f).headline"
@@ -2184,10 +2180,10 @@ function cardSummary(f: CatalogueEntry) {
                   :style="toneStyle(cardSummary(f).headline!.state.tone)"
                 >
                   <component :is="cardSummary(f).headline!.icon" class="w-3 h-3" style="stroke-width:1.5;" />
-                  <span class="font-bold" style="font-family:var(--wd-font-sans);">
+                  <span class="font-bold font-sans">
                     {{ cardSummary(f).headline!.label }}:
                   </span>
-                  <span style="font-family:var(--wd-font-sans);">
+                  <span class="font-sans">
                     {{ cardSummary(f).headline!.state.text }}
                   </span>
                 </span>
@@ -2216,7 +2212,7 @@ function cardSummary(f: CatalogueEntry) {
                 :style="{ borderColor: 'color-mix(in srgb, var(--wd-brown-900) 5.1%, transparent)', background: t.done ? (WD.green600 + '08') : 'white' }"
               >
                 <component :is="t.icon" class="w-4 h-4 shrink-0" :style="{ color: t.done ? WD.green600 : WD.amber600, 'stroke-width': 1.5 }" />
-                <div class="w-24 shrink-0 text-sm font-bold" style="color:var(--wd-brown-900);">
+                <div class="w-24 shrink-0 text-sm font-bold text-foreground">
                   {{ t.label }}
                 </div>
                 <span
@@ -2224,7 +2220,7 @@ function cardSummary(f: CatalogueEntry) {
                   :style="toneStyle(t.state.tone)"
                 >
                   <Check v-if="t.done" class="w-3 h-3" style="stroke-width:2.5;" />
-                  <span style="font-family:var(--wd-font-sans);">{{ t.state.text }}</span>
+                  <span class="font-sans">{{ t.state.text }}</span>
                 </span>
 
                 <button
@@ -2261,16 +2257,14 @@ function cardSummary(f: CatalogueEntry) {
                   :href="t.altAction.href"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-[10px] italic hover:underline inline-flex items-center gap-0.5 whitespace-nowrap"
-                  style="color:var(--wd-amber-600); font-family:var(--wd-font-display);"
+                  class="text-eyebrow italic hover:underline inline-flex items-center gap-0.5 whitespace-nowrap text-secondary font-display"
                 >
                   {{ t.altAction.label }} <ExternalLink class="w-2.5 h-2.5" />
                 </a>
                 <NuxtLink
                   v-else-if="t.altAction"
                   :to="t.altAction.href"
-                  class="text-[10px] italic hover:underline whitespace-nowrap"
-                  style="color:var(--wd-amber-600); font-family:var(--wd-font-display);"
+                  class="text-eyebrow italic hover:underline whitespace-nowrap text-secondary font-display"
                 >
                   {{ t.altAction.label }} →
                 </NuxtLink>
@@ -2278,8 +2272,7 @@ function cardSummary(f: CatalogueEntry) {
                 <button
                   v-if="t.toggleKey"
                   type="button"
-                  class="text-[10px] font-bold italic hover:underline shrink-0 whitespace-nowrap"
-                  style="color:var(--wd-amber-600);"
+                  class="text-eyebrow font-bold italic hover:underline shrink-0 whitespace-nowrap text-secondary"
                   :aria-pressed="t.done"
                   @click.stop="toggleTrack(f.slug, t.toggleKey)"
                 >
@@ -2303,7 +2296,7 @@ function cardSummary(f: CatalogueEntry) {
             <!-- WORKSHOP PICKER -->
             <div v-if="getWorkshopsForFestival(f.slug).length > 0" class="mt-6 pt-6 border-t" style="border-color:color-mix(in srgb, var(--wd-brown-900) 5.1%, transparent);">
               <div class="mb-4">
-                <h4 class="text-sm font-bold mb-3" style="color:var(--wd-brown-900);">
+                <h4 class="text-sm font-bold mb-3 text-foreground">
                   Pick workshops ({{ getSelectedWorkshops(f.slug).size }} selected)
                 </h4>
 
@@ -2316,7 +2309,7 @@ function cardSummary(f: CatalogueEntry) {
                   <div
                     v-if="getWorkshopsForFestival(f.slug).filter(w => w.day === day).length > 0"
                   >
-                    <div class="text-xs font-bold uppercase tracking-widest mb-2" style="color:var(--wd-amber-600);">
+                    <div class="text-xs font-bold uppercase tracking-widest mb-2 text-secondary">
                       {{ day }}
                     </div>
                     <div class="space-y-2">
@@ -2334,10 +2327,10 @@ function cardSummary(f: CatalogueEntry) {
                           @click.stop="toggleWorkshop(f.slug, w.id)"
                         >
                         <div class="flex-1 min-w-0">
-                          <div class="text-sm font-bold leading-tight" style="color:var(--wd-brown-900);">
+                          <div class="text-sm font-bold leading-tight text-foreground">
                             {{ w.time }} · {{ w.title }}
                           </div>
-                          <div class="text-xs mt-0.5" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+                          <div class="text-xs mt-0.5 text-muted-foreground font-sans">
                             <template v-if="w.teacherId">
                               {{ getTeacherName(f.slug, w.teacherId) }}
                             </template>
@@ -2355,7 +2348,7 @@ function cardSummary(f: CatalogueEntry) {
 
               <!-- Selected workshops summary -->
               <div v-if="getSelectedWorkshops(f.slug).size > 0" class="mt-4 pt-4 border-t" style="border-color:color-mix(in srgb, var(--wd-brown-900) 5.1%, transparent);">
-                <div class="text-xs font-bold uppercase tracking-widest mb-3" style="color:var(--wd-amber-600);">
+                <div class="text-xs font-bold uppercase tracking-widest mb-3 text-secondary">
                   Your picks
                 </div>
                 <div class="space-y-2">
@@ -2364,19 +2357,18 @@ function cardSummary(f: CatalogueEntry) {
                     :key="w.id"
                     class="flex items-start gap-2 p-2.5 rounded-lg bg-green-50"
                   >
-                    <Check class="w-4 h-4 mt-0.5 shrink-0" style="color:var(--wd-green-600);" />
+                    <Check class="w-4 h-4 mt-0.5 shrink-0 text-wd-green-600" />
                     <div class="flex-1 min-w-0">
-                      <div class="text-sm font-bold leading-tight" style="color:var(--wd-brown-900);">
+                      <div class="text-sm font-bold leading-tight text-foreground">
                         {{ w.time }} · {{ w.title }}
                       </div>
-                      <div class="text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+                      <div class="text-xs text-muted-foreground font-sans">
                         {{ w.day }} · {{ w.level }}
                       </div>
                     </div>
                     <button
                       type="button"
-                      class="text-xs font-bold italic hover:underline shrink-0"
-                      style="color:var(--wd-red-600);"
+                      class="text-xs font-bold italic hover:underline shrink-0 text-primary"
                       @click.stop="removeSelectedWorkshop(f.slug, w.id)"
                     >
                       Remove
@@ -2389,15 +2381,13 @@ function cardSummary(f: CatalogueEntry) {
             <div class="mt-4 flex items-center gap-4 text-xs">
               <NuxtLink
                 :to="`/festivals/${f.slug}`"
-                class="italic hover:underline"
-                style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);"
+                class="italic hover:underline text-muted-foreground font-sans"
               >
                 Open festival page →
               </NuxtLink>
               <button
                 type="button"
-                class="ml-auto italic hover:underline"
-                style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);"
+                class="ml-auto italic hover:underline text-secondary font-sans"
                 @click.stop="onRemove(f.slug)"
               >
                 Remove
@@ -2411,16 +2401,15 @@ function cardSummary(f: CatalogueEntry) {
       <div id="courses" class="mt-14">
         <div class="flex items-baseline justify-between mb-4">
           <div>
-            <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">This month · courses</div>
-            <h2 class="mt-2 text-2xl leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
-              Where you <em class="italic" style="color:var(--wd-red-600);">show up.</em>
+            <div class="text-xs uppercase tracking-[0.3em] text-secondary">This month · courses</div>
+            <h2 class="mt-2 text-2xl leading-tight font-display text-foreground">
+              Where you <em class="italic text-primary">show up.</em>
             </h2>
           </div>
           <button
             v-if="!showEnrollPicker && availableClasses.length > 0"
             type="button"
-            class="text-xs italic hover:underline"
-            style="color:var(--wd-amber-600); font-family:var(--wd-font-display);"
+            class="text-xs italic hover:underline text-secondary font-display"
             @click="showEnrollPicker = true"
           >
             + Enroll
@@ -2428,8 +2417,7 @@ function cardSummary(f: CatalogueEntry) {
           <button
             v-else-if="showEnrollPicker"
             type="button"
-            class="text-xs italic hover:underline"
-            style="color:var(--wd-brown-700); font-family:var(--wd-font-display);"
+            class="text-xs italic hover:underline text-muted-foreground font-display"
             @click="showEnrollPicker = false"
           >
             Done
@@ -2438,10 +2426,10 @@ function cardSummary(f: CatalogueEntry) {
 
         <!-- Enroll picker — available classes from the city -->
         <div v-if="showEnrollPicker" class="rounded-2xl bg-white p-5 border mb-4" style="border-color:color-mix(in srgb, var(--wd-amber-600) 33.3%, transparent); box-shadow: 0 4px 16px rgba(59,31,18,0.06);">
-          <div class="text-sm font-bold mb-3" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+          <div class="text-sm font-bold mb-3 text-foreground font-display">
             Upcoming classes in {{ dancerCity || 'your city' }}
           </div>
-          <div v-if="!availableClasses.length" class="text-xs py-2" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <div v-if="!availableClasses.length" class="text-xs py-2 text-muted-foreground font-sans">
             No upcoming classes found. Check your city page for more.
           </div>
           <div v-else class="space-y-2">
@@ -2454,26 +2442,25 @@ function cardSummary(f: CatalogueEntry) {
             >
               <div class="w-2 h-2 rounded-full shrink-0" :style="{ background: STYLE_COLORS_ENROLL[cls.style] || WD.gray500 }" />
               <div class="flex-1 min-w-0">
-                <div class="text-sm font-bold" style="color:var(--wd-brown-900);">{{ cls.name }}</div>
-                <div class="text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+                <div class="text-sm font-bold text-foreground">{{ cls.name }}</div>
+                <div class="text-xs text-muted-foreground font-sans">
                   {{ cls.date ? formatShortDate(cls.date) : cls.day }}, {{ cls.time }} · {{ cls.venue }} · {{ cls.level || 'All levels' }}
                 </div>
               </div>
-              <span class="text-xs font-bold italic shrink-0" style="color:var(--wd-red-600);">+ Add</span>
+              <span class="text-xs font-bold italic shrink-0 text-primary">+ Add</span>
             </div>
           </div>
         </div>
 
         <div v-if="!courses.length && !showEnrollPicker" class="rounded-2xl p-6 text-center border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);">
-          <GraduationCap class="w-8 h-8 mx-auto mb-3" style="color:var(--wd-amber-600);" />
-          <p class="text-sm mb-3" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <GraduationCap class="w-8 h-8 mx-auto mb-3 text-secondary" />
+          <p class="text-sm mb-3 text-muted-foreground font-sans">
             No monthly cadence yet. A weekly class is the quickest way to keep momentum.
           </p>
           <button
             v-if="availableClasses.length > 0"
             type="button"
-            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-            style="background:var(--wd-red-600);"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider bg-wd-red-600"
             @click="showEnrollPicker = true"
           >
             Browse classes <ArrowRight class="w-4 h-4" />
@@ -2481,8 +2468,7 @@ function cardSummary(f: CatalogueEntry) {
           <NuxtLink
             v-else
             :to="citySocialsLink"
-            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-            style="background:var(--wd-red-600);"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider bg-wd-red-600"
           >
             Browse city page <ArrowRight class="w-4 h-4" />
           </NuxtLink>
@@ -2496,25 +2482,25 @@ function cardSummary(f: CatalogueEntry) {
           >
             <div class="flex items-start justify-between gap-3 mb-2">
               <div class="min-w-0">
-                <div class="text-base font-bold leading-tight" style="color:var(--wd-brown-900);">
+                <div class="text-base font-bold leading-tight text-foreground">
                   {{ c.school }}
                 </div>
-                <div class="text-xs mt-0.5" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-                  {{ c.teacher }} · <span style="color:var(--wd-amber-600);">{{ c.style }} · {{ c.level }}</span>
+                <div class="text-xs mt-0.5 text-muted-foreground font-sans">
+                  {{ c.teacher }} · <span class="text-secondary">{{ c.style }} · {{ c.level }}</span>
                 </div>
               </div>
               <div class="flex items-center gap-2 shrink-0">
                 <NuxtLink
                   v-if="!c.paidThroughMonth"
                   :to="`/events/${c.id}`"
-                  class="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity"
+                  class="text-eyebrow font-bold uppercase tracking-widest px-2 py-1 rounded-full whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity"
                   :style="{ color: 'var(--wd-red-600)', background: 'color-mix(in srgb, var(--wd-red-600) 9.4%, transparent)' }"
                 >
                   Pay due
                 </NuxtLink>
                 <span
                   v-else
-                  class="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full whitespace-nowrap"
+                  class="text-eyebrow font-bold uppercase tracking-widest px-2 py-1 rounded-full whitespace-nowrap"
                   :style="{ color: 'var(--wd-green-600)', background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)' }"
                 >
                   Paid
@@ -2525,26 +2511,26 @@ function cardSummary(f: CatalogueEntry) {
                   title="Remove course"
                   @click="unenrollCourse(c.id)"
                 >
-                  <X class="w-3.5 h-3.5" style="color:var(--wd-red-600);" />
+                  <X class="w-3.5 h-3.5 text-primary" />
                 </button>
               </div>
             </div>
 
-            <div class="mt-3 space-y-1.5 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+            <div class="mt-3 space-y-1.5 text-xs text-muted-foreground font-sans">
               <div class="flex items-center gap-2">
-                <Calendar class="w-3 h-3" style="color:var(--wd-amber-600);" />
+                <Calendar class="w-3 h-3 text-secondary" />
                 Next class <strong>{{ c.nextClassDate ? formatShortDate(c.nextClassDate) : c.weekday }}, {{ c.time }}</strong>
               </div>
               <div class="flex items-center gap-2">
-                <MapPin class="w-3 h-3" style="color:var(--wd-amber-600);" />
+                <MapPin class="w-3 h-3 text-secondary" />
                 {{ c.venue }}
               </div>
             </div>
 
             <div class="mt-4">
               <div class="flex items-baseline justify-between mb-1">
-                <span class="text-[10px] uppercase tracking-widest font-bold" style="color:var(--wd-amber-600);">Attendance this cycle</span>
-                <span class="text-xs font-black" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">{{ c.attended }} / {{ c.total }}</span>
+                <span class="text-eyebrow uppercase tracking-widest font-bold text-secondary">Attendance this cycle</span>
+                <span class="text-xs font-black text-foreground font-display">{{ c.attended }} / {{ c.total }}</span>
               </div>
               <div class="w-full h-1.5 rounded-full overflow-hidden" style="background:color-mix(in srgb, var(--wd-brown-900) 6.3%, transparent);">
                 <div class="h-full transition-all" :style="{ width: Math.round((c.attended / c.total) * 100) + '%', background: c.color }" />
@@ -2558,25 +2544,24 @@ function cardSummary(f: CatalogueEntry) {
       <div id="socials" class="mt-14">
         <div class="flex items-baseline justify-between mb-4">
           <div>
-            <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">
+            <div class="text-xs uppercase tracking-[0.3em] text-secondary">
               This week · socials<template v-if="dancerCity"> · {{ dancerCity }}</template>
             </div>
-            <h2 class="mt-2 text-2xl leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
-              Where you're <em class="italic" style="color:var(--wd-red-600);">dancing.</em>
+            <h2 class="mt-2 text-2xl leading-tight font-display text-foreground">
+              Where you're <em class="italic text-primary">dancing.</em>
             </h2>
           </div>
           <NuxtLink
             :to="citySocialsLink"
-            class="text-xs italic hover:underline"
-            style="color:var(--wd-amber-600); font-family:var(--wd-font-display);"
+            class="text-xs italic hover:underline text-secondary font-display"
           >
             Full week →
           </NuxtLink>
         </div>
 
         <div v-if="!upcomingSocials.length" class="rounded-2xl p-6 text-center border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);">
-          <Sparkles class="w-8 h-8 mx-auto mb-3" style="color:var(--wd-amber-600);" />
-          <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <Sparkles class="w-8 h-8 mx-auto mb-3 text-secondary" />
+          <p class="text-sm text-muted-foreground font-sans">
             <template v-if="dancerCity">
               We're still gathering this week's socials in {{ dancerCity }}<template v-if="stylesLabel"> for {{ stylesLabel }}</template>. Check back soon.
             </template>
@@ -2594,15 +2579,15 @@ function cardSummary(f: CatalogueEntry) {
             :style="{ borderColor: 'color-mix(in srgb, var(--wd-brown-900) 5.1%, transparent)', background: s.rsvpd ? (WD.green600 + '08') : 'white' }"
           >
             <span
-              class="w-10 text-center text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
+              class="w-10 text-center text-eyebrow font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
               :style="{ background: s.color + '18', color: s.color }"
             >{{ s.dayLabel }}</span>
-            <span class="text-sm font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-sans);">
+            <span class="text-sm font-bold text-foreground font-sans">
               {{ s.time }}
             </span>
             <div class="min-w-0 flex-1">
-              <div class="text-sm font-bold truncate" style="color:var(--wd-brown-900);">{{ s.name }}</div>
-              <div class="text-xs truncate" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+              <div class="text-sm font-bold truncate text-foreground">{{ s.name }}</div>
+              <div class="text-xs truncate text-muted-foreground font-sans">
                 {{ s.venue }} · <span :style="{ color: s.color }">{{ s.style }}</span> · {{ s.friendsGoing }} friends going
               </div>
             </div>
@@ -2624,27 +2609,27 @@ function cardSummary(f: CatalogueEntry) {
       <div id="tonight" class="mt-14">
         <div class="flex items-baseline justify-between mb-4">
           <div>
-            <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Tonight · hangouts</div>
-            <h2 class="mt-2 text-2xl leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
-              Who's <em class="italic" style="color:var(--wd-red-600);">out.</em>
+            <div class="text-xs uppercase tracking-[0.3em] text-secondary">Tonight · hangouts</div>
+            <h2 class="mt-2 text-2xl leading-tight font-display text-foreground">
+              Who's <em class="italic text-primary">out.</em>
             </h2>
           </div>
           <div class="flex items-center gap-2">
             <button
               v-if="isSignedIn"
               type="button"
-              class="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full"
-              style="background:var(--wd-brown-900); color:white; font-family:var(--wd-font-sans);"
+              class="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full bg-wd-brown-900 font-sans"
+              style="color:white;"
               @click="showHangoutForm = !showHangoutForm"
             >
               <Plus class="w-3.5 h-3.5" />
               I'm out
             </button>
             <span
-              class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full"
-              style="background:color-mix(in srgb, var(--wd-red-600) 9.4%, transparent); color:var(--wd-red-600); font-family:var(--wd-font-sans);"
+              class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full text-primary font-sans"
+              style="background:color-mix(in srgb, var(--wd-red-600) 9.4%, transparent);"
             >
-              <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:var(--wd-red-600);" />
+              <span class="w-1.5 h-1.5 rounded-full animate-pulse bg-wd-red-600" />
               Live
             </span>
           </div>
@@ -2670,32 +2655,31 @@ function cardSummary(f: CatalogueEntry) {
             v-model="newHangout.title"
             type="text"
             placeholder="What's the plan? e.g. Dinner before La Rumba"
-            class="w-full text-sm rounded-lg border px-3 py-2 mb-2"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); color:var(--wd-brown-900); font-family:var(--wd-font-sans);"
+            class="w-full text-sm rounded-lg border px-3 py-2 mb-2 text-foreground font-sans"
+            style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);"
           />
           <div class="flex gap-2 mb-3">
             <input
               v-model="newHangout.time"
               type="time"
-              class="text-sm rounded-lg border px-3 py-2"
-              style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); color:var(--wd-brown-900); font-family:var(--wd-font-sans); width:110px;"
+              class="text-sm rounded-lg border px-3 py-2 text-foreground font-sans"
+              style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); width:110px;"
             />
             <input
               v-model="newHangout.venue"
               type="text"
               placeholder="Where? (venue / address)"
-              class="flex-1 text-sm rounded-lg border px-3 py-2"
-              style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); color:var(--wd-brown-900); font-family:var(--wd-font-sans);"
+              class="flex-1 text-sm rounded-lg border px-3 py-2 text-foreground font-sans"
+              style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);"
             />
           </div>
-          <p v-if="hangoutError" class="text-xs mb-2 px-1" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);" role="alert">
+          <p v-if="hangoutError" class="text-xs mb-2 px-1 text-primary font-sans" role="alert">
             {{ hangoutError }}
           </p>
           <div class="flex justify-end gap-2">
             <button
               type="button"
-              class="text-xs px-3 py-1.5 rounded-full"
-              style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);"
+              class="text-xs px-3 py-1.5 rounded-full text-muted-foreground font-sans"
               @click="showHangoutForm = false"
             >
               Cancel
@@ -2713,8 +2697,8 @@ function cardSummary(f: CatalogueEntry) {
         </div>
 
         <div v-if="!hangouts.length && !showHangoutForm" class="rounded-2xl p-6 text-center border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);">
-          <MoonStar class="w-8 h-8 mx-auto mb-3" style="color:var(--wd-amber-600);" />
-          <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <MoonStar class="w-8 h-8 mx-auto mb-3 text-secondary" />
+          <p class="text-sm text-muted-foreground font-sans">
             Nobody's out yet. Post a dinner, a bar hop, or a ride — dancers show up when someone starts.
           </p>
         </div>
@@ -2727,12 +2711,12 @@ function cardSummary(f: CatalogueEntry) {
             :style="{ borderColor: 'color-mix(in srgb, var(--wd-brown-900) 5.1%, transparent)', background: h.going ? (WD.green600 + '08') : 'white' }"
           >
             <component :is="hangoutIcon(h.kind)" class="w-4 h-4 shrink-0" :style="{ color: h.color, 'stroke-width': 1.5 }" />
-            <span class="text-sm font-bold w-12" style="color:var(--wd-brown-900); font-family:var(--wd-font-sans);">
+            <span class="text-sm font-bold w-12 text-foreground font-sans">
               {{ h.time }}
             </span>
             <div class="min-w-0 flex-1">
-              <div class="text-sm font-bold truncate" style="color:var(--wd-brown-900);">{{ h.title }}</div>
-              <div class="text-xs truncate" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+              <div class="text-sm font-bold truncate text-foreground">{{ h.title }}</div>
+              <div class="text-xs truncate text-muted-foreground font-sans">
                 <span v-if="h.host">{{ h.host }} · </span>
                 <span v-if="h.venue">{{ h.venue }} · </span>
                 {{ h.people }} in
@@ -2751,8 +2735,7 @@ function cardSummary(f: CatalogueEntry) {
             <button
               v-if="h.mine"
               type="button"
-              class="text-xs px-1.5 py-1 rounded-full"
-              style="color:var(--wd-amber-600);"
+              class="text-xs px-1.5 py-1 rounded-full text-secondary"
               title="Close this hangout"
               @click="closeHangout(h.id)"
             >
@@ -2766,33 +2749,32 @@ function cardSummary(f: CatalogueEntry) {
       <div id="discover" class="mt-14">
         <div class="flex items-baseline justify-between mb-4">
           <div>
-            <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Widen your year · discover</div>
-            <h2 class="mt-2 text-2xl leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
-              What could <em class="italic" style="color:var(--wd-red-600);">rearrange</em> the year?
+            <div class="text-xs uppercase tracking-[0.3em] text-secondary">Widen your year · discover</div>
+            <h2 class="mt-2 text-2xl leading-tight font-display text-foreground">
+              What could <em class="italic text-primary">rearrange</em> the year?
             </h2>
           </div>
           <button
             type="button"
-            class="inline-flex items-center gap-1 text-xs italic hover:underline"
+            class="inline-flex items-center gap-1 text-xs italic hover:underline text-secondary font-display"
             :class="canUndo ? '' : 'opacity-40 pointer-events-none'"
-            style="color:var(--wd-amber-600); font-family:var(--wd-font-display);"
             @click="undoSwipe"
           >
             <Undo2 class="w-3 h-3" /> Undo
           </button>
         </div>
-        <p class="text-sm mb-6 max-w-xl" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+        <p class="text-sm mb-6 max-w-xl text-muted-foreground font-sans">
           People and places that could pull you somewhere new. Yes = we surface it above. Skip = we won't.
         </p>
 
         <!-- Deck -->
         <div class="relative mx-auto max-w-md">
           <div v-if="!deckCurrent" class="rounded-2xl p-10 text-center border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);">
-            <Sparkles class="w-10 h-10 mx-auto mb-3" style="color:var(--wd-amber-600);" />
-            <p class="text-lg" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+            <Sparkles class="w-10 h-10 mx-auto mb-3 text-secondary" />
+            <p class="text-lg font-display text-foreground">
               That's it for this pass.
             </p>
-            <p class="mt-2 text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+            <p class="mt-2 text-sm text-muted-foreground font-sans">
               We'll refresh nightly with more people and places.
             </p>
           </div>
@@ -2819,13 +2801,13 @@ function cardSummary(f: CatalogueEntry) {
             >
               <!-- YES / SKIP labels tinted by drag -->
               <div
-                class="absolute top-6 left-6 z-10 px-3 py-1 rounded-full border-2 text-sm font-black uppercase tracking-widest pointer-events-none transition-opacity"
-                style="color:var(--wd-red-600); border-color:var(--wd-red-600); transform: rotate(-10deg);"
+                class="absolute top-6 left-6 z-10 px-3 py-1 rounded-full border-2 text-sm font-black uppercase tracking-widest pointer-events-none transition-opacity text-primary border-wd-red-600"
+                style="transform: rotate(-10deg);"
                 :style="{ opacity: Math.min(1, Math.max(0, -dragDx / 100)) }"
               >Skip</div>
               <div
-                class="absolute top-6 right-6 z-10 px-3 py-1 rounded-full border-2 text-sm font-black uppercase tracking-widest pointer-events-none transition-opacity"
-                style="color:var(--wd-green-600); border-color:var(--wd-green-600); transform: rotate(10deg);"
+                class="absolute top-6 right-6 z-10 px-3 py-1 rounded-full border-2 text-sm font-black uppercase tracking-widest pointer-events-none transition-opacity text-wd-green-600 border-wd-green-600"
+                style="transform: rotate(10deg);"
                 :style="{ opacity: Math.min(1, Math.max(0, dragDx / 100)) }"
               >Yes</div>
 
@@ -2834,10 +2816,10 @@ function cardSummary(f: CatalogueEntry) {
                 <img :src="deckCurrent.photo" :alt="deckCurrent.name" class="w-full h-2/3 object-cover" draggable="false">
                 <div class="p-5">
                   <div class="flex items-baseline justify-between gap-3">
-                    <div class="text-xl font-black" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+                    <div class="text-xl font-black font-display text-foreground">
                       {{ deckCurrent.name }}
                     </div>
-                    <div class="text-xs italic" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);">
+                    <div class="text-xs italic text-secondary font-display">
                       {{ deckCurrent.city }}
                     </div>
                   </div>
@@ -2855,19 +2837,19 @@ function cardSummary(f: CatalogueEntry) {
                     Going to {{ deckCurrent.festivalName }} — you're not
                   </div>
                   <div v-else-if="deckCurrent.kind === 'dancer-local'"
-                       class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
-                       style="background:color-mix(in srgb, var(--wd-green-600) 9.4%, transparent); color:var(--wd-green-600);">
+                       class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-wd-green-600"
+                       style="background:color-mix(in srgb, var(--wd-green-600) 9.4%, transparent);">
                     <MapPin class="w-3 h-3" style="stroke-width:1.5;" />
                     Regular at {{ (deckCurrent as any).regularAt }}
                   </div>
                   <div class="mt-3 flex flex-wrap gap-1">
                     <span v-for="st in deckCurrent.danceStyles" :key="st"
-                          class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"
-                          style="background:color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent); color:var(--wd-brown-700);">
+                          class="text-eyebrow font-bold uppercase tracking-widest px-2 py-0.5 rounded-full text-muted-foreground"
+                          style="background:color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent);">
                       {{ st }}
                     </span>
                   </div>
-                  <p v-if="deckCurrent.reason" class="mt-3 text-xs italic leading-snug" style="color:var(--wd-brown-700); font-family:var(--wd-font-display);">
+                  <p v-if="deckCurrent.reason" class="mt-3 text-xs italic leading-snug text-muted-foreground font-display">
                     {{ deckCurrent.reason }}
                   </p>
                 </div>
@@ -2876,28 +2858,28 @@ function cardSummary(f: CatalogueEntry) {
               <!-- EVENT: FESTIVAL -->
               <template v-else-if="deckCurrent.kind === 'event-festival'">
                 <div class="h-2/3 p-6 flex flex-col justify-end" :style="{ background: 'linear-gradient(135deg, ' + (deckCurrent as any).color + ', var(--wd-orange-500))' }">
-                  <div class="text-[10px] uppercase tracking-widest font-bold text-white/90">Festival · not in your year</div>
-                  <div class="mt-1 text-3xl font-black leading-none text-white" style="font-family:var(--wd-font-display);">
+                  <div class="text-eyebrow uppercase tracking-widest font-bold text-white/90">Festival · not in your year</div>
+                  <div class="mt-1 text-3xl font-black leading-none text-white font-display">
                     {{ deckCurrent.name }}
                   </div>
                 </div>
                 <div class="p-5">
-                  <div class="flex items-center gap-4 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+                  <div class="flex items-center gap-4 text-xs text-muted-foreground font-sans">
                     <span class="inline-flex items-center gap-1">
-                      <Calendar class="w-3 h-3" style="color:var(--wd-amber-600);" />
+                      <Calendar class="w-3 h-3 text-secondary" />
                       {{ new Date((deckCurrent as any).dateISO).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
                     </span>
                     <span class="inline-flex items-center gap-1">
-                      <MapPin class="w-3 h-3" style="color:var(--wd-amber-600);" />
+                      <MapPin class="w-3 h-3 text-secondary" />
                       {{ (deckCurrent as any).venue }}, {{ (deckCurrent as any).city }}
                     </span>
                   </div>
-                  <div class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
-                       style="background:color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent); color:var(--wd-amber-500);">
+                  <div class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-wd-amber-500"
+                       style="background:color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent);">
                     <UsersIcon class="w-3 h-3" style="stroke-width:1.5;" />
                     {{ (deckCurrent as any).friendsGoing }} friends going
                   </div>
-                  <p v-if="deckCurrent.reason" class="mt-3 text-xs italic leading-snug" style="color:var(--wd-brown-700); font-family:var(--wd-font-display);">
+                  <p v-if="deckCurrent.reason" class="mt-3 text-xs italic leading-snug text-muted-foreground font-display">
                     {{ deckCurrent.reason }}
                   </p>
                 </div>
@@ -2906,28 +2888,28 @@ function cardSummary(f: CatalogueEntry) {
               <!-- EVENT: LOCAL SOCIAL -->
               <template v-else>
                 <div class="h-2/3 p-6 flex flex-col justify-end" :style="{ background: 'linear-gradient(135deg, ' + (deckCurrent as any).color + ', var(--wd-violet-600))' }">
-                  <div class="text-[10px] uppercase tracking-widest font-bold text-white/90">Local · {{ (deckCurrent as any).style }}</div>
-                  <div class="mt-1 text-3xl font-black leading-none text-white" style="font-family:var(--wd-font-display);">
+                  <div class="text-eyebrow uppercase tracking-widest font-bold text-white/90">Local · {{ (deckCurrent as any).style }}</div>
+                  <div class="mt-1 text-3xl font-black leading-none text-white font-display">
                     {{ deckCurrent.name }}
                   </div>
                 </div>
                 <div class="p-5">
-                  <div class="flex items-center gap-4 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+                  <div class="flex items-center gap-4 text-xs text-muted-foreground font-sans">
                     <span class="inline-flex items-center gap-1">
-                      <Calendar class="w-3 h-3" style="color:var(--wd-amber-600);" />
+                      <Calendar class="w-3 h-3 text-secondary" />
                       {{ (deckCurrent as any).dayLabel }} {{ (deckCurrent as any).time }}
                     </span>
                     <span class="inline-flex items-center gap-1">
-                      <MapPin class="w-3 h-3" style="color:var(--wd-amber-600);" />
+                      <MapPin class="w-3 h-3 text-secondary" />
                       {{ (deckCurrent as any).venue }}, {{ (deckCurrent as any).city }}
                     </span>
                   </div>
-                  <div class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
-                       style="background:color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent); color:var(--wd-amber-500);">
+                  <div class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-wd-amber-500"
+                       style="background:color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent);">
                     <UsersIcon class="w-3 h-3" style="stroke-width:1.5;" />
                     {{ (deckCurrent as any).friendsGoing }} friends going
                   </div>
-                  <p v-if="deckCurrent.reason" class="mt-3 text-xs italic leading-snug" style="color:var(--wd-brown-700); font-family:var(--wd-font-display);">
+                  <p v-if="deckCurrent.reason" class="mt-3 text-xs italic leading-snug text-muted-foreground font-display">
                     {{ deckCurrent.reason }}
                   </p>
                 </div>
@@ -2939,8 +2921,8 @@ function cardSummary(f: CatalogueEntry) {
           <div v-if="deckCurrent" class="mt-8 flex items-center justify-center gap-6">
             <button
               type="button"
-              class="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95"
-              style="background:white; border:2px solid color-mix(in srgb, var(--wd-red-600) 33.3%, transparent); color:var(--wd-red-600);"
+              class="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95 text-primary"
+              style="background:white; border:2px solid color-mix(in srgb, var(--wd-red-600) 33.3%, transparent);"
               aria-label="Skip"
               @click="commitSwipe('skip')"
             >
@@ -2948,8 +2930,8 @@ function cardSummary(f: CatalogueEntry) {
             </button>
             <button
               type="button"
-              class="w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95"
-              style="background:white; border:2px solid color-mix(in srgb, var(--wd-amber-500) 33.3%, transparent); color:var(--wd-amber-500);"
+              class="w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95 text-wd-amber-500"
+              style="background:white; border:2px solid color-mix(in srgb, var(--wd-amber-500) 33.3%, transparent);"
               aria-label="Save for later"
               @click="commitSwipe('save')"
             >
@@ -2957,8 +2939,8 @@ function cardSummary(f: CatalogueEntry) {
             </button>
             <button
               type="button"
-              class="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95"
-              style="background:white; border:2px solid color-mix(in srgb, var(--wd-green-600) 33.3%, transparent); color:var(--wd-green-600);"
+              class="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95 text-wd-green-600"
+              style="background:white; border:2px solid color-mix(in srgb, var(--wd-green-600) 33.3%, transparent);"
               aria-label="Yes"
               @click="commitSwipe('yes')"
             >
@@ -2966,7 +2948,7 @@ function cardSummary(f: CatalogueEntry) {
             </button>
           </div>
 
-          <p v-if="deckCurrent" class="mt-4 text-xs text-center italic" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);">
+          <p v-if="deckCurrent" class="mt-4 text-xs text-center italic text-secondary font-display">
             Drag or use the buttons · {{ deck.length }} left
           </p>
         </div>

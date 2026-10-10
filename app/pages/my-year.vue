@@ -166,7 +166,7 @@ useHead({
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
     <!-- Shared view -->
@@ -184,7 +184,7 @@ useHead({
 
     <!-- Loading / not found for shared view -->
     <div v-else-if="isSharedView && !sharedData" class="max-w-3xl mx-auto px-4 py-16 text-center">
-      <p style="color:var(--wd-brown-700);">This year plan is not available.</p>
+      <p class="text-muted-foreground">This year plan is not available.</p>
       <Button class="mt-4" @click="onCreateYearPlan">
         Create your own year plan
       </Button>

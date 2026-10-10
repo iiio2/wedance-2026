@@ -80,7 +80,7 @@ onMounted(load)
 
       <!-- Winner ribbon -->
       <div
-        class="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
+        class="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-eyebrow font-bold uppercase tracking-wider text-white"
         :style="{ background: accent }"
       >
         <Trophy class="h-3 w-3" /> Video of the Month
@@ -95,10 +95,10 @@ onMounted(load)
 
       <!-- Title -->
       <div class="absolute inset-x-0 bottom-0 p-2.5">
-        <p class="truncate text-sm font-bold text-white" style="font-family:var(--wd-font-display);">
+        <p class="truncate text-sm font-bold text-white font-display">
           {{ winner.title }}
         </p>
-        <p v-if="winner.danceStyle" class="text-[11px] text-white/80" style="font-family:var(--wd-font-sans);">
+        <p v-if="winner.danceStyle" class="text-meta text-white/80 font-sans">
           {{ winner.danceStyle }}
         </p>
       </div>
@@ -111,11 +111,11 @@ onMounted(load)
       class="flex aspect-video w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed text-center"
       style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);"
     >
-      <Trophy class="h-5 w-5" style="color:var(--wd-amber-600);" />
+      <Trophy class="h-5 w-5 text-secondary" />
       <p class="text-xs font-bold" :style="{ color: accent, fontFamily: 'var(--wd-font-sans)' }">
         Be the first to enter
       </p>
-      <p class="text-[11px]" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <p class="text-meta text-muted-foreground font-sans">
         No Video of the Month yet
       </p>
     </div>

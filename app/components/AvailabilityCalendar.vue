@@ -79,12 +79,12 @@ const todayIso = iso(new Date())
 </script>
 
 <template>
-  <div style="font-family:var(--wd-font-sans);">
+  <div class="font-sans">
     <!-- Week nav -->
     <div class="flex items-center justify-between mb-3">
-      <button type="button" class="w-8 h-8 rounded-full flex items-center justify-center" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600);" aria-label="Previous week" @click="weekOffset--"><ChevronLeft class="w-4 h-4" /></button>
-      <div class="text-sm font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">{{ weekLabel }}<button v-if="weekOffset !== 0" type="button" class="ml-2 text-[10px] uppercase tracking-wider" style="color:var(--wd-red-600);" @click="weekOffset = 0">Today</button></div>
-      <button type="button" class="w-8 h-8 rounded-full flex items-center justify-center" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600);" aria-label="Next week" @click="weekOffset++"><ChevronRight class="w-4 h-4" /></button>
+      <button type="button" class="w-8 h-8 rounded-full flex items-center justify-center text-primary" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);" aria-label="Previous week" @click="weekOffset--"><ChevronLeft class="w-4 h-4" /></button>
+      <div class="text-sm font-bold text-foreground font-display">{{ weekLabel }}<button v-if="weekOffset !== 0" type="button" class="ml-2 text-eyebrow uppercase tracking-wider text-primary" @click="weekOffset = 0">Today</button></div>
+      <button type="button" class="w-8 h-8 rounded-full flex items-center justify-center text-primary" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);" aria-label="Next week" @click="weekOffset++"><ChevronRight class="w-4 h-4" /></button>
     </div>
 
     <div class="overflow-x-auto -mx-4 px-4">
@@ -93,17 +93,17 @@ const todayIso = iso(new Date())
         <div class="grid" style="grid-template-columns: 84px repeat(7, 1fr); gap:4px;">
           <div />
           <div v-for="d in days" :key="d.toISOString()" class="text-center py-1">
-            <div class="text-[10px] uppercase font-bold" style="color:var(--wd-amber-600);">{{ d.toLocaleDateString(undefined, { weekday: 'short' }) }}</div>
+            <div class="text-eyebrow uppercase font-bold text-secondary">{{ d.toLocaleDateString(undefined, { weekday: 'short' }) }}</div>
             <div class="text-xs font-bold" :style="iso(d) === todayIso ? 'color:var(--wd-red-600);' : 'color:var(--wd-brown-900);'">{{ d.getDate() }}</div>
           </div>
         </div>
 
         <!-- Area rows -->
         <div v-for="sp in spaces" :key="sp.id" class="grid mt-1" style="grid-template-columns: 84px repeat(7, 1fr); gap:4px;">
-          <div class="flex items-center text-[11px] font-bold pr-1" style="color:var(--wd-brown-900);">{{ sp.name }}</div>
+          <div class="flex items-center text-meta font-bold pr-1 text-foreground">{{ sp.name }}</div>
           <div v-for="d in days" :key="d.toISOString()" class="min-h-[44px] rounded-lg border p-1" :style="isAvailable(sp.id, d) ? 'border-color:color-mix(in srgb, var(--wd-brown-900) 7.1%, transparent); background:white;' : 'border-color:color-mix(in srgb, var(--wd-brown-900) 3.1%, transparent); background:#f5f0e8;'">
             <template v-if="bookingsFor(sp.id, d).length">
-              <div v-for="(b, i) in bookingsFor(sp.id, d)" :key="i" class="rounded px-1 py-0.5 mb-0.5 text-[9px] leading-tight truncate"
+              <div v-for="(b, i) in bookingsFor(sp.id, d)" :key="i" class="rounded px-1 py-0.5 mb-0.5 text-tag leading-tight truncate"
                 :style="b.status === 'accepted' ? 'background:color-mix(in srgb, var(--wd-green-600) 10.2%, transparent); color:#166534;' : 'background:color-mix(in srgb, var(--wd-amber-500) 10.2%, transparent); color:var(--wd-amber-700);'"
                 :title="(b.startTime ? b.startTime + ' ' : '') + (b.title || 'Event')">
                 <span v-if="b.startTime" class="font-bold">{{ b.startTime }}</span> {{ b.title || 'Event' }}
@@ -117,6 +117,6 @@ const todayIso = iso(new Date())
         </div>
       </div>
     </div>
-    <p class="mt-2 text-[11px]" style="color:var(--wd-amber-600);">Tap a free cell to propose an event in that area. Green = confirmed, amber = proposed.</p>
+    <p class="mt-2 text-meta text-secondary">Tap a free cell to propose an event in that area. Green = confirmed, amber = proposed.</p>
   </div>
 </template>

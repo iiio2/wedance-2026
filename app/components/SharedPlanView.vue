@@ -144,13 +144,13 @@ const roleLabel: Record<DanceRole, string> = { lead: 'Lead', follow: 'Follow' }
                 </p>
               </div>
               <div class="flex items-center gap-1.5 shrink-0">
-                <Badge v-if="entry.role" variant="secondary" class="text-[10px] px-1.5 py-0">
+                <Badge v-if="entry.role" variant="secondary" class="text-eyebrow px-1.5 py-0">
                   {{ roleLabel[entry.role] }}
                 </Badge>
                 <Badge
                   v-if="entry.partnerStatus === 'looking'"
                   variant="outline"
-                  class="text-[10px] px-1.5 py-0 bg-orange-100 text-orange-700 border-orange-200"
+                  class="text-eyebrow px-1.5 py-0 bg-orange-100 text-orange-700 border-orange-200"
                 >
                   Needs partner
                 </Badge>

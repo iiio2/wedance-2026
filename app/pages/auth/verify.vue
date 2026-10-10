@@ -88,12 +88,11 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
 
 <template>
   <div
-    class="flex min-h-screen items-center justify-center px-4"
-    style="background:var(--wd-cream);"
+    class="flex min-h-screen items-center justify-center px-4 bg-background"
   >
     <div class="w-full max-w-sm">
       <!-- Accent bar -->
-      <div class="h-1.5 rounded-t-2xl" style="background:var(--wd-red-600);" />
+      <div class="h-1.5 rounded-t-2xl bg-wd-red-600" />
       <div
         class="rounded-b-2xl px-6 pb-6 pt-5 space-y-4"
         style="background:white; box-shadow: 0 4px 24px rgba(59,31,13,0.08);"
@@ -101,13 +100,13 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
         <!-- Loading -->
         <template v-if="status === 'loading'">
           <div class="text-center space-y-3">
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-amber-600);">
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">
               Verifying
             </div>
-            <h1 class="text-2xl leading-tight" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+            <h1 class="text-2xl leading-tight text-foreground font-display">
               Checking your link…
             </h1>
-            <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+            <p class="text-sm text-muted-foreground font-sans">
               Just a moment.
             </p>
           </div>
@@ -116,20 +115,20 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
         <!-- Password reset form -->
         <template v-else-if="status === 'reset-form'">
           <div class="space-y-1">
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-amber-600);">
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">
               Account recovery
             </div>
-            <h1 class="text-2xl leading-tight" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+            <h1 class="text-2xl leading-tight text-foreground font-display">
               Set a new password
             </h1>
-            <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+            <p class="text-sm text-muted-foreground font-sans">
               Enter your new password below.
             </p>
           </div>
 
           <form class="space-y-4 pt-2" novalidate @submit.prevent="handleResetPassword">
             <div class="space-y-1.5">
-              <label for="new-password" class="text-sm font-bold" style="color:var(--wd-brown-900);">New password</label>
+              <label for="new-password" class="text-sm font-bold text-foreground">New password</label>
               <div class="relative">
                 <input
                   id="new-password"
@@ -144,8 +143,7 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
                 >
                 <button
                   type="button"
-                  class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold uppercase tracking-wider"
-                  style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);"
+                  class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold uppercase tracking-wider text-secondary font-sans"
                   @click="showPassword = !showPassword"
                 >
                   {{ showPassword ? 'Hide' : 'Show' }}
@@ -155,7 +153,7 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
             </div>
 
             <div class="space-y-1.5">
-              <label for="confirm-password" class="text-sm font-bold" style="color:var(--wd-brown-900);">Confirm password</label>
+              <label for="confirm-password" class="text-sm font-bold text-foreground">Confirm password</label>
               <input
                 id="confirm-password"
                 v-model="confirmPassword"
@@ -170,15 +168,15 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
               <FieldError id="confirm-password-error" :message="errors.confirmPassword" />
             </div>
 
-            <p v-if="resetError" class="text-sm font-bold" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);">
+            <p v-if="resetError" class="text-sm font-bold text-primary font-sans">
               {{ resetError }}
             </p>
 
             <button
               type="submit"
               :disabled="resetLoading"
-              class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60"
-              style="background:var(--wd-red-600); box-shadow: 0 3px 0 -1px var(--wd-red-800); font-family:var(--wd-font-sans);"
+              class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60 bg-wd-red-600 font-sans"
+              style="box-shadow: 0 3px 0 -1px var(--wd-red-800);"
             >
               {{ resetLoading ? 'Saving…' : 'Save new password' }}
             </button>
@@ -188,13 +186,13 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
         <!-- Success -->
         <template v-else-if="status === 'success'">
           <div class="text-center space-y-3">
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-amber-600);">
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">
               {{ isResetMode ? 'Password updated' : 'Welcome' }}
             </div>
-            <h1 class="text-2xl leading-tight" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+            <h1 class="text-2xl leading-tight text-foreground font-display">
               {{ isResetMode ? 'You\'re all set!' : `Welcome, ${dancerName}!` }}
             </h1>
-            <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+            <p class="text-sm text-muted-foreground font-sans">
               {{ isResetMode ? 'Your password has been changed. Taking you to your plan…' : "You're signed in. Taking you to your plan…" }}
             </p>
           </div>
@@ -203,18 +201,17 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
         <!-- Error -->
         <template v-else>
           <div class="text-center space-y-3">
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-amber-600);">
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">
               Something went wrong
             </div>
-            <h1 class="text-2xl leading-tight" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+            <h1 class="text-2xl leading-tight text-foreground font-display">
               Link expired or invalid
             </h1>
-            <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ errorMessage }}</p>
+            <p class="text-sm text-muted-foreground font-sans">{{ errorMessage }}</p>
             <div class="pt-2">
               <NuxtLink
                 to="/"
-                class="text-sm font-bold underline"
-                style="color:var(--wd-red-600); font-family:var(--wd-font-sans);"
+                class="text-sm font-bold underline text-primary font-sans"
               >
                 Go to homepage
               </NuxtLink>

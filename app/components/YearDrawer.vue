@@ -218,14 +218,14 @@ const simpleChecklistItems = [
                 />
                 <div
                   v-else
-                  class="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[9px] font-bold text-white"
+                  class="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-tag font-bold text-white"
                   :style="{ backgroundColor: f.accentColor }"
                 >
                   {{ f.name.charAt(0) }}
                 </div>
                 <div class="min-w-0">
                   <p class="text-xs font-medium leading-tight">{{ f.name }}</p>
-                  <p class="text-[11px] text-muted-foreground">
+                  <p class="text-meta text-muted-foreground">
                     {{ formatDateRange(f.startDate, f.endDate) }} · {{ f.location }}
                   </p>
                 </div>
@@ -311,7 +311,7 @@ const simpleChecklistItems = [
 
           <div v-if="budgetExpanded" class="ml-8 mt-2 space-y-2">
             <div>
-              <label class="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Year budget</label>
+              <label class="text-eyebrow font-medium text-muted-foreground uppercase tracking-wide">Year budget</label>
               <div class="mt-0.5 flex items-center gap-1.5">
                 <span class="text-xs text-muted-foreground">€</span>
                 <input
@@ -363,10 +363,10 @@ const simpleChecklistItems = [
             >
               <div class="min-w-0">
                 <p class="text-xs font-medium">{{ f.name }}</p>
-                <p class="text-[11px] text-muted-foreground">Deadline: {{ new Date(f.earlyBirdDeadline! + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}</p>
+                <p class="text-meta text-muted-foreground">Deadline: {{ new Date(f.earlyBirdDeadline! + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}</p>
               </div>
               <span
-                class="text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0"
+                class="text-eyebrow font-semibold px-1.5 py-0.5 rounded shrink-0"
                 :class="daysUntilDeadline(f.earlyBirdDeadline!) <= 14 ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'"
               >
                 {{ daysUntilDeadline(f.earlyBirdDeadline!) }}d left
@@ -407,7 +407,7 @@ const simpleChecklistItems = [
                 class="flex items-center justify-between py-1"
               >
                 <span class="text-xs font-medium">{{ f.name }}</span>
-                <span class="text-[10px] text-muted-foreground">{{ f.friendsGoing }} friends going</span>
+                <span class="text-eyebrow text-muted-foreground">{{ f.friendsGoing }} friends going</span>
               </div>
             </div>
             <p v-else class="text-xs text-muted-foreground py-1">
@@ -452,12 +452,12 @@ const simpleChecklistItems = [
               >
                 <div class="min-w-0">
                   <p class="text-xs font-medium">{{ f.name }}</p>
-                  <p class="text-[11px] text-muted-foreground">{{ formatDateRange(f.startDate, f.endDate) }}</p>
+                  <p class="text-meta text-muted-foreground">{{ formatDateRange(f.startDate, f.endDate) }}</p>
                 </div>
                 <a
                   :href="singleCalendarUrl(f)"
                   target="_blank"
-                  class="text-[10px] text-primary hover:underline flex items-center gap-0.5 shrink-0"
+                  class="text-eyebrow text-primary hover:underline flex items-center gap-0.5 shrink-0"
                   @click.stop
                 >
                   <CalendarPlus class="w-3 h-3" />

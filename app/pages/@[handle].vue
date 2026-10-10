@@ -146,7 +146,7 @@ useHead(() => ({
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
     <section v-if="pending" class="max-w-2xl mx-auto px-4 py-24 text-center">
@@ -154,12 +154,12 @@ useHead(() => ({
     </section>
 
     <section v-else-if="isStub" class="max-w-xl mx-auto px-4 py-20 text-center">
-      <h1 class="text-4xl" style="color:var(--wd-brown-900);">Not on WeDance yet</h1>
-      <p class="mt-4 text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <h1 class="text-4xl text-foreground">Not on WeDance yet</h1>
+      <p class="mt-4 text-sm text-muted-foreground font-sans">
         <span class="font-bold">@{{ handle }}</span> doesn't have a page here yet. Run this venue or organise here? Claim it.
       </p>
       <NuxtLink to="/for-events" class="inline-flex items-center gap-2 mt-6 rounded-full px-5 py-2.5 text-white text-sm font-bold uppercase tracking-wider" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));">Claim / list a space</NuxtLink>
-      <div class="mt-4"><NuxtLink to="/cities" class="inline-flex items-center gap-1 text-xs font-bold" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);"><ArrowLeft class="w-3 h-3" /> Browse cities</NuxtLink></div>
+      <div class="mt-4"><NuxtLink to="/cities" class="inline-flex items-center gap-1 text-xs font-bold text-primary font-sans"><ArrowLeft class="w-3 h-3" /> Browse cities</NuxtLink></div>
     </section>
 
     <template v-else-if="profile">
@@ -175,27 +175,27 @@ useHead(() => ({
               </div>
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
-                  <span class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">{{ typeLabel[profile.type] || 'Profile' }}</span>
-                  <span v-if="profile.venueType === 'OpenAir'" class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5" style="background:color-mix(in srgb, var(--wd-green-600) 9.4%, transparent); color:var(--wd-green-600); font-family:var(--wd-font-sans);"><Trees class="w-3 h-3" /> Open air</span>
-                  <span v-if="isFree" class="text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600); font-family:var(--wd-font-sans);">Free · community-run</span>
+                  <span class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary font-sans">{{ typeLabel[profile.type] || 'Profile' }}</span>
+                  <span v-if="profile.venueType === 'OpenAir'" class="inline-flex items-center gap-1 text-eyebrow font-bold uppercase tracking-wider rounded-full px-2 py-0.5 text-wd-green-600 font-sans" style="background:color-mix(in srgb, var(--wd-green-600) 9.4%, transparent);"><Trees class="w-3 h-3" /> Open air</span>
+                  <span v-if="isFree" class="text-eyebrow font-bold uppercase tracking-wider rounded-full px-2 py-0.5 text-primary font-sans" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);">Free · community-run</span>
                 </div>
-                <h1 class="text-3xl leading-tight mt-0.5" style="color:var(--wd-brown-900);">{{ profile.name }}</h1>
-                <div class="text-sm mt-0.5" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);font-style:italic; font-size:18px;">@{{ profile.username }}</div>
-                <div v-if="profile.address" class="flex items-start gap-1 mt-2 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);"><MapPin class="w-3 h-3 mt-0.5 shrink-0" style="color:var(--wd-amber-600);" /> <span>{{ profile.address }}<a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener noreferrer" class="ml-1.5 font-bold underline" style="color:var(--wd-red-600);">Map</a></span></div>
-                <NuxtLink v-if="profile.citySlug && profile.city" :to="`/cities/${profile.citySlug}`" class="inline-block mt-1 text-xs font-bold hover:underline" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">{{ profile.city }} →</NuxtLink>
+                <h1 class="text-3xl leading-tight mt-0.5 text-foreground">{{ profile.name }}</h1>
+                <div class="text-sm mt-0.5 text-secondary font-display italic" style="font-size:18px;">@{{ profile.username }}</div>
+                <div v-if="profile.address" class="flex items-start gap-1 mt-2 text-xs text-muted-foreground font-sans"><MapPin class="w-3 h-3 mt-0.5 shrink-0 text-secondary" /> <span>{{ profile.address }}<a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener noreferrer" class="ml-1.5 font-bold underline text-primary">Map</a></span></div>
+                <NuxtLink v-if="profile.citySlug && profile.city" :to="`/cities/${profile.citySlug}`" class="inline-block mt-1 text-xs font-bold hover:underline text-secondary font-sans">{{ profile.city }} →</NuxtLink>
               </div>
             </div>
-            <p v-if="profile.bio" class="mt-5 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ profile.bio }}</p>
+            <p v-if="profile.bio" class="mt-5 text-sm leading-relaxed text-muted-foreground font-sans">{{ profile.bio }}</p>
             <div v-if="profile.styles?.length" class="mt-3 flex flex-wrap gap-1.5">
-              <span v-for="st in profile.styles" :key="st" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600); font-family:var(--wd-font-sans);">{{ st }}</span>
+              <span v-for="st in profile.styles" :key="st" class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider text-primary font-sans" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);">{{ st }}</span>
             </div>
             <div v-if="profile.socials?.length" class="mt-4 flex items-center gap-2">
-              <a v-for="s in profile.socials" :key="s.platform" :href="s.url" target="_blank" rel="noopener" class="inline-flex items-center justify-center w-9 h-9 rounded-full" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600);" :aria-label="s.platform"><component :is="socialIcon[s.platform] || Globe" class="w-4 h-4" /></a>
+              <a v-for="s in profile.socials" :key="s.platform" :href="s.url" target="_blank" rel="noopener" class="inline-flex items-center justify-center w-9 h-9 rounded-full text-primary" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);" :aria-label="s.platform"><component :is="socialIcon[s.platform] || Globe" class="w-4 h-4" /></a>
             </div>
-            <div v-if="profile.moderatorName" class="mt-4 flex items-center gap-1.5 text-xs" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">
+            <div v-if="profile.moderatorName" class="mt-4 flex items-center gap-1.5 text-xs text-secondary font-sans">
               <ShieldCheck class="w-3.5 h-3.5" /> Moderated by the {{ profile.moderatorName }}<span v-if="profile.moderatorSince"> · since {{ profile.moderatorSince }}</span>
             </div>
-            <NuxtLink v-if="isFree" :to="`/elections/${handle}`" class="mt-2 inline-flex items-center gap-1.5 text-xs font-bold" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);">
+            <NuxtLink v-if="isFree" :to="`/elections/${handle}`" class="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-primary font-sans">
               <ShieldCheck class="w-3.5 h-3.5" /> {{ profile.moderatorName ? 'Moderator election' : 'Elect a moderator' }} →
             </NuxtLink>
           </div>
@@ -203,34 +203,34 @@ useHead(() => ({
       </section>
 
       <!-- Map -->
-      <section v-if="mapIsImage" class="max-w-2xl mx-auto px-4 pb-6" style="font-family:var(--wd-font-sans);">
-        <div class="flex items-center gap-2 mb-2"><LayoutGrid class="w-5 h-5" style="color:var(--wd-red-600);" /><h2 class="text-2xl" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">The map</h2></div>
+      <section v-if="mapIsImage" class="max-w-2xl mx-auto px-4 pb-6 font-sans">
+        <div class="flex items-center gap-2 mb-2"><LayoutGrid class="w-5 h-5 text-primary" /><h2 class="text-2xl font-display text-foreground">The map</h2></div>
         <img :src="profile.mapUrl" alt="Map of the dance areas" class="w-full rounded-2xl border" style="border-color:color-mix(in srgb, var(--wd-brown-900) 10.2%, transparent);">
       </section>
 
       <!-- Scheduled events (first) -->
-      <section class="max-w-2xl mx-auto px-4 pb-6" style="font-family:var(--wd-font-sans);">
-        <div class="flex items-center gap-2 mb-3"><Calendar class="w-5 h-5" style="color:var(--wd-red-600);" /><h2 class="text-2xl" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Scheduled</h2></div>
+      <section class="max-w-2xl mx-auto px-4 pb-6 font-sans">
+        <div class="flex items-center gap-2 mb-3"><Calendar class="w-5 h-5 text-primary" /><h2 class="text-2xl font-display text-foreground">Scheduled</h2></div>
         <EventSchedule v-if="scheduleCards.length" :events="visibleScheduleCards" />
-        <button v-if="scheduleCards.length > scheduleLimit" type="button" class="mt-4 text-xs font-bold underline" style="color:var(--wd-red-600);" @click="scheduleLimit += 24">Show more ({{ scheduleCards.length - scheduleLimit }} more)</button>
-        <p v-if="!scheduleCards.length" class="mt-3 text-sm italic" style="color:var(--wd-amber-600);">{{ spaces.length ? 'Nothing scheduled yet — book the first slot.' : 'Nothing scheduled yet.' }}</p>
+        <button v-if="scheduleCards.length > scheduleLimit" type="button" class="mt-4 text-xs font-bold underline text-primary" @click="scheduleLimit += 24">Show more ({{ scheduleCards.length - scheduleLimit }} more)</button>
+        <p v-if="!scheduleCards.length" class="mt-3 text-sm italic text-secondary">{{ spaces.length ? 'Nothing scheduled yet — book the first slot.' : 'Nothing scheduled yet.' }}</p>
       </section>
 
       <!-- Book a (free) slot -->
-      <section v-if="spaces.length" class="max-w-2xl mx-auto px-4 pb-4" style="font-family:var(--wd-font-sans);">
+      <section v-if="spaces.length" class="max-w-2xl mx-auto px-4 pb-4 font-sans">
         <div class="flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2"><LayoutGrid class="w-5 h-5" style="color:var(--wd-red-600);" /><h2 class="text-2xl" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">{{ isFree ? 'Book a free slot' : 'Book a space' }}</h2></div>
+          <div class="flex items-center gap-2"><LayoutGrid class="w-5 h-5 text-primary" /><h2 class="text-2xl font-display text-foreground">{{ isFree ? 'Book a free slot' : 'Book a space' }}</h2></div>
           <button type="button" class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shrink-0" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));" @click="openBooking(spaces[0])"><Plus class="w-3.5 h-3.5" /> Propose an event</button>
         </div>
-        <p class="mt-1 text-sm" style="color:var(--wd-brown-700);">{{ isFree ? `Tap a free cell to reserve that area — it's free. A community moderator confirms it against the guidelines.` : `Tap an available slot in one of the ${spaces.length} areas.` }}</p>
+        <p class="mt-1 text-sm text-muted-foreground">{{ isFree ? `Tap a free cell to reserve that area — it's free. A community moderator confirms it against the guidelines.` : `Tap an available slot in one of the ${spaces.length} areas.` }}</p>
         <AvailabilityCalendar :spaces="spaces" :bookings="schedule" :availability="availability" class="mt-4" @book="onCalendarBook" />
       </section>
 
       <!-- Guidelines -->
-      <section v-if="profile.guidelines" id="guidelines" class="max-w-2xl mx-auto px-4 pb-6" style="font-family:var(--wd-font-sans);">
-        <div class="flex items-center gap-2"><ScrollText class="w-5 h-5" style="color:var(--wd-red-600);" /><h2 class="text-2xl" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Guidelines</h2></div>
-        <p class="mt-1 text-xs" style="color:var(--wd-amber-600);">Proposed by the elected moderator — keep to them and the spot stays ours.</p>
-        <div class="mt-3 rounded-2xl border p-4 whitespace-pre-line text-sm leading-relaxed" style="border-color:color-mix(in srgb, var(--wd-red-600) 20%, transparent); background:white; color:var(--wd-brown-700);">{{ profile.guidelines }}</div>
+      <section v-if="profile.guidelines" id="guidelines" class="max-w-2xl mx-auto px-4 pb-6 font-sans">
+        <div class="flex items-center gap-2"><ScrollText class="w-5 h-5 text-primary" /><h2 class="text-2xl font-display text-foreground">Guidelines</h2></div>
+        <p class="mt-1 text-xs text-secondary">Proposed by the elected moderator — keep to them and the spot stays ours.</p>
+        <div class="mt-3 rounded-2xl border p-4 whitespace-pre-line text-sm leading-relaxed text-muted-foreground" style="border-color:color-mix(in srgb, var(--wd-red-600) 20%, transparent); background:white;">{{ profile.guidelines }}</div>
       </section>
 
       <!-- Reviews -->
@@ -243,82 +243,82 @@ useHead(() => ({
 
     <!-- Booking modal -->
     <div v-if="booking.open" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style="background:rgba(59,31,18,0.4);" @click.self="booking.open = false">
-      <div class="w-full max-w-md rounded-2xl bg-white p-6" style="font-family:var(--wd-font-sans); box-shadow: 0 20px 50px rgba(0,0,0,0.25);">
+      <div class="w-full max-w-md rounded-2xl bg-white p-6 font-sans" style="box-shadow: 0 20px 50px rgba(0,0,0,0.25);">
         <template v-if="!booking.done">
-          <h3 class="text-xl font-bold" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">{{ isFree ? 'Propose an event' : 'Request a space' }}</h3>
-          <p class="text-xs mt-1" style="color:var(--wd-amber-600);">{{ isFree ? 'Free — a community moderator confirms it against the guidelines.' : 'WeDance connects you with the venue — no payment here.' }}</p>
+          <h3 class="text-xl font-bold font-display text-foreground">{{ isFree ? 'Propose an event' : 'Request a space' }}</h3>
+          <p class="text-xs mt-1 text-secondary">{{ isFree ? 'Free — a community moderator confirms it against the guidelines.' : 'WeDance connects you with the venue — no payment here.' }}</p>
           <div class="mt-4 space-y-3 max-h-[60vh] overflow-y-auto pr-1">
             <div class="grid grid-cols-2 gap-2">
-              <select v-model="booking.spaceId" class="h-10 rounded-xl px-3 text-sm outline-none" style="background:var(--wd-cream); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="Area">
+              <select v-model="booking.spaceId" class="h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="Area">
                 <option v-for="sp in spaces" :key="sp.id" :value="sp.id">{{ sp.name }}</option>
               </select>
-              <select v-model="booking.eventType" class="h-10 rounded-xl px-3 text-sm outline-none" style="background:var(--wd-cream); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="Type">
+              <select v-model="booking.eventType" class="h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="Type">
                 <option v-for="t in EVENT_TYPES" :key="t" :value="t">{{ t }}</option>
               </select>
             </div>
             <div>
-              <input v-model="booking.title" type="text" maxlength="120" placeholder="Event name — e.g. Sunday Salsa Social" class="w-full h-10 rounded-xl px-3 text-sm outline-none" style="background:var(--wd-cream); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('title', 'booking-title-error')">
+              <input v-model="booking.title" type="text" maxlength="120" placeholder="Event name — e.g. Sunday Salsa Social" class="w-full h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('title', 'booking-title-error')">
               <FieldError id="booking-title-error" :message="bookingForm.errors.title" />
             </div>
             <div>
-              <div class="text-[10px] uppercase tracking-wider font-bold mb-1.5" style="color:var(--wd-amber-600);">Styles</div>
+              <div class="text-eyebrow uppercase tracking-wider font-bold mb-1.5 text-secondary">Styles</div>
               <div class="flex flex-wrap gap-1.5">
-                <button v-for="s in DANCE_STYLES" :key="s" type="button" class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider" :style="booking.styles.includes(s) ? 'background:var(--wd-red-600); color:white;' : 'background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600);'" @click="toggleBookingStyle(s)">{{ s }}</button>
+                <button v-for="s in DANCE_STYLES" :key="s" type="button" class="px-2.5 py-1 rounded-full text-meta font-bold uppercase tracking-wider" :style="booking.styles.includes(s) ? 'background:var(--wd-red-600); color:white;' : 'background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600);'" @click="toggleBookingStyle(s)">{{ s }}</button>
               </div>
             </div>
             <div>
               <div class="flex gap-2">
-                <input v-model="booking.eventDate" type="date" class="flex-1 h-10 rounded-xl px-3 text-sm outline-none" style="background:var(--wd-cream); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="Date" v-bind="bookingForm.fieldAttrs('eventDate', 'booking-date-error')">
-                <input v-model="booking.startTime" type="time" class="w-28 h-10 rounded-xl px-2 text-sm outline-none" style="background:var(--wd-cream); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="Start" v-bind="bookingForm.fieldAttrs('startTime', 'booking-start-error')">
-                <input v-model="booking.endTime" type="time" class="w-28 h-10 rounded-xl px-2 text-sm outline-none" style="background:var(--wd-cream); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="End" v-bind="bookingForm.fieldAttrs('endTime', 'booking-end-error')">
+                <input v-model="booking.eventDate" type="date" class="flex-1 h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="Date" v-bind="bookingForm.fieldAttrs('eventDate', 'booking-date-error')">
+                <input v-model="booking.startTime" type="time" class="w-28 h-10 rounded-xl px-2 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="Start" v-bind="bookingForm.fieldAttrs('startTime', 'booking-start-error')">
+                <input v-model="booking.endTime" type="time" class="w-28 h-10 rounded-xl px-2 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="End" v-bind="bookingForm.fieldAttrs('endTime', 'booking-end-error')">
               </div>
               <FieldError id="booking-date-error" :message="bookingForm.errors.eventDate" />
               <FieldError id="booking-start-error" :message="bookingForm.errors.startTime" />
               <FieldError id="booking-end-error" :message="bookingForm.errors.endTime" />
             </div>
-            <input v-model="booking.artists" type="text" placeholder="Artists / DJs / teachers (comma-separated · @handle or name)" class="w-full h-10 rounded-xl px-3 text-sm outline-none" style="background:var(--wd-cream); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);">
+            <input v-model="booking.artists" type="text" placeholder="Artists / DJs / teachers (comma-separated · @handle or name)" class="w-full h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);">
             <div>
-              <input v-model="booking.organizerHandle" type="text" placeholder="Organiser @handle (optional — who runs this event)" class="w-full h-10 rounded-xl px-3 text-sm outline-none" style="background:var(--wd-cream); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('organizerHandle', 'booking-organizer-error')">
+              <input v-model="booking.organizerHandle" type="text" placeholder="Organiser @handle (optional — who runs this event)" class="w-full h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('organizerHandle', 'booking-organizer-error')">
               <FieldError id="booking-organizer-error" :message="bookingForm.errors.organizerHandle" />
             </div>
             <div>
-              <textarea v-model="booking.message" rows="2" maxlength="2000" placeholder="Anything the community should know (level, entry…)" class="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none" style="background:var(--wd-cream); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('message', 'booking-message-error')" />
+              <textarea v-model="booking.message" rows="2" maxlength="2000" placeholder="Anything the community should know (level, entry…)" class="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('message', 'booking-message-error')" />
               <FieldError id="booking-message-error" :message="bookingForm.errors.message" />
             </div>
             <div>
               <div class="flex gap-2">
-                <input v-model="booking.name" type="text" placeholder="Your name" class="flex-1 h-10 rounded-xl px-3 text-sm outline-none" style="background:var(--wd-cream); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('name', 'booking-name-error')">
-                <input v-model="booking.headcount" type="number" min="1" placeholder="Guests" class="w-24 h-10 rounded-xl px-3 text-sm outline-none" style="background:var(--wd-cream); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('headcount', 'booking-headcount-error')">
+                <input v-model="booking.name" type="text" placeholder="Your name" class="flex-1 h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('name', 'booking-name-error')">
+                <input v-model="booking.headcount" type="number" min="1" placeholder="Guests" class="w-24 h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('headcount', 'booking-headcount-error')">
               </div>
               <FieldError id="booking-name-error" :message="bookingForm.errors.name" />
               <FieldError id="booking-headcount-error" :message="bookingForm.errors.headcount" />
             </div>
             <div>
-              <input v-model="booking.email" type="email" placeholder="Email (so the moderator can reply)" class="w-full h-10 rounded-xl px-3 text-sm outline-none" style="background:var(--wd-cream); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('email', 'booking-email-error')">
+              <input v-model="booking.email" type="email" placeholder="Email (so the moderator can reply)" class="w-full h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('email', 'booking-email-error')">
               <FieldError id="booking-email-error" :message="bookingForm.errors.email" />
             </div>
             <div>
-              <label class="flex items-start gap-2 text-xs cursor-pointer" style="color:var(--wd-brown-700);">
+              <label class="flex items-start gap-2 text-xs cursor-pointer text-muted-foreground">
                 <input v-model="booking.terms" type="checkbox" class="mt-0.5 w-4 h-4 accent-wd-red-600" v-bind="bookingForm.fieldAttrs('terms', 'booking-terms-error')">
-                <span v-if="isFree && profile.guidelines">I've read and will follow the <a href="#guidelines" class="underline font-bold" style="color:var(--wd-red-600);" @click.prevent="document.getElementById('guidelines')?.scrollIntoView({behavior:'smooth'})">community guidelines</a>.</span>
+                <span v-if="isFree && profile.guidelines">I've read and will follow the <a href="#guidelines" class="underline font-bold text-primary" @click.prevent="document.getElementById('guidelines')?.scrollIntoView({behavior:'smooth'})">community guidelines</a>.</span>
                 <span v-else-if="isFree">I'll respect this space and its community.</span>
-                <span v-else>I accept the <NuxtLink to="/booking-terms" target="_blank" class="underline font-bold" style="color:var(--wd-red-600);">booking terms</NuxtLink>.</span>
+                <span v-else>I accept the <NuxtLink to="/booking-terms" target="_blank" class="underline font-bold text-primary">booking terms</NuxtLink>.</span>
               </label>
               <FieldError id="booking-terms-error" :message="bookingForm.errors.terms" />
             </div>
-            <p v-if="booking.err" class="text-sm font-bold" style="color:var(--wd-red-600);">{{ booking.err }}</p>
+            <p v-if="booking.err" class="text-sm font-bold text-primary">{{ booking.err }}</p>
           </div>
           <div class="mt-4 flex gap-2">
             <button type="button" :disabled="booking.busy" class="flex-1 h-11 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));" @click="submitBooking">{{ booking.busy ? 'Sending…' : (isFree ? 'Book it' : 'Send request') }}</button>
-            <button type="button" class="h-11 px-4 rounded-full text-sm font-bold" style="color:var(--wd-amber-600);" @click="booking.open = false">Cancel</button>
+            <button type="button" class="h-11 px-4 rounded-full text-sm font-bold text-secondary" @click="booking.open = false">Cancel</button>
           </div>
         </template>
         <template v-else>
           <div class="text-center py-4">
-            <div class="w-12 h-12 rounded-full mx-auto flex items-center justify-center text-white" style="background:var(--wd-green-600);"><Check class="w-6 h-6" /></div>
-            <h3 class="text-xl font-bold mt-3" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">{{ isFree ? 'Slot proposed' : 'Request sent' }}</h3>
-            <p class="text-sm mt-1" style="color:var(--wd-brown-700);">{{ isFree ? 'The moderator will confirm against the guidelines. See you on the floor!' : 'The venue will reply to your email.' }}</p>
-            <button type="button" class="mt-4 rounded-full px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white" style="background:var(--wd-red-600);" @click="booking.open = false">Done</button>
+            <div class="w-12 h-12 rounded-full mx-auto flex items-center justify-center text-white bg-wd-green-600"><Check class="w-6 h-6" /></div>
+            <h3 class="text-xl font-bold mt-3 font-display text-foreground">{{ isFree ? 'Slot proposed' : 'Request sent' }}</h3>
+            <p class="text-sm mt-1 text-muted-foreground">{{ isFree ? 'The moderator will confirm against the guidelines. See you on the floor!' : 'The venue will reply to your email.' }}</p>
+            <button type="button" class="mt-4 rounded-full px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white bg-wd-red-600" @click="booking.open = false">Done</button>
           </div>
         </template>
       </div>

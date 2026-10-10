@@ -100,10 +100,10 @@ function reset() {
     <!-- Step 1: CTA. Leads with the payoff + who can enter, THEN the button —
          so the reason to participate is visible before the ask. -->
     <div v-if="!open" class="flex flex-col items-center gap-3 py-3 text-center">
-      <p class="text-sm font-bold leading-snug" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+      <p class="text-sm font-bold leading-snug text-foreground font-display">
         Get your dancing seen.
       </p>
-      <p class="max-w-xs text-xs leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <p class="max-w-xs text-xs leading-relaxed text-muted-foreground font-sans">
         Post a clip, the community votes, and the top-voted video this month gets
         featured on WeDance{{ cityLabel }}<template v-if="prize"> and wins <span class="font-bold" :style="{ color: accent }">{{ prize }}</span></template>.
         Any dancer, any style.
@@ -116,7 +116,7 @@ function reset() {
       >
         <Video class="h-4 w-4" /> Submit your video
       </button>
-      <p class="text-[11px]" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">
+      <p class="text-meta text-secondary font-sans">
         Free · we review every entry before it joins the vote
       </p>
     </div>
@@ -124,10 +124,10 @@ function reset() {
     <!-- Step 2: success state (shown after a submit, inside the open form). -->
     <div v-else-if="submitted" class="flex flex-col items-center gap-2 py-6 text-center">
       <CheckCircle2 class="h-8 w-8" :style="{ color: accent }" />
-      <p class="text-base font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+      <p class="text-base font-bold text-foreground font-display">
         Submitted — pending review
       </p>
-      <p class="max-w-xs text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <p class="max-w-xs text-xs text-muted-foreground font-sans">
         We review every entry before it joins the vote. You'll appear in the competition once approved.
       </p>
       <div class="mt-2 flex items-center gap-4">
@@ -141,8 +141,7 @@ function reset() {
         </button>
         <button
           type="button"
-          class="text-xs font-bold underline"
-          style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);"
+          class="text-xs font-bold underline text-muted-foreground font-sans"
           @click="collapse"
         >
           Done
@@ -153,18 +152,17 @@ function reset() {
     <form v-else class="space-y-3" novalidate @submit.prevent="submit">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <div class="text-[10px] uppercase tracking-[0.3em] font-bold" :style="{ color: accent }">Enter the competition</div>
-          <h3 class="mt-1 text-lg font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+          <div class="text-eyebrow uppercase tracking-[0.3em] font-bold" :style="{ color: accent }">Enter the competition</div>
+          <h3 class="mt-1 text-lg font-bold text-foreground font-display">
             Submit your video
           </h3>
-          <p class="mt-0.5 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <p class="mt-0.5 text-xs text-muted-foreground font-sans">
             Paste a YouTube, Instagram, or TikTok link. Top-voted clip gets featured on WeDance{{ cityLabel }}<template v-if="prize"> and wins {{ prize }}</template>.
           </p>
         </div>
         <button
           type="button"
-          class="shrink-0 rounded-full p-1.5 transition-colors hover:bg-black/5"
-          style="color:var(--wd-amber-600);"
+          class="shrink-0 rounded-full p-1.5 transition-colors hover:bg-black/5 text-secondary"
           aria-label="Cancel"
           @click="collapse"
         >
@@ -179,8 +177,8 @@ function reset() {
           type="text"
           placeholder="Video title"
           maxlength="120"
-          class="w-full rounded-lg border px-3 py-2 text-sm outline-none"
-          style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); font-family:var(--wd-font-sans); color:var(--wd-brown-900);"
+          class="w-full rounded-lg border px-3 py-2 text-sm outline-none font-sans text-foreground"
+          style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent);"
           v-bind="fieldAttrs('title', 'video-title-error')"
         >
         <FieldError id="video-title-error" :message="errors.title" />
@@ -191,21 +189,20 @@ function reset() {
           v-model="videoUrl"
           type="url"
           placeholder="https://youtube.com/watch?v=…"
-          class="w-full rounded-lg border px-3 py-2 text-sm outline-none"
-          style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); font-family:var(--wd-font-sans); color:var(--wd-brown-900);"
+          class="w-full rounded-lg border px-3 py-2 text-sm outline-none font-sans text-foreground"
+          style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent);"
           v-bind="fieldAttrs('videoUrl', 'video-url-error')"
         >
         <FieldError v-if="errors.videoUrl" id="video-url-error" :message="errors.videoUrl" />
         <p
           v-else-if="videoUrl.trim() && !urlLooksValid"
-          class="mt-1 text-[11px]"
-          style="color:var(--wd-amber-700); font-family:var(--wd-font-sans);"
+          class="mt-1 text-meta text-wd-amber-700 font-sans"
         >
           We couldn't recognise this as a YouTube, Instagram, or TikTok link — double-check it.
         </p>
         <p
           v-else-if="urlLooksValid"
-          class="mt-1 text-[11px] capitalize"
+          class="mt-1 text-meta capitalize"
           :style="{ color: accent, fontFamily: 'var(--wd-font-sans)' }"
         >
           {{ provider }} link detected ✓
@@ -218,8 +215,8 @@ function reset() {
           type="text"
           placeholder="Dance style (optional) — e.g. Bachata"
           maxlength="60"
-          class="w-full rounded-lg border px-3 py-2 text-sm outline-none"
-          style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); font-family:var(--wd-font-sans); color:var(--wd-brown-900);"
+          class="w-full rounded-lg border px-3 py-2 text-sm outline-none font-sans text-foreground"
+          style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent);"
           v-bind="fieldAttrs('danceStyle', 'video-style-error')"
         >
         <FieldError id="video-style-error" :message="errors.danceStyle" />
@@ -230,14 +227,14 @@ function reset() {
           v-model="email"
           type="email"
           placeholder="Your email"
-          class="w-full rounded-lg border px-3 py-2 text-sm outline-none"
-          style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); font-family:var(--wd-font-sans); color:var(--wd-brown-900);"
+          class="w-full rounded-lg border px-3 py-2 text-sm outline-none font-sans text-foreground"
+          style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent);"
           v-bind="fieldAttrs('email', 'video-email-error')"
         >
         <FieldError id="video-email-error" :message="errors.email" />
       </div>
 
-      <p v-if="error" class="text-xs" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);">
+      <p v-if="error" class="text-xs text-primary font-sans">
         {{ error }}
       </p>
 

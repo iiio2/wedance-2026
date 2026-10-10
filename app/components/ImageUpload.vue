@@ -64,8 +64,8 @@ function remove() {
       >
       <button
         type="button"
-        class="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center"
-        style="background:var(--wd-red-600); color:white;"
+        class="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center bg-wd-red-600"
+        style="color:white;"
         @click="remove"
       >
         <X class="w-3.5 h-3.5" />
@@ -84,9 +84,9 @@ function remove() {
       @drop.prevent="onDrop"
       @click="($refs.fileInput as HTMLInputElement).click()"
     >
-      <Loader2 v-if="uploading" class="w-6 h-6 animate-spin" style="color:var(--wd-amber-600);" />
-      <Upload v-else class="w-6 h-6" style="color:var(--wd-amber-600);" />
-      <span class="text-sm" style="color:var(--wd-brown-700);">
+      <Loader2 v-if="uploading" class="w-6 h-6 animate-spin text-secondary" />
+      <Upload v-else class="w-6 h-6 text-secondary" />
+      <span class="text-sm text-muted-foreground">
         {{ uploading ? 'Uploading...' : 'Drop a photo here or click to choose' }}
       </span>
       <input
@@ -102,8 +102,7 @@ function remove() {
     <button
       v-if="model && !uploading"
       type="button"
-      class="text-xs font-bold"
-      style="color:var(--wd-red-600);"
+      class="text-xs font-bold text-primary"
       @click="($refs.fileInput2 as HTMLInputElement).click()"
     >
       Replace photo
@@ -116,6 +115,6 @@ function remove() {
       >
     </button>
 
-    <p v-if="errorMsg" class="text-xs font-bold" style="color:var(--wd-red-600);">{{ errorMsg }}</p>
+    <p v-if="errorMsg" class="text-xs font-bold text-primary">{{ errorMsg }}</p>
   </div>
 </template>

@@ -441,7 +441,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
             </div>
 
             <!-- Level legend -->
-            <div class="flex items-center justify-center gap-3 text-[10px] text-muted-foreground">
+            <div class="flex items-center justify-center gap-3 text-eyebrow text-muted-foreground">
               <span>🌶️ Beginner</span>
               <span>🌶️🌶️ Intermediate</span>
               <span>🌶️🌶️🌶️ Advanced</span>
@@ -459,7 +459,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
                   <button
                     v-for="level in (['Beginner', 'Intermediate', 'Advanced'] as const)"
                     :key="level"
-                    class="px-2 py-1 rounded-full text-[10px] border transition-all whitespace-nowrap"
+                    class="px-2 py-1 rounded-full text-eyebrow border transition-all whitespace-nowrap"
                     :class="selectedStyles.get(style) === level ? 'border-sky-500 bg-sky-500 text-white' : 'border-muted-foreground/20 hover:border-sky-300'"
                     @click.stop="toggleStyleLevel(style, level)"
                   >
@@ -495,7 +495,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
               <div>
                 <div class="flex items-center gap-1.5">
                   <h4 class="text-base font-semibold">{{ profileName || 'Your name' }}</h4>
-                  <Badge v-if="selectedRole" class="bg-white/20 text-white border-white/30 text-[10px] px-1.5 py-0">
+                  <Badge v-if="selectedRole" class="bg-white/20 text-white border-white/30 text-eyebrow px-1.5 py-0">
                     {{ selectedRole === 'lead' ? 'Lead' : 'Follow' }}
                   </Badge>
                 </div>
@@ -524,10 +524,10 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
               <div>
                 <div class="flex items-center gap-1.5">
                   <h4 class="text-base font-semibold">{{ currentDancer.name }}</h4>
-                  <Badge v-if="currentDancer.serviceType === 'taxi-dancer'" class="bg-amber-500/90 text-white border-amber-400 text-[10px] px-1.5 py-0">
+                  <Badge v-if="currentDancer.serviceType === 'taxi-dancer'" class="bg-amber-500/90 text-white border-amber-400 text-eyebrow px-1.5 py-0">
                     Bookable · &euro;{{ currentDancer.hourlyRate }}/h
                   </Badge>
-                  <Badge v-else-if="currentDancer.serviceType === 'videographer'" class="bg-violet-500/90 text-white border-violet-400 text-[10px] px-1.5 py-0">
+                  <Badge v-else-if="currentDancer.serviceType === 'videographer'" class="bg-violet-500/90 text-white border-violet-400 text-eyebrow px-1.5 py-0">
                     📹 Videographer · &euro;{{ currentDancer.hourlyRate }}/h
                   </Badge>
                 </div>
@@ -542,25 +542,25 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
                   {{ style.name }} {{ chilis(style.level) }}
                   <span v-if="endorsementCount(currentDancer, style.name) > 0" class="ml-1 inline-flex items-center gap-0.5">
                     <Heart class="w-2.5 h-2.5 fill-pink-400 text-pink-400" />
-                    <span class="text-[10px]">{{ endorsementCount(currentDancer, style.name) }}</span>
+                    <span class="text-eyebrow">{{ endorsementCount(currentDancer, style.name) }}</span>
                   </span>
                 </Badge>
               </div>
               <div v-if="mutualWorkshops(currentDancer).length > 0">
-                <p class="text-[10px] font-medium text-white/70 mb-1">
+                <p class="text-eyebrow font-medium text-white/70 mb-1">
                   {{ mutualWorkshops(currentDancer).length }} workshops in common:
                 </p>
                 <div class="flex flex-wrap gap-1">
                   <Badge
                     v-for="w in mutualWorkshops(currentDancer)"
                     :key="w.id"
-                    class="bg-white/15 text-white border-white/20 text-[10px] px-1.5 py-0.5"
+                    class="bg-white/15 text-white border-white/20 text-eyebrow px-1.5 py-0.5"
                   >
                     {{ w.day.slice(0, 3) }} {{ w.time }} · {{ w.title }}
                   </Badge>
                 </div>
               </div>
-              <p v-if="currentDancer.mutualFriends" class="text-[10px] text-white/70">
+              <p v-if="currentDancer.mutualFriends" class="text-eyebrow text-white/70">
                 {{ currentDancer.mutualFriends }} mutual {{ currentDancer.mutualFriends === 1 ? 'friend' : 'friends' }}
               </p>
             </div>
@@ -584,7 +584,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
                 <Badge
                   v-if="dinnerSpotsLeft > 0"
                   :class="[
-                    'text-[10px] px-1.5 py-0 font-semibold',
+                    'text-eyebrow px-1.5 py-0 font-semibold',
                     dinnerSpotsLeft <= 3
                       ? 'bg-orange-100 text-orange-700 border-orange-200'
                       : 'bg-green-100 text-green-700 border-green-200',
@@ -593,7 +593,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
                 >
                   {{ dinnerSpotsLeft }} spots left
                 </Badge>
-                <Badge v-else variant="secondary" class="text-[10px] px-1.5 py-0">Full</Badge>
+                <Badge v-else variant="secondary" class="text-eyebrow px-1.5 py-0">Full</Badge>
               </div>
               <div class="w-full bg-orange-200/50 rounded-full h-2">
                 <div class="bg-orange-400 rounded-full h-2 transition-all" :style="{ width: `${(currentDinnerCard.joined / currentDinnerCard.maxSize) * 100}%` }" />
@@ -716,7 +716,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
         >
           <h4 class="text-sm font-semibold flex items-center gap-2">
             My Dance List
-            <Badge variant="secondary" class="text-[10px] px-1.5 py-0">
+            <Badge variant="secondary" class="text-eyebrow px-1.5 py-0">
               {{ danceList.filter((e) => e.danced).length }}/{{ danceList.length }}
             </Badge>
           </h4>
@@ -749,17 +749,17 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
                   >
                     {{ entry.dancer.name }}
                   </span>
-                  <Badge variant="secondary" class="text-[10px] px-1.5 py-0">
+                  <Badge variant="secondary" class="text-eyebrow px-1.5 py-0">
                     {{ entry.dancer.role === 'lead' ? 'Lead' : 'Follow' }}
                   </Badge>
-                  <Badge v-if="entry.dancer.serviceType === 'taxi-dancer'" class="bg-amber-100 text-amber-700 border-amber-200 text-[10px] px-1.5 py-0">
+                  <Badge v-if="entry.dancer.serviceType === 'taxi-dancer'" class="bg-amber-100 text-amber-700 border-amber-200 text-eyebrow px-1.5 py-0">
                     Bookable
                   </Badge>
-                  <Badge v-else-if="entry.dancer.serviceType === 'videographer'" class="bg-violet-100 text-violet-700 border-violet-200 text-[10px] px-1.5 py-0">
+                  <Badge v-else-if="entry.dancer.serviceType === 'videographer'" class="bg-violet-100 text-violet-700 border-violet-200 text-eyebrow px-1.5 py-0">
                     📹 Videographer
                   </Badge>
                 </div>
-                <p class="text-[10px] text-muted-foreground">
+                <p class="text-eyebrow text-muted-foreground">
                   {{ entry.dancer.styles.map(s => `${s.name} ${chilis(s.level)}`).join(', ') }}
                 </p>
               </div>
@@ -798,10 +798,10 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
                     {{ style.name }}
                   </button>
                 </div>
-                <p v-if="!isEndorsementMutual(entry.dancer.id)" class="text-[10px] text-muted-foreground mt-1">
+                <p v-if="!isEndorsementMutual(entry.dancer.id)" class="text-eyebrow text-muted-foreground mt-1">
                   Endorsement will be public once {{ entry.dancer.name }} also confirms the dance.
                 </p>
-                <p v-else class="text-[10px] text-green-600 mt-1">
+                <p v-else class="text-eyebrow text-green-600 mt-1">
                   Both confirmed! Endorsements are public.
                 </p>
               </div>
@@ -839,11 +839,11 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
                 <!-- Feedback revealed: both sent -->
                 <div v-if="isFeedbackRevealed(entry.dancer.id)" class="space-y-2">
                   <div class="p-2 rounded bg-muted/50 border">
-                    <p class="text-[10px] font-medium text-muted-foreground mb-0.5">You wrote:</p>
+                    <p class="text-eyebrow font-medium text-muted-foreground mb-0.5">You wrote:</p>
                     <p class="text-xs italic">"{{ myFeedbackSent.get(entry.dancer.id) }}"</p>
                   </div>
                   <div class="p-2 rounded bg-amber-50 border border-amber-200">
-                    <p class="text-[10px] font-medium text-amber-800 mb-0.5">{{ entry.dancer.name }} wrote:</p>
+                    <p class="text-eyebrow font-medium text-amber-800 mb-0.5">{{ entry.dancer.name }} wrote:</p>
                     <p class="text-xs text-amber-700">
                       {{ '★'.repeat(theySharedFeedback[entry.dancer.id].rating) }}{{ '☆'.repeat(5 - theySharedFeedback[entry.dancer.id].rating) }}
                     </p>
@@ -854,10 +854,10 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
                 <!-- Feedback sent, waiting for theirs -->
                 <div v-else-if="isFeedbackSent(entry.dancer.id)" class="space-y-1.5">
                   <div class="p-2 rounded bg-muted/50 border">
-                    <p class="text-[10px] font-medium text-muted-foreground mb-0.5">You wrote:</p>
+                    <p class="text-eyebrow font-medium text-muted-foreground mb-0.5">You wrote:</p>
                     <p class="text-xs italic">"{{ myFeedbackSent.get(entry.dancer.id) }}"</p>
                   </div>
-                  <p class="text-[10px] text-muted-foreground">
+                  <p class="text-eyebrow text-muted-foreground">
                     Feedback sent! Will be revealed once {{ entry.dancer.name }} also sends theirs.
                   </p>
                 </div>
@@ -885,7 +885,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
 
               <!-- Close -->
               <button
-                class="text-[11px] text-muted-foreground hover:text-foreground"
+                class="text-meta text-muted-foreground hover:text-foreground"
                 @click="expandedDancerId = null"
               >
                 Done
@@ -899,10 +899,10 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
               @click="expandedDancerId = entry.dancer.id"
             >
               <Heart class="w-3 h-3 fill-pink-500 text-pink-500 shrink-0" />
-              <span class="text-[10px] text-muted-foreground">
+              <span class="text-eyebrow text-muted-foreground">
                 {{ entry.endorsements.map(e => e.style).join(', ') }}
               </span>
-              <span v-if="!isEndorsementMutual(entry.dancer.id)" class="text-[10px] text-amber-500 ml-auto">
+              <span v-if="!isEndorsementMutual(entry.dancer.id)" class="text-eyebrow text-amber-500 ml-auto">
                 pending
               </span>
             </div>
