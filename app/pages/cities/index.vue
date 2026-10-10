@@ -61,17 +61,17 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
     <!-- HERO -->
     <section class="relative">
       <div class="max-w-4xl mx-auto px-4 pt-12 pb-8 text-center">
-        <div class="text-sm tracking-widest uppercase mb-3" style="color:var(--wd-amber-600);">Your local floor</div>
-        <h1 class="text-5xl sm:text-6xl leading-[0.98]" style="color:var(--wd-brown-900);">
-          Every scene <em class="italic" style="color:var(--wd-red-600);">every city.</em>
+        <div class="text-sm tracking-widest uppercase mb-3 text-secondary">Your local floor</div>
+        <h1 class="text-5xl sm:text-6xl leading-[0.98] text-foreground">
+          Every scene <em class="italic text-primary">every city.</em>
         </h1>
-        <p class="mt-5 text-base sm:text-lg leading-relaxed max-w-xl mx-auto" style="color:var(--wd-brown-700);">
+        <p class="mt-5 text-base sm:text-lg leading-relaxed max-w-xl mx-auto text-muted-foreground">
           The venues, artists and organizers behind every dance scene — find your city's community.
         </p>
 
@@ -88,13 +88,13 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
 
         <div class="mt-8 max-w-lg mx-auto">
           <div class="relative">
-            <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style="color:var(--wd-amber-600);" />
+            <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" />
             <input
               v-model="searchQuery"
               type="text"
               placeholder="Search by city or country"
-              class="w-full h-12 rounded-full pl-11 pr-4 text-sm outline-none transition-all"
-              style="background:white; border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent); color:var(--wd-brown-900); font-family:var(--wd-font-sans); box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent), 0 6px 16px rgba(59, 31, 18, 0.04);"
+              class="w-full h-12 rounded-full pl-11 pr-4 text-sm outline-none transition-all bg-white border border-input text-foreground font-sans"
+              style="box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent), 0 6px 16px rgba(59, 31, 18, 0.04);"
             >
           </div>
         </div>
@@ -113,27 +113,26 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
     <!-- City grid -->
     <section class="max-w-4xl mx-auto px-4 pb-12">
       <div class="flex items-baseline justify-between mb-6">
-        <h2 class="text-2xl leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+        <h2 class="text-2xl leading-tight font-display text-foreground">
           {{ searchQuery ? 'Results' : 'Biggest communities' }}
         </h2>
-        <span v-if="!loading" class="text-xs" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);font-style:italic; font-size:18px;">
+        <span v-if="!loading" class="text-xs text-secondary font-display italic" style="font-size:18px;">
           <template v-if="searchQuery">— {{ displayedCities.length }} cit{{ displayedCities.length === 1 ? 'y' : 'ies' }}</template>
           <template v-else>— top {{ displayedCities.length }} of {{ cities.length }}</template>
         </span>
       </div>
 
-      <div v-if="loading" class="text-center py-14" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">
+      <div v-if="loading" class="text-center py-14 text-secondary font-sans">
         Loading cities…
       </div>
 
       <div
         v-else-if="!filteredCities.length"
-        class="text-center py-14 rounded-2xl border-2 border-dashed"
-        style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);"
+        class="text-center py-14 rounded-2xl border-2 border-dashed border-input bg-white/50"
       >
-        <Search class="w-8 h-8 mx-auto mb-3" style="color:var(--wd-amber-600);" />
-        <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">Nothing matches "{{ searchQuery }}"</p>
-        <button type="button" class="text-xs font-bold mt-2 underline" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);" @click="searchQuery = ''">Clear search</button>
+        <Search class="w-8 h-8 mx-auto mb-3 text-secondary" />
+        <p class="text-sm text-muted-foreground font-sans">Nothing matches "{{ searchQuery }}"</p>
+        <button type="button" class="text-xs font-bold mt-2 underline text-primary font-sans" @click="searchQuery = ''">Clear search</button>
       </div>
 
       <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -154,13 +153,13 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
             >
             <div class="absolute inset-0" style="background:linear-gradient(180deg, rgba(59,31,18,0) 35%, rgba(59,31,18,0.7) 100%);" />
             <div class="absolute bottom-2 left-3 right-3">
-              <h3 class="font-bold text-xl leading-tight" style="color:#fff; font-family:var(--wd-font-display); text-shadow:0 1px 12px rgba(0,0,0,0.4);">{{ c.city }}</h3>
-              <div v-if="c.country" class="text-[11px] font-medium" style="color:rgba(255,255,255,0.85); font-family:var(--wd-font-sans); text-shadow:0 1px 8px rgba(0,0,0,0.5);">{{ c.country }}</div>
+              <h3 class="font-bold text-xl leading-tight text-white font-display" style="text-shadow:0 1px 12px rgba(0,0,0,0.4);">{{ c.city }}</h3>
+              <div v-if="c.country" class="text-meta font-medium text-white/85 font-sans" style="text-shadow:0 1px 8px rgba(0,0,0,0.5);">{{ c.country }}</div>
             </div>
             <span
               v-if="c.credit"
-              class="absolute top-1 right-1.5 text-[9px] px-1 py-px rounded"
-              style="color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.25); font-family:var(--wd-font-sans);"
+              class="absolute top-1 right-1.5 text-tag px-1 py-px rounded text-white/70 font-sans"
+              style="background:rgba(0,0,0,0.25);"
               :title="`${c.credit}${c.license ? ' · ' + c.license : ''} · Wikimedia Commons`"
             >📷</span>
           </div>
@@ -168,20 +167,20 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
           <div class="p-5">
             <div class="flex items-start justify-between gap-3">
               <div v-if="!c.image">
-                <h3 class="font-bold text-xl leading-tight" style="color:var(--wd-brown-900);">{{ c.city }}</h3>
-                <div v-if="c.country" class="text-[11px] font-medium mt-0.5" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">{{ c.country }}</div>
+                <h3 class="font-bold text-xl leading-tight text-foreground">{{ c.city }}</h3>
+                <div v-if="c.country" class="text-meta font-medium mt-0.5 text-secondary font-sans">{{ c.country }}</div>
               </div>
               <span v-else class="text-xs font-bold uppercase tracking-wider" :style="{ color: accentFor(c.citySlug) }">Explore</span>
               <ArrowRight class="w-4 h-4 mt-0.5 shrink-0 transition-transform group-hover:translate-x-1" :style="{ color: accentFor(c.citySlug) }" />
             </div>
-            <div class="mt-3 flex items-center gap-1.5 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-              <Users class="w-3 h-3" style="color:var(--wd-amber-600);" />
+            <div class="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground font-sans">
+              <Users class="w-3 h-3 text-secondary" />
               <span>{{ c.total }} in the community</span>
             </div>
             <div class="flex flex-wrap gap-1.5 mt-3">
-              <span v-if="c.venues" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider" :style="{ background: accentFor(c.citySlug) + '18', color: accentFor(c.citySlug) }">{{ c.venues }} venue{{ c.venues === 1 ? '' : 's' }}</span>
-              <span v-if="c.artists" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider" :style="{ background: accentFor(c.citySlug) + '18', color: accentFor(c.citySlug) }">{{ c.artists }} artist{{ c.artists === 1 ? '' : 's' }}</span>
-              <span v-if="c.organizers" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider" :style="{ background: accentFor(c.citySlug) + '18', color: accentFor(c.citySlug) }">{{ c.organizers }} organizer{{ c.organizers === 1 ? '' : 's' }}</span>
+              <span v-if="c.venues" class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider" :style="{ background: accentFor(c.citySlug) + '18', color: accentFor(c.citySlug) }">{{ c.venues }} venue{{ c.venues === 1 ? '' : 's' }}</span>
+              <span v-if="c.artists" class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider" :style="{ background: accentFor(c.citySlug) + '18', color: accentFor(c.citySlug) }">{{ c.artists }} artist{{ c.artists === 1 ? '' : 's' }}</span>
+              <span v-if="c.organizers" class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider" :style="{ background: accentFor(c.citySlug) + '18', color: accentFor(c.citySlug) }">{{ c.organizers }} organizer{{ c.organizers === 1 ? '' : 's' }}</span>
             </div>
           </div>
         </NuxtLink>
@@ -190,13 +189,13 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
 
     <!-- Organizer CTA -->
     <section class="max-w-4xl mx-auto px-4 py-10">
-      <div class="rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background:white; border:1px solid color-mix(in srgb, var(--wd-cyan-600) 33.3%, transparent); box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-cyan-600) 13.3%, transparent), 0 8px 22px rgba(59,31,18,0.05);">
+      <div class="rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-wd-cyan-600/[33.3%]" style="box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-cyan-600) 13.3%, transparent), 0 8px 22px rgba(59,31,18,0.05);">
         <div>
-          <div class="text-[10px] uppercase tracking-[0.3em] font-bold mb-1" style="color:var(--wd-cyan-600);">For organizers</div>
-          <h3 class="text-lg font-bold" style="color:var(--wd-brown-900);">Run a class or a weekly social?</h3>
-          <p class="text-sm mt-1" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">List your event for free. Local dancers find you.</p>
+          <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mb-1 text-info">For organizers</div>
+          <h3 class="text-lg font-bold text-foreground">Run a class or a weekly social?</h3>
+          <p class="text-sm mt-1 text-muted-foreground font-sans">List your event for free. Local dancers find you.</p>
         </div>
-        <button type="button" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider shrink-0" style="background:var(--wd-cyan-600); box-shadow: 0 3px 0 -1px var(--wd-cyan-700);" @click="router.push('/organizers/create')">
+        <button type="button" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider shrink-0 bg-info" style="box-shadow: 0 3px 0 -1px var(--wd-cyan-700);" @click="router.push('/organizers/create')">
           Create listing <ArrowRight class="w-4 h-4" />
         </button>
       </div>

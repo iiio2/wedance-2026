@@ -103,7 +103,7 @@ onMounted(loadPair)
   <div v-if="!(compact && collapsed)">
     <!-- Compact header: one-line label. -->
     <div v-if="compact" class="mb-3">
-      <p class="text-sm sm:text-base" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+      <p class="text-sm sm:text-base font-display text-foreground">
         Which is better? <em class="italic" :style="{ color: accent }">Vote the daily matchup.</em>
       </p>
     </div>
@@ -111,8 +111,8 @@ onMounted(loadPair)
     <!-- Full header -->
     <div v-else class="mb-4 flex items-baseline justify-between gap-3">
       <div>
-        <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Video of the day</div>
-        <h3 class="mt-1 text-xl leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+        <div class="text-xs uppercase tracking-[0.3em] text-secondary">Video of the day</div>
+        <h3 class="mt-1 text-xl leading-tight font-display text-foreground">
           Which one <em class="italic" :style="{ color: accent }">wins?</em>
         </h3>
       </div>
@@ -127,7 +127,7 @@ onMounted(loadPair)
 
     <!-- Loading -->
     <div v-if="loading" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <div v-for="i in 2" :key="i" class="aspect-video rounded-xl animate-pulse" style="background:color-mix(in srgb, var(--wd-brown-900) 5.1%, transparent);" />
+      <div v-for="i in 2" :key="i" class="aspect-video rounded-xl animate-pulse bg-wd-brown-900/[5.1%]" />
     </div>
 
     <!-- Voting pair -->
@@ -139,7 +139,7 @@ onMounted(loadPair)
         :style="{ borderColor: accent + '44', boxShadow: '0 1px 0 ' + accent + '18, 0 6px 16px rgba(59,31,18,0.05)' }"
       >
         <!-- Embed if opened, else thumbnail with play -->
-        <div class="relative aspect-video" style="background:var(--wd-brown-900);">
+        <div class="relative aspect-video bg-wd-brown-900">
           <iframe
             v-if="activeEmbed === v.id && embedFor(v).embedUrl"
             :src="embedFor(v).embedUrl!"
@@ -171,10 +171,10 @@ onMounted(loadPair)
         </div>
 
         <div class="p-3">
-          <p class="truncate text-sm font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+          <p class="truncate text-sm font-bold text-foreground font-display">
             {{ v.title }}
           </p>
-          <p v-if="v.danceStyle" class="mt-0.5 text-[11px]" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <p v-if="v.danceStyle" class="mt-0.5 text-meta text-muted-foreground font-sans">
             {{ v.danceStyle }}
           </p>
           <button
@@ -193,30 +193,29 @@ onMounted(loadPair)
     <!-- End states -->
     <div
       v-else
-      class="rounded-xl border-2 border-dashed p-6 text-center"
-      style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);"
+      class="rounded-xl border-2 border-dashed p-6 text-center border-input bg-white/50"
     >
       <template v-if="notEnough">
-        <p class="text-sm font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+        <p class="text-sm font-bold text-foreground font-display">
           Not enough videos to vote yet
         </p>
-        <p class="mt-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+        <p class="mt-1 text-xs text-muted-foreground font-sans">
           Submit yours below and get the competition started.
         </p>
       </template>
       <template v-else-if="capped">
-        <p class="text-sm font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+        <p class="text-sm font-bold text-foreground font-display">
           That's a lot of voting today — thank you!
         </p>
-        <p class="mt-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+        <p class="mt-1 text-xs text-muted-foreground font-sans">
           Come back tomorrow for more.
         </p>
       </template>
       <template v-else>
-        <p class="text-sm font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+        <p class="text-sm font-bold text-foreground font-display">
           You've voted on every pairing — nice.
         </p>
-        <p class="mt-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+        <p class="mt-1 text-xs text-muted-foreground font-sans">
           {{ votesCast }} vote{{ votesCast === 1 ? '' : 's' }} counted. Check the leaderboard to see who's winning.
         </p>
       </template>

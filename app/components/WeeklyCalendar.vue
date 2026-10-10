@@ -116,10 +116,9 @@ function eventHref(e: CityEvent): string | undefined {
     <!-- Empty (nothing across the whole week matches filters) -->
     <div
       v-if="!daysWithEvents.length"
-      class="text-center py-14 rounded-2xl border-2 border-dashed"
-      style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);"
+      class="text-center py-14 rounded-2xl border-2 border-dashed border-input bg-white/50"
     >
-      <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <p class="text-sm text-muted-foreground font-sans">
         No events match your filters.
       </p>
     </div>
@@ -128,20 +127,17 @@ function eventHref(e: CityEvent): string | undefined {
     <div v-for="day in daysWithEvents" :key="day" class="space-y-3">
       <!-- Sticky day header -->
       <div
-        class="sticky top-0 z-10 pt-2 pb-3 flex items-baseline gap-3 backdrop-blur-sm"
-        style="background:rgba(251, 245, 234, 0.95); border-bottom:1px solid color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);"
+        class="sticky top-0 z-10 pt-2 pb-3 flex items-baseline gap-3 backdrop-blur-sm border-b border-border bg-background/95"
       >
         <h3
-          class="text-xl font-black leading-none"
-          style="font-family:var(--wd-font-display);"
+          class="text-xl font-black leading-none font-display"
           :style="{ color: day === today ? WD.red600 : WD.brown900 }"
         >
           {{ dayLabels[day] }}
         </h3>
         <span
           v-if="day === today"
-          class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"
-          style="background:color-mix(in srgb, var(--wd-red-600) 9.4%, transparent); color:var(--wd-red-600); font-family:var(--wd-font-sans);"
+          class="text-eyebrow font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-primary/[9.4%] text-primary font-sans"
         >
           Tonight
         </span>
@@ -175,24 +171,24 @@ function eventHref(e: CityEvent): string | undefined {
           <div class="flex-1 min-w-0">
             <div class="flex items-center flex-wrap gap-2">
               <span
-                class="inline-flex items-center text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
+                class="inline-flex items-center text-tag font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
                 :style="{ background: typeStyle[e.type as EventType]?.color + '18', color: typeStyle[e.type as EventType]?.color }"
               >
                 {{ typeStyle[e.type as EventType]?.label ?? e.type }}
               </span>
               <span
-                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
                 :style="{ background: styleAccent(e.style) + '18', color: styleAccent(e.style) }"
               >
                 {{ e.style }}
               </span>
             </div>
-            <h4 class="text-sm sm:text-base font-bold leading-tight mt-1 break-words group-hover:underline" style="color:var(--wd-brown-900);">
+            <h4 class="text-sm sm:text-base font-bold leading-tight mt-1 break-words group-hover:underline text-foreground">
               {{ e.name }}
             </h4>
-            <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-muted-foreground font-sans">
               <span class="inline-flex items-center gap-1">
-                <MapPin class="w-3 h-3" style="color:var(--wd-amber-600);" />
+                <MapPin class="w-3 h-3 text-secondary" />
                 {{ e.venue }}
               </span>
               <button
@@ -218,8 +214,7 @@ function eventHref(e: CityEvent): string | undefined {
               </span>
               <span
                 v-else-if="e.level"
-                class="text-[10px] font-bold uppercase tracking-wider"
-                style="color:var(--wd-amber-600);"
+                class="text-eyebrow font-bold uppercase tracking-wider text-secondary"
               >
                 {{ e.level }}
               </span>

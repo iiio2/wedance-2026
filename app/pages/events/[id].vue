@@ -124,69 +124,69 @@ useHead(() => ({
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
     <section v-if="pending" class="max-w-2xl mx-auto px-4 py-24 text-center">
-      <div class="inline-block w-8 h-8 rounded-full border-2 animate-spin" style="border-color:color-mix(in srgb, var(--wd-red-600) 20%, transparent); border-top-color:var(--wd-red-600);" />
+      <div class="inline-block w-8 h-8 rounded-full border-2 animate-spin border-primary/20" style="border-top-color:var(--wd-red-600);" />
     </section>
 
     <section v-else-if="failed || !ev" class="max-w-xl mx-auto px-4 py-20 text-center">
-      <h1 class="text-4xl" style="color:var(--wd-brown-900);">Event not found</h1>
-      <NuxtLink to="/cities" class="inline-flex items-center gap-1 text-xs font-bold mt-6" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);"><ArrowLeft class="w-3 h-3" /> Browse cities</NuxtLink>
+      <h1 class="text-4xl text-foreground">Event not found</h1>
+      <NuxtLink to="/cities" class="inline-flex items-center gap-1 text-xs font-bold mt-6 text-primary font-sans"><ArrowLeft class="w-3 h-3" /> Browse cities</NuxtLink>
     </section>
 
     <template v-else>
       <!-- Part-of-festival banner (workshops / festival schedule items) -->
-      <NuxtLink v-if="parentFestival" :to="`/festivals/${parentFestival.slug}`" class="block border-b hover:brightness-95 transition-all" style="background:color-mix(in srgb, var(--wd-red-600) 6.3%, transparent); border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
-        <div class="max-w-3xl mx-auto px-4 py-2.5 flex items-center gap-2 text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-          <span class="text-[10px] uppercase tracking-widest font-black shrink-0" style="color:var(--wd-red-600);">Festival</span>
-          <span class="truncate">Part of <b style="color:var(--wd-brown-900);">{{ parentFestival.name }}</b></span>
-          <span class="ml-auto font-bold whitespace-nowrap shrink-0" style="color:var(--wd-red-600);">View festival →</span>
+      <NuxtLink v-if="parentFestival" :to="`/festivals/${parentFestival.slug}`" class="block border-b hover:brightness-95 transition-all bg-primary/[6.3%] border-border">
+        <div class="max-w-3xl mx-auto px-4 py-2.5 flex items-center gap-2 text-sm text-muted-foreground font-sans">
+          <span class="text-eyebrow uppercase tracking-widest font-black shrink-0 text-primary">Festival</span>
+          <span class="truncate">Part of <b class="text-foreground">{{ parentFestival.name }}</b></span>
+          <span class="ml-auto font-bold whitespace-nowrap shrink-0 text-primary">View festival →</span>
         </div>
       </NuxtLink>
 
       <!-- Same hero as festivals -->
       <FestivalHero :festival="asFestival" review-target-type="event" :picked="picked" :date-label="ev.when" @pick="onPick" />
 
-      <div v-if="ev.archived" class="max-w-3xl mx-auto px-4 pt-4" style="font-family:var(--wd-font-sans);">
-        <p class="rounded-xl px-4 py-3 text-sm" style="background:color-mix(in srgb, var(--wd-amber-500) 12.2%, transparent); color:var(--wd-amber-800);">This event is no longer listed by its organiser — it may have been cancelled or moved.</p>
+      <div v-if="ev.archived" class="max-w-3xl mx-auto px-4 pt-4 font-sans">
+        <p class="rounded-xl px-4 py-3 text-sm bg-warning/[12.2%] text-wd-amber-800">This event is no longer listed by its organiser — it may have been cancelled or moved.</p>
       </div>
 
       <!-- Section anchor nav (festival-style) -->
-      <nav class="sticky top-0 z-20 border-b" style="background:rgba(251, 245, 234, 0.95); backdrop-filter: blur(8px); border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
+      <nav class="sticky top-0 z-20 border-b border-border bg-background/95" style="backdrop-filter: blur(8px);">
         <div class="max-w-3xl mx-auto flex items-center gap-1 px-4 overflow-x-auto">
-          <button v-for="s in sections" :key="s.id" type="button" class="px-3 py-3 text-sm italic whitespace-nowrap" style="color:var(--wd-brown-700); font-family:var(--wd-font-display);" @click="scrollTo(s.id)">{{ s.label }}</button>
+          <button v-for="s in sections" :key="s.id" type="button" class="px-3 py-3 text-sm italic whitespace-nowrap text-muted-foreground font-display" @click="scrollTo(s.id)">{{ s.label }}</button>
         </div>
       </nav>
 
-      <div class="max-w-3xl mx-auto px-4 space-y-14 pt-8 pb-20" style="font-family:var(--wd-font-sans);">
+      <div class="max-w-3xl mx-auto px-4 space-y-14 pt-8 pb-20 font-sans">
         <!-- About -->
         <section v-if="ev.message || ev.cover || ev.link || ev.price" id="about" class="scroll-mt-16">
-          <h2 class="text-2xl font-black leading-tight mb-3" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">About</h2>
-          <img v-if="ev.cover" :src="ev.cover" :alt="ev.title" class="w-full max-h-[28rem] object-contain rounded-2xl mb-4" style="background:color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent);" loading="lazy">
+          <h2 class="text-2xl font-black leading-tight mb-3 font-display text-foreground">About</h2>
+          <img v-if="ev.cover" :src="ev.cover" :alt="ev.title" class="w-full max-h-[28rem] object-contain rounded-2xl mb-4 bg-wd-brown-900/[3.9%]" loading="lazy">
           <div class="flex flex-wrap items-center gap-2 mb-4">
-            <span v-if="ev.eventType" class="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded" style="background:color-mix(in srgb, var(--wd-amber-600) 9.4%, transparent); color:var(--wd-amber-600);">{{ ev.eventType }}</span>
-            <span v-for="s in (ev.styles || [])" :key="s" class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full" :style="{ background: accent + '14', color: accent }">{{ s }}</span>
+            <span v-if="ev.eventType" class="text-eyebrow font-black uppercase tracking-widest px-2 py-1 rounded bg-secondary/[9.4%] text-secondary">{{ ev.eventType }}</span>
+            <span v-for="s in (ev.styles || [])" :key="s" class="text-eyebrow font-bold uppercase tracking-wider px-2 py-1 rounded-full" :style="{ background: accent + '14', color: accent }">{{ s }}</span>
           </div>
-          <ul class="space-y-1.5 text-sm mb-4" style="color:var(--wd-brown-900);">
-            <li v-if="ev.price" class="flex items-start gap-2"><Euro class="w-4 h-4 mt-0.5 shrink-0" style="color:var(--wd-amber-600);" /> {{ ev.price }}</li>
+          <ul class="space-y-1.5 text-sm mb-4 text-foreground">
+            <li v-if="ev.price" class="flex items-start gap-2"><Euro class="w-4 h-4 mt-0.5 shrink-0 text-secondary" /> {{ ev.price }}</li>
             <li v-if="ev.organizerName" class="flex items-start gap-2">
-              <User class="w-4 h-4 mt-0.5 shrink-0" style="color:var(--wd-amber-600);" />
+              <User class="w-4 h-4 mt-0.5 shrink-0 text-secondary" />
               <NuxtLink v-if="ev.organizerHandle" :to="`/@${ev.organizerHandle}`" class="font-bold hover:underline">{{ ev.organizerName }}</NuxtLink>
               <span v-else class="font-bold">{{ ev.organizerName }}</span>
             </li>
             <li v-if="ev.link" class="flex items-start gap-2">
-              <Globe class="w-4 h-4 mt-0.5 shrink-0" style="color:var(--wd-amber-600);" />
+              <Globe class="w-4 h-4 mt-0.5 shrink-0 text-secondary" />
               <a :href="ev.link" target="_blank" rel="noopener noreferrer" class="font-bold hover:underline break-all" :style="{ color: accent }">Event website</a>
             </li>
           </ul>
-          <p v-if="ev.message" class="text-sm leading-relaxed whitespace-pre-line break-words" style="color:var(--wd-brown-700);">{{ ev.message }}</p>
+          <p v-if="ev.message" class="text-sm leading-relaxed whitespace-pre-line break-words text-muted-foreground">{{ ev.message }}</p>
         </section>
 
         <!-- Lineup -->
         <section v-if="ev.artists?.length" id="lineup" class="scroll-mt-16">
-          <h2 class="text-2xl font-black leading-tight mb-3" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Lineup</h2>
+          <h2 class="text-2xl font-black leading-tight mb-3 font-display text-foreground">Lineup</h2>
           <div class="flex flex-wrap gap-2">
             <template v-for="(a, i) in ev.artists" :key="i">
               <NuxtLink v-if="String(a).startsWith('@')" :to="`/${a}`" class="rounded-full px-4 py-2 text-sm font-bold" :style="{ background: accent + '14', color: accent }">{{ a }}</NuxtLink>
@@ -197,16 +197,16 @@ useHead(() => ({
 
         <!-- Venue (Pick lives in the hero now) -->
         <section id="venue" class="scroll-mt-16">
-          <h2 class="text-2xl font-black leading-tight mb-2" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Venue</h2>
-          <NuxtLink v-if="ev.venueHandle" :to="`/@${ev.venueHandle}`" class="inline-flex items-center gap-2 text-sm font-bold hover:underline" style="color:var(--wd-brown-900);">
-            <MapPin class="w-4 h-4" style="color:var(--wd-amber-600);" /> <span>{{ ev.venueName }}<template v-if="ev.venueCity">, {{ ev.venueCity }}</template></span>
+          <h2 class="text-2xl font-black leading-tight mb-2 font-display text-foreground">Venue</h2>
+          <NuxtLink v-if="ev.venueHandle" :to="`/@${ev.venueHandle}`" class="inline-flex items-center gap-2 text-sm font-bold hover:underline text-foreground">
+            <MapPin class="w-4 h-4 text-secondary" /> <span>{{ ev.venueName }}<template v-if="ev.venueCity">, {{ ev.venueCity }}</template></span>
           </NuxtLink>
-          <span v-else-if="ev.venueName" class="inline-flex items-center gap-2 text-sm font-bold" style="color:var(--wd-brown-900);">
-            <MapPin class="w-4 h-4" style="color:var(--wd-amber-600);" /> <span>{{ ev.venueName }}<template v-if="ev.venueCity">, {{ ev.venueCity }}</template></span>
+          <span v-else-if="ev.venueName" class="inline-flex items-center gap-2 text-sm font-bold text-foreground">
+            <MapPin class="w-4 h-4 text-secondary" /> <span>{{ ev.venueName }}<template v-if="ev.venueCity">, {{ ev.venueCity }}</template></span>
           </span>
-          <p v-if="ev.venueAddress" class="mt-1 text-xs" style="color:var(--wd-amber-600);">{{ ev.venueAddress }}</p>
+          <p v-if="ev.venueAddress" class="mt-1 text-xs text-secondary">{{ ev.venueAddress }}</p>
           <a v-if="ev.mapUrl" :href="ev.mapUrl" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-xs font-bold underline" :style="{ color: accent }">Open in Google Maps</a>
-          <p v-if="ev.citySlug" class="mt-3 text-xs"><NuxtLink :to="`/cities/${ev.citySlug}`" class="font-bold hover:underline" style="color:var(--wd-amber-600);">More dancing in {{ ev.venueCity }} →</NuxtLink></p>
+          <p v-if="ev.citySlug" class="mt-3 text-xs"><NuxtLink :to="`/cities/${ev.citySlug}`" class="font-bold hover:underline text-secondary">More dancing in {{ ev.venueCity }} →</NuxtLink></p>
         </section>
 
         <!-- Reviews (same component as venues/festivals) -->

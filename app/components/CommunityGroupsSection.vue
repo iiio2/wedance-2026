@@ -49,13 +49,13 @@ const platformLabel: Record<string, string> = {
 
 <template>
   <!-- Only render the entire section (including wrapper) if there are groups to display -->
-  <section v-if="groups.length > 0" class="border-t" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(251, 245, 234, 0.5);">
-    <div class="max-w-4xl mx-auto px-4 py-12" style="font-family:var(--wd-font-sans);">
+  <section v-if="groups.length > 0" class="border-t border-border bg-background/50">
+    <div class="max-w-4xl mx-auto px-4 py-12 font-sans">
       <div class="flex items-center gap-2">
-        <MessageCircle class="w-5 h-5" style="color:var(--wd-green-600);" />
-        <h3 class="text-2xl" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Local groups</h3>
+        <MessageCircle class="w-5 h-5 text-success" />
+        <h3 class="text-2xl font-display text-foreground">Local groups</h3>
       </div>
-      <p class="mt-1 text-sm" style="color:var(--wd-brown-700);">
+      <p class="mt-1 text-sm text-muted-foreground">
         Community chats where the{{ cityName ? ` ${cityName}` : '' }} scene organises — WhatsApp, Telegram &amp; more. Join the locals.
       </p>
 
@@ -63,18 +63,17 @@ const platformLabel: Record<string, string> = {
         <li v-for="g in groups" :key="g.id" class="relative">
           <div class="group relative">
             <a :href="g.inviteUrl" target="_blank" rel="noopener"
-               class="flex items-center justify-between gap-3 rounded-xl border p-3 bg-white transition-all hover:-translate-y-0.5"
-               style="border-color:color-mix(in srgb, var(--wd-green-600) 20%, transparent);">
+               class="flex items-center justify-between gap-3 rounded-xl border p-3 bg-white transition-all hover:-translate-y-0.5 border-wd-green-600/20">
               <div class="min-w-0">
                 <div class="flex items-center gap-1.5">
-                  <span class="font-bold text-sm truncate" style="color:var(--wd-brown-900);">{{ g.name }}</span>
-                  <BadgeCheck v-if="g.verified" class="w-3.5 h-3.5 shrink-0" style="color:var(--wd-green-600);" />
+                  <span class="font-bold text-sm truncate text-foreground">{{ g.name }}</span>
+                  <BadgeCheck v-if="g.verified" class="w-3.5 h-3.5 shrink-0 text-success" />
                 </div>
-                <div class="text-[11px] mt-0.5" style="color:var(--wd-amber-600);">
+                <div class="text-meta mt-0.5 text-secondary">
                   {{ platformLabel[g.platform] || 'Group' }}<span v-if="g.styles?.length"> · {{ g.styles.join(', ') }}</span>
                 </div>
               </div>
-              <ArrowUpRight class="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" style="color:var(--wd-green-600);" />
+              <ArrowUpRight class="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 text-success" />
             </a>
             <button
               type="button"

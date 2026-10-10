@@ -52,8 +52,8 @@ const groups = computed(() => {
     <div v-for="g in groups" :key="g.date" class="space-y-2">
       <!-- Day header -->
       <div class="flex items-baseline gap-2 pt-1">
-        <h4 class="text-lg font-black leading-none" style="font-family:var(--wd-font-display);" :style="{ color: g.isToday ? WD.red600 : WD.brown900 }">{{ g.label }}</h4>
-        <span v-if="g.isToday" class="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style="background:color-mix(in srgb, var(--wd-red-600) 9.4%, transparent); color:var(--wd-red-600); font-family:var(--wd-font-sans);">Tonight</span>
+        <h4 class="text-lg font-black leading-none font-display" :style="{ color: g.isToday ? WD.red600 : WD.brown900 }">{{ g.label }}</h4>
+        <span v-if="g.isToday" class="text-tag font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-primary/[9.4%] text-primary font-sans">Tonight</span>
       </div>
 
       <!-- Cards -->
@@ -68,20 +68,20 @@ const groups = computed(() => {
         <!-- Time -->
         <div class="w-14 shrink-0 text-center">
           <div class="text-base font-black leading-none tabular-nums" :style="{ color: accent(e.styles?.[0] || ''), fontFamily: 'var(--wd-font-display)' }">{{ e.startTime || '—' }}</div>
-          <div v-if="e.endTime" class="text-[10px] mt-0.5" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">{{ e.endTime }}</div>
+          <div v-if="e.endTime" class="text-eyebrow mt-0.5 text-secondary font-sans">{{ e.endTime }}</div>
         </div>
 
         <!-- Middle -->
-        <div class="flex-1 min-w-0" style="font-family:var(--wd-font-sans);">
+        <div class="flex-1 min-w-0 font-sans">
           <div class="flex items-center flex-wrap gap-1.5">
-            <span v-if="e.eventType" class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" :style="{ background: (typeColor[e.eventType] || WD.brown700) + '18', color: typeColor[e.eventType] || WD.brown700 }">{{ e.eventType }}</span>
-            <span v-for="st in (e.styles || [])" :key="st" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" :style="{ background: accent(st) + '18', color: accent(st) }">{{ st }}</span>
-            <span v-if="e.status && e.status !== 'accepted'" class="text-[9px] uppercase tracking-wider font-bold rounded-full px-1.5 py-0.5" style="background:color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent); color:var(--wd-amber-700);">Proposed</span>
+            <span v-if="e.eventType" class="text-tag font-black uppercase tracking-widest px-1.5 py-0.5 rounded" :style="{ background: (typeColor[e.eventType] || WD.brown700) + '18', color: typeColor[e.eventType] || WD.brown700 }">{{ e.eventType }}</span>
+            <span v-for="st in (e.styles || [])" :key="st" class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" :style="{ background: accent(st) + '18', color: accent(st) }">{{ st }}</span>
+            <span v-if="e.status && e.status !== 'accepted'" class="text-tag uppercase tracking-wider font-bold rounded-full px-1.5 py-0.5 bg-warning/[9.4%] text-wd-amber-700">Proposed</span>
           </div>
-          <h4 class="text-sm sm:text-base font-bold leading-tight mt-1" style="color:var(--wd-brown-900);">{{ e.title || 'Social' }}</h4>
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs" style="color:var(--wd-brown-700);">
-            <span v-if="e.location" class="inline-flex items-center gap-1"><MapPin class="w-3 h-3" style="color:var(--wd-amber-600);" /> {{ e.location }}</span>
-            <span v-if="e.artists?.length" style="color:var(--wd-amber-600);">with {{ e.artists.join(', ') }}</span>
+          <h4 class="text-sm sm:text-base font-bold leading-tight mt-1 text-foreground">{{ e.title || 'Social' }}</h4>
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-muted-foreground">
+            <span v-if="e.location" class="inline-flex items-center gap-1"><MapPin class="w-3 h-3 text-secondary" /> {{ e.location }}</span>
+            <span v-if="e.artists?.length" class="text-secondary">with {{ e.artists.join(', ') }}</span>
           </div>
         </div>
 

@@ -186,18 +186,18 @@ function getAccent(category: string): string {
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <!-- V3 header -->
     <SiteHeader />
 
     <!-- HERO -->
     <section class="relative">
       <div class="max-w-4xl mx-auto px-4 pt-12 pb-8 text-center">
-        <div class="text-sm tracking-widest uppercase mb-3" style="color:var(--wd-amber-600);">The two-way opportunity board</div>
-        <h1 class="text-5xl sm:text-6xl leading-[0.98]" style="color:var(--wd-brown-900);">
-          Get booked. <em class="italic" style="color:var(--wd-red-600);">Hire talent.</em>
+        <div class="text-sm tracking-widest uppercase mb-3 text-secondary">The two-way opportunity board</div>
+        <h1 class="text-5xl sm:text-6xl leading-[0.98] text-foreground">
+          Get booked. <em class="italic text-primary">Hire talent.</em>
         </h1>
-        <p class="mt-5 text-base sm:text-lg leading-relaxed max-w-xl mx-auto" style="color:var(--wd-brown-700);">
+        <p class="mt-5 text-base sm:text-lg leading-relaxed max-w-xl mx-auto text-muted-foreground">
           Find open roles at festivals and events. Post your services and book gigs. Organizers and artists — it all happens here.
         </p>
 
@@ -222,7 +222,7 @@ function getAccent(category: string): string {
         </div>
 
         <!-- Kind toggle -->
-        <div class="mt-8 inline-flex rounded-full p-1" style="background:white; border:1px solid color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
+        <div class="mt-8 inline-flex rounded-full p-1 bg-white border border-border">
           <button
             v-for="opt in [{ v: '', label: 'All' }, { v: 'role', label: 'Open roles' }, { v: 'offer', label: 'Services offered' }]"
             :key="opt.v"
@@ -260,23 +260,23 @@ function getAccent(category: string): string {
     </section>
 
     <!-- FORM (when user clicks Post a gig) -->
-    <section v-if="showForm" class="max-w-2xl mx-auto px-4 mb-8 bg-white rounded-2xl p-6 border-2" style="border-color:color-mix(in srgb, var(--wd-red-600) 20%, transparent);">
+    <section v-if="showForm" class="max-w-2xl mx-auto px-4 mb-8 bg-white rounded-2xl p-6 border-2 border-primary/20">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-2xl font-bold" style="color:var(--wd-brown-900);">{{ formData.kind === 'role' ? 'Post an open role' : 'Offer your services' }}</h2>
+        <h2 class="text-2xl font-bold text-foreground">{{ formData.kind === 'role' ? 'Post an open role' : 'Offer your services' }}</h2>
         <button
           type="button"
           class="p-2 rounded-full hover:bg-gray-100"
           @click="showForm = false"
         >
-          <X class="w-5 h-5" style="color:var(--wd-brown-900);" />
+          <X class="w-5 h-5 text-foreground" />
         </button>
       </div>
 
       <form class="space-y-4" novalidate @submit.prevent="submitForm">
         <!-- Kind toggle -->
         <div>
-          <label class="block text-sm font-bold mb-1" style="color:var(--wd-brown-700);">What are you posting?</label>
-          <div class="inline-flex rounded-full p-1 w-full" style="background:var(--wd-cream); border:1px solid color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
+          <label class="block text-sm font-bold mb-1 text-muted-foreground">What are you posting?</label>
+          <div class="inline-flex rounded-full p-1 w-full bg-background border border-border">
             <button
               v-for="opt in [{ v: 'role' as const, label: 'I need someone', icon: Megaphone }, { v: 'offer' as const, label: 'I offer my services', icon: Hand }]"
               :key="opt.v"
@@ -295,13 +295,12 @@ function getAccent(category: string): string {
 
         <!-- Poster type (who is posting) -->
         <div>
-          <label class="block text-sm font-bold mb-1" style="color:var(--wd-brown-700);">{{ formData.kind === 'role' ? 'You are a…' : 'You are a…' }}</label>
+          <label class="block text-sm font-bold mb-1 text-muted-foreground">{{ formData.kind === 'role' ? 'You are a…' : 'You are a…' }}</label>
           <select
             v-model="formData.posterType"
             v-bind="fieldAttrs('posterType', 'gig-posterType-error')"
             required
-            class="w-full px-3 py-2 rounded-lg border"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); color:var(--wd-brown-900);"
+            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           >
             <template v-if="formData.kind === 'role'">
               <option value="Festival">Festival</option>
@@ -322,13 +321,12 @@ function getAccent(category: string): string {
 
         <!-- Category -->
         <div>
-          <label class="block text-sm font-bold mb-1" style="color:var(--wd-brown-700);">{{ formData.kind === 'role' ? 'Role needed' : 'Service category' }}</label>
+          <label class="block text-sm font-bold mb-1 text-muted-foreground">{{ formData.kind === 'role' ? 'Role needed' : 'Service category' }}</label>
           <select
             v-model="formData.category"
             v-bind="fieldAttrs('category', 'gig-category-error')"
             required
-            class="w-full px-3 py-2 rounded-lg border"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); color:var(--wd-brown-900);"
+            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           >
             <option value="">Select a category</option>
             <option value="Teacher">Teacher</option>
@@ -344,65 +342,60 @@ function getAccent(category: string): string {
 
         <!-- Title -->
         <div>
-          <label class="block text-sm font-bold mb-1" style="color:var(--wd-brown-700);">{{ formData.kind === 'role' ? 'Role title' : 'Service title' }}</label>
+          <label class="block text-sm font-bold mb-1 text-muted-foreground">{{ formData.kind === 'role' ? 'Role title' : 'Service title' }}</label>
           <input
             v-model="formData.title"
             v-bind="fieldAttrs('title', 'gig-title-error')"
             type="text"
             required
             :placeholder="formData.kind === 'role' ? 'e.g., Salsa teacher needed for weekend festival' : 'e.g., Timba workshops for European festivals'"
-            class="w-full px-3 py-2 rounded-lg border"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); color:var(--wd-brown-900);"
+            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           />
           <FieldError id="gig-title-error" :message="errors.title" />
         </div>
 
         <!-- Your name -->
         <div>
-          <label class="block text-sm font-bold mb-1" style="color:var(--wd-brown-700);">{{ formData.kind === 'role' ? 'Organisation / event name' : 'Your name' }}</label>
+          <label class="block text-sm font-bold mb-1 text-muted-foreground">{{ formData.kind === 'role' ? 'Organisation / event name' : 'Your name' }}</label>
           <input
             v-model="formData.posterName"
             v-bind="fieldAttrs('posterName', 'gig-posterName-error')"
             type="text"
             required
             :placeholder="formData.kind === 'role' ? 'e.g., Munich Salsa Festival' : 'Your name or artist name'"
-            class="w-full px-3 py-2 rounded-lg border"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); color:var(--wd-brown-900);"
+            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           />
           <FieldError id="gig-posterName-error" :message="errors.posterName" />
         </div>
 
         <!-- Location -->
         <div>
-          <label class="block text-sm font-bold mb-1" style="color:var(--wd-brown-700);">Location or base</label>
+          <label class="block text-sm font-bold mb-1 text-muted-foreground">Location or base</label>
           <input
             v-model="formData.location"
             v-bind="fieldAttrs('location', 'gig-location-error')"
             type="text"
             required
             placeholder="e.g., Munich, Germany"
-            class="w-full px-3 py-2 rounded-lg border"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); color:var(--wd-brown-900);"
+            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           />
           <FieldError id="gig-location-error" :message="errors.location" />
         </div>
 
         <!-- Styles -->
         <div>
-          <label class="block text-sm font-bold mb-1" style="color:var(--wd-brown-700);">Dance styles</label>
+          <label class="block text-sm font-bold mb-1 text-muted-foreground">Dance styles</label>
           <div class="flex gap-2 mb-2">
             <input
               v-model="styleInput"
               type="text"
               placeholder="Add style (e.g., Timba)"
-              class="flex-1 px-3 py-2 rounded-lg border"
-              style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); color:var(--wd-brown-900);"
+              class="flex-1 px-3 py-2 rounded-lg border border-border text-foreground"
               @keyup.enter="addStyle"
             />
             <button
               type="button"
-              class="px-4 py-2 rounded-lg font-bold text-white"
-              style="background:var(--wd-red-600);"
+              class="px-4 py-2 rounded-lg font-bold text-white bg-primary"
               @click="addStyle"
             >
               Add
@@ -412,8 +405,7 @@ function getAccent(category: string): string {
             <span
               v-for="(style, idx) in formData.styles"
               :key="idx"
-              class="px-3 py-1 rounded-full text-sm font-bold flex items-center gap-2"
-              style="background:color-mix(in srgb, var(--wd-red-600) 9.4%, transparent); color:var(--wd-red-600);"
+              class="px-3 py-1 rounded-full text-sm font-bold flex items-center gap-2 bg-primary/[9.4%] text-primary"
             >
               {{ style }}
               <button
@@ -429,69 +421,65 @@ function getAccent(category: string): string {
 
         <!-- Availability / When -->
         <div>
-          <label class="block text-sm font-bold mb-1" style="color:var(--wd-brown-700);">{{ formData.kind === 'role' ? 'When is the event?' : 'When available' }}</label>
+          <label class="block text-sm font-bold mb-1 text-muted-foreground">{{ formData.kind === 'role' ? 'When is the event?' : 'When available' }}</label>
           <input
             v-model="formData.when"
             v-bind="fieldAttrs('when', 'gig-when-error')"
             type="text"
             required
             :placeholder="formData.kind === 'role' ? 'e.g., May 23–25, 2027' : 'e.g., Weekends, Booking 2026–27'"
-            class="w-full px-3 py-2 rounded-lg border"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); color:var(--wd-brown-900);"
+            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           />
           <FieldError id="gig-when-error" :message="errors.when" />
         </div>
 
         <!-- Compensation -->
         <div>
-          <label class="block text-sm font-bold mb-1" style="color:var(--wd-brown-700);">{{ formData.kind === 'role' ? 'Budget / compensation offered' : 'Compensation / rate' }}</label>
+          <label class="block text-sm font-bold mb-1 text-muted-foreground">{{ formData.kind === 'role' ? 'Budget / compensation offered' : 'Compensation / rate' }}</label>
           <input
             v-model="formData.compensation"
             v-bind="fieldAttrs('compensation', 'gig-compensation-error')"
             type="text"
             required
             :placeholder="formData.kind === 'role' ? 'e.g., €500 + travel, Negotiable' : 'e.g., From €200/hour, On request'"
-            class="w-full px-3 py-2 rounded-lg border"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); color:var(--wd-brown-900);"
+            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           />
           <FieldError id="gig-compensation-error" :message="errors.compensation" />
         </div>
 
         <!-- Contact email -->
         <div>
-          <label class="block text-sm font-bold mb-1" style="color:var(--wd-brown-700);">Contact email</label>
+          <label class="block text-sm font-bold mb-1 text-muted-foreground">Contact email</label>
           <input
             v-model="formData.contactEmail"
             v-bind="fieldAttrs('contactEmail', 'gig-contactEmail-error')"
             type="email"
             required
-            class="w-full px-3 py-2 rounded-lg border"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); color:var(--wd-brown-900);"
+            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           />
           <FieldError id="gig-contactEmail-error" :message="errors.contactEmail" />
         </div>
 
         <!-- Website (optional) -->
         <div>
-          <label class="block text-sm font-bold mb-1" style="color:var(--wd-brown-700);">Website or portfolio (optional)</label>
+          <label class="block text-sm font-bold mb-1 text-muted-foreground">Website or portfolio (optional)</label>
           <input
             v-model="formData.contactUrl"
             v-bind="fieldAttrs('contactUrl', 'gig-contactUrl-error')"
             type="url"
             placeholder="https://..."
-            class="w-full px-3 py-2 rounded-lg border"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); color:var(--wd-brown-900);"
+            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           />
           <FieldError id="gig-contactUrl-error" :message="errors.contactUrl" />
         </div>
 
         <!-- Error message -->
-        <div v-if="formError" class="p-3 rounded-lg text-sm font-bold" style="background:color-mix(in srgb, var(--wd-red-600) 9.4%, transparent); color:var(--wd-red-600);">
+        <div v-if="formError" class="p-3 rounded-lg text-sm font-bold bg-primary/[9.4%] text-primary">
           {{ formError }}
         </div>
 
         <!-- Success message -->
-        <div v-if="formSuccess" class="p-3 rounded-lg text-sm font-bold" style="background:color-mix(in srgb, var(--wd-green-600) 9.4%, transparent); color:var(--wd-green-600);">
+        <div v-if="formSuccess" class="p-3 rounded-lg text-sm font-bold bg-success/[9.4%] text-success">
           ✓ Gig posted! It will appear on the board shortly.
         </div>
 
@@ -510,24 +498,24 @@ function getAccent(category: string): string {
     <!-- BOARD -->
     <section class="max-w-4xl mx-auto px-4 pb-16">
       <div class="flex items-baseline justify-between mb-6">
-        <h2 class="text-2xl leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+        <h2 class="text-2xl leading-tight font-display text-foreground">
           {{ kindFilter === 'role' ? 'Open roles' : kindFilter === 'offer' ? 'Services offered' : 'All gigs' }}
         </h2>
-        <span class="text-xs" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);font-style:italic; font-size:18px;">
+        <span class="text-xs text-secondary font-display italic" style="font-size:18px;">
           — {{ allGigs.length }} gig{{ allGigs.length === 1 ? '' : 's' }}
         </span>
       </div>
 
       <div v-if="loadingGigs" class="text-center py-14">
-        <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">Loading gigs...</p>
+        <p class="text-sm text-muted-foreground font-sans">Loading gigs...</p>
       </div>
 
       <div v-else-if="gigsFailed" class="text-center py-14">
-        <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">Couldn't load gigs. <button type="button" class="underline" @click="refreshGigs()">Try again</button></p>
+        <p class="text-sm text-muted-foreground font-sans">Couldn't load gigs. <button type="button" class="underline" @click="refreshGigs()">Try again</button></p>
       </div>
 
-      <div v-else-if="!allGigs.length" class="text-center py-14 rounded-2xl border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);">
-        <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">No gigs match your filters yet.</p>
+      <div v-else-if="!allGigs.length" class="text-center py-14 rounded-2xl border-2 border-dashed border-input bg-white/50">
+        <p class="text-sm text-muted-foreground font-sans">No gigs match your filters yet.</p>
       </div>
 
       <div v-else class="grid gap-4 sm:grid-cols-2">
@@ -540,7 +528,7 @@ function getAccent(category: string): string {
           <!-- Kind + category -->
           <div class="flex items-center justify-between gap-2 mb-2">
             <span
-              class="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
+              class="inline-flex items-center gap-1.5 text-eyebrow font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
               :style="g.kind === 'role'
                 ? { background: 'color-mix(in srgb, var(--wd-red-600) 9.4%, transparent)', color: 'var(--wd-red-600)' }
                 : { background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: 'var(--wd-green-600)' }"
@@ -548,26 +536,26 @@ function getAccent(category: string): string {
               <component :is="g.kind === 'role' ? Megaphone : Hand" class="w-3 h-3" />
               {{ g.kind === 'role' ? 'Wanted' : 'Offering' }}
             </span>
-            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" :style="{ background: getAccent(g.category) + '18', color: getAccent(g.category) }">
+            <span class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" :style="{ background: getAccent(g.category) + '18', color: getAccent(g.category) }">
               {{ g.category }}
             </span>
           </div>
 
-          <h3 class="text-lg font-bold leading-tight" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+          <h3 class="text-lg font-bold leading-tight text-foreground font-display">
             {{ g.title }}
           </h3>
 
           <!-- Poster -->
-          <div class="mt-1 text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <div class="mt-1 text-sm text-muted-foreground font-sans">
             <span class="font-bold" :style="{ color: getAccent(g.category) }">{{ g.posterName }}</span>
-            <span style="color:var(--wd-amber-600);"> · {{ g.posterType }}</span>
+            <span class="text-secondary"> · {{ g.posterType }}</span>
           </div>
 
           <!-- Meta -->
-          <div class="mt-3 grid gap-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-            <span class="inline-flex items-center gap-1.5"><MapPin class="w-3 h-3" style="color:var(--wd-amber-600);" /> {{ g.location }}</span>
-            <span class="inline-flex items-center gap-1.5"><Calendar class="w-3 h-3" style="color:var(--wd-amber-600);" /> {{ g.when }}</span>
-            <span class="inline-flex items-center gap-1.5"><Wallet class="w-3 h-3" style="color:var(--wd-amber-600);" /> {{ g.compensation }}</span>
+          <div class="mt-3 grid gap-1 text-xs text-muted-foreground font-sans">
+            <span class="inline-flex items-center gap-1.5"><MapPin class="w-3 h-3 text-secondary" /> {{ g.location }}</span>
+            <span class="inline-flex items-center gap-1.5"><Calendar class="w-3 h-3 text-secondary" /> {{ g.when }}</span>
+            <span class="inline-flex items-center gap-1.5"><Wallet class="w-3 h-3 text-secondary" /> {{ g.compensation }}</span>
           </div>
 
           <!-- Styles -->
@@ -575,7 +563,7 @@ function getAccent(category: string): string {
             <span
               v-for="s in g.styles"
               :key="s"
-              class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+              class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
               :style="{ background: getAccent(g.category) + '14', color: getAccent(g.category) }"
             >{{ s }}</span>
           </div>
@@ -583,8 +571,7 @@ function getAccent(category: string): string {
           <!-- Confirmation banner -->
           <div
             v-if="appliedGigs.has(g.id)"
-            class="mt-3 p-3 rounded-lg text-xs font-bold"
-            style="background:color-mix(in srgb, var(--wd-green-600) 7.8%, transparent); color:var(--wd-green-600); font-family:var(--wd-font-sans); border: 1px solid color-mix(in srgb, var(--wd-green-600) 20%, transparent);"
+            class="mt-3 p-3 rounded-lg text-xs font-bold bg-success/[7.8%] text-success font-sans border border-wd-green-600/20"
           >
             ✓ Email draft opened — send it to reach {{ g.posterName }} directly.
             <template v-if="safeHref(g.contactUrl)">

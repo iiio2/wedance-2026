@@ -41,7 +41,7 @@ function select(s: string) {
         v-for="(style, i) in visible"
         :key="style"
         type="button"
-        class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all"
+        class="px-2.5 py-1 rounded-full text-meta font-bold uppercase tracking-wider transition-all"
         :style="modelValue === style
           ? { background: accents[i % accents.length], color: 'white' }
           : { background: 'white', color: accents[i % accents.length], border: '1px solid ' + accents[i % accents.length] + '55' }"
@@ -53,8 +53,7 @@ function select(s: string) {
       <button
         v-if="hiddenCount && !expanded"
         type="button"
-        class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all"
-        style="background:white; color:var(--wd-brown-700); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);"
+        class="px-2.5 py-1 rounded-full text-meta font-bold uppercase tracking-wider transition-all bg-white text-muted-foreground border border-input"
         @click="expanded = true"
       >
         + {{ hiddenCount }} more
@@ -62,8 +61,7 @@ function select(s: string) {
       <button
         v-else-if="expanded && ordered.length > leadCount"
         type="button"
-        class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all"
-        style="background:white; color:var(--wd-amber-600); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);"
+        class="px-2.5 py-1 rounded-full text-meta font-bold uppercase tracking-wider transition-all bg-white text-secondary border border-input"
         @click="expanded = false"
       >
         Less
