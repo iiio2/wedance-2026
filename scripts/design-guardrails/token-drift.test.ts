@@ -5,11 +5,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   ALLOWED_GOOGLE_FAMILIES,
+  findDynamicClasses,
   findQuotedFontLists,
   readBaseline,
   scanFontFamily,
   scanGoogleFonts,
   scanHex,
+  scanDynamicClasses,
   scanQuotedFontLists,
 } from './scan'
 
@@ -63,6 +65,11 @@ describe('design tokens: no drift', () => {
     const bad = scanQuotedFontLists()
     expect(bad, `Quoted font list ("'Caveat, cursive'" is ONE family named "Caveat, cursive" and never matches). Quote each name: 'Playfair Display', serif. See ${DOCS}.\n${fmt(bad)}`).toEqual([])
   })
+
+  it('no Tailwind class names built at runtime', () => {
+    const bad = scanDynamicClasses()
+    expect(bad, `Tailwind only generates classes it finds literally in source, so \`bg-wd-\${key}\` or 'text-' + c renders NOTHING for any name not written out elsewhere. Use a lookup of full class strings ({ red: 'bg-wd-red-600' }) or an inline style with var(--wd-*). See ${DOCS}.\n${fmt(bad)}`).toEqual([])
+  })
 })
 
 describe('design-guardrail scanner self-test', () => {
@@ -70,5 +77,14 @@ describe('design-guardrail scanner self-test', () => {
     expect(findQuotedFontLists(`:root{ --wd-font-hand: 'Caveat, cursive'; }`)).toHaveLength(1)
     expect(findQuotedFontLists(`.x{ font-family: "Anton, sans-serif"; }`)).toHaveLength(1)
     expect(findQuotedFontLists(`:root{ --wd-font-display: 'Playfair Display', serif; }`)).toHaveLength(0)
+  })
+
+  it('detects runtime-built class names and accepts full literals', () => {
+    expect(findDynamicClasses('cls: `bg-wd-${kebab(key)}`')).toHaveLength(1)
+    expect(findDynamicClasses(":class=\"'text-' + tone\"")).toHaveLength(1)
+    expect(findDynamicClasses('`border-${c}-500`')).toHaveLength(1)
+    expect(findDynamicClasses("{ red: 'bg-wd-red-600', cyan: 'bg-wd-cyan-600' }")).toHaveLength(0)
+    expect(findDynamicClasses('`${base} bg-primary text-white`')).toHaveLength(0)
+    expect(findDynamicClasses("background: `var(${c.token})`")).toHaveLength(0)
   })
 })
