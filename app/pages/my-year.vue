@@ -234,6 +234,8 @@ const stats = computed(() => {
 
 // Share modal
 const showShareModal = ref(false)
+// The own-plan view's "Sign in" CTA (was a no-op).
+const showSignIn = ref(false)
 
 function openFestival(slug: string) {
   if (isSharedView.value) {
@@ -279,9 +281,10 @@ useHead({
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
+    <main>
     <!-- Shared view -->
     <SharedYearPlan
       v-if="isSharedView && sharedData"
@@ -297,7 +300,7 @@ useHead({
 
     <!-- Loading / not found for shared view -->
     <div v-else-if="isSharedView && !sharedData" class="max-w-3xl mx-auto px-4 py-16 text-center">
-      <p style="color:var(--wd-brown-700);">This year plan is not available.</p>
+      <h1 class="text-muted-foreground">This year plan is not available.</h1>
       <Button class="mt-4" @click="onCreateYearPlan">
         Create your own year plan
       </Button>
@@ -313,7 +316,7 @@ useHead({
         @open-festival="openFestival"
         @add-festival="onAddFestival"
         @share="showShareModal = true"
-        @sign-in="() => {}"
+        @sign-in="showSignIn = true"
         @browse-festivals="onBrowseFestivals"
       />
 
@@ -322,7 +325,9 @@ useHead({
         :festivals="myFestivals"
         sharer-name="You"
       />
+      <SignUpModal v-model:open="showSignIn" action="signin" />
     </template>
+    </main>
 
     <SiteFooter />
   </div>

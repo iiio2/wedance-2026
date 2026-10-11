@@ -84,16 +84,16 @@ const endsLabel = computed(() => {
         </div>
 
         <div class="min-w-0 flex-1">
-          <div class="text-[10px] uppercase tracking-[0.3em] font-bold" :style="{ color: accent }">
+          <div class="text-eyebrow uppercase tracking-[0.3em] font-bold" :style="{ color: accent }">
             Giveaway · {{ giveaway.sponsorName }}
           </div>
-          <h3 class="mt-1 text-lg font-bold leading-tight" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+          <h3 class="mt-1 text-lg font-bold leading-tight text-foreground font-display">
             {{ giveaway.title }}
           </h3>
-          <p class="mt-1 text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <p class="mt-1 text-sm text-muted-foreground font-sans">
             {{ giveaway.description }}
           </p>
-          <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground font-sans">
             <span class="inline-flex items-center gap-1 font-bold" :style="{ color: accent }">
               <Gift class="h-3 w-3" /> {{ giveaway.prizeDescription }}
             </span>
@@ -106,35 +106,31 @@ const endsLabel = computed(() => {
       <div class="mt-4">
         <div v-if="entered" class="flex items-center gap-2 rounded-lg p-3" :style="{ background: accent + '14' }">
           <CheckCircle2 class="h-5 w-5 shrink-0" :style="{ color: accent }" />
-          <p class="text-sm font-medium" style="color:var(--wd-brown-900); font-family:var(--wd-font-sans);">
+          <p class="text-sm font-medium text-foreground font-sans">
             {{ already ? "You're already entered — good luck!" : "You're in! We'll email the winner." }}
           </p>
         </div>
 
-        <form v-else class="flex flex-col gap-2 sm:flex-row" novalidate @submit.prevent="enter">
-          <input
-            v-model="email"
-            type="email"
-            placeholder="Your email"
-            class="min-w-0 flex-1 rounded-full border px-4 py-2.5 text-sm outline-none"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); font-family:var(--wd-font-sans); color:var(--wd-brown-900);"
-            v-bind="fieldAttrs('email', `giveaway-${giveaway.id}-email-error`)"
-          >
-          <button
-            type="submit"
-            :disabled="entering"
-            class="inline-flex shrink-0 items-center justify-center rounded-full px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all disabled:opacity-50"
-            :style="{ background: accent, boxShadow: '0 3px 0 -1px rgba(0,0,0,0.15)' }"
-          >
+        <form v-else class="flex flex-col gap-2 sm:flex-row sm:items-start" novalidate @submit.prevent="enter">
+          <Field :id="`giveaway-${giveaway.id}-email`" label="Your email" hide-label :error="errors.email" class="min-w-0 flex-1 gap-1">
+            <Input
+              v-model="email"
+              type="email"
+              autocomplete="email"
+              placeholder="Your email"
+              class="rounded-full px-4"
+              v-bind="fieldAttrs('email', `giveaway-${giveaway.id}-email-error`)"
+            />
+          </Field>
+          <Button type="submit" variant="pill" :accent="accent" class="h-11 shrink-0 px-5" :loading="entering">
             {{ entering ? 'Entering…' : 'Enter free' }}
-          </button>
+          </Button>
         </form>
-        <FieldError :id="`giveaway-${giveaway.id}-email-error`" :message="errors.email" />
-        <p v-if="error" class="mt-1 text-xs" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);">
+        <p v-if="error" role="alert" class="mt-1 text-xs text-primary font-sans">
           {{ error }}
         </p>
 
-        <div class="mt-2 flex items-center justify-between text-[11px]" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">
+        <div class="mt-2 flex items-center justify-between text-meta text-secondary font-sans">
           <a :href="giveaway.ctaUrl" class="inline-flex items-center gap-1 hover:underline">
             <ExternalLink class="h-3 w-3" /> About {{ giveaway.sponsorName }}
           </a>
@@ -142,7 +138,7 @@ const endsLabel = computed(() => {
             Terms &amp; conditions
           </a>
         </div>
-        <p class="mt-1 text-[10px]" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">
+        <p class="mt-1 text-eyebrow text-secondary font-sans">
           Free entry. No purchase necessary.
         </p>
       </div>

@@ -170,9 +170,9 @@ const simpleChecklistItems = [
         <span class="text-sm font-semibold">My Year</span>
         <span v-if="completedCount > 0" class="bg-primary-foreground/20 text-xs font-medium px-1.5 py-0.5 rounded">{{ completedCount }}/{{ totalItems }}</span>
       </div>
-      <button class="p-1 rounded hover:bg-primary-foreground/10 lg:hidden" @click="emit('close')">
-        <X class="w-4 h-4" />
-      </button>
+      <Button variant="ghost" size="icon-sm" class="lg:hidden hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Close my year" @click="emit('close')">
+        <X aria-hidden="true" />
+      </Button>
     </div>
 
     <!-- Content -->
@@ -182,7 +182,9 @@ const simpleChecklistItems = [
         <!-- 1. Pick festivals (auto-checked, expandable) -->
         <div class="px-4 py-2.5">
           <button
+            type="button"
             class="w-full flex items-center gap-3"
+            :aria-expanded="festivalsExpanded"
             @click="festivalsExpanded = !festivalsExpanded"
           >
             <div
@@ -218,24 +220,27 @@ const simpleChecklistItems = [
                 />
                 <div
                   v-else
-                  class="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[9px] font-bold text-white"
+                  class="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-tag font-bold text-white"
                   :style="{ backgroundColor: f.accentColor }"
                 >
                   {{ f.name.charAt(0) }}
                 </div>
                 <div class="min-w-0">
                   <p class="text-xs font-medium leading-tight">{{ f.name }}</p>
-                  <p class="text-[11px] text-muted-foreground">
+                  <p class="text-meta text-muted-foreground">
                     {{ formatDateRange(f.startDate, f.endDate) }} · {{ f.location }}
                   </p>
                 </div>
               </NuxtLink>
-              <button
-                class="shrink-0 text-muted-foreground hover:text-destructive p-0.5"
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="shrink-0 size-7 text-muted-foreground hover:text-destructive [&_svg]:size-3"
+                :aria-label="`Remove ${f.name}`"
                 @click="emit('remove', f.slug)"
               >
-                <X class="w-3 h-3" />
-              </button>
+                <X aria-hidden="true" />
+              </Button>
             </div>
           </div>
         </div>
@@ -243,7 +248,9 @@ const simpleChecklistItems = [
         <!-- 2. Set dance goals (expandable) -->
         <div class="px-4 py-2.5">
           <button
+            type="button"
             class="w-full flex items-center gap-3"
+            :aria-expanded="goalsExpanded"
             @click="goalsExpanded = !goalsExpanded"
           >
             <div
@@ -267,17 +274,14 @@ const simpleChecklistItems = [
           <div v-if="goalsExpanded" class="ml-8 mt-2 space-y-2">
             <div v-for="(goal, i) in danceGoals" :key="i" class="flex items-center justify-between gap-2">
               <span class="text-xs">{{ goal }}</span>
-              <button class="text-muted-foreground hover:text-destructive p-0.5" @click="removeGoal(i)">
-                <X class="w-3 h-3" />
-              </button>
+              <Button variant="ghost" size="icon-sm" class="size-7 text-muted-foreground hover:text-destructive [&_svg]:size-3" :aria-label="`Remove goal: ${goal}`" @click="removeGoal(i)">
+                <X aria-hidden="true" />
+              </Button>
             </div>
             <form class="flex gap-1.5" novalidate @submit.prevent="addGoal">
-              <input
-                v-model="newGoal"
-                type="text"
-                placeholder="e.g. Learn Bachata Sensual"
-                class="flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-xs placeholder:text-muted-foreground"
-              />
+              <Field id="year-drawer-new-goal" label="New goal" hide-label class="flex-1">
+                <Input v-model="newGoal" size="sm" class="text-xs" placeholder="e.g. Learn Bachata Sensual" />
+              </Field>
               <Button type="submit" size="sm" variant="outline" class="text-xs px-2 shrink-0" :disabled="!newGoalResult.success">
                 Add
               </Button>
@@ -288,7 +292,9 @@ const simpleChecklistItems = [
         <!-- 3. Set budget (expandable) -->
         <div class="px-4 py-2.5">
           <button
+            type="button"
             class="w-full flex items-center gap-3"
+            :aria-expanded="budgetExpanded"
             @click="budgetExpanded = !budgetExpanded"
           >
             <div
@@ -310,20 +316,9 @@ const simpleChecklistItems = [
           </button>
 
           <div v-if="budgetExpanded" class="ml-8 mt-2 space-y-2">
-            <div>
-              <label class="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Year budget</label>
-              <div class="mt-0.5 flex items-center gap-1.5">
-                <span class="text-xs text-muted-foreground">€</span>
-                <input
-                  v-model.number="yearBudget"
-                  type="number"
-                  min="0"
-                  step="50"
-                  placeholder="2000"
-                  class="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs"
-                />
-              </div>
-            </div>
+            <Field id="year-drawer-budget" label="Year budget (€)">
+              <Input v-model.number="yearBudget" type="number" min="0" step="50" inputmode="numeric" size="sm" class="text-xs" placeholder="2000" />
+            </Field>
             <p class="text-xs text-muted-foreground">
               {{ count }} festivals picked — budget covers tickets, travel, accommodation, and food for the year.
             </p>
@@ -333,7 +328,9 @@ const simpleChecklistItems = [
         <!-- 4. Book early birds (auto-checked, expandable) -->
         <div class="px-4 py-2.5">
           <button
+            type="button"
             class="w-full flex items-center gap-3"
+            :aria-expanded="earlyBirdsExpanded"
             @click="earlyBirdsExpanded = !earlyBirdsExpanded"
           >
             <div
@@ -363,10 +360,10 @@ const simpleChecklistItems = [
             >
               <div class="min-w-0">
                 <p class="text-xs font-medium">{{ f.name }}</p>
-                <p class="text-[11px] text-muted-foreground">Deadline: {{ new Date(f.earlyBirdDeadline! + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}</p>
+                <p class="text-meta text-muted-foreground">Deadline: {{ new Date(f.earlyBirdDeadline! + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}</p>
               </div>
               <span
-                class="text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0"
+                class="text-eyebrow font-semibold px-1.5 py-0.5 rounded shrink-0"
                 :class="daysUntilDeadline(f.earlyBirdDeadline!) <= 14 ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'"
               >
                 {{ daysUntilDeadline(f.earlyBirdDeadline!) }}d left
@@ -378,7 +375,9 @@ const simpleChecklistItems = [
         <!-- 5. Find travel buddies (auto-checked, expandable) -->
         <div class="px-4 py-2.5">
           <button
+            type="button"
             class="w-full flex items-center gap-3"
+            :aria-expanded="buddiesExpanded"
             @click="buddiesExpanded = !buddiesExpanded"
           >
             <div
@@ -407,7 +406,7 @@ const simpleChecklistItems = [
                 class="flex items-center justify-between py-1"
               >
                 <span class="text-xs font-medium">{{ f.name }}</span>
-                <span class="text-[10px] text-muted-foreground">{{ f.friendsGoing }} friends going</span>
+                <span class="text-eyebrow text-muted-foreground">{{ f.friendsGoing }} friends going</span>
               </div>
             </div>
             <p v-else class="text-xs text-muted-foreground py-1">
@@ -422,7 +421,9 @@ const simpleChecklistItems = [
         <!-- 6. Plan time off (expandable) -->
         <div class="px-4 py-2.5">
           <button
+            type="button"
             class="w-full flex items-center gap-3"
+            :aria-expanded="timeOffExpanded"
             @click="timeOffExpanded = !timeOffExpanded"
           >
             <div
@@ -452,12 +453,12 @@ const simpleChecklistItems = [
               >
                 <div class="min-w-0">
                   <p class="text-xs font-medium">{{ f.name }}</p>
-                  <p class="text-[11px] text-muted-foreground">{{ formatDateRange(f.startDate, f.endDate) }}</p>
+                  <p class="text-meta text-muted-foreground">{{ formatDateRange(f.startDate, f.endDate) }}</p>
                 </div>
                 <a
                   :href="singleCalendarUrl(f)"
                   target="_blank"
-                  class="text-[10px] text-primary hover:underline flex items-center gap-0.5 shrink-0"
+                  class="text-eyebrow text-primary hover:underline flex items-center gap-0.5 shrink-0"
                   @click.stop
                 >
                   <CalendarPlus class="w-3 h-3" />
@@ -487,6 +488,9 @@ const simpleChecklistItems = [
         <button
           v-for="item in simpleChecklistItems"
           :key="item.key"
+          type="button"
+          role="checkbox"
+          :aria-checked="!!checklist[item.key]"
           class="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left"
           @click="toggleCheck(item.key)"
         >

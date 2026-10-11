@@ -139,72 +139,64 @@ async function submitDelete() {
   }
 }
 
-const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;'
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
-    <section class="max-w-lg mx-auto px-4 pt-12 pb-16" style="font-family:var(--wd-font-sans);">
+    <main class="max-w-lg mx-auto px-4 pt-12 pb-16 font-sans">
       <div class="flex items-baseline justify-between">
-        <h1 class="text-4xl" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">Settings</h1>
+        <h1 class="text-4xl text-foreground font-display">Settings</h1>
         <NuxtLink
           v-if="username"
           :to="`/u/${username}`"
-          class="inline-flex items-center gap-1 text-xs font-bold"
-          style="color:var(--wd-red-600);"
-        >View public <ExternalLink class="w-3 h-3" /></NuxtLink>
+          class="inline-flex items-center gap-1 text-xs font-bold text-primary"
+        >View public <ExternalLink class="w-3 h-3" aria-hidden="true" /></NuxtLink>
       </div>
 
       <!-- PROFILE -->
-      <h2 class="mt-8 text-lg font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">Profile</h2>
-      <div class="mt-4 space-y-6">
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--wd-amber-600);">Name</label>
-          <input v-model="form.name" type="text" class="w-full h-11 rounded-xl px-3.5 text-sm outline-none" :style="inputStyle" v-bind="profileForm.fieldAttrs('name', 'settings-name-error')">
-          <FieldError id="settings-name-error" :message="profileForm.errors.name" />
-        </div>
+      <h2 class="mt-8 text-lg font-bold text-foreground font-display">Profile</h2>
+      <form class="mt-4 space-y-6" novalidate @submit.prevent="save">
+        <Field id="settings-name" label="Name" :error="profileForm.errors.name">
+          <Input v-model="form.name" autocomplete="name" v-bind="profileForm.fieldAttrs('name', 'settings-name-error')" />
+        </Field>
 
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--wd-amber-600);">City</label>
-          <input v-model="form.city" type="text" placeholder="e.g. Munich" class="w-full h-11 rounded-xl px-3.5 text-sm outline-none" :style="inputStyle">
-        </div>
+        <Field id="settings-city" label="City" optional>
+          <Input v-model="form.city" placeholder="e.g. Munich" autocomplete="address-level2" />
+        </Field>
 
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--wd-amber-600);">Bio</label>
-          <textarea v-model="form.bio" rows="3" maxlength="500" placeholder="A line or two about you and your dancing." class="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none resize-none" :style="inputStyle" v-bind="profileForm.fieldAttrs('bio', 'settings-bio-error')" />
-          <FieldError id="settings-bio-error" :message="profileForm.errors.bio" />
-        </div>
+        <Field id="settings-bio" label="Bio" optional :error="profileForm.errors.bio">
+          <Textarea v-model="form.bio" :rows="3" maxlength="500" :resize="false" placeholder="A line or two about you and your dancing." v-bind="profileForm.fieldAttrs('bio', 'settings-bio-error')" />
+        </Field>
 
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--wd-amber-600);">Role</label>
-          <div class="flex gap-2">
-            <button
+        <div class="flex flex-col gap-1.5">
+          <span id="settings-role-label" class="text-sm font-bold text-foreground leading-snug">Role <span class="font-normal text-muted-foreground">(optional)</span></span>
+          <div role="group" aria-labelledby="settings-role-label" class="flex gap-2">
+            <ToggleChip
               v-for="opt in [{v:'lead',l:'Leader'},{v:'follow',l:'Follower'},{v:'both',l:'Both'}]"
               :key="opt.v"
-              type="button"
-              class="flex-1 h-11 rounded-xl text-sm font-bold transition-all"
-              :style="form.role === opt.v ? 'background:var(--wd-red-600); color:white; box-shadow:0 3px 0 -1px var(--wd-red-800);' : 'background:white; color:var(--wd-brown-700); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);'"
+              :pressed="form.role === opt.v"
+              class="flex-1 h-11 text-sm"
               @click="form.role = (form.role === opt.v ? '' : (opt.v as any))"
-            >{{ opt.l }}</button>
+            >{{ opt.l }}</ToggleChip>
           </div>
         </div>
 
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--wd-amber-600);">Dances</label>
-          <div class="flex flex-wrap gap-1.5">
-            <button
+        <div class="flex flex-col gap-1.5">
+          <span id="settings-dances-label" class="text-sm font-bold text-foreground leading-snug">Dances <span class="font-normal text-muted-foreground">(optional)</span></span>
+          <div role="group" aria-labelledby="settings-dances-label" class="flex flex-wrap gap-1.5">
+            <ToggleChip
               v-for="s in DANCE_STYLES"
               :key="s"
-              type="button"
-              class="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all"
-              :style="form.danceStyles.includes(s) ? 'background:var(--wd-red-600); color:white;' : 'background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600);'"
+              variant="soft"
+              :pressed="form.danceStyles.includes(s)"
+              class="px-3 py-1.5 text-xs uppercase tracking-wider"
               @click="toggleStyle(s)"
-            >{{ s }}</button>
+            >{{ s }}</ToggleChip>
           </div>
           <div v-if="form.danceStyles.length" class="mt-3 grid gap-2">
-            <p class="text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+            <p class="text-xs text-muted-foreground font-sans">
               Your level in each — organizers see it only as an anonymous mix of who's coming.
             </p>
             <div
@@ -214,95 +206,82 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
               :aria-label="`${s} level`"
               class="flex flex-wrap items-center gap-1.5"
             >
-              <span class="w-24 text-xs font-bold uppercase tracking-wider" style="color:var(--wd-brown-900);">{{ s }}</span>
-              <button
+              <span class="w-24 text-xs font-bold uppercase tracking-wider text-foreground">{{ s }}</span>
+              <ToggleChip
                 v-for="lvl in DANCE_LEVELS"
                 :key="lvl"
-                type="button"
-                :aria-pressed="form.danceLevels[s] === lvl"
-                class="px-2.5 py-1 rounded-full text-xs font-bold transition-all"
-                :style="form.danceLevels[s] === lvl ? 'background:var(--wd-brown-900); color:white;' : 'background:white; color:var(--wd-brown-700); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);'"
+                variant="ink"
+                :pressed="form.danceLevels[s] === lvl"
+                class="px-2.5 py-1 text-xs"
                 @click="setLevel(s, lvl)"
-              >{{ chilis(lvl) }} {{ lvl }}</button>
+              >{{ chilis(lvl) }} {{ lvl }}</ToggleChip>
             </div>
           </div>
         </div>
 
         <!-- Socials -->
         <div class="grid gap-3">
-          <div>
-            <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--wd-amber-600);">Instagram <span class="normal-case font-normal">(handle or URL)</span></label>
-            <input v-model="form.instagram" type="text" placeholder="@yourhandle" class="w-full h-11 rounded-xl px-3.5 text-sm outline-none" :style="inputStyle" v-bind="profileForm.fieldAttrs('instagram', 'settings-instagram-error')">
-            <FieldError id="settings-instagram-error" :message="profileForm.errors.instagram" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--wd-amber-600);">YouTube <span class="normal-case font-normal">(handle or URL)</span></label>
-            <input v-model="form.youtube" type="text" placeholder="@yourchannel" class="w-full h-11 rounded-xl px-3.5 text-sm outline-none" :style="inputStyle" v-bind="profileForm.fieldAttrs('youtube', 'settings-youtube-error')">
-            <FieldError id="settings-youtube-error" :message="profileForm.errors.youtube" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--wd-amber-600);">Website</label>
-            <input v-model="form.website" type="text" placeholder="yoursite.com" class="w-full h-11 rounded-xl px-3.5 text-sm outline-none" :style="inputStyle" v-bind="profileForm.fieldAttrs('website', 'settings-website-error')">
-            <FieldError id="settings-website-error" :message="profileForm.errors.website" />
-          </div>
+          <Field id="settings-instagram" label="Instagram" optional hint="Your handle or a link." :error="profileForm.errors.instagram">
+            <Input v-model="form.instagram" placeholder="@yourhandle" v-bind="profileForm.fieldAttrs('instagram', 'settings-instagram-error')" />
+          </Field>
+          <Field id="settings-youtube" label="YouTube" optional hint="Your handle or a link." :error="profileForm.errors.youtube">
+            <Input v-model="form.youtube" placeholder="@yourchannel" v-bind="profileForm.fieldAttrs('youtube', 'settings-youtube-error')" />
+          </Field>
+          <Field id="settings-website" label="Website" optional :error="profileForm.errors.website">
+            <Input v-model="form.website" type="url" inputmode="url" autocomplete="url" placeholder="yoursite.com" v-bind="profileForm.fieldAttrs('website', 'settings-website-error')" />
+          </Field>
         </div>
 
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--wd-amber-600);">Photo <span class="normal-case font-normal">(optional)</span></label>
+        <div class="flex flex-col gap-1.5">
+          <span class="text-sm font-bold text-foreground leading-snug">Photo <span class="font-normal text-muted-foreground">(optional)</span></span>
           <ImageUpload v-model="form.photo" />
         </div>
 
         <!-- Privacy -->
-        <label class="flex items-start gap-3 cursor-pointer select-none">
-          <input v-model="form.profilePublic" type="checkbox" class="mt-1 w-4 h-4 accent-wd-red-600">
-          <span class="text-sm" style="color:var(--wd-brown-700);">
-            <span class="font-bold" style="color:var(--wd-brown-900);">Public profile</span><br>
+        <Checkbox v-model="form.profilePublic" class="items-start">
+          <span class="text-muted-foreground">
+            <span class="font-bold text-foreground">Public profile</span><br>
             When off, your <span class="italic">/u/{{ username }}</span> page is hidden from everyone but you.
           </span>
-        </label>
+        </Checkbox>
 
-        <p v-if="error" class="text-sm font-bold" style="color:var(--wd-red-600);">{{ error }}</p>
-        <p v-if="saved" class="inline-flex items-center gap-1.5 text-sm font-bold" style="color:var(--wd-green-600);"><Check class="w-4 h-4" /> Saved</p>
+        <p v-if="error" role="alert" class="text-sm font-bold text-primary">{{ error }}</p>
+        <p v-if="saved" role="status" class="inline-flex items-center gap-1.5 text-sm font-bold text-wd-green-600"><Check class="w-4 h-4" aria-hidden="true" /> Saved</p>
 
-        <button
-          type="button" :disabled="loading"
-          class="w-full h-12 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60"
-          style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow:0 3px 0 -1px var(--wd-red-800);"
-          @click="save"
-        >{{ loading ? 'Saving…' : 'Save changes' }}</button>
-      </div>
+        <Button type="submit" variant="cta" size="lg" class="w-full h-12" :loading="loading">
+          {{ loading ? 'Saving…' : 'Save changes' }}
+        </Button>
+      </form>
 
       <!-- ACCOUNT -->
-      <h2 class="mt-12 text-lg font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">Change password</h2>
-      <div class="mt-4 space-y-4">
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--wd-amber-600);">Current password</label>
-          <input v-model="pw.current" type="password" autocomplete="current-password" class="w-full h-11 rounded-xl px-3.5 text-sm outline-none" :style="inputStyle" v-bind="passwordForm.fieldAttrs('current', 'settings-pw-current-error')">
-          <FieldError id="settings-pw-current-error" :message="passwordForm.errors.current" />
-        </div>
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--wd-amber-600);">New password</label>
-          <input v-model="pw.next" type="password" autocomplete="new-password" placeholder="At least 8 characters" class="w-full h-11 rounded-xl px-3.5 text-sm outline-none" :style="inputStyle" v-bind="passwordForm.fieldAttrs('next', 'settings-pw-next-error')">
-          <FieldError id="settings-pw-next-error" :message="passwordForm.errors.next" />
-        </div>
-        <p v-if="pwError" class="text-sm font-bold" style="color:var(--wd-red-600);">{{ pwError }}</p>
-        <p v-if="pwSaved" class="inline-flex items-center gap-1.5 text-sm font-bold" style="color:var(--wd-green-600);"><Check class="w-4 h-4" /> Password changed</p>
-        <button
-          type="button" :disabled="pwLoading || !pw.current || !pw.next"
-          class="w-full h-11 rounded-full text-sm font-bold uppercase tracking-wider disabled:opacity-50"
-          style="background:white; color:var(--wd-red-600); border:1px solid color-mix(in srgb, var(--wd-red-600) 33.3%, transparent);"
-          @click="submitPassword"
-        >{{ pwLoading ? 'Changing…' : 'Change password' }}</button>
-      </div>
+      <h2 class="mt-12 text-lg font-bold text-foreground font-display">Change password</h2>
+      <form class="mt-4 space-y-4" novalidate @submit.prevent="submitPassword">
+        <Field id="settings-pw-current" label="Current password" :error="passwordForm.errors.current">
+          <Input v-model="pw.current" type="password" autocomplete="current-password" v-bind="passwordForm.fieldAttrs('current', 'settings-pw-current-error')" />
+        </Field>
+        <Field id="settings-pw-next" label="New password" :error="passwordForm.errors.next">
+          <Input v-model="pw.next" type="password" autocomplete="new-password" placeholder="At least 8 characters" v-bind="passwordForm.fieldAttrs('next', 'settings-pw-next-error')" />
+        </Field>
+        <p v-if="pwError" role="alert" class="text-sm font-bold text-primary">{{ pwError }}</p>
+        <p v-if="pwSaved" role="status" class="inline-flex items-center gap-1.5 text-sm font-bold text-wd-green-600"><Check class="w-4 h-4" aria-hidden="true" /> Password changed</p>
+        <Button
+          type="submit"
+          variant="outline-pill"
+          size="lg"
+          class="w-full"
+          :loading="pwLoading"
+          :disabled="!pw.current || !pw.next"
+        >{{ pwLoading ? 'Changing…' : 'Change password' }}</Button>
+      </form>
 
       <!-- DANGER ZONE -->
-      <h2 class="mt-12 text-lg font-bold" style="color:var(--wd-red-600); font-family:var(--wd-font-display);">Danger Zone</h2>
-      <div class="mt-4 p-4 rounded-xl" style="background:#fecaca33; border:1px solid color-mix(in srgb, var(--wd-red-600) 40%, transparent);">
+      <h2 class="mt-12 text-lg font-bold text-primary font-display">Danger Zone</h2>
+      <div class="mt-4 p-4 rounded-xl bg-wd-red-50 border border-destructive/40">
         <div class="flex gap-3">
-          <AlertTriangle class="w-5 h-5 flex-shrink-0 mt-0.5" style="color:var(--wd-red-600);" />
+          <AlertTriangle class="w-5 h-5 flex-shrink-0 mt-0.5 text-primary" aria-hidden="true" />
           <div class="flex-1">
-            <h3 class="font-bold text-sm mb-2" style="color:var(--wd-red-600);">Permanently delete your account</h3>
-            <p class="text-xs mb-4" style="color:#7f1d1d;">
+            <h3 class="font-bold text-sm mb-2 text-primary">Permanently delete your account</h3>
+            <p class="text-xs mb-4 text-wd-red-900">
               This action cannot be undone. Your profile will be removed, your account deleted, and you will be signed out immediately.
               <br><br>
               <strong>What happens to your data:</strong>
@@ -316,47 +295,41 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
               <br>• Gigs you posted are anonymized (record kept, your identity removed)
             </p>
 
-            <button
+            <Button
               v-if="!showDeleteConfirm"
-              type="button"
-              class="w-full h-11 rounded-full text-sm font-bold uppercase tracking-wider"
-              style="background:var(--wd-red-600); color:white; box-shadow:0 3px 0 -1px var(--wd-red-800);"
+              variant="destructive"
+              size="lg"
+              class="w-full rounded-full font-bold uppercase tracking-wider"
               @click="showDeleteConfirm = true"
-            >Delete my account</button>
+            >Delete my account</Button>
 
-            <div v-else class="space-y-4">
-              <div>
-                <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--wd-red-600);">Confirm by typing your name</label>
-                <input
-                  v-model="deleteConfirmInput"
-                  type="text"
-                  :placeholder="`Type: ${dancerName}`"
-                  class="w-full h-11 rounded-xl px-3.5 text-sm outline-none"
-                  :style="inputStyle"
-                >
-              </div>
-              <p v-if="deleteError" class="text-sm font-bold" style="color:var(--wd-red-600);">{{ deleteError }}</p>
+            <form v-else class="space-y-4" novalidate @submit.prevent="submitDelete">
+              <Field id="settings-delete-confirm" label="Confirm by typing your name" :error="deleteError || undefined">
+                <Input v-model="deleteConfirmInput" :placeholder="`Type: ${dancerName}`" autocomplete="off" />
+              </Field>
               <div class="flex gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="outline-pill"
+                  size="lg"
+                  class="flex-1"
                   :disabled="deleteLoading"
-                  class="flex-1 h-11 rounded-full text-sm font-bold uppercase tracking-wider disabled:opacity-50"
-                  style="background:white; color:var(--wd-red-600); border:1px solid color-mix(in srgb, var(--wd-red-600) 33.3%, transparent);"
                   @click="showDeleteConfirm = false; deleteConfirmInput = ''; deleteError = ''"
-                >Cancel</button>
-                <button
-                  type="button"
-                  :disabled="deleteLoading || deleteConfirmInput !== dancerName"
-                  class="flex-1 h-11 rounded-full text-sm font-bold uppercase tracking-wider disabled:opacity-50"
-                  style="background:var(--wd-red-600); color:white; box-shadow:0 3px 0 -1px var(--wd-red-800);"
-                  @click="submitDelete"
-                >{{ deleteLoading ? 'Deleting…' : 'Permanently delete' }}</button>
+                >Cancel</Button>
+                <Button
+                  type="submit"
+                  variant="destructive"
+                  size="lg"
+                  class="flex-1 rounded-full font-bold uppercase tracking-wider"
+                  :loading="deleteLoading"
+                  :disabled="deleteConfirmInput !== dancerName"
+                >{{ deleteLoading ? 'Deleting…' : 'Permanently delete' }}</Button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       </div>
-    </section>
+    </main>
 
     <SiteFooter />
   </div>

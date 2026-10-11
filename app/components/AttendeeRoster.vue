@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Users } from 'lucide-vue-next'
 // Public verified-attendee roster for a festival.
 //
 // Calls `festivalSignup.publicRoster` and renders the response in two parts:
@@ -84,16 +85,17 @@ function initials(name: string | null): string {
     <template v-else>
       <div
         v-if="attendees.length === 0 && unclaimed === 0"
-        class="rounded-lg border border-dashed bg-card/40 p-5 text-center space-y-3"
+        class="text-center py-8 px-4 rounded-2xl border-2 border-dashed border-input bg-white/50"
       >
-        <p class="text-sm text-muted-foreground">
+        <Users class="w-8 h-8 mx-auto mb-3 text-secondary" aria-hidden="true" />
+        <p class="font-sans text-sm text-muted-foreground">
           No verified ticket holders here yet.
         </p>
         <NuxtLink
           to="/charanga/claim"
-          class="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+          class="mt-2 inline-block font-sans text-xs font-bold underline text-primary"
         >
-          Be the first to claim your spot →
+          Be the first to claim your spot
         </NuxtLink>
       </div>
 

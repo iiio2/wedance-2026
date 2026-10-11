@@ -82,18 +82,15 @@ async function handleResetPassword() {
   }
 }
 
-const inputClass = 'w-full h-11 rounded-full px-4 text-sm outline-none transition-all'
-const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d; font-family: system-ui, sans-serif;'
 </script>
 
 <template>
-  <div
-    class="flex min-h-screen items-center justify-center px-4"
-    style="background:var(--wd-cream);"
+  <main
+    class="flex min-h-screen items-center justify-center px-4 bg-background"
   >
     <div class="w-full max-w-sm">
       <!-- Accent bar -->
-      <div class="h-1.5 rounded-t-2xl" style="background:var(--wd-red-600);" />
+      <div class="h-1.5 rounded-t-2xl bg-wd-red-600" />
       <div
         class="rounded-b-2xl px-6 pb-6 pt-5 space-y-4"
         style="background:white; box-shadow: 0 4px 24px rgba(59,31,13,0.08);"
@@ -101,13 +98,13 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
         <!-- Loading -->
         <template v-if="status === 'loading'">
           <div class="text-center space-y-3">
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-amber-600);">
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">
               Verifying
             </div>
-            <h1 class="text-2xl leading-tight" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+            <h1 class="text-2xl leading-tight text-foreground font-display">
               Checking your link…
             </h1>
-            <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+            <p class="text-sm text-muted-foreground font-sans">
               Just a moment.
             </p>
           </div>
@@ -116,85 +113,73 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
         <!-- Password reset form -->
         <template v-else-if="status === 'reset-form'">
           <div class="space-y-1">
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-amber-600);">
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">
               Account recovery
             </div>
-            <h1 class="text-2xl leading-tight" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+            <h1 class="text-2xl leading-tight text-foreground font-display">
               Set a new password
             </h1>
-            <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+            <p class="text-sm text-muted-foreground font-sans">
               Enter your new password below.
             </p>
           </div>
 
           <form class="space-y-4 pt-2" novalidate @submit.prevent="handleResetPassword">
-            <div class="space-y-1.5">
-              <label for="new-password" class="text-sm font-bold" style="color:var(--wd-brown-900);">New password</label>
+            <Field id="new-password" label="New password" :error="errors.password">
               <div class="relative">
-                <input
-                  id="new-password"
+                <Input
                   v-model="newPassword"
                   :type="showPassword ? 'text' : 'password'"
                   placeholder="At least 8 characters"
                   autocomplete="new-password"
                   required
-                  :class="inputClass + ' pr-16'"
-                  :style="inputStyle"
+                  class="pr-20"
                   v-bind="fieldAttrs('password', 'new-password-error')"
-                >
-                <button
+                />
+                <Button
                   type="button"
-                  class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold uppercase tracking-wider"
-                  style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);"
+                  variant="ghost"
+                  size="sm"
+                  class="absolute right-1 top-1/2 -translate-y-1/2 text-xs font-bold uppercase tracking-wider text-secondary"
+                  :aria-pressed="showPassword"
                   @click="showPassword = !showPassword"
                 >
                   {{ showPassword ? 'Hide' : 'Show' }}
-                </button>
+                </Button>
               </div>
-              <FieldError id="new-password-error" :message="errors.password" />
-            </div>
+            </Field>
 
-            <div class="space-y-1.5">
-              <label for="confirm-password" class="text-sm font-bold" style="color:var(--wd-brown-900);">Confirm password</label>
-              <input
-                id="confirm-password"
+            <Field id="confirm-password" label="Confirm password" :error="errors.confirmPassword">
+              <Input
                 v-model="confirmPassword"
                 :type="showPassword ? 'text' : 'password'"
                 placeholder="Repeat your password"
                 autocomplete="new-password"
                 required
-                :class="inputClass"
-                :style="inputStyle"
                 v-bind="fieldAttrs('confirmPassword', 'confirm-password-error')"
-              >
-              <FieldError id="confirm-password-error" :message="errors.confirmPassword" />
-            </div>
+              />
+            </Field>
 
-            <p v-if="resetError" class="text-sm font-bold" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);">
+            <p v-if="resetError" role="alert" class="text-sm font-bold text-primary font-sans">
               {{ resetError }}
             </p>
 
-            <button
-              type="submit"
-              :disabled="resetLoading"
-              class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60"
-              style="background:var(--wd-red-600); box-shadow: 0 3px 0 -1px var(--wd-red-800); font-family:var(--wd-font-sans);"
-            >
+            <Button type="submit" variant="pill" size="lg" class="w-full" :loading="resetLoading">
               {{ resetLoading ? 'Saving…' : 'Save new password' }}
-            </button>
+            </Button>
           </form>
         </template>
 
         <!-- Success -->
         <template v-else-if="status === 'success'">
           <div class="text-center space-y-3">
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-amber-600);">
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">
               {{ isResetMode ? 'Password updated' : 'Welcome' }}
             </div>
-            <h1 class="text-2xl leading-tight" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+            <h1 class="text-2xl leading-tight text-foreground font-display">
               {{ isResetMode ? 'You\'re all set!' : `Welcome, ${dancerName}!` }}
             </h1>
-            <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+            <p class="text-sm text-muted-foreground font-sans">
               {{ isResetMode ? 'Your password has been changed. Taking you to your plan…' : "You're signed in. Taking you to your plan…" }}
             </p>
           </div>
@@ -203,18 +188,17 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
         <!-- Error -->
         <template v-else>
           <div class="text-center space-y-3">
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-amber-600);">
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">
               Something went wrong
             </div>
-            <h1 class="text-2xl leading-tight" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+            <h1 class="text-2xl leading-tight text-foreground font-display">
               Link expired or invalid
             </h1>
-            <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ errorMessage }}</p>
+            <p class="text-sm text-muted-foreground font-sans">{{ errorMessage }}</p>
             <div class="pt-2">
               <NuxtLink
                 to="/"
-                class="text-sm font-bold underline"
-                style="color:var(--wd-red-600); font-family:var(--wd-font-sans);"
+                class="text-sm font-bold underline text-primary font-sans"
               >
                 Go to homepage
               </NuxtLink>
@@ -228,5 +212,5 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
         <Brand />
       </div>
     </div>
-  </div>
+  </main>
 </template>

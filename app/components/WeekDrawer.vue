@@ -97,26 +97,29 @@ const typeBadge: Record<string, { label: string; class: string }> = {
         <span class="text-sm font-semibold">My Week</span>
         <span v-if="count > 0" class="bg-primary-foreground/20 text-xs font-medium px-1.5 py-0.5 rounded">{{ count }}</span>
       </div>
-      <button class="p-1 rounded hover:bg-primary-foreground/10 lg:hidden" @click="emit('close')">
-        <X class="w-4 h-4" />
-      </button>
+      <Button variant="ghost" size="icon-sm" class="lg:hidden hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Close my week" @click="emit('close')">
+        <X aria-hidden="true" />
+      </Button>
     </div>
 
     <!-- Content -->
     <div class="flex-1 overflow-y-auto">
       <!-- Empty state -->
-      <div v-if="count === 0" class="px-4 py-8 text-center">
-        <CalendarDays class="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-        <p class="text-sm font-medium">Build your week</p>
-        <p class="text-xs text-muted-foreground mt-1">
-          Tap "Going?" on classes and socials to plan your dance week in {{ cityName }}.
+      <div v-if="count === 0" class="m-4 text-center py-8 px-4 rounded-2xl border-2 border-dashed border-input bg-white/50">
+        <CalendarDays class="w-8 h-8 mx-auto mb-3 text-secondary" aria-hidden="true" />
+        <p class="text-sm font-bold font-display text-foreground">Build your week</p>
+        <p class="text-xs text-muted-foreground mt-1 font-sans">
+          Tap “Going?” on classes and socials to plan your dance week in {{ cityName }}.
         </p>
+        <Button variant="soft" size="pill-sm" class="mt-3 lg:hidden" @click="emit('close')">
+          See this week’s classes
+        </Button>
       </div>
 
       <!-- Picked events by day -->
       <div v-else class="divide-y">
         <div v-for="day in daysWithEvents" :key="day" class="px-4 py-3">
-          <h3 class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+          <h3 class="text-eyebrow font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             {{ day }}
           </h3>
           <div class="space-y-2">
@@ -127,18 +130,18 @@ const typeBadge: Record<string, { label: string; class: string }> = {
             >
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-1.5">
-                  <span class="text-[11px] font-mono text-muted-foreground">{{ event.time }}</span>
+                  <span class="text-meta font-mono text-muted-foreground">{{ event.time }}</span>
                   <span
-                    class="px-1 py-0.5 rounded text-[9px] font-medium leading-none"
+                    class="px-1 py-0.5 rounded text-tag font-medium leading-none"
                     :class="typeBadge[event.type]?.class"
                   >
                     {{ typeBadge[event.type]?.label }}
                   </span>
                 </div>
                 <p class="text-xs font-medium mt-0.5 leading-tight">{{ event.name }}</p>
-                <p v-if="personName(event)" class="text-[10px] text-muted-foreground mt-0.5">{{ personName(event) }}</p>
+                <p v-if="personName(event)" class="text-eyebrow text-muted-foreground mt-0.5">{{ personName(event) }}</p>
                 <div class="flex items-center gap-1.5 mt-0.5">
-                  <span class="text-[10px] text-muted-foreground">{{ event.venue }}</span>
+                  <span class="text-eyebrow text-muted-foreground">{{ event.venue }}</span>
                   <span v-if="levelChilis(event.level) > 0" class="flex items-center gap-px">
                     <Flame
                       v-for="n in levelChilis(event.level)"
@@ -149,12 +152,15 @@ const typeBadge: Record<string, { label: string; class: string }> = {
                   </span>
                 </div>
               </div>
-              <button
-                class="shrink-0 text-muted-foreground hover:text-destructive p-0.5 mt-1"
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="shrink-0 size-7 text-muted-foreground hover:text-destructive [&_svg]:size-3"
+                :aria-label="`Remove ${event.name}`"
                 @click="emit('remove', event.id)"
               >
-                <X class="w-3 h-3" />
-              </button>
+                <X aria-hidden="true" />
+              </Button>
             </div>
           </div>
         </div>
@@ -167,7 +173,7 @@ const typeBadge: Record<string, { label: string; class: string }> = {
               <span
                 v-for="s in styles"
                 :key="s"
-                class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground"
+                class="px-1.5 py-0.5 rounded text-eyebrow font-medium bg-muted text-muted-foreground"
               >
                 {{ s }}
               </span>

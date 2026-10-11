@@ -92,8 +92,10 @@ useHead(() => ({
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
+
+    <main>
 
     <!-- Loading -->
     <section v-if="pending" class="max-w-xl mx-auto px-4 py-24 text-center">
@@ -102,11 +104,11 @@ useHead(() => ({
 
     <!-- Not found -->
     <section v-else-if="notFound" class="max-w-xl mx-auto px-4 py-20 text-center">
-      <h1 class="text-4xl" style="color:var(--wd-brown-900);">No dancer here</h1>
-      <p class="mt-4 text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <h1 class="text-4xl text-foreground">No dancer here</h1>
+      <p class="mt-4 text-sm text-muted-foreground font-sans">
         We couldn't find a dancer at <span class="font-bold">@{{ username }}</span>.
       </p>
-      <NuxtLink to="/cities" class="inline-flex items-center gap-2 mt-6 text-sm font-bold" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);">
+      <NuxtLink to="/cities" class="inline-flex items-center gap-2 mt-6 text-sm font-bold text-primary font-sans">
         <ArrowLeft class="w-4 h-4" /> Browse cities
       </NuxtLink>
     </section>
@@ -115,8 +117,8 @@ useHead(() => ({
       <!-- Owner-only private banner -->
       <div
         v-if="profile && !profile.isPublic && profile.isOwner"
-        class="mb-4 rounded-xl px-4 py-3 flex items-center gap-2 text-sm"
-        style="background:color-mix(in srgb, var(--wd-amber-600) 7.8%, transparent); color:var(--wd-amber-600); font-family:var(--wd-font-sans);"
+        class="mb-4 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-secondary font-sans"
+        style="background:color-mix(in srgb, var(--wd-amber-600) 7.8%, transparent);"
       >
         <EyeOff class="w-4 h-4 shrink-0" />
         <span>Your profile is <b>private</b> — only you can see this. Make it public in <NuxtLink to="/settings" class="underline font-bold">Settings</NuxtLink>.</span>
@@ -145,45 +147,42 @@ useHead(() => ({
             </div>
 
             <div class="min-w-0 flex-1">
-              <h1 class="text-3xl leading-tight" style="color:var(--wd-brown-900);">{{ profile?.name }}</h1>
-              <div class="text-sm mt-0.5" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);font-style:italic; font-size:18px;">@{{ profile?.username }}</div>
-              <div v-if="profile?.city" class="flex items-center gap-1 mt-2 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-                <MapPin class="w-3 h-3" style="color:var(--wd-amber-600);" /> {{ profile.city }}
+              <h1 class="text-3xl leading-tight text-foreground">{{ profile?.name }}</h1>
+              <div class="text-sm mt-0.5 text-secondary font-display italic" style="font-size:18px;">@{{ profile?.username }}</div>
+              <div v-if="profile?.city" class="flex items-center gap-1 mt-2 text-xs text-muted-foreground font-sans">
+                <MapPin class="w-3 h-3 text-secondary" /> {{ profile.city }}
               </div>
-              <div v-if="profile?.role" class="mt-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+              <div v-if="profile?.role" class="mt-1 text-xs text-muted-foreground font-sans">
                 {{ roleLabel[profile.role] || profile.role }}
               </div>
             </div>
 
-            <NuxtLink
-              v-if="profile?.isOwner"
-              to="/settings"
-              class="shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold"
-              style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600); font-family:var(--wd-font-sans);"
-            >
-              <Pencil class="w-3 h-3" /> Edit
-            </NuxtLink>
+            <Button v-if="profile?.isOwner" as-child variant="soft" size="pill-sm" class="shrink-0 px-3">
+              <NuxtLink to="/settings">
+                <Pencil class="size-3" aria-hidden="true" /> Edit
+              </NuxtLink>
+            </Button>
           </div>
 
           <!-- Bio -->
-          <p v-if="profile?.bio" class="mt-5 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ profile.bio }}</p>
+          <p v-if="profile?.bio" class="mt-5 text-sm leading-relaxed text-muted-foreground font-sans">{{ profile.bio }}</p>
 
           <!-- Social links -->
           <div v-if="igUrl || ytUrl || siteUrl" class="mt-4 flex items-center gap-2">
-            <a v-if="igUrl" :href="igUrl" target="_blank" rel="noopener" class="inline-flex items-center justify-center w-9 h-9 rounded-full" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600);" aria-label="Instagram"><Instagram class="w-4 h-4" /></a>
-            <a v-if="ytUrl" :href="ytUrl" target="_blank" rel="noopener" class="inline-flex items-center justify-center w-9 h-9 rounded-full" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600);" aria-label="YouTube"><Youtube class="w-4 h-4" /></a>
-            <a v-if="siteUrl" :href="siteUrl" target="_blank" rel="noopener" class="inline-flex items-center justify-center w-9 h-9 rounded-full" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600);" aria-label="Website"><Globe class="w-4 h-4" /></a>
+            <a v-if="igUrl" :href="igUrl" target="_blank" rel="noopener" class="inline-flex items-center justify-center w-9 h-9 rounded-full text-primary" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);" aria-label="Instagram"><Instagram class="w-4 h-4" /></a>
+            <a v-if="ytUrl" :href="ytUrl" target="_blank" rel="noopener" class="inline-flex items-center justify-center w-9 h-9 rounded-full text-primary" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);" aria-label="YouTube"><Youtube class="w-4 h-4" /></a>
+            <a v-if="siteUrl" :href="siteUrl" target="_blank" rel="noopener" class="inline-flex items-center justify-center w-9 h-9 rounded-full text-primary" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);" aria-label="Website"><Globe class="w-4 h-4" /></a>
           </div>
 
           <!-- Styles -->
           <div v-if="profile?.danceStyles?.length" class="mt-6">
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold mb-2" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">Dances</div>
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mb-2 text-secondary font-sans">Dances</div>
             <div class="flex flex-wrap gap-1.5">
               <span
                 v-for="s in profile.danceStyles"
                 :key="s"
-                class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider"
-                style="background:color-mix(in srgb, var(--wd-red-600) 9.4%, transparent); color:var(--wd-red-600);"
+                class="px-2.5 py-1 rounded-full text-meta font-bold uppercase tracking-wider text-primary"
+                style="background:color-mix(in srgb, var(--wd-red-600) 9.4%, transparent);"
               >{{ s }}</span>
             </div>
           </div>
@@ -226,7 +225,7 @@ useHead(() => ({
 
       <!-- Videos (activity) -->
       <div v-if="profile?.videos?.length" class="mt-6">
-        <div class="text-[10px] uppercase tracking-[0.3em] font-bold mb-3" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">Videos</div>
+        <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mb-3 text-secondary font-sans">Videos</div>
         <div class="grid grid-cols-2 gap-3">
           <a
             v-for="v in profile.videos"
@@ -244,13 +243,14 @@ useHead(() => ({
               </div>
             </div>
             <div class="p-2.5">
-              <div class="text-xs font-bold truncate" style="color:var(--wd-brown-900); font-family:var(--wd-font-sans);">{{ v.title }}</div>
-              <div v-if="v.danceStyle" class="text-[10px] mt-0.5" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">{{ v.danceStyle }} · {{ v.citySlug }}</div>
+              <div class="text-xs font-bold truncate text-foreground font-sans">{{ v.title }}</div>
+              <div v-if="v.danceStyle" class="text-eyebrow mt-0.5 text-secondary font-sans">{{ v.danceStyle }} · {{ v.citySlug }}</div>
             </div>
           </a>
         </div>
       </div>
     </section>
+    </main>
 
     <SiteFooter />
   </div>

@@ -117,7 +117,9 @@ function toggleMatchWorkshop(id: string) {
         >
           <!-- Friend header -->
           <button
+            type="button"
             class="w-full flex items-center gap-3 p-3 text-left hover:bg-muted/50 transition-colors"
+            :aria-expanded="expandedFriendId === friend.id"
             @click="toggleFriend(friend.id)"
           >
             <img
@@ -128,7 +130,7 @@ function toggleMatchWorkshop(id: string) {
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
                 <span class="text-sm font-medium">{{ friend.name }}</span>
-                <Badge variant="secondary" class="text-[10px] px-1.5 py-0">
+                <Badge variant="secondary" class="text-eyebrow px-1.5 py-0">
                   {{ friend.role === 'lead' ? 'Lead' : 'Follow' }}
                 </Badge>
               </div>
@@ -157,16 +159,16 @@ function toggleMatchWorkshop(id: string) {
                 <Check v-if="isOverlap(w.id)" class="w-3.5 h-3.5 text-primary shrink-0" />
                 <div class="min-w-0 flex-1">
                   <p class="text-xs font-medium leading-tight">{{ w.title }}</p>
-                  <p class="text-[10px] text-muted-foreground">{{ w.day }} {{ w.time }}<span v-if="w.room"> · {{ w.room }}</span></p>
+                  <p class="text-eyebrow text-muted-foreground">{{ w.day }} {{ w.time }}<span v-if="w.room"> · {{ w.room }}</span></p>
                 </div>
-                <Badge v-if="isOverlap(w.id)" variant="outline" class="text-[10px] px-1.5 py-0 text-primary border-primary/30 shrink-0">
+                <Badge v-if="isOverlap(w.id)" variant="outline" class="text-eyebrow px-1.5 py-0 text-primary border-primary/30 shrink-0">
                   You too
                 </Badge>
                 <Button
                   v-else
                   size="sm"
                   variant="ghost"
-                  class="shrink-0 text-[10px] h-6 px-2 text-muted-foreground hover:text-primary"
+                  class="shrink-0 text-eyebrow h-6 px-2 text-muted-foreground hover:text-primary"
                   @click="emit('add-workshop', w.id)"
                 >
                   <Plus class="w-3 h-3 mr-0.5" />
@@ -179,6 +181,7 @@ function toggleMatchWorkshop(id: string) {
 
         <!-- Invite more -->
         <button
+          type="button"
           class="w-full rounded-lg border border-dashed p-3 flex items-center gap-3 text-left hover:bg-muted/50 transition-colors group"
           @click="emit('invite-friends')"
         >
@@ -230,7 +233,9 @@ function toggleMatchWorkshop(id: string) {
         >
           <!-- Workshop header -->
           <button
+            type="button"
             class="w-full flex items-center gap-3 p-3 text-left hover:bg-muted/50 transition-colors"
+            :aria-expanded="expandedMatchWorkshopId === workshop.id"
             @click="toggleMatchWorkshop(workshop.id)"
           >
             <div class="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center shrink-0">
@@ -244,7 +249,7 @@ function toggleMatchWorkshop(id: string) {
               </p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <Badge v-if="matchesForWorkshop(workshop.id, role).length > 0" variant="secondary" class="text-[10px] px-1.5 py-0">
+              <Badge v-if="matchesForWorkshop(workshop.id, role).length > 0" variant="secondary" class="text-eyebrow px-1.5 py-0">
                 {{ matchesForWorkshop(workshop.id, role).length }} available
               </Badge>
               <component
@@ -273,10 +278,10 @@ function toggleMatchWorkshop(id: string) {
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2">
                     <span class="text-sm font-medium">{{ match.name }}</span>
-                    <Badge variant="secondary" class="text-[10px] px-1.5 py-0">
+                    <Badge variant="secondary" class="text-eyebrow px-1.5 py-0">
                       {{ match.role === 'lead' ? 'Lead' : 'Follow' }}
                     </Badge>
-                    <Badge variant="outline" class="text-[10px] px-1.5 py-0">
+                    <Badge variant="outline" class="text-eyebrow px-1.5 py-0">
                       {{ match.level }}
                     </Badge>
                   </div>
@@ -286,7 +291,7 @@ function toggleMatchWorkshop(id: string) {
                       v-for="style in match.styles"
                       :key="style"
                       variant="outline"
-                      class="text-[10px] px-1 py-0"
+                      class="text-eyebrow px-1 py-0"
                     >
                       {{ style }}
                     </Badge>

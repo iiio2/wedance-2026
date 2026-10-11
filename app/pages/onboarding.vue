@@ -11,7 +11,7 @@
  * completeOnboarding, and redirects to the persona's landing. Skip still stamps
  * onboardedAt (intent 'skipped') so the guard never nags, and lands on my-plan.
  *
- * 2026 tropical style: Playfair/Caveat, #fbf5ea / #3b1f0d / #dc2626.
+ * 2026 tropical style — design-system tokens (cream / brown / red).
  */
 import { ArrowRight, ArrowLeft, Check } from 'lucide-vue-next'
 import { onboardingDetailsSchema } from '#shared/validation'
@@ -64,7 +64,6 @@ const { errors, fieldAttrs } = details
 
 // Refs for focus management.
 const firstIntentBtn = ref<HTMLButtonElement | null>(null)
-const cityInput = ref<HTMLInputElement | null>(null)
 const detailsHeading = ref<HTMLElement | null>(null)
 
 // Redirect signed-out users to home — onboarding requires a session.
@@ -93,7 +92,12 @@ function pickIntent(p: Persona) {
   details.reset()
   if (detailsNeeded.value) {
     step.value = 'details'
-    nextTick(() => (cityInput.value?.focus() ?? detailsHeading.value?.focus()))
+    nextTick(() => {
+      // focus() returns undefined, so `a?.focus() ?? b?.focus()` would focus both — pick one.
+      const city = document.getElementById('onb-city')
+      if (city) city.focus()
+      else detailsHeading.value?.focus()
+    })
   } else {
     // No fields to collect — finish immediately.
     finish()
@@ -144,15 +148,13 @@ async function skip() {
   }
 }
 
-const inputClass = 'w-full h-11 rounded-full px-4 text-sm outline-none transition-all'
-const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d; font-family: system-ui, sans-serif;'
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
-    <section class="max-w-2xl mx-auto px-4 pt-10 pb-16">
+    <main class="max-w-2xl mx-auto px-4 pt-10 pb-16">
       <!-- Progress indicator -->
       <div class="flex items-center justify-center gap-2 mb-8" aria-hidden="true">
         <span class="h-1.5 rounded-full transition-all" :style="{ width: '40px', background: 'var(--wd-red-600)' }" />
@@ -168,13 +170,13 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
       <!-- ============================ STEP 1: INTENT ============================ -->
       <template v-if="step === 'intent'">
         <div class="text-center mb-8">
-          <div class="text-[10px] uppercase tracking-[0.3em] font-bold mb-3" style="color:var(--wd-amber-600);">
+          <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mb-3 text-secondary">
             Welcome to the floor
           </div>
-          <h1 class="text-4xl sm:text-5xl leading-[1.02]" style="color:var(--wd-brown-900);">
-            What brings you to <em class="italic" style="color:var(--wd-red-600);">WeDance?</em>
+          <h1 class="text-4xl sm:text-5xl leading-[1.02] text-foreground">
+            What brings you to <em class="italic text-primary">WeDance?</em>
           </h1>
-          <p class="mt-4 text-base" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <p class="mt-4 text-base text-muted-foreground font-sans">
             Pick one — we'll set up the rest around it.
           </p>
         </div>
@@ -191,91 +193,72 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
           >
             <span class="text-3xl shrink-0" aria-hidden="true">{{ p.emoji }}</span>
             <span class="min-w-0 flex-1">
-              <span class="block font-bold text-lg leading-tight" style="color:var(--wd-brown-900);">{{ p.label }}</span>
-              <span class="block text-sm mt-0.5" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ p.blurb }}</span>
+              <span class="block font-bold text-lg leading-tight text-foreground">{{ p.label }}</span>
+              <span class="block text-sm mt-0.5 text-muted-foreground font-sans">{{ p.blurb }}</span>
             </span>
-            <ArrowRight class="w-5 h-5 shrink-0 transition-transform group-hover:translate-x-1" style="color:var(--wd-red-600);" />
+            <ArrowRight class="w-5 h-5 shrink-0 transition-transform group-hover:translate-x-1 text-primary" />
           </button>
         </div>
 
-        <p v-if="error" class="text-sm font-bold text-center mt-4" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);">
+        <p v-if="error" class="text-sm font-bold text-center mt-4 text-primary font-sans">
           {{ error }}
         </p>
 
         <div class="text-center mt-8">
-          <button
-            type="button"
-            class="text-sm underline"
-            style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);"
-            :disabled="loading"
-            @click="skip"
-          >
+          <Button variant="link" class="text-secondary underline font-sans" :disabled="loading" @click="skip">
             Skip for now
-          </button>
+          </Button>
         </div>
       </template>
 
       <!-- =========================== STEP 2: DETAILS =========================== -->
       <template v-else>
         <div class="text-center mb-8">
-          <div class="text-[10px] uppercase tracking-[0.3em] font-bold mb-3" style="color:var(--wd-amber-600);">
+          <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mb-3 text-secondary">
             {{ chosen?.emoji }} {{ chosen?.label }}
           </div>
           <h1
             ref="detailsHeading"
             tabindex="-1"
-            class="text-3xl sm:text-4xl leading-[1.05] outline-none"
-            style="color:var(--wd-brown-900);"
+            class="text-3xl sm:text-4xl leading-[1.05] outline-none text-foreground"
           >
-            A couple <em class="italic" style="color:var(--wd-red-600);">details</em>
+            A couple <em class="italic text-primary">details</em>
           </h1>
-          <p class="mt-4 text-base" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <p class="mt-4 text-base text-muted-foreground font-sans">
             So we can fill your plan with the right things.
           </p>
         </div>
 
         <form class="space-y-6" novalidate @submit.prevent="finish">
           <!-- City -->
-          <div v-if="chosen?.collects.city" class="space-y-1.5">
-            <label for="onb-city" class="text-sm font-bold" style="color:var(--wd-brown-900);">Your city</label>
-            <input
-              id="onb-city"
-              ref="cityInput"
+          <Field v-if="chosen?.collects.city" id="onb-city" label="Your city" :error="errors.city">
+            <Input
               v-model="form.city"
-              type="text"
               placeholder="Munich, Berlin…"
               autocomplete="address-level2"
-              :class="inputClass"
-              :style="inputStyle"
               v-bind="fieldAttrs('city', 'onb-city-error')"
-            >
-            <FieldError id="onb-city-error" :message="errors.city" />
-          </div>
+            />
+          </Field>
 
           <!-- Styles -->
           <div v-if="chosen?.collects.styles" class="space-y-2">
-            <span id="onb-styles-label" class="text-sm font-bold" style="color:var(--wd-brown-900);">Which dances?</span>
+            <span id="onb-styles-label" class="text-sm font-bold text-foreground">Which dances?</span>
             <div role="group" aria-labelledby="onb-styles-label" class="flex flex-wrap gap-2" v-bind="fieldAttrs('danceStyles', 'onb-styles-error')">
-              <button
+              <ToggleChip
                 v-for="style in DANCE_STYLES"
                 :key="style"
-                type="button"
-                :aria-pressed="form.danceStyles.includes(style)"
-                class="inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors"
-                :style="form.danceStyles.includes(style)
-                  ? 'background:var(--wd-red-600); color:white; border:1px solid var(--wd-red-600);'
-                  : 'background:white; color:var(--wd-brown-700); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);'"
+                :pressed="form.danceStyles.includes(style)"
+                class="px-3.5 py-1.5 text-xs uppercase tracking-wider"
                 @click="toggleStyle(style)"
               >
-                <Check v-if="form.danceStyles.includes(style)" class="w-3 h-3" />
+                <Check v-if="form.danceStyles.includes(style)" class="w-3 h-3" aria-hidden="true" />
                 {{ style }}
-              </button>
+              </ToggleChip>
             </div>
             <FieldError id="onb-styles-error" :message="errors.danceStyles" />
             <NuxtLink
               to="/find-your-dance"
-              class="inline-block text-xs italic hover:underline pt-1"
-              style="color:var(--wd-amber-600); font-family:var(--wd-font-display);"
+              class="inline-block text-xs italic hover:underline pt-1 text-secondary font-display"
             >
               Don't know which dance? →
             </NuxtLink>
@@ -283,7 +266,7 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
 
           <!-- Role -->
           <div v-if="chosen?.collects.role" class="space-y-2">
-            <span id="onb-role-label" class="text-sm font-bold" style="color:var(--wd-brown-900);">Do you lead or follow?</span>
+            <span id="onb-role-label" class="text-sm font-bold text-foreground">Do you lead or follow?</span>
             <div role="radiogroup" aria-labelledby="onb-role-label" class="flex gap-3" v-bind="fieldAttrs('role', 'onb-role-error')">
               <label
                 v-for="r in [{ value: 'lead', label: 'Lead' }, { value: 'follow', label: 'Follow' }, { value: 'both', label: 'Both' }]"
@@ -300,43 +283,27 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
             <FieldError id="onb-role-error" :message="errors.role" />
           </div>
 
-          <p v-if="error" class="text-sm font-bold" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);">
+          <p v-if="error" class="text-sm font-bold text-primary font-sans">
             {{ error }}
           </p>
 
           <div class="flex items-center gap-3 pt-2">
-            <button
-              type="button"
-              class="inline-flex items-center gap-1.5 px-4 py-3 rounded-full text-sm font-bold uppercase tracking-wider"
-              style="background:white; color:var(--wd-brown-700); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent); font-family:var(--wd-font-sans);"
-              @click="back"
-            >
-              <ArrowLeft class="w-4 h-4" /> Back
-            </button>
-            <button
-              type="submit"
-              :disabled="loading"
-              class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60"
-              style="background:var(--wd-red-600); box-shadow: 0 3px 0 -1px var(--wd-red-800); font-family:var(--wd-font-sans);"
-            >
+            <Button type="button" variant="outline-pill" size="lg" class="px-4" @click="back">
+              <ArrowLeft aria-hidden="true" /> Back
+            </Button>
+            <Button type="submit" variant="pill" size="lg" class="flex-1 px-5" :loading="loading">
               {{ loading ? 'Setting up…' : 'Take me to my plan' }}
-              <ArrowRight v-if="!loading" class="w-4 h-4" />
-            </button>
+              <ArrowRight v-if="!loading" aria-hidden="true" />
+            </Button>
           </div>
 
           <div class="text-center pt-1">
-            <button
-              type="button"
-              class="text-sm underline"
-              style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);"
-              :disabled="loading"
-              @click="skip"
-            >
+            <Button variant="link" class="text-secondary underline font-sans" :disabled="loading" @click="skip">
               Skip for now
-            </button>
+            </Button>
           </div>
         </form>
       </template>
-    </section>
+    </main>
   </div>
 </template>

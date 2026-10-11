@@ -149,7 +149,7 @@ async function nativeShare() {
               <img v-if="f.logo" :src="f.logo" :alt="f.name" class="w-6 h-6 rounded object-cover shrink-0" />
               <div
                 v-else
-                class="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                class="w-6 h-6 rounded flex items-center justify-center text-eyebrow font-bold text-white shrink-0"
                 :style="{ background: f.accentColor || WD.amber600 }"
               >
                 {{ f.name.charAt(0) }}
@@ -159,7 +159,7 @@ async function nativeShare() {
               <Badge
                 v-if="f.lookingCount > 0"
                 variant="outline"
-                class="text-[9px] px-1 py-0 bg-orange-50 text-orange-600 border-orange-200 shrink-0"
+                class="text-tag px-1 py-0 bg-orange-50 text-orange-600 border-orange-200 shrink-0"
               >
                 {{ f.lookingCount }} partner
               </Badge>
