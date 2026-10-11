@@ -400,74 +400,73 @@ async function publish() {
   }
 }
 
-// V3 shared field styles. Kept as class strings so field usage
-// throughout the template doesn't need to change — every input
-// inherits the tropical palette + Playfair labels from these.
-const inputClass = 'block h-11 w-full rounded-xl border border-[#3b1f0d33] bg-white px-4 text-sm text-[#3b1f0d] outline-none transition-all placeholder:text-[#9a5614]/60 focus:border-[#dc2626] focus:shadow-[0_0_0_3px_rgba(220,38,38,0.15)] font-sans'
-const textareaClass = 'block w-full rounded-xl border border-[#3b1f0d33] bg-white px-4 py-3 text-sm text-[#3b1f0d] outline-none transition-all placeholder:text-[#9a5614]/60 focus:border-[#dc2626] focus:shadow-[0_0_0_3px_rgba(220,38,38,0.15)] min-h-[96px] resize-y font-sans'
-const selectClass = 'block h-11 w-full rounded-xl border border-[#3b1f0d33] bg-white px-4 text-sm text-[#3b1f0d] outline-none transition-all focus:border-[#dc2626] focus:shadow-[0_0_0_3px_rgba(220,38,38,0.15)] appearance-none font-sans'
-const labelClass = 'text-[10px] uppercase tracking-[0.25em] font-bold mb-2 block text-[#9a5614]'
+
+// Trash / remove buttons on repeatable rows.
+const removeBtnClass = 'shrink-0 text-secondary hover:bg-transparent hover:text-primary'
+// "Edit" links on the preview cards and "+ Add …" links above lists.
+const inlineLinkClass = 'h-auto p-0 text-xs italic font-display font-normal'
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <!-- V3 site header — same as / , /festivals, /organizers, etc. -->
     <SiteHeader />
 
     <!-- Create-flow action bar (sticky) -->
-    <div class="sticky top-0 z-20 border-b backdrop-blur-sm" style="background:rgba(251, 245, 234, 0.95); border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
+    <div class="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm">
       <div class="max-w-4xl mx-auto px-4 flex items-center justify-between h-14 gap-3">
-        <button
-          type="button"
-          class="inline-flex items-center gap-2 text-sm italic hover:underline"
-          style="color:var(--wd-brown-700); font-family:var(--wd-font-display);"
+        <Button
+          variant="link"
+          class="h-auto p-0 text-sm italic font-display font-normal text-muted-foreground"
           @click="router.push('/organizers')"
         >
-          <ArrowLeft class="w-4 h-4" />
+          <ArrowLeft />
           Back
-        </button>
-        <div class="text-xs uppercase tracking-[0.3em] font-bold" style="color:var(--wd-amber-600);">
+        </Button>
+        <div class="text-xs uppercase tracking-[0.3em] font-bold text-secondary">
           Create festival
         </div>
-        <button
+        <Button
           v-if="currentStep === 'preview'"
-          type="button"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-white text-xs font-bold uppercase tracking-wider"
+          variant="cta"
+          size="pill-sm"
           :disabled="isPublishing || isPublished"
-          style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 3px 0 -1px var(--wd-red-800);"
           @click="publish"
         >
           {{ isPublished ? 'Submitted' : isPublishing ? 'Submitting…' : 'Submit for review' }}
-        </button>
+        </Button>
         <div v-else class="w-14" />
       </div>
 
       <!-- Step indicator -->
-      <nav class="overflow-x-auto border-t" style="border-color:color-mix(in srgb, var(--wd-brown-900) 5.1%, transparent);">
+      <nav class="overflow-x-auto border-t border-foreground/5" aria-label="Steps">
         <div class="max-w-4xl mx-auto px-4 flex">
-          <button
+          <Button
             v-for="(step, i) in steps"
             :key="step.id"
-            type="button"
-            class="flex items-center gap-2 px-4 py-3 text-xs italic whitespace-nowrap transition-all border-b-2"
-            :style="step.id === currentStep
-              ? { borderColor: 'var(--wd-red-600)', color: 'var(--wd-red-600)', fontFamily: 'var(--wd-font-display)', fontWeight: 700 }
-              : { borderColor: 'transparent', color: i < currentStepIndex ? WD.brown900 : WD.amber600, fontFamily: 'var(--wd-font-display)' }"
+            variant="ghost"
+            class="h-auto gap-2 rounded-none px-4 py-3 text-xs italic font-display font-normal whitespace-nowrap transition-all border-b-2 hover:bg-transparent [&_svg]:size-3"
+            :class="step.id === currentStep
+              ? 'border-primary text-primary font-bold hover:text-primary'
+              : i < currentStepIndex
+                ? 'border-transparent text-foreground hover:text-foreground'
+                : 'border-transparent text-secondary hover:text-secondary'"
+            :aria-current="step.id === currentStep ? 'step' : undefined"
             @click="goToStep(step.id)"
           >
             <div
-              class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black shrink-0"
-              :style="i < currentStepIndex
-                ? { background: 'var(--wd-green-600)', color: 'white' }
+              class="size-6 rounded-full flex items-center justify-center text-meta not-italic font-black shrink-0"
+              :class="i < currentStepIndex
+                ? 'bg-wd-green-600 text-white'
                 : step.id === currentStep
-                  ? { background: 'var(--wd-red-600)', color: 'white' }
-                  : { background: 'white', color: 'var(--wd-amber-600)', border: '1.5px solid color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent)' }"
+                  ? 'bg-primary text-white'
+                  : 'bg-white text-secondary border-[1.5px] border-border'"
             >
-              <Check v-if="i < currentStepIndex" class="w-3 h-3" style="stroke-width:2.5;" />
-              <span v-else style="font-family:var(--wd-font-sans);">{{ i + 1 }}</span>
+              <Check v-if="i < currentStepIndex" class="stroke-[2.5]" />
+              <span v-else class="font-sans">{{ i + 1 }}</span>
             </div>
             {{ step.label }}
-          </button>
+          </Button>
         </div>
       </nav>
     </div>
@@ -482,20 +481,20 @@ const labelClass = 'text-[10px] uppercase tracking-[0.25em] font-bold mb-2 block
       >
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 mb-1">
-            <Sparkles v-if="selectedPlan === 'pro'" class="w-4 h-4" :style="{ color: currentPlan.color }" />
-            <span class="text-[10px] uppercase tracking-[0.3em] font-bold" :style="{ color: currentPlan.color }">
+            <Sparkles v-if="selectedPlan === 'pro'" class="size-4" :style="{ color: currentPlan.color }" />
+            <span class="text-eyebrow uppercase tracking-[0.3em] font-bold" :style="{ color: currentPlan.color }">
               {{ currentPlan.name }} plan
             </span>
-            <span class="text-sm font-bold" style="color:var(--wd-brown-900);">
-              {{ currentPlan.price }}<span v-if="currentPlan.period" class="font-normal text-xs" style="color:var(--wd-amber-600);">{{ currentPlan.period }}</span>
+            <span class="text-sm font-bold text-foreground">
+              {{ currentPlan.price }}<span v-if="currentPlan.period" class="font-normal text-xs text-secondary">{{ currentPlan.period }}</span>
             </span>
           </div>
-          <p class="text-sm mb-3" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <p class="text-sm mb-3 text-muted-foreground font-sans">
             {{ currentPlan.description }}
           </p>
           <ul class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
-            <li v-for="f in currentPlan.features" :key="f" class="flex items-start gap-1.5 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-              <CheckCircle class="w-3.5 h-3.5 shrink-0 mt-0.5" :style="{ color: currentPlan.color }" />
+            <li v-for="f in currentPlan.features" :key="f" class="flex items-start gap-1.5 text-xs text-muted-foreground font-sans">
+              <CheckCircle class="size-3.5 shrink-0 mt-0.5" :style="{ color: currentPlan.color }" aria-hidden="true" />
               <span>{{ f }}</span>
             </li>
           </ul>
@@ -503,8 +502,7 @@ const labelClass = 'text-[10px] uppercase tracking-[0.25em] font-bold mb-2 block
         <div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 shrink-0">
           <NuxtLink
             to="/organizers#pricing"
-            class="text-xs italic hover:underline whitespace-nowrap"
-            style="color:var(--wd-cyan-600); font-family:var(--wd-font-display);"
+            class="text-xs italic hover:underline whitespace-nowrap text-wd-cyan-600 font-display"
           >
             Change plan
           </NuxtLink>
@@ -512,9 +510,9 @@ const labelClass = 'text-[10px] uppercase tracking-[0.25em] font-bold mb-2 block
       </div>
 
       <!-- Validation errors -->
-      <div v-if="stepErrors.length" role="alert" class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 mb-6">
-        <p class="text-sm font-semibold text-red-700 mb-1">Please fix the following before continuing:</p>
-        <ul class="list-disc list-inside text-sm text-red-600 space-y-0.5">
+      <div v-if="stepErrors.length" role="alert" class="rounded-xl border border-destructive/30 bg-wd-red-50 px-4 py-3 mb-6 font-sans">
+        <p class="text-sm font-semibold text-wd-red-900 mb-1">Please fix the following before continuing:</p>
+        <ul class="list-disc list-inside text-sm text-wd-red-800 space-y-0.5">
           <li v-for="(err, i) in stepErrors" :key="i">{{ err }}</li>
         </ul>
       </div>
@@ -522,77 +520,66 @@ const labelClass = 'text-[10px] uppercase tracking-[0.25em] font-bold mb-2 block
       <!-- Step 1: Basics -->
       <div v-if="currentStep === 'basics'" class="space-y-6">
         <div>
-          <h2 class="text-2xl leading-tight font-black mb-1" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Festival Details</h2>
-          <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">Start with the essentials — name, dates, and description.</p>
+          <h2 class="text-2xl leading-tight font-black mb-1 font-display text-foreground">Festival Details</h2>
+          <p class="text-sm text-muted-foreground font-sans">Start with the essentials — name, dates, and description.</p>
         </div>
 
         <div class="space-y-4">
-          <div>
-            <label :class="labelClass">Festival name *</label>
-            <input v-model="festival.name" :class="inputClass" type="text" required placeholder="e.g. Salsa Open Berlin 2026" />
-          </div>
+          <Field id="festival-name" label="Festival name" required>
+            <Input v-model="festival.name" placeholder="e.g. Salsa Open Berlin 2026" />
+          </Field>
 
-          <div>
-            <label :class="labelClass">URL slug</label>
+          <Field id="festival-slug" label="URL slug">
             <div class="flex items-center gap-0">
-              <span
-                class="text-xs px-3 h-11 flex items-center rounded-l-xl border border-r-0"
-                style="color:var(--wd-brown-700); background:color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent); border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); font-family:var(--wd-font-sans);"
-              >wedance.vip/festivals/</span>
-              <input v-model="festival.slug" :class="[inputClass, 'rounded-l-none']" type="text" placeholder="salsa-open-berlin-2026" />
+              <span class="text-xs px-3 h-11 flex items-center rounded-l-xl border border-r-0 border-input bg-foreground/4 text-muted-foreground font-sans">wedance.vip/festivals/</span>
+              <Input v-model="festival.slug" class="rounded-l-none" placeholder="salsa-open-berlin-2026" />
             </div>
-          </div>
+          </Field>
 
           <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label :class="labelClass">Start date *</label>
-              <input v-model="festival.startDate" :class="inputClass" type="date" required />
-            </div>
-            <div>
-              <label :class="labelClass">End date *</label>
-              <input v-model="festival.endDate" :class="inputClass" type="date" required />
-            </div>
+            <Field id="festival-start" label="Start date" required>
+              <Input v-model="festival.startDate" type="date" />
+            </Field>
+            <Field id="festival-end" label="End date" required>
+              <Input v-model="festival.endDate" type="date" />
+            </Field>
           </div>
 
-          <div>
-            <label :class="labelClass">Description</label>
-            <textarea v-model="festival.description" :class="textareaClass" placeholder="Tell dancers what makes your festival special..." rows="4" />
-          </div>
+          <Field id="festival-description" label="Description" optional>
+            <Textarea v-model="festival.description" placeholder="Tell dancers what makes your festival special..." :rows="4" />
+          </Field>
 
-          <div>
-            <label :class="labelClass">Logo URL</label>
-            <input v-model="festival.logo" :class="inputClass" type="url" placeholder="https://..." />
-            <p style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);" class="text-xs mt-1">Square image recommended (200x200px or larger)</p>
-          </div>
+          <Field id="festival-logo" label="Logo URL" optional hint="Square image recommended (200x200px or larger)">
+            <Input v-model="festival.logo" type="url" placeholder="https://..." />
+          </Field>
 
-          <div>
-            <label :class="labelClass">Accent color</label>
+          <Field id="festival-accent" label="Accent color">
             <div class="flex items-center gap-3">
-              <input v-model="festival.accentColor" type="color" class="w-9 h-9 rounded cursor-pointer border-0 p-0" />
-              <input v-model="festival.accentColor" :class="inputClass" class="max-w-32" type="text" placeholder="#e11d48" />
+              <input v-model="festival.accentColor" type="color" aria-label="Pick accent color" class="size-9 rounded cursor-pointer border-0 p-0">
+              <Input v-model="festival.accentColor" class="max-w-32" :placeholder="WD.rose600" />
             </div>
-          </div>
+          </Field>
         </div>
 
         <!-- Social links -->
         <div>
           <div class="flex items-center justify-between mb-3">
-            <label :class="labelClass" class="mb-0">Social links</label>
-            <button class="inline-flex items-center gap-1 text-xs italic hover:underline" style="color:var(--wd-red-600); font-family:var(--wd-font-display);" @click="addSocialLink">
-              <Plus class="w-3 h-3" /> Add link
-            </button>
+            <Label optional>Social links</Label>
+            <Button variant="link" :class="inlineLinkClass" @click="addSocialLink">
+              <Plus /> Add link
+            </Button>
           </div>
           <div class="space-y-2">
             <div v-for="(link, i) in festival.socialLinks" :key="i" class="flex items-center gap-2">
-              <select v-model="link.platform" :class="selectClass" class="max-w-32">
-                <option v-for="p in socialPlatforms" :key="p.value" :value="p.value">{{ p.label }}</option>
-              </select>
-              <input v-model="link.url" :class="inputClass" type="url" placeholder="https://..." />
-              <button style="color:var(--wd-amber-600);" class="hover:!text-wd-red-600 shrink-0 p-1" @click="removeSocialLink(i)">
-                <Trash2 class="w-4 h-4" />
-              </button>
+              <div class="w-32 shrink-0">
+                <Select v-model="link.platform" :options="socialPlatforms" :aria-label="`Link ${i + 1} platform`" />
+              </div>
+              <Input v-model="link.url" type="url" placeholder="https://..." :aria-label="`Link ${i + 1} URL`" />
+              <Button variant="ghost" size="icon-sm" :class="removeBtnClass" :aria-label="`Remove link ${i + 1}`" @click="removeSocialLink(i)">
+                <Trash2 />
+              </Button>
             </div>
-            <p v-if="!festival.socialLinks.length" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);" class="text-xs">No social links yet.</p>
+            <p v-if="!festival.socialLinks.length" class="text-xs text-secondary font-sans">No social links yet.</p>
           </div>
         </div>
       </div>
@@ -600,37 +587,35 @@ const labelClass = 'text-[10px] uppercase tracking-[0.25em] font-bold mb-2 block
       <!-- Step 2: Venue -->
       <div v-if="currentStep === 'venue'" class="space-y-6">
         <div>
-          <h2 class="text-2xl leading-tight font-black mb-1" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Venue</h2>
-          <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">Where is the festival happening?</p>
+          <h2 class="text-2xl leading-tight font-black mb-1 font-display text-foreground">Venue</h2>
+          <p class="text-sm text-muted-foreground font-sans">Where is the festival happening?</p>
         </div>
 
         <div class="space-y-4">
-          <div>
-            <label :class="labelClass">Venue name *</label>
-            <input v-model="venue.name" :class="inputClass" type="text" required placeholder="e.g. Alte Munze" />
-          </div>
+          <Field id="venue-name" label="Venue name" required>
+            <Input v-model="venue.name" placeholder="e.g. Alte Munze" />
+          </Field>
 
-          <div>
-            <label :class="labelClass">Address *</label>
-            <input v-model="venue.address" :class="inputClass" type="text" required placeholder="e.g. Molkenmarkt 2, 10179 Berlin, Germany" />
-          </div>
+          <Field id="venue-address" label="Address" required>
+            <Input v-model="venue.address" placeholder="e.g. Molkenmarkt 2, 10179 Berlin, Germany" />
+          </Field>
         </div>
 
         <!-- Rooms -->
         <div>
           <div class="flex items-center justify-between mb-3">
-            <label :class="labelClass" class="mb-0">Rooms</label>
-            <button class="inline-flex items-center gap-1 text-xs italic hover:underline" style="color:var(--wd-red-600); font-family:var(--wd-font-display);" @click="addRoom">
-              <Plus class="w-3 h-3" /> Add room
-            </button>
+            <Label optional>Rooms</Label>
+            <Button variant="link" :class="inlineLinkClass" @click="addRoom">
+              <Plus /> Add room
+            </Button>
           </div>
-          <p style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);" class="text-xs mb-2">List the rooms/halls where workshops take place. These will appear as options in the schedule.</p>
+          <p class="text-xs mb-2 text-secondary font-sans">List the rooms/halls where workshops take place. These will appear as options in the schedule.</p>
           <div class="space-y-2">
             <div v-for="(_, i) in venue.rooms" :key="i" class="flex items-center gap-2">
-              <input v-model="venue.rooms[i]" :class="inputClass" type="text" placeholder="e.g. Main Hall" />
-              <button style="color:var(--wd-amber-600);" class="hover:!text-wd-red-600 shrink-0 p-1" @click="removeRoom(i)">
-                <Trash2 class="w-4 h-4" />
-              </button>
+              <Input v-model="venue.rooms[i]" placeholder="e.g. Main Hall" :aria-label="`Room ${i + 1}`" />
+              <Button variant="ghost" size="icon-sm" :class="removeBtnClass" :aria-label="`Remove room ${i + 1}`" @click="removeRoom(i)">
+                <Trash2 />
+              </Button>
             </div>
           </div>
         </div>
@@ -638,17 +623,17 @@ const labelClass = 'text-[10px] uppercase tracking-[0.25em] font-bold mb-2 block
         <!-- Practical info -->
         <div>
           <div class="flex items-center justify-between mb-3">
-            <label :class="labelClass" class="mb-0">Practical info</label>
-            <button class="inline-flex items-center gap-1 text-xs italic hover:underline" style="color:var(--wd-red-600); font-family:var(--wd-font-display);" @click="addPracticalInfo">
-              <Plus class="w-3 h-3" /> Add item
-            </button>
+            <Label optional>Practical info</Label>
+            <Button variant="link" :class="inlineLinkClass" @click="addPracticalInfo">
+              <Plus /> Add item
+            </Button>
           </div>
           <div class="space-y-2">
             <div v-for="(_, i) in venue.practicalInfo" :key="i" class="flex items-center gap-2">
-              <input v-model="venue.practicalInfo[i]" :class="inputClass" type="text" placeholder="e.g. Nearest metro: U2 Klosterstrasse" />
-              <button style="color:var(--wd-amber-600);" class="hover:!text-wd-red-600 shrink-0 p-1" @click="removePracticalInfo(i)">
-                <Trash2 class="w-4 h-4" />
-              </button>
+              <Input v-model="venue.practicalInfo[i]" placeholder="e.g. Nearest metro: U2 Klosterstrasse" :aria-label="`Practical info ${i + 1}`" />
+              <Button variant="ghost" size="icon-sm" :class="removeBtnClass" :aria-label="`Remove practical info ${i + 1}`" @click="removePracticalInfo(i)">
+                <Trash2 />
+              </Button>
             </div>
           </div>
         </div>
@@ -658,59 +643,53 @@ const labelClass = 'text-[10px] uppercase tracking-[0.25em] font-bold mb-2 block
       <div v-if="currentStep === 'lineup'" class="space-y-6">
         <div class="flex items-start justify-between">
           <div>
-            <h2 class="text-2xl leading-tight font-black mb-1" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Lineup</h2>
-            <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">Add the teachers and DJs performing at your festival.</p>
+            <h2 class="text-2xl leading-tight font-black mb-1 font-display text-foreground">Lineup</h2>
+            <p class="text-sm text-muted-foreground font-sans">Add the teachers and DJs performing at your festival.</p>
           </div>
           <Button size="sm" variant="outline" class="gap-1 shrink-0" @click="addTeacher">
-            <Plus class="w-3.5 h-3.5" /> Add Artist
+            <Plus class="size-3.5" /> Add Artist
           </Button>
         </div>
 
         <div v-if="!teachers.length" class="text-center py-12 border rounded-lg border-dashed">
-          <Users class="w-8 h-8 mx-auto mb-2" style="color:var(--wd-amber-600);" />
-          <p style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);" class="text-sm mb-3">No artists added yet</p>
+          <Users class="size-8 mx-auto mb-2 text-secondary" aria-hidden="true" />
+          <p class="text-sm mb-3 text-muted-foreground font-sans">No artists added yet</p>
           <Button size="sm" variant="outline" @click="addTeacher">Add your first artist</Button>
         </div>
 
         <div v-for="(teacher, i) in teachers" :key="teacher.id" class="border rounded-lg p-4 space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-semibold">{{ teacher.name || `Artist ${i + 1}` }}</h3>
-            <button style="color:var(--wd-amber-600);" class="hover:!text-wd-red-600 p-1" @click="removeTeacher(i)">
-              <Trash2 class="w-4 h-4" />
-            </button>
+            <Button variant="ghost" size="icon-sm" :class="removeBtnClass" :aria-label="`Remove ${teacher.name || `artist ${i + 1}`}`" @click="removeTeacher(i)">
+              <Trash2 />
+            </Button>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label :class="labelClass">Name *</label>
-              <input v-model="teacher.name" :class="inputClass" type="text" placeholder="e.g. Carlos Rivera" />
-            </div>
-            <div>
-              <label :class="labelClass">Styles</label>
-              <input v-model="teacher.styles" :class="inputClass" type="text" placeholder="e.g. Salsa, Timba" />
-            </div>
+            <Field :id="`teacher-${teacher.id}-name`" label="Name" required>
+              <Input v-model="teacher.name" placeholder="e.g. Carlos Rivera" />
+            </Field>
+            <Field :id="`teacher-${teacher.id}-styles`" label="Styles" optional>
+              <Input v-model="teacher.styles" placeholder="e.g. Salsa, Timba" />
+            </Field>
           </div>
 
-          <div>
-            <label :class="labelClass">Bio</label>
-            <textarea v-model="teacher.bio" :class="textareaClass" placeholder="Short bio..." rows="2" />
-          </div>
+          <Field :id="`teacher-${teacher.id}-bio`" label="Bio" optional>
+            <Textarea v-model="teacher.bio" placeholder="Short bio..." :rows="2" />
+          </Field>
 
           <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label :class="labelClass">Photo URL</label>
-              <input v-model="teacher.photo" :class="inputClass" type="url" placeholder="https://..." />
-            </div>
-            <div>
-              <label :class="labelClass">Video URL</label>
-              <input v-model="teacher.videoUrl" :class="inputClass" type="url" placeholder="https://youtube.com/..." />
-            </div>
+            <Field :id="`teacher-${teacher.id}-photo`" label="Photo URL" optional>
+              <Input v-model="teacher.photo" type="url" placeholder="https://..." />
+            </Field>
+            <Field :id="`teacher-${teacher.id}-video`" label="Video URL" optional>
+              <Input v-model="teacher.videoUrl" type="url" placeholder="https://youtube.com/..." />
+            </Field>
           </div>
 
-          <div>
-            <label :class="labelClass">Instagram</label>
-            <input v-model="teacher.instagram" :class="inputClass" type="url" placeholder="https://instagram.com/..." />
-          </div>
+          <Field :id="`teacher-${teacher.id}-instagram`" label="Instagram" optional>
+            <Input v-model="teacher.instagram" type="url" placeholder="https://instagram.com/..." />
+          </Field>
         </div>
       </div>
 
@@ -718,20 +697,20 @@ const labelClass = 'text-[10px] uppercase tracking-[0.25em] font-bold mb-2 block
       <div v-if="currentStep === 'schedule'" class="space-y-6">
         <div class="flex items-start justify-between">
           <div>
-            <h2 class="text-2xl leading-tight font-black mb-1" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Schedule</h2>
-            <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+            <h2 class="text-2xl leading-tight font-black mb-1 font-display text-foreground">Schedule</h2>
+            <p class="text-sm text-muted-foreground font-sans">
               Add workshops and parties.
               <span v-if="!days.length" class="text-destructive">Set dates in Basics first.</span>
             </p>
           </div>
           <Button size="sm" variant="outline" class="gap-1 shrink-0" :disabled="!days.length" @click="addWorkshop">
-            <Plus class="w-3.5 h-3.5" /> Add Workshop
+            <Plus class="size-3.5" /> Add Workshop
           </Button>
         </div>
 
         <div v-if="!workshops.length" class="text-center py-12 border rounded-lg border-dashed">
-          <Music class="w-8 h-8 mx-auto mb-2" style="color:var(--wd-amber-600);" />
-          <p style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);" class="text-sm mb-3">No workshops added yet</p>
+          <Music class="size-8 mx-auto mb-2 text-secondary" aria-hidden="true" />
+          <p class="text-sm mb-3 text-muted-foreground font-sans">No workshops added yet</p>
           <Button size="sm" variant="outline" :disabled="!days.length" @click="addWorkshop">Add your first workshop</Button>
         </div>
 
@@ -742,85 +721,65 @@ const labelClass = 'text-[10px] uppercase tracking-[0.25em] font-bold mb-2 block
               <Badge :variant="ws.type === 'party' ? 'secondary' : 'default'" class="text-[10px]">
                 {{ ws.type }}
               </Badge>
-              <button style="color:var(--wd-amber-600);" class="hover:!text-wd-red-600 p-1" @click="removeWorkshop(i)">
-                <Trash2 class="w-4 h-4" />
-              </button>
+              <Button variant="ghost" size="icon-sm" :class="removeBtnClass" :aria-label="`Remove ${ws.title || `workshop ${i + 1}`}`" @click="removeWorkshop(i)">
+                <Trash2 />
+              </Button>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label :class="labelClass">Title *</label>
-              <input v-model="ws.title" :class="inputClass" type="text" placeholder="e.g. Salsa Fundamentals" />
-            </div>
-            <div>
-              <label :class="labelClass">Type</label>
-              <select v-model="ws.type" :class="selectClass">
-                <option value="workshop">Workshop</option>
-                <option value="party">Party</option>
-              </select>
-            </div>
+            <Field :id="`ws-${ws.id}-title`" label="Title" required>
+              <Input v-model="ws.title" placeholder="e.g. Salsa Fundamentals" />
+            </Field>
+            <Field :id="`ws-${ws.id}-type`" label="Type">
+              <Select v-model="ws.type" :options="[{ label: 'Workshop', value: 'workshop' }, { label: 'Party', value: 'party' }]" />
+            </Field>
           </div>
 
           <div class="grid grid-cols-4 gap-3">
-            <div>
-              <label :class="labelClass">Day</label>
-              <select v-model="ws.day" :class="selectClass">
-                <option v-for="d in days" :key="d" :value="d">{{ d }}</option>
-              </select>
-            </div>
-            <div>
-              <label :class="labelClass">Time</label>
-              <input v-model="ws.time" :class="inputClass" type="time" />
-            </div>
-            <div>
-              <label :class="labelClass">Duration (min)</label>
-              <input v-model.number="ws.duration" :class="inputClass" type="number" min="15" step="15" />
-            </div>
-            <div>
-              <label :class="labelClass">Room</label>
-              <select v-if="rooms.length" v-model="ws.room" :class="selectClass">
+            <Field :id="`ws-${ws.id}-day`" label="Day">
+              <Select v-model="ws.day" :options="days" />
+            </Field>
+            <Field :id="`ws-${ws.id}-time`" label="Time">
+              <Input v-model="ws.time" type="time" />
+            </Field>
+            <Field :id="`ws-${ws.id}-duration`" label="Duration (min)">
+              <Input v-model.number="ws.duration" type="number" min="15" step="15" />
+            </Field>
+            <Field :id="`ws-${ws.id}-room`" label="Room" optional>
+              <Select v-if="rooms.length" v-model="ws.room">
                 <option value="">— Select —</option>
                 <option v-for="r in rooms" :key="r" :value="r">{{ r }}</option>
-              </select>
-              <input v-else v-model="ws.room" :class="inputClass" type="text" placeholder="Add rooms in Venue step" />
-            </div>
+              </Select>
+              <Input v-else v-model="ws.room" placeholder="Add rooms in Venue step" />
+            </Field>
           </div>
 
           <div class="grid grid-cols-3 gap-3">
-            <div>
-              <label :class="labelClass">Style</label>
-              <input v-model="ws.style" :class="inputClass" type="text" placeholder="Salsa" list="style-options" />
+            <Field :id="`ws-${ws.id}-style`" label="Style" optional>
+              <Input v-model="ws.style" placeholder="Salsa" list="style-options" />
               <datalist id="style-options">
                 <option v-for="s in styles" :key="s" :value="s" />
               </datalist>
-            </div>
-            <div>
-              <label :class="labelClass">Level</label>
-              <select v-model="ws.level" :class="selectClass">
-                <option value="Beginner">Beginner</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Advanced">Advanced</option>
-              </select>
-            </div>
-            <div>
-              <label :class="labelClass">Teacher</label>
-              <select v-model="ws.teacherId" :class="selectClass">
+            </Field>
+            <Field :id="`ws-${ws.id}-level`" label="Level">
+              <Select v-model="ws.level" :options="['Beginner', 'Intermediate', 'Advanced']" />
+            </Field>
+            <Field :id="`ws-${ws.id}-teacher`" label="Teacher" optional>
+              <Select v-model="ws.teacherId">
                 <option value="">— None —</option>
                 <option v-for="t in teachers" :key="t.id" :value="t.id">{{ t.name || 'Unnamed' }}</option>
-              </select>
-            </div>
+              </Select>
+            </Field>
           </div>
 
-          <div>
-            <label :class="labelClass">Description</label>
-            <textarea v-model="ws.description" :class="textareaClass" placeholder="Optional workshop description..." rows="2" />
-          </div>
+          <Field :id="`ws-${ws.id}-description`" label="Description" optional>
+            <Textarea v-model="ws.description" placeholder="Optional workshop description..." :rows="2" />
+          </Field>
 
-          <div>
-            <label :class="labelClass">Alternative venue</label>
-            <input v-model="ws.venue" :class="inputClass" type="text" placeholder="Leave empty if same as main venue" />
-          </div>
+          <Field :id="`ws-${ws.id}-venue`" label="Alternative venue" optional>
+            <Input v-model="ws.venue" placeholder="Leave empty if same as main venue" />
+          </Field>
         </div>
       </div>
 
@@ -828,67 +787,54 @@ const labelClass = 'text-[10px] uppercase tracking-[0.25em] font-bold mb-2 block
       <div v-if="currentStep === 'tickets'" class="space-y-6">
         <div class="flex items-start justify-between">
           <div>
-            <h2 class="text-2xl leading-tight font-black mb-1" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Tickets</h2>
-            <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">Define your ticket options. We'll recommend the best fit to dancers.</p>
+            <h2 class="text-2xl leading-tight font-black mb-1 font-display text-foreground">Tickets</h2>
+            <p class="text-sm text-muted-foreground font-sans">Define your ticket options. We'll recommend the best fit to dancers.</p>
           </div>
           <Button size="sm" variant="outline" class="gap-1 shrink-0" @click="addTicket">
-            <Plus class="w-3.5 h-3.5" /> Add Ticket
+            <Plus class="size-3.5" /> Add Ticket
           </Button>
         </div>
 
-        <div>
-          <label :class="labelClass">Ticket purchase URL</label>
-          <input v-model="ticketUrl" :class="inputClass" type="url" placeholder="https://your-ticket-page.com" />
-          <p style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);" class="text-xs mt-1">Where dancers go to buy tickets (your website or ticket platform)</p>
-        </div>
+        <Field id="ticket-url" label="Ticket purchase URL" optional hint="Where dancers go to buy tickets (your website or ticket platform)">
+          <Input v-model="ticketUrl" type="url" placeholder="https://your-ticket-page.com" />
+        </Field>
 
         <div v-if="!tickets.length" class="text-center py-12 border rounded-lg border-dashed">
-          <Ticket class="w-8 h-8 mx-auto mb-2" style="color:var(--wd-amber-600);" />
-          <p style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);" class="text-sm mb-3">No ticket options added yet</p>
+          <Ticket class="size-8 mx-auto mb-2 text-secondary" aria-hidden="true" />
+          <p class="text-sm mb-3 text-muted-foreground font-sans">No ticket options added yet</p>
           <Button size="sm" variant="outline" @click="addTicket">Add your first ticket</Button>
         </div>
 
         <div v-for="(ticket, i) in tickets" :key="ticket.id" class="border rounded-lg p-4 space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-semibold">{{ ticket.name || `Ticket ${i + 1}` }}</h3>
-            <button style="color:var(--wd-amber-600);" class="hover:!text-wd-red-600 p-1" @click="removeTicket(i)">
-              <Trash2 class="w-4 h-4" />
-            </button>
+            <Button variant="ghost" size="icon-sm" :class="removeBtnClass" :aria-label="`Remove ${ticket.name || `ticket ${i + 1}`}`" @click="removeTicket(i)">
+              <Trash2 />
+            </Button>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label :class="labelClass">Name *</label>
-              <input v-model="ticket.name" :class="inputClass" type="text" placeholder="e.g. Full Pass + Party" />
-            </div>
-            <div>
-              <label :class="labelClass">Price (EUR) *</label>
-              <input v-model.number="ticket.price" :class="inputClass" type="number" min="0" step="1" placeholder="100" />
-            </div>
+            <Field :id="`ticket-${ticket.id}-name`" label="Name" required>
+              <Input v-model="ticket.name" placeholder="e.g. Full Pass + Party" />
+            </Field>
+            <Field :id="`ticket-${ticket.id}-price`" label="Price (EUR)" required>
+              <Input v-model.number="ticket.price" type="number" min="0" step="1" placeholder="100" />
+            </Field>
           </div>
 
-          <div>
-            <label :class="labelClass">Description</label>
-            <input v-model="ticket.description" :class="inputClass" type="text" placeholder="e.g. All 5 workshops + Saturday Party" />
-          </div>
+          <Field :id="`ticket-${ticket.id}-description`" label="Description" optional>
+            <Input v-model="ticket.description" placeholder="e.g. All 5 workshops + Saturday Party" />
+          </Field>
 
           <div class="grid grid-cols-3 gap-3">
-            <div>
-              <label :class="labelClass">Max workshops</label>
-              <input v-model.number="ticket.workshopCount" :class="inputClass" type="number" min="0" placeholder="Unlimited" />
-              <p style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);" class="text-xs mt-0.5">Leave empty for unlimited</p>
+            <Field :id="`ticket-${ticket.id}-workshops`" label="Max workshops" hint="Leave empty for unlimited">
+              <Input v-model.number="ticket.workshopCount" type="number" min="0" placeholder="Unlimited" />
+            </Field>
+            <div class="flex items-end">
+              <Checkbox v-model="ticket.includesParty">Includes party</Checkbox>
             </div>
-            <div class="flex items-end pb-1">
-              <label class="flex items-center gap-2 text-sm cursor-pointer">
-                <input v-model="ticket.includesParty" type="checkbox" class="rounded" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent); accent-color:var(--wd-red-600);" />
-                Includes party
-              </label>
-            </div>
-            <div class="flex items-end pb-1">
-              <label class="flex items-center gap-2 text-sm cursor-pointer">
-                <input v-model="ticket.soldOut" type="checkbox" class="rounded" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent); accent-color:var(--wd-red-600);" />
-                Sold out
-              </label>
+            <div class="flex items-end">
+              <Checkbox v-model="ticket.soldOut">Sold out</Checkbox>
             </div>
           </div>
         </div>
@@ -897,15 +843,15 @@ const labelClass = 'text-[10px] uppercase tracking-[0.25em] font-bold mb-2 block
       <!-- Step 6: Preview -->
       <div v-if="currentStep === 'preview'" class="space-y-6">
         <div>
-          <h2 class="text-2xl leading-tight font-black mb-1" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Preview & Submit</h2>
-          <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">Review your festival, then send it to our team to onboard.</p>
+          <h2 class="text-2xl leading-tight font-black mb-1 font-display text-foreground">Preview & Submit</h2>
+          <p class="text-sm text-muted-foreground font-sans">Review your festival, then send it to our team to onboard.</p>
         </div>
 
         <!-- Submitted success -->
-        <div v-if="isPublished" class="text-center py-12 border rounded-lg bg-green-50 border-green-200">
-          <Check class="w-12 h-12 text-green-500 mx-auto mb-3" />
+        <div v-if="isPublished" class="text-center py-12 border rounded-lg bg-success/6 border-success/20">
+          <Check class="size-12 text-success mx-auto mb-3" aria-hidden="true" />
           <h3 class="text-lg font-semibold mb-1">Submitted for review</h3>
-          <p style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);" class="text-sm mb-4">
+          <p class="text-sm mb-4 text-muted-foreground font-sans">
             Thanks — we've got <strong>{{ festival.name }}</strong>. Our team will review it and reach out to get it live on WeDance.
           </p>
           <div class="flex items-center justify-center gap-3">
@@ -917,130 +863,113 @@ const labelClass = 'text-[10px] uppercase tracking-[0.25em] font-bold mb-2 block
 
         <!-- Preview summary -->
         <div v-else class="space-y-4">
-          <p v-if="submitError" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p v-if="submitError" role="alert" class="rounded-lg border border-destructive/30 bg-wd-red-50 px-4 py-3 text-sm text-wd-red-900 font-sans">
             {{ submitError }}
           </p>
           <!-- Basics summary -->
-          <div class="rounded-2xl bg-white border p-5" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent), 0 6px 18px rgba(59,31,18,0.04);">
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <h3 class="text-sm font-semibold">Basics</h3>
-                <button class="text-xs italic hover:underline" style="color:var(--wd-red-600); font-family:var(--wd-font-display);" @click="goToStep('basics')">Edit</button>
-              </div>
-              <div class="grid grid-cols-2 gap-y-1 text-sm">
-                <span style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">Name</span>
-                <span>{{ festival.name || '—' }}</span>
-                <span style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">Dates</span>
-                <span>{{ festival.startDate && festival.endDate ? `${festival.startDate} to ${festival.endDate}` : '—' }}</span>
-                <span style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">Social links</span>
-                <span>{{ festival.socialLinks.length || 0 }} links</span>
-              </div>
+          <div class="rounded-2xl border bg-card p-5 shadow-wd-card">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-semibold">Basics</h3>
+              <Button variant="link" :class="inlineLinkClass" @click="goToStep('basics')">Edit</Button>
+            </div>
+            <div class="grid grid-cols-2 gap-y-1 text-sm">
+              <span class="text-secondary font-sans">Name</span>
+              <span>{{ festival.name || '—' }}</span>
+              <span class="text-secondary font-sans">Dates</span>
+              <span>{{ festival.startDate && festival.endDate ? `${festival.startDate} to ${festival.endDate}` : '—' }}</span>
+              <span class="text-secondary font-sans">Social links</span>
+              <span>{{ festival.socialLinks.length || 0 }} links</span>
             </div>
           </div>
 
           <!-- Venue summary -->
-          <div class="rounded-2xl bg-white border p-5" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent), 0 6px 18px rgba(59,31,18,0.04);">
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <h3 class="text-sm font-semibold">Venue</h3>
-                <button class="text-xs italic hover:underline" style="color:var(--wd-red-600); font-family:var(--wd-font-display);" @click="goToStep('venue')">Edit</button>
-              </div>
-              <div class="grid grid-cols-2 gap-y-1 text-sm">
-                <span style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">Name</span>
-                <span>{{ venue.name || '—' }}</span>
-                <span style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">Address</span>
-                <span>{{ venue.address || '—' }}</span>
-              </div>
+          <div class="rounded-2xl border bg-card p-5 shadow-wd-card">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-semibold">Venue</h3>
+              <Button variant="link" :class="inlineLinkClass" @click="goToStep('venue')">Edit</Button>
+            </div>
+            <div class="grid grid-cols-2 gap-y-1 text-sm">
+              <span class="text-secondary font-sans">Name</span>
+              <span>{{ venue.name || '—' }}</span>
+              <span class="text-secondary font-sans">Address</span>
+              <span>{{ venue.address || '—' }}</span>
             </div>
           </div>
 
           <!-- Lineup summary -->
-          <div class="rounded-2xl bg-white border p-5" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent), 0 6px 18px rgba(59,31,18,0.04);">
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <h3 class="text-sm font-semibold">Lineup</h3>
-                <button class="text-xs italic hover:underline" style="color:var(--wd-red-600); font-family:var(--wd-font-display);" @click="goToStep('lineup')">Edit</button>
-              </div>
-              <p class="text-sm">
-                <strong>{{ teachers.length }}</strong> {{ teachers.length === 1 ? 'artist' : 'artists' }}
-                <span v-if="teachers.length" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">
-                  — {{ teachers.map(t => t.name).filter(Boolean).join(', ') }}
-                </span>
-              </p>
+          <div class="rounded-2xl border bg-card p-5 shadow-wd-card">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-semibold">Lineup</h3>
+              <Button variant="link" :class="inlineLinkClass" @click="goToStep('lineup')">Edit</Button>
             </div>
+            <p class="text-sm">
+              <strong>{{ teachers.length }}</strong> {{ teachers.length === 1 ? 'artist' : 'artists' }}
+              <span v-if="teachers.length" class="text-secondary font-sans">
+                — {{ teachers.map(t => t.name).filter(Boolean).join(', ') }}
+              </span>
+            </p>
           </div>
 
           <!-- Schedule summary -->
-          <div class="rounded-2xl bg-white border p-5" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent), 0 6px 18px rgba(59,31,18,0.04);">
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <h3 class="text-sm font-semibold">Schedule</h3>
-                <button class="text-xs italic hover:underline" style="color:var(--wd-red-600); font-family:var(--wd-font-display);" @click="goToStep('schedule')">Edit</button>
-              </div>
-              <p class="text-sm">
-                <strong>{{ workshopCount }}</strong> {{ workshopCount === 1 ? 'workshop' : 'workshops' }},
-                <strong>{{ partyCount }}</strong> {{ partyCount === 1 ? 'party' : 'parties' }}
-                <span v-if="days.length" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">across {{ days.length }} days</span>
-              </p>
+          <div class="rounded-2xl border bg-card p-5 shadow-wd-card">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-semibold">Schedule</h3>
+              <Button variant="link" :class="inlineLinkClass" @click="goToStep('schedule')">Edit</Button>
             </div>
+            <p class="text-sm">
+              <strong>{{ workshopCount }}</strong> {{ workshopCount === 1 ? 'workshop' : 'workshops' }},
+              <strong>{{ partyCount }}</strong> {{ partyCount === 1 ? 'party' : 'parties' }}
+              <span v-if="days.length" class="text-secondary font-sans">across {{ days.length }} days</span>
+            </p>
           </div>
 
           <!-- Tickets summary -->
-          <div class="rounded-2xl bg-white border p-5" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent), 0 6px 18px rgba(59,31,18,0.04);">
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <h3 class="text-sm font-semibold">Tickets</h3>
-                <button class="text-xs italic hover:underline" style="color:var(--wd-red-600); font-family:var(--wd-font-display);" @click="goToStep('tickets')">Edit</button>
-              </div>
-              <p class="text-sm">
-                <strong>{{ tickets.length }}</strong> {{ tickets.length === 1 ? 'option' : 'options' }}
-                <span v-if="tickets.length" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">
-                  — {{ tickets.filter(t => !t.soldOut).map(t => `${t.name} €${t.price}`).join(', ') }}
-                </span>
-              </p>
+          <div class="rounded-2xl border bg-card p-5 shadow-wd-card">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-semibold">Tickets</h3>
+              <Button variant="link" :class="inlineLinkClass" @click="goToStep('tickets')">Edit</Button>
             </div>
+            <p class="text-sm">
+              <strong>{{ tickets.length }}</strong> {{ tickets.length === 1 ? 'option' : 'options' }}
+              <span v-if="tickets.length" class="text-secondary font-sans">
+                — {{ tickets.filter(t => !t.soldOut).map(t => `${t.name} €${t.price}`).join(', ') }}
+              </span>
+            </p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Bottom navigation -->
-    <div v-if="!isPublished" class="fixed bottom-0 left-0 right-0 border-t z-20 backdrop-blur-sm" style="background:rgba(251, 245, 234, 0.96); border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
+    <div v-if="!isPublished" class="fixed bottom-0 left-0 right-0 border-t border-border z-20 bg-background/96 backdrop-blur-sm">
       <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-        <button
+        <Button
           v-if="currentStepIndex > 0"
-          type="button"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border transition-all hover:-translate-y-0.5"
-          style="background:white; color:var(--wd-brown-700); border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); font-family:var(--wd-font-sans);"
+          variant="outline"
+          class="rounded-full font-bold text-muted-foreground font-sans hover:-translate-y-0.5 transition-all"
           @click="prevStep"
         >
-          <ArrowLeft class="w-4 h-4" /> Back
-        </button>
+          <ArrowLeft /> Back
+        </Button>
         <div v-else class="w-16" />
 
-        <div class="text-xs italic" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);">
-          Step <strong style="color:var(--wd-brown-900);">{{ currentStepIndex + 1 }}</strong> of {{ steps.length }}
+        <div class="text-xs italic text-secondary font-display">
+          Step <strong class="text-foreground">{{ currentStepIndex + 1 }}</strong> of {{ steps.length }}
         </div>
 
-        <button
-          v-if="currentStep !== 'preview'"
-          type="button"
-          class="inline-flex items-center gap-2 px-5 py-2 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-          style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 3px 0 -1px var(--wd-red-800); font-family:var(--wd-font-sans);"
-          @click="nextStep"
-        >
-          Next <ArrowRight class="w-4 h-4" />
-        </button>
-        <button
+        <Button v-if="currentStep !== 'preview'" variant="cta" class="font-sans" @click="nextStep">
+          Next <ArrowRight />
+        </Button>
+        <Button
           v-else
-          type="button"
-          class="inline-flex items-center gap-2 px-5 py-2 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60"
-          :disabled="isPublishing"
-          style="background:linear-gradient(135deg, var(--wd-green-600), var(--wd-cyan-600)); box-shadow: 0 3px 0 -1px var(--wd-green-700); font-family:var(--wd-font-sans);"
+          variant="cta"
+          accent="var(--wd-green-700)"
+          class="font-sans"
+          :loading="isPublishing"
           @click="publish"
         >
           {{ isPublishing ? 'Submitting…' : 'Submit for review' }}
-        </button>
+        </Button>
       </div>
     </div>
   </div>

@@ -71,59 +71,51 @@ watch([isLoading, isSignedIn], ([loadingNow, signedIn]) => {
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
     <main class="max-w-3xl mx-auto px-4 py-12">
-      <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">The dashboard</div>
+      <div class="text-xs uppercase tracking-[0.3em] text-secondary">The dashboard</div>
       <h1 class="mt-2 text-4xl leading-tight">
-        Your <em class="italic" style="color:var(--wd-red-600);">insights.</em>
+        Your <em class="italic text-primary">insights.</em>
       </h1>
-      <p class="mt-2 text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <p class="mt-2 text-sm text-muted-foreground font-sans">
         Who is actually coming — so you can plan a program that fits them.
       </p>
 
-      <div v-if="isLoading || loadingList" class="mt-10 flex items-center gap-2 text-sm" style="font-family:var(--wd-font-sans);">
-        <Loader2 class="w-4 h-4 animate-spin" /> Loading…
+      <div v-if="isLoading || loadingList" class="mt-10 flex items-center gap-2 text-sm font-sans">
+        <Loader2 class="size-4 animate-spin" aria-hidden="true" /> Loading…
       </div>
 
-      <div v-else-if="!isSignedIn" class="mt-10 rounded-2xl bg-white border p-6" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); font-family:var(--wd-font-sans);">
+      <div v-else-if="!isSignedIn" class="mt-10 rounded-2xl border bg-card p-6 font-sans">
         <p class="text-sm">Sign in with the account you used to list your festival to see its insights.</p>
       </div>
 
-      <div v-else-if="!festivals.length && !error" class="mt-10 rounded-2xl bg-white border p-6" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); font-family:var(--wd-font-sans);">
-        <BarChart3 class="w-6 h-6" style="color:var(--wd-amber-500);" />
+      <div v-else-if="!festivals.length && !error" class="mt-10 rounded-2xl border bg-card p-6 font-sans">
+        <BarChart3 class="size-6 text-warning" aria-hidden="true" />
         <p class="mt-2 text-sm">
           No festivals on your account yet. Insights open once the team has onboarded the festival you listed.
         </p>
-        <NuxtLink to="/organizers/create" class="mt-4 inline-block text-sm font-bold underline" style="color:var(--wd-red-600);">
+        <NuxtLink to="/organizers/create" class="mt-4 inline-block text-sm font-bold underline text-primary">
           List your festival →
         </NuxtLink>
       </div>
 
       <template v-else>
-        <div v-if="festivals.length > 1" class="mt-8" style="font-family:var(--wd-font-sans);">
-          <label for="insights-festival" class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--wd-amber-600);">Festival</label>
-          <select
-            id="insights-festival"
-            v-model="selected"
-            class="h-11 w-full sm:w-auto rounded-xl px-3.5 text-sm bg-white"
-            style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent); color:var(--wd-brown-900);"
-          >
-            <option v-for="f in festivals" :key="f.slug" :value="f.slug">{{ f.name }}</option>
-          </select>
-        </div>
+        <Field v-if="festivals.length > 1" id="insights-festival" label="Festival" class="mt-8 sm:max-w-xs">
+          <Select v-model="selected" :options="festivals.map(f => ({ label: f.name, value: f.slug }))" />
+        </Field>
 
-        <p v-if="error" role="alert" class="mt-8 text-sm rounded-xl p-3" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-800); font-family:var(--wd-font-sans);">
+        <p v-if="error" role="alert" class="mt-8 text-sm rounded-xl p-3 bg-primary/8 text-wd-red-800 font-sans">
           {{ error }}
         </p>
 
         <section v-if="mix || loadingMix" class="mt-8">
           <h2 class="text-2xl">
-            Style &amp; level mix<span v-if="mix" style="color:var(--wd-brown-700);"> · {{ mix.festival.name }}</span>
+            Style &amp; level mix<span v-if="mix" class="text-muted-foreground"> · {{ mix.festival.name }}</span>
           </h2>
-          <div v-if="loadingMix" class="mt-4 flex items-center gap-2 text-sm" style="font-family:var(--wd-font-sans);">
-            <Loader2 class="w-4 h-4 animate-spin" /> Loading…
+          <div v-if="loadingMix" class="mt-4 flex items-center gap-2 text-sm font-sans">
+            <Loader2 class="size-4 animate-spin" aria-hidden="true" /> Loading…
           </div>
           <StyleLevelMix v-else-if="mix" :mix="mix" class="mt-4" />
         </section>

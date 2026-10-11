@@ -4,7 +4,7 @@
  * `admin` layout provides the sidebar + is_admin gate; list via
  * admin.listFestivals (adminProcedure).
  */
-import { Loader2, ArrowRight, RotateCcw } from 'lucide-vue-next'
+import { ArrowRight, RotateCcw } from 'lucide-vue-next'
 
 definePageMeta({ layout: 'admin' })
 useHead({ title: 'Admin: Festivals | WeDance' })
@@ -34,41 +34,28 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString('en-GB', {
 
 <template>
   <div>
-    <div class="flex items-baseline justify-between gap-3">
-      <h1 class="text-3xl sm:text-4xl leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
-        Festival <em class="italic" style="color:var(--wd-green-600);">dinners</em>
-      </h1>
-      <button type="button" class="inline-flex items-center gap-1.5 text-xs font-bold hover:underline" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);" @click="load">
-        <RotateCcw class="w-3.5 h-3.5" /> Refresh
-      </button>
-    </div>
-    <p class="mt-1 text-sm italic" style="color:var(--wd-brown-700);">Pick a festival to assign dinner groups and reveal restaurants.</p>
+    <AdminPageHeader title="Festival dinners" description="Pick a festival to assign dinner groups and reveal restaurants.">
+      <Button variant="ghost" size="sm" class="text-secondary" :disabled="loading" @click="load">
+        <RotateCcw /> Refresh
+      </Button>
+    </AdminPageHeader>
 
-    <div v-if="error" class="mt-6 rounded-xl border p-4 text-sm" style="border-color:color-mix(in srgb, var(--wd-red-600) 33.3%, transparent); background:var(--wd-red-50); color:var(--wd-red-900); font-family:var(--wd-font-sans);">
-      {{ error }}
-    </div>
-
-    <div v-if="loading" class="flex items-center gap-2 py-16 justify-center" style="color:var(--wd-amber-600);">
-      <Loader2 class="w-5 h-5 animate-spin" /> <span class="text-sm italic">Loading…</span>
-    </div>
-
-    <div v-else-if="!items.length" class="mt-8 rounded-2xl border-2 border-dashed p-10 text-center" style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent);">
-      <p class="text-sm font-bold" style="color:var(--wd-brown-900);">No festivals.</p>
-    </div>
+    <AdminState v-if="error" kind="error" :message="error" />
+    <AdminState v-if="loading" kind="loading" />
+    <AdminState v-else-if="!items.length" kind="empty" message="No festivals." />
 
     <div v-else class="mt-6 grid gap-3">
       <NuxtLink
         v-for="f in items"
         :key="f.slug"
         :to="`/admin/festivals/${f.slug}`"
-        class="group flex items-center gap-3 rounded-2xl bg-white border p-4 transition-all hover:-translate-y-0.5"
-        style="border-color:color-mix(in srgb, var(--wd-green-600) 20%, transparent);"
+        class="group flex items-center gap-3 rounded-2xl border bg-card p-4 transition-all duration-wd-standard hover:-translate-y-0.5 hover:border-input"
       >
         <div class="flex-1 min-w-0">
-          <h3 class="text-base font-bold leading-tight" style="color:var(--wd-brown-900);">{{ f.name }}</h3>
-          <p class="text-xs" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">{{ fmt(f.startDate) }} → {{ fmt(f.endDate) }} · {{ f.slug }}</p>
+          <h3 class="font-display text-base font-bold leading-tight text-foreground">{{ f.name }}</h3>
+          <p class="text-xs text-secondary">{{ fmt(f.startDate) }} → {{ fmt(f.endDate) }} · {{ f.slug }}</p>
         </div>
-        <ArrowRight class="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-1" style="color:var(--wd-green-600);" />
+        <ArrowRight class="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" aria-hidden="true" />
       </NuxtLink>
     </div>
   </div>

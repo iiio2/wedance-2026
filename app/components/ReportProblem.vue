@@ -9,8 +9,44 @@
  * (device, route, recent client errors, Sentry replay link — see
  * useReportContext). Styled in the 2026 tropical aesthetic to match SignUpModal.
  */
-import { Bug, X, Check, Loader2, ImageIcon } from 'lucide-vue-next'
+import { Bug, Check, ImageIcon } from 'lucide-vue-next'
 import { ReportProblemSchema } from '#shared/validation'
+import { WD } from '~/lib/brand'
+
+/**
+ * Literal values for the semantic tokens, injected into the cloned document
+ * before html2canvas paints it. html2canvas v1.4.1 only parses rgb/rgba/hsl/
+ * hex — not the color-mix()/oklch() our tokens resolve to — so these must stay
+ * plain colours. Brand ones come from WD (kept in sync with tailwind.css by
+ * brand.test.ts); white and the two cream mixes (--muted, --accent) are their
+ * computed sRGB values. Update here if a semantic token changes.
+ */
+const WHITE = 'rgb(255,255,255)'
+const SCREENSHOT_TOKENS: Record<string, string> = {
+  'background': WD.cream,
+  'foreground': WD.brown900,
+  'card': WHITE,
+  'card-foreground': WD.brown900,
+  'popover': WHITE,
+  'popover-foreground': WD.brown900,
+  'primary': WD.red600,
+  'primary-foreground': WHITE,
+  'secondary': WD.amber600,
+  'secondary-foreground': WD.cream,
+  'muted': 'rgb(245,239,229)',
+  'muted-foreground': WD.brown700,
+  'accent': 'rgb(247,239,224)',
+  'accent-foreground': WD.amber600,
+  'destructive': WD.red600,
+  'destructive-foreground': WHITE,
+  'border': 'rgba(59,31,13,0.13)',
+  'input': 'rgba(59,31,13,0.2)',
+  'ring': WD.amber600,
+  'success': WD.green600,
+  'info': WD.cyan600,
+  'warning': WD.amber500,
+}
+const SCREENSHOT_TOKEN_CSS = `:root{${Object.entries(SCREENSHOT_TOKENS).map(([k, v]) => `--${k}:${v};`).join('')}}`
 
 const { collect } = useReportContext()
 const { isSignedIn } = useAuth()
@@ -37,7 +73,7 @@ async function captureScreenshot(): Promise<string | null> {
     const canvas = await html2canvas(document.body, {
       logging: false,
       useCORS: true,
-      backgroundColor: '#ffffff',
+      backgroundColor: WHITE,
       imageTimeout: 5000,
       scale: Math.min(window.devicePixelRatio || 1, 1.5),
       x: window.scrollX,
@@ -51,34 +87,25 @@ async function captureScreenshot(): Promise<string | null> {
         // Tailwind 4 emits oklch() in CSS variables and color-mix()
         // for opacity utilities — both crash the color parser before
         // any element is rendered.  Inject hex overrides for every
-        // CSS variable so computed styles resolve to safe values.
+        // CSS variable so computed styles resolve to safe values
+        // (SCREENSHOT_TOKENS above).
         const fix = doc.createElement('style')
-        fix.textContent = [
-          ':root{',
-          '--background:#fbf5ea;--foreground:#3b1f0d;',
-          '--card:#ffffff;--card-foreground:#3b1f0d;',
-          '--popover:#ffffff;--popover-foreground:#3b1f0d;',
-          '--primary:#dc2626;--primary-foreground:#ffffff;',
-          '--secondary:#9a5614;--secondary-foreground:#fbf5ea;',
-          '--muted:#f5efe5;--muted-foreground:#5b3a1d;',
-          '--accent:#f7efe0;--accent-foreground:#9a5614;',
-          '--destructive:#dc2626;--destructive-foreground:#ffffff;',
-          '--border:rgba(59,31,13,0.13);--input:rgba(59,31,13,0.2);--ring:#9a5614;',
-          '--success:#16a34a;--info:#0891b2;--warning:#f59e0b;',
-          '}',
-        ].join('')
+        fix.textContent = SCREENSHOT_TOKEN_CSS
         doc.head.appendChild(fix)
 
         // Neutralise any remaining CSS Color Level 4 values that
         // html2canvas v1 can't parse (oklch, oklab, lab, lch,
         // color-mix, hwb).  Tailwind 4 and modern browsers emit
         // these in computed styles even when the source uses oklch.
+        // color() is what color-mix(in srgb, …) computes to — e.g. the
+        // `bg-primary/10` tints and --border — and also crashes the parser.
         const colorProps = [
           'color', 'backgroundColor',
           'borderTopColor', 'borderRightColor',
           'borderBottomColor', 'borderLeftColor',
+          'outlineColor', 'textDecorationColor',
         ] as const
-        const unsupported = /oklch|oklab|lab\(|lch\(|color-mix|hwb\(/
+        const unsupported = /oklch|oklab|lab\(|lch\(|color-mix|color\(|hwb\(/
         cloned.querySelectorAll<HTMLElement>('*').forEach((el) => {
           const cs = doc.defaultView?.getComputedStyle(el)
           if (!cs) return
@@ -87,6 +114,8 @@ async function captureScreenshot(): Promise<string | null> {
               el.style[prop] = 'transparent'
             }
           }
+          if (unsupported.test(cs.boxShadow)) el.style.boxShadow = 'none'
+          if (unsupported.test(cs.backgroundImage)) el.style.backgroundImage = 'none'
         })
 
         // Strip SVG-filter overlays and blend modes that html2canvas
@@ -169,24 +198,19 @@ async function submit() {
     submitting.value = false
   }
 }
-
-const inputClass = 'w-full rounded-2xl px-4 py-3 text-sm outline-none transition-all bg-white border border-border text-foreground font-sans'
 </script>
 
 <template>
   <!-- Floating trigger (bottom-left to stay clear of the plan/cart sidebar) -->
-  <button
-    type="button"
-    :disabled="capturing"
-    class="fixed left-4 bottom-4 z-40 inline-flex items-center gap-2 rounded-full pl-3 pr-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-lg disabled:opacity-70 bg-foreground"
-    style="box-shadow: 0 4px 14px rgba(59,31,13,0.35);"
+  <Button
+    :loading="capturing"
+    class="fixed left-4 bottom-4 z-40 h-auto gap-2 rounded-full pl-3 pr-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-foreground hover:bg-foreground/90 shadow-[0_4px_14px_rgba(59,31,13,0.35)]"
     aria-label="Report a problem"
     @click="openReport"
   >
-    <Loader2 v-if="capturing" class="w-4 h-4 animate-spin" />
-    <Bug v-else class="w-4 h-4" />
+    <Bug v-if="!capturing" />
     <span class="hidden sm:inline">{{ capturing ? 'Capturing…' : 'Report a problem' }}</span>
-  </button>
+  </Button>
 
   <Dialog v-model:open="open">
     <DialogContent
@@ -198,7 +222,7 @@ const inputClass = 'w-full rounded-2xl px-4 py-3 text-sm outline-none transition
         <!-- Success -->
         <template v-if="doneUrl">
           <DialogHeader class="text-left space-y-1">
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold text-secondary">Thank you</div>
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">Thank you</div>
             <DialogTitle class="text-2xl leading-tight text-foreground font-display">
               Report sent 🎉
             </DialogTitle>
@@ -206,19 +230,15 @@ const inputClass = 'w-full rounded-2xl px-4 py-3 text-sm outline-none transition
               Our team has it, complete with a screenshot and technical details. We really appreciate you flagging it.
             </DialogDescription>
           </DialogHeader>
-          <button
-            type="button"
-            class="mt-5 w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider bg-primary shadow-[0_3px_0_-1px_var(--wd-red-800)] font-sans"
-            @click="open = false"
-          >
-            <Check class="w-4 h-4" /> Done
-          </button>
+          <Button variant="pill" size="lg" class="mt-5 w-full px-5 font-sans" @click="open = false">
+            <Check /> Done
+          </Button>
         </template>
 
         <!-- Form -->
         <template v-else>
           <DialogHeader class="text-left space-y-1">
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold text-secondary">Help us improve</div>
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">Help us improve</div>
             <DialogTitle class="text-2xl leading-tight text-foreground font-display">
               Report a problem
             </DialogTitle>
@@ -228,65 +248,50 @@ const inputClass = 'w-full rounded-2xl px-4 py-3 text-sm outline-none transition
           </DialogHeader>
 
           <form class="space-y-4 pt-4" novalidate @submit.prevent="submit">
-            <div class="space-y-1.5">
-              <label for="report-desc" class="text-sm font-bold text-foreground">What happened?</label>
-              <textarea
-                id="report-desc"
+            <Field id="report-desc" label="What happened?" required :error="errors.description">
+              <Textarea
                 v-model="description"
-                rows="4"
+                :rows="4"
                 placeholder="e.g. I clicked ‘Save my plan’ and nothing happened…"
-                required
-                :class="inputClass"
                 v-bind="fieldAttrs('description', 'report-desc-error')"
               />
-              <FieldError id="report-desc-error" :message="errors.description" />
-            </div>
+            </Field>
 
-            <div v-if="!isSignedIn" class="space-y-1.5">
-              <label for="report-email" class="text-sm font-bold text-foreground">
-                Email <span class="text-secondary font-normal">(optional — so we can follow up)</span>
-              </label>
-              <input
-                id="report-email"
+            <Field v-if="!isSignedIn" id="report-email" label="Email" optional hint="So we can follow up." :error="errors.email">
+              <Input
                 v-model="email"
                 type="email"
                 placeholder="you@example.com"
                 autocomplete="email"
-                :class="inputClass"
                 v-bind="fieldAttrs('email', 'report-email-error')"
-              >
-              <FieldError id="report-email-error" :message="errors.email" />
-            </div>
+              />
+            </Field>
 
             <!-- Screenshot status -->
             <div
-              class="flex items-center gap-2 rounded-2xl px-3 py-2.5 text-xs bg-white border border-border text-muted-foreground font-sans"
+              class="flex items-center gap-2 rounded-2xl px-3 py-2.5 text-xs bg-card border border-border text-muted-foreground font-sans"
             >
-              <ImageIcon class="w-4 h-4 shrink-0" :class="screenshot ? 'text-success' : 'text-secondary'" />
+              <ImageIcon class="size-4 shrink-0" :class="screenshot ? 'text-success' : 'text-secondary'" aria-hidden="true" />
               <span v-if="screenshot" class="flex-1">Screenshot of this page attached.</span>
               <span v-else class="flex-1">No screenshot captured — we’ll still get your description &amp; details.</span>
-              <button
+              <Button
                 v-if="screenshot"
                 type="button"
-                class="font-bold underline shrink-0 text-primary"
+                variant="link"
+                class="h-auto shrink-0 p-0 text-xs font-bold underline text-primary"
                 @click="screenshot = null"
               >
                 Remove
-              </button>
+              </Button>
             </div>
 
-            <p v-if="error" class="text-sm font-bold text-primary font-sans">
+            <p v-if="error" role="alert" class="text-sm font-bold text-primary font-sans">
               {{ error }}
             </p>
 
-            <button
-              type="submit"
-              :disabled="submitting"
-              class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60 bg-primary shadow-[0_3px_0_-1px_var(--wd-red-800)] font-sans"
-            >
-              <Loader2 v-if="submitting" class="w-4 h-4 animate-spin" />
+            <Button type="submit" variant="pill" size="lg" class="w-full px-5 font-sans" :loading="submitting">
               {{ submitting ? 'Sending…' : 'Send report' }}
-            </button>
+            </Button>
           </form>
         </template>
       </div>

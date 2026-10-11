@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, UtensilsCrossed, MessageCircle, Eye, RefreshCw, Loader2 } from 'lucide-vue-next'
-import { Badge } from '~/components/ui/badge'
+import { UtensilsCrossed, MessageCircle, Eye, RefreshCw, ChevronDown } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 
 const route = useRoute()
@@ -125,39 +124,21 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-      <!-- Header -->
-      <div class="flex items-center gap-3">
-        <NuxtLink to="/admin/festivals" class="p-2 rounded-lg hover:bg-muted transition-colors">
-          <ArrowLeft class="w-5 h-5" />
-        </NuxtLink>
-        <div>
-          <h1 class="text-lg font-semibold">Festival Admin</h1>
-          <p class="text-sm text-muted-foreground">{{ slug }}</p>
-        </div>
-        <NuxtLink
-          :to="{ path: '/organizers/insights', query: { festival: slug } }"
-          class="ml-auto inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border hover:bg-muted transition-colors"
-        >
-          <Eye class="w-4 h-4" /> Style &amp; level mix
-        </NuxtLink>
-      </div>
+      <AdminPageHeader title="Festival admin" :eyebrow="slug" :back="{ to: '/admin/festivals', label: 'All festivals' }">
+        <Button as-child variant="outline" size="sm">
+          <NuxtLink :to="{ path: '/organizers/insights', query: { festival: slug } }">
+            <Eye /> Style &amp; level mix
+          </NuxtLink>
+        </Button>
+      </AdminPageHeader>
 
-      <!-- Loading -->
-      <div v-if="loading" class="flex items-center justify-center py-12">
-        <Loader2 class="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
+      <AdminState v-if="loading" kind="loading" />
 
-      <!-- Error -->
-      <div v-else-if="error" class="text-center py-12">
-        <p class="text-sm text-destructive">{{ error }}</p>
-        <Button size="sm" variant="outline" class="mt-2" @click="loadDinners">Retry</Button>
-      </div>
+      <AdminState v-else-if="error" kind="error" :message="error">
+        <Button size="sm" variant="outline" @click="loadDinners">Retry</Button>
+      </AdminState>
 
-      <!-- No dinners -->
-      <div v-else-if="!dinners.length" class="text-center py-12">
-        <UtensilsCrossed class="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-        <p class="text-sm text-muted-foreground">No dinners found for this festival.</p>
-      </div>
+      <AdminState v-else-if="!dinners.length" kind="empty" message="No dinners found for this festival." />
 
       <!-- Dinners section -->
       <div v-else class="space-y-4">
@@ -166,28 +147,31 @@ onMounted(() => {
           <h2 class="text-base font-semibold">Group Dinners</h2>
         </div>
 
-        <div v-for="dinner in dinners" :key="dinner.id" class="border rounded-lg overflow-hidden">
+        <div v-for="dinner in dinners" :key="dinner.id" class="rounded-2xl border bg-card overflow-hidden">
           <!-- Dinner header -->
-          <button
-            class="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors"
+          <Button
+            variant="ghost"
+            class="h-auto w-full justify-between gap-3 rounded-none px-4 py-3 text-left font-normal whitespace-normal hover:bg-muted/50 hover:text-foreground"
+            :aria-expanded="selectedDinnerId === dinner.id"
             @click="selectDinner(dinner.id)"
           >
             <div class="flex items-center gap-3">
-              <UtensilsCrossed class="w-4 h-4 text-orange-500" />
+              <UtensilsCrossed class="size-4 text-wd-orange-500" aria-hidden="true" />
               <div class="text-left">
                 <span class="text-sm font-medium">{{ dinner.day }} dinner</span>
                 <span class="text-xs text-muted-foreground ml-2">{{ dinner.date }} · {{ dinner.timeSlot }}</span>
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <Badge variant="secondary" class="text-xs">
+              <AdminStatus tone="neutral">
                 {{ dinner.signupCount }}/{{ dinner.maxSize }} signed up
-              </Badge>
-              <Badge v-if="dinner.revealDate" class="bg-green-100 text-green-700 text-xs">
+              </AdminStatus>
+              <AdminStatus v-if="dinner.revealDate" tone="success">
                 Revealed
-              </Badge>
+              </AdminStatus>
+              <ChevronDown class="size-4 text-muted-foreground transition-transform" :class="selectedDinnerId === dinner.id ? 'rotate-180' : ''" aria-hidden="true" />
             </div>
-          </button>
+          </Button>
 
           <!-- Dinner details (expanded) -->
           <div v-if="selectedDinnerId === dinner.id" class="border-t px-4 py-4 space-y-4">
@@ -206,7 +190,7 @@ onMounted(() => {
               >
                 <Eye class="w-3 h-3" /> Reveal to dancers
               </Button>
-              <span v-else class="text-xs text-green-600 font-medium">Revealed on {{ dinner.revealDate }}</span>
+              <span v-else class="text-xs text-wd-green-700 font-medium">Revealed on {{ dinner.revealDate }}</span>
             </div>
 
             <!-- Signups -->
@@ -250,7 +234,7 @@ onMounted(() => {
               >
                 <div class="flex items-center justify-between">
                   <p class="text-sm font-medium">Group {{ gi + 1 }}</p>
-                  <Badge variant="secondary" class="text-[9px] px-1 py-0">{{ group.members.length }} people</Badge>
+                  <AdminStatus tone="neutral">{{ group.members.length }} people</AdminStatus>
                 </div>
 
                 <div class="flex flex-wrap gap-2">
@@ -261,7 +245,7 @@ onMounted(() => {
                   >
                     <div>
                       <span class="text-xs font-medium">{{ member.name }}</span>
-                      <span class="text-[10px] text-muted-foreground ml-1">{{ member.email }}</span>
+                      <span class="text-eyebrow text-muted-foreground ml-1">{{ member.email }}</span>
                     </div>
                   </div>
                 </div>

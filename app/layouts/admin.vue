@@ -7,7 +7,7 @@
  */
 import {
   LayoutDashboard, Video, Gift, Users, UtensilsCrossed,
-  Loader2, ShieldAlert, ArrowLeft,
+  ShieldAlert, ArrowLeft,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -51,74 +51,58 @@ const isActive = (item: { to: string; exact: boolean }) =>
 </script>
 
 <template>
-  <div class="min-h-screen md:flex" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen md:flex bg-background text-foreground font-sans">
     <!-- Sidebar (desktop) / top bar (mobile) -->
-    <aside
-      class="md:w-60 md:min-h-screen md:border-r border-b md:border-b-0 shrink-0 md:sticky md:top-0 md:h-screen flex md:flex-col"
-      style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(255,255,255,0.55);"
-    >
+    <aside class="md:w-60 md:min-h-screen md:border-r border-b md:border-b-0 border-border shrink-0 md:sticky md:top-0 md:h-screen flex md:flex-col bg-card/55">
       <div class="px-4 py-4 md:py-6 flex md:block items-center justify-between w-full">
         <NuxtLink to="/" class="inline-flex items-center gap-2">
           <Brand />
         </NuxtLink>
-        <div class="hidden md:block mt-6 text-[10px] uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Admin</div>
+        <div class="hidden md:block mt-6 text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Admin</div>
       </div>
 
-      <nav class="flex md:flex-col gap-1 px-2 md:px-3 pb-3 md:pb-0 overflow-x-auto md:overflow-visible">
+      <nav class="flex md:flex-col gap-1 px-2 md:px-3 pb-3 md:pb-0 overflow-x-auto md:overflow-visible" aria-label="Admin">
         <NuxtLink
           v-for="item in nav"
           :key="item.to"
           :to="item.to"
-          class="group flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm whitespace-nowrap transition-colors"
-          :style="isActive(item)
-            ? { background: 'color-mix(in srgb, var(--wd-red-600) 10.2%, transparent)', color: 'var(--wd-red-600)', fontWeight: 700 }
-            : { color: 'var(--wd-brown-700)' }"
+          :aria-current="isActive(item) ? 'page' : undefined"
+          class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm whitespace-nowrap transition-colors duration-wd-quick"
+          :class="isActive(item)
+            ? 'bg-primary/10 text-wd-red-800 font-bold'
+            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'"
         >
-          <component :is="item.icon" class="w-4 h-4 shrink-0" />
-          <span class="italic">{{ item.label }}</span>
-          <span
-            v-if="item.badge"
-            class="ml-auto text-[10px] font-bold rounded-full px-1.5 py-0.5 text-white"
-            style="background:var(--wd-red-600); font-family:var(--wd-font-sans);"
-          >{{ item.badge }}</span>
+          <component :is="item.icon" class="size-4 shrink-0" aria-hidden="true" />
+          <span>{{ item.label }}</span>
+          <AdminStatus v-if="item.badge" tone="accent" solid class="ml-auto px-1.5">{{ item.badge }}</AdminStatus>
         </NuxtLink>
       </nav>
 
       <NuxtLink
         to="/"
-        class="hidden md:flex items-center gap-1.5 mt-auto mx-3 mb-4 text-xs italic hover:underline"
-        style="color:var(--wd-amber-600);"
+        class="hidden md:flex items-center gap-1.5 mt-auto mx-6 mb-4 text-xs text-secondary hover:underline"
       >
-        <ArrowLeft class="w-3.5 h-3.5" /> Back to site
+        <ArrowLeft class="size-3.5" aria-hidden="true" /> Back to site
       </NuxtLink>
     </aside>
 
     <!-- Content -->
     <main class="flex-1 min-w-0">
       <div class="max-w-4xl mx-auto px-4 py-8">
-        <div v-if="state === 'checking'" class="flex items-center gap-2 py-24 justify-center" style="color:var(--wd-amber-600);">
-          <Loader2 class="w-5 h-5 animate-spin" />
-          <span class="text-sm italic">Checking access…</span>
-        </div>
+        <AdminState v-if="state === 'checking'" kind="loading" message="Checking access…" class="py-24" />
 
         <div
           v-else-if="state === 'denied'"
-          class="max-w-md mx-auto mt-16 rounded-2xl border-2 border-dashed p-10 text-center"
-          style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.6);"
+          class="max-w-md mx-auto mt-16 rounded-2xl border-2 border-dashed border-input bg-card/60 p-10 text-center"
         >
-          <ShieldAlert class="w-7 h-7 mx-auto mb-3" style="color:var(--wd-red-600);" />
-          <p class="text-base font-bold" style="color:var(--wd-brown-900);">Admin access required</p>
-          <p class="mt-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <ShieldAlert class="size-7 mx-auto mb-3 text-primary" aria-hidden="true" />
+          <p class="font-display text-base font-bold text-foreground">Admin access required</p>
+          <p class="mt-1 text-xs text-muted-foreground">
             Sign in with an admin account to view this page.
           </p>
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 mt-5 rounded-full px-5 py-2.5 text-white text-xs font-bold uppercase tracking-wider"
-            style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));"
-            @click="showSignIn = true"
-          >
+          <Button variant="cta" class="mt-5" @click="showSignIn = true">
             Sign in
-          </button>
+          </Button>
           <SignUpModal v-model:open="showSignIn" action="signin" />
         </div>
 
