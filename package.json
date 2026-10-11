@@ -20,7 +20,8 @@
     "db:push": "drizzle-kit push",
     "db:seed": "bun run server/database/seed.ts",
     "sync:v3-events": "bun scripts/sync-v3-events.ts",
-    "dev:db-proxy": "bun scripts/dev/neon-http-proxy.ts"
+    "dev:db-proxy": "bun scripts/dev/neon-http-proxy.ts",
+    "seed:pinakothek": "bun scripts/seed-pinakothek.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

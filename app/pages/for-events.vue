@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowRight, MapPin, Music, Mic, Users, PartyPopper, UtensilsCrossed, Camera, Ticket, Loader2, Check } from 'lucide-vue-next'
+import { ArrowRight, MapPin, Music, Mic, Users, PartyPopper, UtensilsCrossed, Camera, Ticket, Loader2, Check, Trees } from 'lucide-vue-next'
 import { EventInquirySchema } from '#shared/validation'
 import { WD } from '~/lib/brand'
 
@@ -133,6 +133,31 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
           </div>
         </component>
       </div>
+    </section>
+
+    <!-- SHOWCASE: Pinakothek Open Air -->
+    <section class="max-w-5xl mx-auto px-4 pb-10">
+      <p class="mb-4 text-sm tracking-widest uppercase" style="color:var(--wd-amber-600);">See it in action</p>
+      <NuxtLink
+        to="/@pinakothek-der-moderne"
+        class="rounded-2xl bg-white border flex flex-col sm:flex-row items-stretch overflow-hidden transition-all hover:-translate-y-0.5"
+        style="border-color:color-mix(in srgb, var(--wd-green-600) 33%, transparent);"
+      >
+        <div class="sm:w-1/3 min-h-[160px] bg-cover bg-center" style="background-image:url('https://firebasestorage.googleapis.com/v0/b/wedance-4abe3.appspot.com/o/media%2FtvR012ArEpQhCJdPHh6G7sLuqoO2%2Fdc862207-95df-4573-9e92-6884ce0e7b83?alt=media&token=eb5bb326-9da4-4e2b-8428-c07afe0a707d');" />
+        <div class="p-6 flex-1">
+          <div class="flex items-center gap-2 mb-2">
+            <Trees class="w-4 h-4" style="color:var(--wd-green-600);" />
+            <span class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-green-600); font-family:var(--wd-font-sans);">Open air · Free · Community-run</span>
+          </div>
+          <div class="text-xl font-bold" style="color:var(--wd-brown-900);">Pinakothek der Moderne</div>
+          <div class="mt-2 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+            Munich's open-air dance commons — six mapped areas, community guidelines, and a free booking flow. Pick an area, propose your event, the moderator confirms it.
+          </div>
+          <div class="mt-3 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);">
+            See the venue <ArrowRight class="w-3.5 h-3.5" />
+          </div>
+        </div>
+      </NuxtLink>
     </section>
 
     <!-- CTA -->

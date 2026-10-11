@@ -8,7 +8,7 @@ linear_url: https://linear.app/wedance/issue/WED-159
 audience: Organizer
 cuj: "C6 — Host — Private event & venue"
 jtbd: "J6 — Run a great event / throw a great night"
-status: not-built
+status: built
 wsjf_business_value: 5
 wsjf_time_criticality: 3
 wsjf_risk_opportunity: 5
