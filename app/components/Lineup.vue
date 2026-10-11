@@ -15,6 +15,19 @@ defineProps<{
 defineEmits<{
   select: [id: string | null]
 }>()
+
+const failedPhotos = ref(new Set<string>())
+function onImgError(id: string) {
+  failedPhotos.value.add(id)
+}
+function teacherInitials(name: string) {
+  return name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+}
 </script>
 
 <template>
@@ -28,7 +41,8 @@ defineEmits<{
         :title="teacher.name"
       >
         <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-transparent transition-all group-hover:-translate-y-0.5" style="box-shadow: 0 2px 8px rgba(59,31,18,0.08);">
-          <img :src="teacher.photo" :alt="teacher.name" class="w-full h-full object-cover">
+          <img v-if="teacher.photo && !failedPhotos.has(teacher.id)" :src="teacher.photo" :alt="teacher.name" class="w-full h-full object-cover" @error="onImgError(teacher.id)">
+          <div v-else class="w-full h-full flex items-center justify-center text-sm font-black" :style="{ background: WD.red600 + '18', color: WD.red600 }">{{ teacherInitials(teacher.name) }}</div>
         </div>
         <span class="w-full text-xs text-center leading-tight line-clamp-2 break-words" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans); overflow-wrap:anywhere;">
           {{ teacher.name }}
@@ -49,7 +63,8 @@ defineEmits<{
             ? { borderColor: 'var(--wd-red-600)', boxShadow: '0 2px 10px rgba(220,38,38,0.25)' }
             : { borderColor: 'transparent' }"
         >
-          <img :src="teacher.photo" :alt="teacher.name" class="w-full h-full object-cover">
+          <img v-if="teacher.photo && !failedPhotos.has(teacher.id)" :src="teacher.photo" :alt="teacher.name" class="w-full h-full object-cover" @error="onImgError(teacher.id)">
+          <div v-else class="w-full h-full flex items-center justify-center text-sm font-black" :style="{ background: WD.red600 + '18', color: WD.red600 }">{{ teacherInitials(teacher.name) }}</div>
         </div>
         <span
           class="w-full text-xs text-center leading-tight line-clamp-2 break-words"

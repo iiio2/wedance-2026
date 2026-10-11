@@ -74,11 +74,21 @@ function formatDateRange(start: string, end: string) {
         <div class="mt-4 flex flex-col sm:flex-row items-start gap-5">
           <!-- Photo with V3 red drop-shadow border -->
           <img
+            v-if="artist.photo && !imgError"
             :src="artist.photo"
             :alt="artist.name"
             class="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover shrink-0 border-4"
             style="border-color:var(--wd-cream); box-shadow: 6px 7px 0 -2px var(--wd-red-600);"
+            @error="imgError = true"
           >
+          <div
+            v-else
+            class="w-28 h-28 sm:w-32 sm:h-32 rounded-full shrink-0 border-4 flex items-center justify-center text-3xl font-black"
+            style="border-color:var(--wd-cream); box-shadow: 6px 7px 0 -2px var(--wd-red-600);"
+            :style="{ background: WD.red600 + '18', color: WD.red600 }"
+          >
+            {{ initials }}
+          </div>
           <div class="min-w-0 flex-1">
             <h1 class="text-4xl sm:text-6xl leading-[0.98] tracking-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
               {{ artist.name }}

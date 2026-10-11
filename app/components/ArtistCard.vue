@@ -37,6 +37,16 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ select: [] }>()
 const profileHref = computed(() => `/artists/${props.artist.id}`)
 
+const imgError = ref(false)
+const initials = computed(() =>
+  props.artist.name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase(),
+)
+
 // Root is a link (whole card → profile) unless selectable (festival
 // lineup), where it's a button that filters the schedule.
 const NuxtLinkComponent = resolveComponent('NuxtLink')
@@ -61,10 +71,19 @@ const rootTag = computed(() => (props.selectable ? 'button' : NuxtLinkComponent)
     <!-- Face first -->
     <div class="relative aspect-square overflow-hidden" :style="{ background: accent + '12' }">
       <img
+        v-if="artist.photo && !imgError"
         :src="artist.photo"
         :alt="artist.name"
         class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+        @error="imgError = true"
       >
+      <div
+        v-else
+        class="w-full h-full flex items-center justify-center text-4xl font-black"
+        :style="{ background: accent + '18', color: accent }"
+      >
+        {{ initials }}
+      </div>
       <div v-if="festivalCount != null" class="absolute top-3 left-3">
         <span
           class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full text-white"

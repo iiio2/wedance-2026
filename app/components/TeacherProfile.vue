@@ -29,6 +29,16 @@ const platformIcon: Record<string, any> = {
 // "pinakothek-der-moderne-open-air" that never matched the real "pinakothek-der-moderne".
 const profileHref = computed(() => (props.teacher.id ? `/@${props.teacher.id}` : null))
 
+const imgError = ref(false)
+const initials = computed(() =>
+  props.teacher.name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase(),
+)
+
 function toEmbedUrl(url: string): string {
   const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&/?]+)/)
   return match ? `https://www.youtube.com/embed/${match[1]}` : url
@@ -38,7 +48,20 @@ function toEmbedUrl(url: string): string {
 <template>
   <div class="rounded-2xl bg-white p-5 border" style="border-color:color-mix(in srgb, var(--wd-red-600) 20%, transparent); box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-red-600) 13.3%, transparent), 0 8px 22px rgba(59,31,18,0.05);">
     <div class="flex items-start gap-4">
-      <img :src="teacher.photo" :alt="teacher.name" class="w-20 h-20 rounded-full object-cover shrink-0 shadow-sm">
+      <img
+        v-if="teacher.photo && !imgError"
+        :src="teacher.photo"
+        :alt="teacher.name"
+        class="w-20 h-20 rounded-full object-cover shrink-0 shadow-sm"
+        @error="imgError = true"
+      >
+      <div
+        v-else
+        class="w-20 h-20 rounded-full shrink-0 shadow-sm flex items-center justify-center text-lg font-black"
+        :style="{ background: 'color-mix(in srgb, var(--wd-red-600) 10%, transparent)', color: 'var(--wd-red-600)' }"
+      >
+        {{ initials }}
+      </div>
       <div class="flex-1 min-w-0">
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
