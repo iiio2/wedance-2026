@@ -4,6 +4,7 @@
  * (entity.listArtists). The tRPC client is client-only, so we fetch on mount.
  * Each card links to the unified /@<handle> profile.
  */
+import { displayDanceStyle, sameDanceStyle, sortDanceStyles } from '#shared/dance-styles'
 import { ChevronDown, Heart, MapPin, Search } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Field } from '~/components/ui/field'
@@ -51,7 +52,8 @@ const selectedStyle = ref('')
 const allStyles = computed(() => {
   const s = new Set<string>()
   artists.value.forEach(a => (a.styles || []).forEach(st => s.add(st)))
-  return Array.from(s)
+  // Most popular first (taxonomy), aliases de-duplicated.
+  return sortDanceStyles(Array.from(s))
 })
 
 const allCities = computed(() => {
@@ -72,7 +74,7 @@ const filtered = computed(() => {
     const matchesCity = !selectedCity.value
       || (a.city && a.city.toLowerCase() === selectedCity.value.toLowerCase())
     const matchesStyle = !selectedStyle.value
-      || (a.styles || []).some(s => s.toLowerCase() === selectedStyle.value.toLowerCase())
+      || (a.styles || []).some(s => sameDanceStyle(s, selectedStyle.value))
     return matchesText && matchesCity && matchesStyle
   })
 })
@@ -144,7 +146,7 @@ const NuxtLinkC = resolveComponent('NuxtLink')
                 All styles
               </option>
               <option v-for="style in allStyles" :key="style" :value="style">
-                {{ style }}
+                {{ displayDanceStyle(style) }}
               </option>
             </select>
             <ChevronDown class="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" :style="{ color: selectedStyle ? 'white' : WD.brown700 }" aria-hidden="true" />

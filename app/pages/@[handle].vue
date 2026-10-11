@@ -128,7 +128,6 @@ function fmtDate(d: any) { if (!d) return 'Date TBD'; try { return new Date(d).t
 
 // --- Booking modal (a booking IS a scheduled event — collect enough info) ---
 const EVENT_TYPES = ['Social', 'Party', 'Workshop', 'Class', 'Practica', 'Private']
-const DANCE_STYLES = ['Salsa', 'Bachata', 'Kizomba', 'Zouk', 'Timba', 'Casino', 'Rueda', 'Afro']
 const booking = reactive({
   open: false, spaceId: '', spaceName: '',
   title: '', eventType: 'Social', styles: [] as string[], artists: '', organizerHandle: '',
@@ -144,10 +143,6 @@ function openBooking(space: any) {
     email: '', name: (dancerName.value as string) || '', eventDate: '', startTime: '', endTime: '',
     headcount: '', message: '', terms: false, err: '', done: false,
   })
-}
-function toggleBookingStyle(s: string) {
-  const i = booking.styles.indexOf(s)
-  if (i >= 0) booking.styles.splice(i, 1); else booking.styles.push(s)
 }
 // From the availability calendar: open the form pre-filled with the picked slot.
 function onCalendarBook(slot: { spaceId: string; spaceName: string; date: string }) {
@@ -310,10 +305,8 @@ useHead(() => ({
               <Input v-model="booking.title" size="sm" maxlength="120" placeholder="e.g. Sunday Salsa Social" v-bind="bookingForm.fieldAttrs('title', 'booking-title-error')" />
             </Field>
             <div class="flex flex-col gap-1.5">
-              <span id="booking-styles-label" class="text-sm font-bold text-foreground leading-snug">Styles <span class="font-normal text-muted-foreground">(optional)</span></span>
-              <div role="group" aria-labelledby="booking-styles-label" class="flex flex-wrap gap-1.5">
-                <ToggleChip v-for="s in DANCE_STYLES" :key="s" variant="soft" :pressed="booking.styles.includes(s)" class="px-2.5 py-1 text-meta uppercase tracking-wider" @click="toggleBookingStyle(s)">{{ s }}</ToggleChip>
-              </div>
+              <label for="booking-styles" class="text-sm font-bold text-foreground leading-snug">Styles <span class="font-normal text-muted-foreground">(optional)</span></label>
+              <DanceStylePicker id="booking-styles" v-model="booking.styles" label="Styles" :popular-count="6" />
             </div>
             <Field id="booking-date" label="Date" optional :error="bookingForm.errors.eventDate">
               <Input v-model="booking.eventDate" type="date" size="sm" v-bind="bookingForm.fieldAttrs('eventDate', 'booking-date-error')" />

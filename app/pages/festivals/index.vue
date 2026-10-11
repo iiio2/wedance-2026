@@ -10,6 +10,7 @@
  * RAZ-105: data now fetched from /api/festivals (DB-driven, SSR) instead
  * of hardcoded mock imports. Past festivals filtered server-side.
  */
+import { DANCE_STYLES, findDanceStyle, matchesDanceStyleQuery, sortDanceStyles } from '#shared/dance-styles'
 import {
   Search,
   ArrowRight,
@@ -88,11 +89,19 @@ const filteredFestivals = computed(() => {
   return festivals.filter(f =>
     f.name.toLowerCase().includes(q)
     || location(f).toLowerCase().includes(q)
-    || f.styles.some((s: string) => s.toLowerCase().includes(q)),
+    || f.styles.some((s: string) => {
+      // Alias-aware: "cuban salsa" finds Casino, "on2" finds Salsa NY.
+      const st = findDanceStyle(s)
+      return st ? matchesDanceStyleQuery(st, q) : s.toLowerCase().includes(q)
+    }),
   )
 })
 
-const styleChips = ['Salsa', 'Bachata', 'Timba', 'Kizomba', 'Son']
+// Styles the listed festivals actually have, most popular first.
+const styleChips = computed(() => {
+  const present = sortDanceStyles((allFestivals.value ?? []).flatMap(f => f.styles || []))
+  return present.length ? present : DANCE_STYLES.slice(0, 5).map(s => s.name)
+})
 </script>
 
 <template>

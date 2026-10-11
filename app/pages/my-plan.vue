@@ -15,6 +15,7 @@ import * as cityMunich from '~/data/mock-city-munich'
 import * as cityBerlin from '~/data/mock-city-berlin'
 import type { CityEvent } from '~/types/city'
 import { eventLocalDate, eventLocalTime, eventLocalWeekday } from '#shared/utils/eventTime'
+import { detectDanceStyle, relatedDanceStyles } from '#shared/dance-styles'
 import * as cubanFire from '~/data/mock-cuban-fire'
 import * as caribbeanUrbanFire from '~/data/mock-caribbean-urban-fire'
 import { WD } from '~/lib/brand'
@@ -827,8 +828,6 @@ const previewGoals: PreviewGoal[] = [
 // Real goals — persisted via TRPC plan router.
 const { goals: dbGoals, addGoal, removeGoal, updateGoal, hasGoal, loadFromDb: loadGoalsFromDb } = useGoals()
 
-// Dance styles for goal tagging.
-const GOAL_DANCE_STYLES = ['Salsa', 'Bachata', 'Kizomba', 'Zouk', 'Timba', 'Semba', 'Afro-Cuban', 'Reggaeton', 'Cha-Cha']
 
 // Unified view: preview mode shows hard-coded preview goals; real mode shows DB goals.
 const goalsList = computed(() => {
@@ -848,8 +847,7 @@ const goalsList = computed(() => {
 // Resolve a goal's effective style: explicit tag, or auto-detect from title.
 function goalEffectiveStyle(g: { title: string; style: string }): string {
   if (g.style) return g.style
-  const t = g.title.toLowerCase()
-  return GOAL_DANCE_STYLES.find(s => t.includes(s.toLowerCase())) || ''
+  return detectDanceStyle(g.title)?.name || ''
 }
 
 // Map from dance style → goal titles that target it.
@@ -868,7 +866,8 @@ const goalsByStyle = computed(() => {
 // Check if any goal targets a given dance style.
 function goalsForStyle(style: string): string[] {
   if (!style) return []
-  return goalsByStyle.value.get(style) || []
+  // A 'Salsa NY' goal is served by a 'Salsa' festival and vice versa.
+  return [...goalsByStyle.value].filter(([s]) => relatedDanceStyles(s, style)).flatMap(([, titles]) => titles)
 }
 
 // Inline add-goal form state.
@@ -876,6 +875,11 @@ const showGoalForm = ref(false)
 const goalFormTitle = ref('')
 const goalFormWhy = ref('')
 const goalFormStyle = ref('')
+// The picker speaks string[]; a goal has at most one style.
+const goalFormStyles = computed({
+  get: () => (goalFormStyle.value ? [goalFormStyle.value] : []),
+  set: (v: string[]) => { goalFormStyle.value = v[0] ?? '' },
+})
 const goalFormError = ref('')
 
 // Progress editing state.
@@ -1896,21 +1900,9 @@ function cardSummary(f: CatalogueEntry) {
             <Field id="goal-why" label="Why does it matter?" optional>
               <Input v-model="goalFormWhy" placeholder="e.g. Feel confident on the dance floor" />
             </Field>
-            <div role="group" aria-labelledby="goal-style-label">
-              <p id="goal-style-label" class="text-sm font-bold text-foreground mb-1.5">
-                Dance style <span class="font-normal text-muted-foreground">(optional — links this goal to your courses &amp; festivals)</span>
-              </p>
-              <div class="flex flex-wrap gap-2">
-                <ToggleChip
-                  v-for="s in GOAL_DANCE_STYLES"
-                  :key="s"
-                  :pressed="goalFormStyle === s"
-                  @click="goalFormStyle = goalFormStyle === s ? '' : s"
-                >
-                  {{ s }}
-                </ToggleChip>
-              </div>
-            </div>
+            <Field id="goal-style" label="Dance style" optional hint="Links this goal to your courses & festivals.">
+              <DanceStylePicker v-model="goalFormStyles" single label="Dance style" :popular-count="6" />
+            </Field>
             <div class="flex items-center gap-3 pt-1">
               <Button type="submit" variant="pill" :disabled="!goalFormTitle.trim() || !!goalFormError">
                 Add goal

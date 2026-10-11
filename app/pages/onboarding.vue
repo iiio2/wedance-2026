@@ -13,7 +13,7 @@
  *
  * 2026 tropical style — design-system tokens (cream / brown / red).
  */
-import { ArrowRight, ArrowLeft, Check } from 'lucide-vue-next'
+import { ArrowRight, ArrowLeft } from 'lucide-vue-next'
 import { onboardingDetailsSchema } from '#shared/validation'
 import { WD } from '~/lib/brand'
 
@@ -44,7 +44,6 @@ const PERSONAS: Persona[] = [
   { key: 'organize', emoji: '📣', label: 'Run events', blurb: 'Fill your floor — list socials and classes.', landing: '/organizers', collects: {} },
 ]
 
-const DANCE_STYLES = ['Salsa', 'Bachata', 'Kizomba', 'Zouk', 'Timba', 'Semba', 'Afro-Cuban', 'Reggaeton', 'Cha-Cha']
 
 type Step = 'intent' | 'details'
 const step = ref<Step>('intent')
@@ -108,12 +107,6 @@ function back() {
   step.value = 'intent'
   error.value = ''
   nextTick(() => firstIntentBtn.value?.focus())
-}
-
-function toggleStyle(style: string) {
-  const i = form.danceStyles.indexOf(style)
-  if (i >= 0) form.danceStyles.splice(i, 1)
-  else form.danceStyles.push(style)
 }
 
 async function finish() {
@@ -242,19 +235,13 @@ async function skip() {
 
           <!-- Styles -->
           <div v-if="chosen?.collects.styles" class="space-y-2">
-            <span id="onb-styles-label" class="text-sm font-bold text-foreground">Which dances?</span>
-            <div role="group" aria-labelledby="onb-styles-label" class="flex flex-wrap gap-2" v-bind="fieldAttrs('danceStyles', 'onb-styles-error')">
-              <ToggleChip
-                v-for="style in DANCE_STYLES"
-                :key="style"
-                :pressed="form.danceStyles.includes(style)"
-                class="px-3.5 py-1.5 text-xs uppercase tracking-wider"
-                @click="toggleStyle(style)"
-              >
-                <Check v-if="form.danceStyles.includes(style)" class="w-3 h-3" aria-hidden="true" />
-                {{ style }}
-              </ToggleChip>
-            </div>
+            <label for="onb-styles" class="block text-sm font-bold text-foreground">Which dances?</label>
+            <DanceStylePicker
+              id="onb-styles"
+              v-model="form.danceStyles"
+              label="Which dances?"
+              v-bind="fieldAttrs('danceStyles', 'onb-styles-error')"
+            />
             <FieldError id="onb-styles-error" :message="errors.danceStyles" />
             <NuxtLink
               to="/find-your-dance"

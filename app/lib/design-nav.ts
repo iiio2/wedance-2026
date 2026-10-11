@@ -60,6 +60,7 @@ export const designNav: DocSection[] = [
       { title: 'Textarea', to: '/design/components/textarea', status: 'beta', summary: 'Multi-line text field.' },
       { title: 'Checkbox', to: '/design/components/checkbox', status: 'beta', summary: 'Toggle an option on or off.' },
       { title: 'Field', to: '/design/components/field', status: 'beta', summary: 'Label + control + hint + error wrapper (includes Label).' },
+      { title: 'Dance style picker', to: '/design/components/dance-style-picker', status: 'beta', summary: 'Pick dances from the taxonomy: popular first, grouped by family, alias search. Plus read-only style chips.' },
     ],
   },
   {

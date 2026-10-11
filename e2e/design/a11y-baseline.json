@@ -34,6 +34,9 @@
   "axe desktop /design/components/checkbox": {
     "color-contrast": 1
   },
+  "axe desktop /design/components/dance-style-picker": {
+    "color-contrast": 1
+  },
   "axe desktop /design/components/dialog": {
     "color-contrast": 1
   },
