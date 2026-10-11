@@ -38,6 +38,13 @@ export default defineNuxtConfig({
     '/agb': { redirect: { to: '/terms', statusCode: 301 } },
     // The old single-page styleguide was replaced by the /design docs.
     '/styleguide': { redirect: { to: '/design', statusCode: 301 } },
+    // Auth-gated pages: all data is client-only (localStorage + TRPC behind
+    // session cookie). SSR renders empty stats → hydration mismatch → Vue
+    // fails to reconcile the DOM, so the user sees stale/empty data until a
+    // hard refresh. Disabling SSR avoids the mismatch entirely.
+    '/my-year': { ssr: false },
+    '/my-plan': { ssr: false },
+    '/settings': { ssr: false },
   },
   nitro: {
     preset: 'vercel',
