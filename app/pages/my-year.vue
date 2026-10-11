@@ -209,7 +209,15 @@ function openFestival(slug: string) {
 }
 
 function onCreateYearPlan() {
+  if (!isSignedIn.value) {
+    navigateTo('/onboarding')
+    return
+  }
   router.replace({ query: {} })
+}
+
+function onBrowseFestivals() {
+  navigateTo('/festivals')
 }
 
 function onAddFriend() {
@@ -259,6 +267,7 @@ useHead({
         @open-festival="openFestival"
         @share="showShareModal = true"
         @sign-in="() => {}"
+        @browse-festivals="onBrowseFestivals"
       />
 
       <ShareYearPlanModal

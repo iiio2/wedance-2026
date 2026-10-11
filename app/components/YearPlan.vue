@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { YearPlanFestival, YearStats } from '~/types/festival'
-import { Calendar, MapPin, Users, Ticket, Clock, ChevronRight, Share2, Sparkles, ExternalLink } from 'lucide-vue-next'
+import { Calendar, MapPin, Users, Ticket, Clock, ChevronRight, Share2, Sparkles, ExternalLink, ArrowRight } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
 
 const props = defineProps<{
@@ -14,6 +14,7 @@ const emit = defineEmits<{
   'open-festival': [slug: string]
   'share': []
   'sign-in': []
+  'browse-festivals': []
 }>()
 
 // Group festivals by month
@@ -85,6 +86,23 @@ const ticketStatusClass: Record<string, string> = {
       >
         <Share2 class="w-3.5 h-3.5" />
         Share
+      </button>
+    </div>
+
+    <!-- Empty state — no festivals yet -->
+    <div v-if="festivals.length === 0" class="rounded-xl border-2 border-dashed p-8 text-center space-y-4" style="border-color:color-mix(in srgb, var(--wd-red-600) 26.7%, transparent); background:rgba(255,255,255,0.8);">
+      <Calendar class="w-10 h-10 mx-auto" style="color:var(--wd-red-600);" />
+      <h2 class="text-xl font-bold" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Start your dance year</h2>
+      <p class="text-sm max-w-md mx-auto" style="color:var(--wd-brown-700);">
+        Browse festivals, pick workshops, find dance partners, and share your year with friends.
+      </p>
+      <button
+        class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider hover:-translate-y-0.5 transition-transform"
+        style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
+        @click="emit('browse-festivals')"
+      >
+        Browse festivals
+        <ArrowRight class="w-4 h-4" />
       </button>
     </div>
 
@@ -298,7 +316,7 @@ const ticketStatusClass: Record<string, string> = {
     </div>
 
     <!-- Year stats -->
-    <div class="rounded-xl border-2 border-dashed p-5 space-y-4" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(255,255,255,0.7);">
+    <div v-if="festivals.length > 0" class="rounded-xl border-2 border-dashed p-5 space-y-4" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(255,255,255,0.7);">
       <h3 class="text-base font-bold" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">My Year in Numbers</h3>
 
       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
