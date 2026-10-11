@@ -168,6 +168,8 @@ export const planRouter = router({
         accentColor: festivals.accentColor,
         styles: festivals.styles,
         ticketUrl: festivals.ticketUrl,
+        earlyBirdDeadline: festivals.earlyBirdDeadline,
+        earlyBirdOfferName: festivals.earlyBirdOfferName,
       })
       .from(festivals)
       .where(inArray(festivals.slug, slugs))
@@ -216,7 +218,15 @@ export const planRouter = router({
 
     return festivalRows
       .map((f) => {
-        const earlyBird = getEarlyBirdInfo(f.slug)
+        // DB columns take precedence; fall back to hardcoded config for
+        // festivals that haven't been migrated to DB-driven early-bird yet.
+        const dbDeadline = f.earlyBirdDeadline
+        const dbOffer = f.earlyBirdOfferName
+        const hardcoded = getEarlyBirdInfo(f.slug)
+        const deadline = dbDeadline ?? hardcoded?.deadline ?? ''
+        const offer = dbOffer ?? hardcoded?.offerName ?? ''
+        // Only surface deadlines that are still in the future.
+        const deadlineActive = deadline && new Date(deadline) > new Date()
         return {
           slug: f.slug,
           name: f.name,
@@ -231,8 +241,8 @@ export const planRouter = router({
           ticketStatus: (ticketByFestivalId.get(f.id) ? 'purchased' : 'not-purchased') as 'purchased' | 'not-purchased',
           referralDiscountPercent: getReferralDiscountPercent(f.slug),
           ticketUrl: f.ticketUrl ?? '',
-          earlyBirdDeadline: earlyBird?.deadline ?? '',
-          earlyBirdOffer: earlyBird?.offerName ?? '',
+          earlyBirdDeadline: deadlineActive ? deadline : '',
+          earlyBirdOffer: deadlineActive ? offer : '',
         }
       })
       .sort((a, b) => a.startDate.localeCompare(b.startDate))
@@ -303,6 +313,8 @@ export const planRouter = router({
           accentColor: festivals.accentColor,
           styles: festivals.styles,
           ticketUrl: festivals.ticketUrl,
+          earlyBirdDeadline: festivals.earlyBirdDeadline,
+          earlyBirdOfferName: festivals.earlyBirdOfferName,
         })
         .from(festivals)
         .where(inArray(festivals.slug, slugs))
@@ -353,7 +365,12 @@ export const planRouter = router({
       // 6. Build the response, sorted by start date.
       const result = festivalRows
         .map((f) => {
-          const earlyBird = getEarlyBirdInfo(f.slug)
+          const dbDeadline = f.earlyBirdDeadline
+          const dbOffer = f.earlyBirdOfferName
+          const hardcoded = getEarlyBirdInfo(f.slug)
+          const deadline = dbDeadline ?? hardcoded?.deadline ?? ''
+          const offer = dbOffer ?? hardcoded?.offerName ?? ''
+          const deadlineActive = deadline && new Date(deadline) > new Date()
           return {
             slug: f.slug,
             name: f.name,
@@ -368,8 +385,8 @@ export const planRouter = router({
             hasTicket: ticketByFestivalId.get(f.id) ?? false,
             referralDiscountPercent: getReferralDiscountPercent(f.slug),
             ticketUrl: f.ticketUrl ?? '',
-            earlyBirdDeadline: earlyBird?.deadline ?? '',
-            earlyBirdOffer: earlyBird?.offerName ?? '',
+            earlyBirdDeadline: deadlineActive ? deadline : '',
+            earlyBirdOffer: deadlineActive ? offer : '',
           }
         })
         .sort((a, b) => a.startDate.localeCompare(b.startDate))

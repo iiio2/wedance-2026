@@ -67,6 +67,8 @@ export const festivals = pgTable('festivals', {
   styles: json('styles').$type<string[]>().default([]),
   logo: text('logo'),
   accentColor: text('accent_color'),
+  earlyBirdDeadline: date('early_bird_deadline'),
+  earlyBirdOfferName: text('early_bird_offer_name'),
 })
 
 export const festivalSignups = pgTable('festival_signups', {
