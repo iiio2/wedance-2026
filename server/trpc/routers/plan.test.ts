@@ -1,10 +1,10 @@
 /**
- * Unit tests for the plan router (add / listDetailed / remove).
+ * Unit tests for the plan router (add / listDetailed / remove / shareGoing).
  *
  * Hermetic — no DATABASE_URL required. Uses an in-memory FakeDb that
  * mirrors just enough of the Drizzle query builder to exercise the plan
  * procedures. Regression test for RAZ-265 (goals not persisted because
- * the metadata column was missing).
+ * the metadata column was missing) + RAZ-115 (opt-in attendee sharing).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { planItems } from '../../database/schema'
@@ -32,7 +32,7 @@ vi.mock('drizzle-orm', async () => {
   const and = (...preds: any[]) => (row: Record<string, any>) =>
     preds.every(p => p(row))
 
-  return { eq, and, sql: (..._args: any[]) => ({}), unique: () => ({}), index: () => ({}) }
+  return { eq, and, sql: (..._args: any[]) => ({}), unique: () => ({}), index: () => ({}), ne: () => () => true, inArray: () => () => true, gte: () => () => true, lt: () => () => true, asc: () => ({}), ilike: () => () => true }
 })
 
 // ---------- FakeDb ----------
@@ -68,6 +68,9 @@ class FakeDb {
             }),
           )
         },
+        innerJoin: () => ({
+          where: () => Promise.resolve([]),
+        }),
       }),
     }
   }
@@ -87,9 +90,26 @@ class FakeDb {
           if (!exists) {
             self.rows.push({
               id: `id-${self.rows.length}`,
+              shareGoing: false,
               createdAt: new Date(),
               ...row,
             })
+          }
+          return Promise.resolve()
+        },
+      }),
+    }
+  }
+
+  update(_table: any) {
+    const self = this
+    return {
+      set: (values: Record<string, any>) => ({
+        where: (filter: (r: FakeRow) => boolean) => {
+          for (const row of self.rows) {
+            if (filter(row)) {
+              Object.assign(row, values)
+            }
           }
           return Promise.resolve()
         },
@@ -182,6 +202,71 @@ describe('plan router', () => {
       await caller.plan.add({ itemType: 'goal', itemId: 'goal-cnt' })
       const c = await caller.plan.count({ itemType: 'goal', itemId: 'goal-cnt' })
       expect(c).toBe(1)
+    })
+  })
+
+  describe('opt-in attendee sharing (RAZ-115)', () => {
+    it('new plan items default to shareGoing=false', async () => {
+      const caller = makeCaller(db)
+      await caller.plan.add({ itemType: 'festival', itemId: 'fest-1' })
+
+      const res = await caller.plan.getShareGoing({ itemType: 'festival', itemId: 'fest-1' })
+      expect(res.share).toBe(false)
+    })
+
+    it('setShareGoing toggles the share state to true', async () => {
+      const caller = makeCaller(db)
+      await caller.plan.add({ itemType: 'festival', itemId: 'fest-2' })
+
+      await caller.plan.setShareGoing({ itemType: 'festival', itemId: 'fest-2', share: true })
+      const res = await caller.plan.getShareGoing({ itemType: 'festival', itemId: 'fest-2' })
+      expect(res.share).toBe(true)
+    })
+
+    it('setShareGoing toggles back to false', async () => {
+      const caller = makeCaller(db)
+      await caller.plan.add({ itemType: 'event', itemId: 'ev-1' })
+
+      await caller.plan.setShareGoing({ itemType: 'event', itemId: 'ev-1', share: true })
+      await caller.plan.setShareGoing({ itemType: 'event', itemId: 'ev-1', share: false })
+      const res = await caller.plan.getShareGoing({ itemType: 'event', itemId: 'ev-1' })
+      expect(res.share).toBe(false)
+    })
+
+    it('getShareGoing returns false for a non-existent plan item', async () => {
+      const caller = makeCaller(db)
+      const res = await caller.plan.getShareGoing({ itemType: 'festival', itemId: 'no-such' })
+      expect(res.share).toBe(false)
+    })
+
+    it('setShareGoing only affects the calling dancer', async () => {
+      const caller1 = makeCaller(db, 'dancer-1')
+      const caller2 = makeCaller(db, 'dancer-2')
+
+      await caller1.plan.add({ itemType: 'festival', itemId: 'fest-shared' })
+      await caller2.plan.add({ itemType: 'festival', itemId: 'fest-shared' })
+
+      await caller1.plan.setShareGoing({ itemType: 'festival', itemId: 'fest-shared', share: true })
+
+      const res1 = await caller1.plan.getShareGoing({ itemType: 'festival', itemId: 'fest-shared' })
+      const res2 = await caller2.plan.getShareGoing({ itemType: 'festival', itemId: 'fest-shared' })
+
+      expect(res1.share).toBe(true)
+      expect(res2.share).toBe(false)
+    })
+
+    it('setShareGoing rejects unauthenticated calls', async () => {
+      const caller = makeCaller(db, null)
+      await expect(
+        caller.plan.setShareGoing({ itemType: 'festival', itemId: 'fest-x', share: true }),
+      ).rejects.toThrow('Not signed in')
+    })
+
+    it('getShareGoing rejects unauthenticated calls', async () => {
+      const caller = makeCaller(db, null)
+      await expect(
+        caller.plan.getShareGoing({ itemType: 'festival', itemId: 'fest-x' }),
+      ).rejects.toThrow('Not signed in')
     })
   })
 

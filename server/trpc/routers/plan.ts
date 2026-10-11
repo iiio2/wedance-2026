@@ -122,6 +122,7 @@ export const planRouter = router({
           and(
             eq(planItems.itemType, type),
             eq(planItems.itemId, id),
+            eq(planItems.shareGoing, true),
             eq(dancers.profilePublic, true),
           ),
         )
@@ -785,6 +786,7 @@ export const planRouter = router({
           and(
             eq(planItems.itemType, input.itemType),
             inArray(planItems.itemId, input.itemIds),
+            eq(planItems.shareGoing, true),
             eq(dancers.profilePublic, true),
           ),
         )
@@ -800,5 +802,52 @@ export const planRouter = router({
         }
       }
       return result
+    }),
+
+  /**
+   * Toggle opt-in attendee visibility for a plan item (RAZ-115).
+   *
+   * When shareGoing is true the dancer appears in the public "who's going"
+   * list; when false they are counted but not individually listed.
+   */
+  setShareGoing: protectedProcedure
+    .input(z.object({
+      itemType: z.enum(['festival', 'event']),
+      itemId: z.string().min(1).max(120),
+      share: z.boolean(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .update(planItems)
+        .set({ shareGoing: input.share })
+        .where(
+          and(
+            eq(planItems.dancerId, ctx.dancerId),
+            eq(planItems.itemType, input.itemType),
+            eq(planItems.itemId, input.itemId),
+          ),
+        )
+    }),
+
+  /**
+   * Get the current dancer's shareGoing state for a specific plan item.
+   */
+  getShareGoing: protectedProcedure
+    .input(z.object({
+      itemType: z.enum(['festival', 'event']),
+      itemId: z.string().min(1).max(120),
+    }))
+    .query(async ({ ctx, input }) => {
+      const [row] = await ctx.db
+        .select({ shareGoing: planItems.shareGoing })
+        .from(planItems)
+        .where(
+          and(
+            eq(planItems.dancerId, ctx.dancerId),
+            eq(planItems.itemType, input.itemType),
+            eq(planItems.itemId, input.itemId),
+          ),
+        )
+      return { share: row?.shareGoing ?? false }
     }),
 })

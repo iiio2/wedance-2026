@@ -5,8 +5,11 @@
  * Fetches the public list of dancers who marked "Going" (plan_items)
  * via `plan.goingList` and renders a grid of tappable profile cards.
  * Each face links to the dancer's profile at /u/{username}.
+ *
+ * RAZ-115: when the signed-in dancer has this item in their plan, a
+ * share toggle appears — opt-in to appear in the public going list.
  */
-import { Users } from 'lucide-vue-next'
+import { Users, Eye, EyeOff } from 'lucide-vue-next'
 
 const props = withDefaults(defineProps<{
   /** Legacy shorthand — sets itemType='festival', itemId=festivalSlug */
@@ -20,6 +23,14 @@ const resolvedType = computed(() => props.itemType ?? 'festival')
 const resolvedId = computed(() => props.itemId ?? props.festivalSlug ?? '')
 
 const { $trpc } = useNuxtApp()
+const { isSignedIn } = useAuth()
+const { yearPlanIds } = useYearPlan()
+const { weekPlanIds } = useWeekPlan()
+
+const isInPlan = computed(() => {
+  if (resolvedType.value === 'festival') return yearPlanIds.value.has(resolvedId.value)
+  return weekPlanIds.value.has(resolvedId.value)
+})
 
 interface GoingDancer {
   dancerId: string
@@ -31,6 +42,10 @@ interface GoingDancer {
 
 const going = ref<GoingDancer[]>([])
 const loading = ref(true)
+
+// Share toggle state
+const shareGoing = ref(false)
+const shareLoading = ref(false)
 
 async function load() {
   if (!resolvedId.value) return
@@ -48,9 +63,52 @@ async function load() {
   }
 }
 
-onMounted(load)
+async function loadShareState() {
+  if (!isSignedIn.value || !isInPlan.value || !resolvedId.value) return
+  try {
+    const res = await $trpc.plan.getShareGoing.query({
+      itemType: resolvedType.value as 'festival' | 'event',
+      itemId: resolvedId.value,
+    })
+    shareGoing.value = res.share
+  } catch {
+    // non-critical
+  }
+}
+
+async function toggleShare() {
+  if (shareLoading.value) return
+  const next = !shareGoing.value
+  shareGoing.value = next
+  shareLoading.value = true
+  try {
+    await $trpc.plan.setShareGoing.mutate({
+      itemType: resolvedType.value as 'festival' | 'event',
+      itemId: resolvedId.value,
+      share: next,
+    })
+    // Reload the public list to reflect the change
+    await load()
+  } catch {
+    // Roll back on failure
+    shareGoing.value = !next
+  } finally {
+    shareLoading.value = false
+  }
+}
+
+onMounted(() => {
+  load()
+  loadShareState()
+})
 watch(resolvedId, (next, prev) => {
-  if (next !== prev) load()
+  if (next !== prev) {
+    load()
+    loadShareState()
+  }
+})
+watch([isSignedIn, isInPlan], () => {
+  loadShareState()
 })
 
 function initials(name: string): string {
@@ -65,6 +123,40 @@ function initials(name: string): string {
 
 <template>
   <div>
+    <!-- Opt-in share toggle (only visible when signed in + item is in plan) -->
+    <div
+      v-if="isSignedIn && isInPlan"
+      class="mb-4 flex items-center gap-3 rounded-xl p-3"
+      style="background:color-mix(in srgb, var(--wd-amber-600) 6%, transparent); border:1px solid color-mix(in srgb, var(--wd-amber-600) 20%, transparent);"
+    >
+      <button
+        type="button"
+        :disabled="shareLoading"
+        class="relative w-11 h-6 rounded-full transition-colors shrink-0"
+        :style="{ background: shareGoing ? accentColor : 'color-mix(in srgb, var(--wd-brown-900) 20%, transparent)' }"
+        role="switch"
+        :aria-checked="shareGoing"
+        aria-label="Show me in the going list"
+        @click="toggleShare"
+      >
+        <span
+          class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform"
+          :class="shareGoing ? 'translate-x-5' : 'translate-x-0'"
+        />
+      </button>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-1.5">
+          <component :is="shareGoing ? Eye : EyeOff" class="w-4 h-4 shrink-0" style="color:var(--wd-brown-700);" />
+          <span class="text-sm font-bold" style="color:var(--wd-brown-900);">
+            {{ shareGoing ? 'Visible in the going list' : 'Hidden from the going list' }}
+          </span>
+        </div>
+        <p class="text-xs mt-0.5" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          {{ shareGoing ? 'Others can see you\'re going. Toggle off to hide.' : 'Toggle on to let others know you\'re going.' }}
+        </p>
+      </div>
+    </div>
+
     <div v-if="loading" class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
       Loading…
     </div>
@@ -111,7 +203,7 @@ function initials(name: string): string {
     >
       <Users class="w-6 h-6 mx-auto mb-2" style="color:var(--wd-amber-600);" />
       <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-        No one has marked "Going" yet — be the first!
+        No one has shared they're going yet — be the first!
       </p>
     </div>
   </div>

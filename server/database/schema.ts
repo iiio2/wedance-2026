@@ -568,6 +568,9 @@ export const planItems = pgTable(
     itemType: text('item_type').notNull().$type<'festival' | 'event' | 'goal' | 'workshop'>(),
     itemId: text('item_id').notNull(),
     metadata: jsonb('metadata').$type<Record<string, string>>(),
+    // Opt-in attendee visibility (RAZ-115): when true the dancer appears in
+    // the public "who's going" list; when false they're counted but not shown.
+    shareGoing: boolean('share_going').notNull().default(false),
     createdAt: timestamp('created_at').defaultNow(),
   },
   (t) => [
