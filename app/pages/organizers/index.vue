@@ -126,7 +126,11 @@ const salesMailto = 'mailto:hello@wedance.vip?subject=' + encodeURIComponent('We
 
 const howItWorks = [
   { step: '1', title: 'List your event',       description: 'Add your festival, schedule, teachers, and venue in minutes.',                    color: WD.red600 },
-  { step: '2', title: 'Dancers plan',          description: 'Dancers find your event, build workshop plans, and match with partners.',        color: WD.amber500 },
+  { step: '2', title: 'Dancers plan',          description: 'Dancers find your event, build workshop plans, and match with partners.',        color: WD.amber500, substeps: [
+    { icon: Globe,        label: 'Discover your festival in the directory', link: '/festivals' },
+    { icon: CalendarDays, label: 'Build a workshop plan from the schedule', link: '/festivals/meneate-viena-2026#schedule' },
+    { icon: Users,        label: 'Match with dance partners before arriving', link: '/festivals/meneate-viena-2026#discover' },
+  ] },
   { step: '3', title: 'Plans drive tickets',   description: 'Smart recommendations guide dancers to the right pass. Sharing spreads the word.', color: WD.green600 },
   { step: '4', title: 'You get insights',      description: 'Real demand data, audience geography, and post-event signal.',                   color: WD.cyan600 },
 ]
@@ -267,6 +271,18 @@ function goToEditor(plan?: string) {
           </div>
           <div class="text-base font-bold leading-tight" style="color:var(--wd-brown-900);">{{ item.title }}</div>
           <div class="mt-2 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ item.description }}</div>
+          <div v-if="item.substeps" class="mt-4 space-y-2">
+            <NuxtLink
+              v-for="sub in item.substeps" :key="sub.label"
+              :to="sub.link"
+              class="flex items-center gap-2 text-xs group"
+              style="font-family:var(--wd-font-sans);"
+              :style="{ color: item.color }"
+            >
+              <component :is="sub.icon" class="w-3.5 h-3.5 shrink-0" style="stroke-width:1.5;" />
+              <span class="group-hover:underline">{{ sub.label }}</span>
+            </NuxtLink>
+          </div>
         </div>
       </div>
     </section>
