@@ -81,3 +81,44 @@ export function getTicketPriceCents(
 export function getReferralDiscountPercent(festivalSlug: string): number {
   return referralDiscountPercent[festivalSlug] ?? 0
 }
+
+/**
+ * Per-festival early-bird ticket config. Each entry describes an
+ * early-bird offer with a deadline — the date the discounted price
+ * expires and goes up to the regular price.
+ */
+interface EarlyBirdConfig {
+  /** Name of the early-bird ticket/offer shown in the alert. */
+  offerName: string
+  /** ISO date (YYYY-MM-DD) when the early-bird price expires. */
+  deadline: string
+  /** Early-bird price in euro cents. */
+  priceCents: number
+  /** Regular price in euro cents (after the deadline). */
+  regularPriceCents: number
+}
+
+const earlyBirds: Record<string, EarlyBirdConfig> = {
+  'agua-pichi-2027': {
+    offerName: 'Early Bird Full Pass',
+    deadline: '2027-04-01',
+    priceCents: 12_000,
+    regularPriceCents: 17_000,
+  },
+}
+
+/**
+ * Return the active early-bird info for a festival, or `null` if none
+ * exists or the deadline has already passed.
+ */
+export function getEarlyBirdInfo(festivalSlug: string): {
+  offerName: string
+  deadline: string
+  priceCents: number
+  regularPriceCents: number
+} | null {
+  const config = earlyBirds[festivalSlug]
+  if (!config) return null
+  if (new Date(config.deadline) <= new Date()) return null
+  return config
+}

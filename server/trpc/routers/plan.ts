@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { eq, and, ne, sql, inArray, gte, lt, asc, ilike } from 'drizzle-orm'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
 import { planItems, dancers, festivals, festivalSignups, events } from '../../database/schema'
-import { getReferralDiscountPercent } from '../../utils/ticket-prices'
+import { getReferralDiscountPercent, getEarlyBirdInfo } from '../../utils/ticket-prices'
 
 export const planRouter = router({
   count: publicProcedure
@@ -167,6 +167,7 @@ export const planRouter = router({
         logo: festivals.logo,
         accentColor: festivals.accentColor,
         styles: festivals.styles,
+        ticketUrl: festivals.ticketUrl,
       })
       .from(festivals)
       .where(inArray(festivals.slug, slugs))
@@ -214,20 +215,26 @@ export const planRouter = router({
     )
 
     return festivalRows
-      .map((f) => ({
-        slug: f.slug,
-        name: f.name,
-        startDate: f.startDate ?? '',
-        endDate: f.endDate ?? '',
-        location: f.city ?? '',
-        country: f.country ?? '',
-        logo: f.logo ?? '',
-        accentColor: f.accentColor ?? '',
-        styles: (f.styles as string[]) ?? [],
-        workshopCount: workshopCountBySlug.get(f.slug) ?? 0,
-        ticketStatus: (ticketByFestivalId.get(f.id) ? 'purchased' : 'not-purchased') as 'purchased' | 'not-purchased',
-        referralDiscountPercent: getReferralDiscountPercent(f.slug),
-      }))
+      .map((f) => {
+        const earlyBird = getEarlyBirdInfo(f.slug)
+        return {
+          slug: f.slug,
+          name: f.name,
+          startDate: f.startDate ?? '',
+          endDate: f.endDate ?? '',
+          location: f.city ?? '',
+          country: f.country ?? '',
+          logo: f.logo ?? '',
+          accentColor: f.accentColor ?? '',
+          styles: (f.styles as string[]) ?? [],
+          workshopCount: workshopCountBySlug.get(f.slug) ?? 0,
+          ticketStatus: (ticketByFestivalId.get(f.id) ? 'purchased' : 'not-purchased') as 'purchased' | 'not-purchased',
+          referralDiscountPercent: getReferralDiscountPercent(f.slug),
+          ticketUrl: f.ticketUrl ?? '',
+          earlyBirdDeadline: earlyBird?.deadline ?? '',
+          earlyBirdOffer: earlyBird?.offerName ?? '',
+        }
+      })
       .sort((a, b) => a.startDate.localeCompare(b.startDate))
   }),
 
@@ -295,6 +302,7 @@ export const planRouter = router({
           logo: festivals.logo,
           accentColor: festivals.accentColor,
           styles: festivals.styles,
+          ticketUrl: festivals.ticketUrl,
         })
         .from(festivals)
         .where(inArray(festivals.slug, slugs))
@@ -344,20 +352,26 @@ export const planRouter = router({
 
       // 6. Build the response, sorted by start date.
       const result = festivalRows
-        .map((f) => ({
-          slug: f.slug,
-          name: f.name,
-          startDate: f.startDate ?? '',
-          endDate: f.endDate ?? '',
-          location: f.city ?? '',
-          country: f.country ?? '',
-          logo: f.logo ?? '',
-          accentColor: f.accentColor ?? '',
-          styles: (f.styles as string[]) ?? [],
-          workshopCount: workshopCountBySlug.get(f.slug) ?? 0,
-          hasTicket: ticketByFestivalId.get(f.id) ?? false,
-          referralDiscountPercent: getReferralDiscountPercent(f.slug),
-        }))
+        .map((f) => {
+          const earlyBird = getEarlyBirdInfo(f.slug)
+          return {
+            slug: f.slug,
+            name: f.name,
+            startDate: f.startDate ?? '',
+            endDate: f.endDate ?? '',
+            location: f.city ?? '',
+            country: f.country ?? '',
+            logo: f.logo ?? '',
+            accentColor: f.accentColor ?? '',
+            styles: (f.styles as string[]) ?? [],
+            workshopCount: workshopCountBySlug.get(f.slug) ?? 0,
+            hasTicket: ticketByFestivalId.get(f.id) ?? false,
+            referralDiscountPercent: getReferralDiscountPercent(f.slug),
+            ticketUrl: f.ticketUrl ?? '',
+            earlyBirdDeadline: earlyBird?.deadline ?? '',
+            earlyBirdOffer: earlyBird?.offerName ?? '',
+          }
+        })
         .sort((a, b) => a.startDate.localeCompare(b.startDate))
 
       return {

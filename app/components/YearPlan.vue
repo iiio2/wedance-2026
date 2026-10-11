@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { YearPlanFestival, YearStats } from '~/types/festival'
-import { Calendar, MapPin, Users, Ticket, Clock, ChevronRight, Share2, Sparkles } from 'lucide-vue-next'
+import { Calendar, MapPin, Users, Ticket, Clock, ChevronRight, Share2, Sparkles, ExternalLink } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
 
 const props = defineProps<{
@@ -29,11 +29,11 @@ const groupedByMonth = computed(() => {
   return months
 })
 
-// Upcoming ticket deadlines
+// Upcoming ticket deadlines — only for festivals where the user hasn't bought yet
 const upcomingDeadlines = computed(() => {
   const now = new Date()
   return props.festivals
-    .filter((f) => f.earlyBirdDeadline && new Date(f.earlyBirdDeadline) > now)
+    .filter((f) => f.earlyBirdDeadline && new Date(f.earlyBirdDeadline) > now && f.ticketStatus !== 'purchased')
     .sort((a, b) => new Date(a.earlyBirdDeadline!).getTime() - new Date(b.earlyBirdDeadline!).getTime())
     .slice(0, 3)
 })
@@ -101,10 +101,25 @@ const ticketStatusClass: Record<string, string> = {
           <Clock class="w-4 h-4" style="color:var(--wd-amber-500);" />
         </div>
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">Early bird for {{ f.name }}</p>
+          <p class="text-sm font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+            Early bird for {{ f.name }}
+            <span v-if="f.earlyBirdOffer" class="font-normal text-xs" style="color:var(--wd-amber-600);"> — {{ f.earlyBirdOffer }}</span>
+          </p>
           <p class="text-xs" style="color:var(--wd-amber-600);">Expires in {{ daysUntil(f.earlyBirdDeadline!) }} days</p>
         </div>
-        <ChevronRight class="w-4 h-4 shrink-0" style="color:var(--wd-amber-500);" />
+        <a
+          v-if="f.ticketUrl"
+          :href="f.ticketUrl"
+          target="_blank"
+          rel="noopener"
+          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white shrink-0 hover:opacity-90 transition-opacity"
+          style="background:var(--wd-amber-500);"
+          @click.stop
+        >
+          Buy
+          <ExternalLink class="w-3 h-3" />
+        </a>
+        <ChevronRight v-else class="w-4 h-4 shrink-0" style="color:var(--wd-amber-500);" />
       </div>
     </div>
 

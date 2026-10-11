@@ -192,6 +192,10 @@ export interface YearPlanFestival {
   ticketStatus: 'purchased' | 'not-purchased' | 'sold-out'
   ticketName?: string
   earlyBirdDeadline?: string
+  /** Name of the active early-bird offer (e.g. "Early Bird Full Pass"). */
+  earlyBirdOffer?: string
+  /** External ticket purchase URL. */
+  ticketUrl?: string
   friendsGoing: { name: string; photo: string }[]
   styles: string[]
   /** Referral discount percentage for this festival (0 = no referral program). */

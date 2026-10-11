@@ -26,6 +26,7 @@ const sharedData = ref<{
     slug: string; name: string; startDate: string; endDate: string
     location: string; country: string; logo: string; accentColor: string; styles: string[]
     workshopCount: number; hasTicket: boolean; referralDiscountPercent: number
+    ticketUrl: string; earlyBirdDeadline: string; earlyBirdOffer: string
   }>
 } | null>(null)
 
@@ -34,6 +35,7 @@ const myFestivalsRaw = ref<Array<{
   slug: string; name: string; startDate: string; endDate: string
   location: string; country: string; logo: string; accentColor: string; styles: string[]
   workshopCount: number; ticketStatus: 'purchased' | 'not-purchased'; referralDiscountPercent: number
+  ticketUrl: string; earlyBirdDeadline: string; earlyBirdOffer: string
 }>>([])
 
 function fetchMyPlan() {
@@ -76,6 +78,9 @@ const sharedFestivals = computed<YearPlanFestival[]>(() => {
     ticketStatus: f.hasTicket ? 'purchased' as const : 'not-purchased' as const,
     friendsGoing: [],
     referralDiscountPercent: f.referralDiscountPercent,
+    earlyBirdDeadline: f.earlyBirdDeadline || undefined,
+    earlyBirdOffer: f.earlyBirdOffer || undefined,
+    ticketUrl: f.ticketUrl || undefined,
   }))
 })
 
@@ -97,6 +102,9 @@ const myFestivals = computed<YearPlanFestival[]>(() => {
     ticketStatus: f.ticketStatus,
     friendsGoing: [],
     referralDiscountPercent: f.referralDiscountPercent,
+    earlyBirdDeadline: f.earlyBirdDeadline || undefined,
+    earlyBirdOffer: f.earlyBirdOffer || undefined,
+    ticketUrl: f.ticketUrl || undefined,
   }))
 })
 
