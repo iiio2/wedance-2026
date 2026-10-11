@@ -8,6 +8,9 @@
  *   3. Google Fonts URLs may only load Playfair Display.
  *   4. Font tokens in tailwind.css may not quote a comma list as one name
  *      ('Caveat, cursive' is one font called "Caveat, cursive" — it never matches).
+ *   5. No Tailwind class names assembled at runtime (`bg-wd-${key}`, 'text-' + c):
+ *      Tailwind only generates classes it finds literally in source, so a built
+ *      name silently renders nothing (the white swatches on /design/foundations/colors).
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
@@ -117,6 +120,24 @@ export function findQuotedFontLists(src: string, file = '<inline>') {
     for (const q of m[1]!.matchAll(/(['"])([^'"]*,[^'"]*)\1/g))
       hits.push({ file, line: lineOf(src, m.index!), text: q[0] })
   }
+  return hits
+}
+
+const UTILITY = '(?:bg|text|border|ring|outline|fill|stroke|from|via|to|shadow|decoration|accent|caret|divide|placeholder)'
+// `…bg-${x}…`  or  'bg-' + x  /  "text-wd-" + x
+const DYNAMIC_CLASS_RE = new RegExp(
+  '(?<![\\w-])' + UTILITY + '-(?:[\\w-]*-)?(?:\\$\\{|[\'"]\\s*\\+)',
+  'g',
+)
+
+export function scanDynamicClasses(files = listAppFiles()) {
+  return files.flatMap(file => findDynamicClasses(readFileSync(join(ROOT, file), 'utf8'), file))
+}
+
+export function findDynamicClasses(src: string, file = '<inline>') {
+  const hits: Hit[] = []
+  for (const m of src.matchAll(DYNAMIC_CLASS_RE))
+    hits.push({ file, line: lineOf(src, m.index!), text: src.slice(m.index!, m.index! + 40).split('\n')[0]! })
   return hits
 }
 
