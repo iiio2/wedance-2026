@@ -7,7 +7,7 @@ audience: Beginner
 p: P1003
 cuj: "C1 — Seeker — Find your dance (first class / start dancing)"
 jtbd: "J1 — Start dancing without feeling lost"
-status: partial
+status: done
 wsjf_business_value: 8
 wsjf_time_criticality: 5
 wsjf_risk_opportunity: 8

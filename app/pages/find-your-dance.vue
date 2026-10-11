@@ -46,6 +46,7 @@ const quickPicks = [
           v-for="p in quickPicks"
           :key="p.style"
           :to="`/cities?style=${p.style}`"
+          :data-testid="`quick-pick-${p.style.toLowerCase()}`"
           class="group rounded-2xl bg-white border p-6 text-center transition-all hover:-translate-y-1"
           :style="{ borderColor: p.accent + '55', boxShadow: '0 1px 0 ' + p.accent + '22, 0 8px 22px rgba(59,31,18,0.05)' }"
         >
