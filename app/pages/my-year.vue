@@ -10,6 +10,28 @@ const { $trpc } = useNuxtApp()
 const { isSignedIn, username: myUsername } = useAuth()
 const { yearPlanIds } = useYearPlan()
 
+// Progress store — reads the same localStorage key as my-plan.vue so the
+// partner match rate on My Year stays in sync with the per-festival
+// "Partner found" toggle on My Plan.
+const PROGRESS_KEY = 'wedance-plan-progress'
+const progressStore = ref<Record<string, Partial<Record<string, boolean>>>>({})
+
+function loadProgress() {
+  if (typeof localStorage === 'undefined') return
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY)
+    if (raw) progressStore.value = JSON.parse(raw)
+  } catch { /* corrupt payload — treat as empty */ }
+}
+
+if (import.meta.client) {
+  loadProgress()
+  // Re-read when the user comes back from my-plan (tab focus / navigation).
+  window.addEventListener('storage', (e) => {
+    if (e.key === PROGRESS_KEY) loadProgress()
+  })
+}
+
 // Shared view detection — ?user=<username>.
 const sharerUsername = computed(() => {
   const u = route.query.user as string | undefined
@@ -154,7 +176,11 @@ const stats = computed(() => {
     totalWorkshops: fests.reduce((sum, f) => sum + f.workshopCount, 0),
     countries,
     topStyles,
-    partnerMatchRate: 0,
+    partnerMatchRate: fests.length === 0
+      ? 0
+      : Math.round(
+          (fests.filter((f) => progressStore.value[f.slug]?.partnerFound).length / fests.length) * 100,
+        ),
   }
 })
 
