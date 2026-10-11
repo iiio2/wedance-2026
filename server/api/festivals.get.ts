@@ -90,7 +90,7 @@ export default defineEventHandler(async (): Promise<FestivalRow[]> => {
 
     // First 5 public avatars per festival via row_number window — avoids
     // fetching every attendee row and capping in JS.
-    const avatarRows = await db.execute<{
+    const avatarResult = await db.execute<{
       festival_slug: string
       name: string
       photo: string | null
@@ -104,11 +104,14 @@ export default defineEventHandler(async (): Promise<FestivalRow[]> => {
         from plan_items pi
         inner join dancers d on d.id = pi.dancer_id
         where pi.item_type = 'festival'
-          and pi.item_id = any(${slugs})
+          and pi.item_id in (${sql.join(slugs.map(s => sql`${s}`), sql`, `)})
           and d.profile_public = true
       ) sub
       where rn <= 5
     `)
+    // neon-http returns { rows }, not an array. `any(${slugs})` expanded to a
+    // record ($1, $2, …) and Postgres rejected it — /api/festivals 500'd (RAZ-297).
+    const avatarRows = (avatarResult as unknown as { rows?: typeof avatarResult }).rows ?? avatarResult
 
     for (const row of avatarRows) {
       const slug = row.festival_slug
