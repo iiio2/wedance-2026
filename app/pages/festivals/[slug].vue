@@ -915,7 +915,7 @@ const { setCartCount } = useCart()
 watch(() => plan.value.size, (n) => setCartCount(n), { immediate: true })
 
 // Navigation — only show sections that have content for this festival.
-const allSections = ['about', 'discover', 'activities', 'lineup', 'schedule', 'tickets', 'venue'] as const
+const allSections = ['about', 'going', 'discover', 'activities', 'lineup', 'schedule', 'tickets', 'venue'] as const
 const sections = computed(() =>
   allSections.filter((s) => {
     if (s === 'schedule') return workshops.length > 0
@@ -926,6 +926,7 @@ const sections = computed(() =>
 )
 const sectionLabels: Record<string, string> = {
   'about': 'About',
+  'going': 'Who\'s going',
   'discover': 'Shall we dance?',
   'activities': 'Activities',
   'lineup': 'Lineup',
@@ -1305,6 +1306,12 @@ useHead({
     <div class="max-w-3xl mx-auto px-4 space-y-14 pt-8 pb-20">
         <section id="about" class="scroll-mt-12">
           <AboutTab :festival="festival" />
+        </section>
+
+        <section id="going" class="scroll-mt-16">
+          <h2 class="text-2xl font-black leading-tight mb-1" style="color:var(--wd-brown-900);">Who's <em class="italic" style="color:var(--wd-red-600);">going</em></h2>
+          <p class="text-sm mb-4" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">See who else is planning to be there — mark yourself as going so others see you too.</p>
+          <GoingSection :festival-slug="festival.slug" :accent-color="festival.accentColor" />
         </section>
 
         <section id="discover" class="scroll-mt-16">

@@ -85,6 +85,43 @@ export const planRouter = router({
     }),
 
   /**
+   * Public list of dancers who marked "Going" for a festival.
+   *
+   * Returns name + photo + city for public profiles, capped at 50.
+   * Used by the festivals listing (avatar stack) and the detail page
+   * ("Who's going" section) so travelers can see real people before
+   * they book.
+   */
+  goingList: publicProcedure
+    .input(z.object({ festivalSlug: z.string().min(1).max(120) }))
+    .query(async ({ ctx, input }) => {
+      const rows = await ctx.db
+        .select({
+          dancerId: planItems.dancerId,
+          name: dancers.name,
+          photo: dancers.photo,
+          city: dancers.city,
+        })
+        .from(planItems)
+        .innerJoin(dancers, eq(planItems.dancerId, dancers.id))
+        .where(
+          and(
+            eq(planItems.itemType, 'festival'),
+            eq(planItems.itemId, input.festivalSlug),
+            eq(dancers.profilePublic, true),
+          ),
+        )
+        .limit(50)
+
+      return rows.map(r => ({
+        dancerId: r.dancerId,
+        name: r.name,
+        photo: r.photo,
+        city: r.city,
+      }))
+    }),
+
+  /**
    * Fetch the current dancer's planned festivals with ticket status and
    * referral data — the "own view" of the year plan page.
    */

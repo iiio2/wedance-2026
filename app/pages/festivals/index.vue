@@ -20,6 +20,11 @@ import {
 import { daysUntil } from '#shared/utils/festivalDateFormatter'
 import { WD } from '~/lib/brand'
 
+interface GoingAvatar {
+  name: string
+  photo: string | null
+}
+
 interface FestivalRow {
   slug: string
   name: string
@@ -33,6 +38,16 @@ interface FestivalRow {
   accentColor: string | null
   ticketUrl: string | null
   signupCount: number
+  goingAvatars: GoingAvatar[]
+}
+
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(p => p[0]?.toUpperCase() ?? '')
+    .join('')
 }
 
 definePageMeta({ layout: false })
@@ -249,11 +264,43 @@ const styleChips = ['Salsa', 'Bachata', 'Timba', 'Kizomba', 'Son']
                   </span>
                 </div>
 
-                <!-- Stats row -->
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-                  <span v-if="f.signupCount" class="flex items-center gap-1">
+                <!-- Going row: avatars + count + pick button -->
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+                  <!-- Avatar stack -->
+                  <div v-if="f.goingAvatars?.length" class="flex items-center">
+                    <div class="flex -space-x-2">
+                      <template v-for="(a, i) in f.goingAvatars.slice(0, 5)" :key="i">
+                        <img
+                          v-if="a.photo"
+                          :src="a.photo"
+                          :alt="a.name"
+                          class="w-6 h-6 rounded-full border-2 object-cover"
+                          style="border-color:white;"
+                        />
+                        <div
+                          v-else
+                          class="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[8px] font-bold text-white"
+                          :style="{ borderColor: 'white', background: accent(f) }"
+                        >
+                          {{ initials(a.name) }}
+                        </div>
+                      </template>
+                      <div
+                        v-if="f.signupCount > 5"
+                        class="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[8px] font-bold"
+                        style="border-color:white; background:var(--wd-cream); color:var(--wd-brown-700);"
+                      >
+                        +{{ f.signupCount - 5 }}
+                      </div>
+                    </div>
+                    <span class="ml-2 flex items-center gap-1">
+                      <Users class="w-3 h-3" style="color:var(--wd-amber-600);" />
+                      {{ f.signupCount }} going
+                    </span>
+                  </div>
+                  <span v-else-if="f.signupCount" class="flex items-center gap-1">
                     <Users class="w-3 h-3" style="color:var(--wd-amber-600);" />
-                    {{ f.signupCount }} planning
+                    {{ f.signupCount }} going
                   </span>
                   <button
                     type="button"

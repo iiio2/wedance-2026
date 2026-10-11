@@ -1,6 +1,6 @@
-import { gte, sql } from 'drizzle-orm'
+import { gte, sql, eq, and, inArray } from 'drizzle-orm'
 import { useDb } from '../utils/db'
-import { festivals } from '../database/schema'
+import { festivals, planItems, dancers } from '../database/schema'
 
 /**
  * SSR-friendly festivals directory. Mirrors the cities.get.ts pattern so the
@@ -9,7 +9,13 @@ import { festivals } from '../database/schema'
  * Returns upcoming festivals sorted by start date ascending (nearest first).
  * Past festivals (endDate < today) are excluded server-side.
  * signupCount = number of dancers who clicked "Going" (plan_items).
+ * goingAvatars = first 5 public dancers going (name + photo) for the avatar stack.
  */
+export type GoingAvatar = {
+  name: string
+  photo: string | null
+}
+
 export type FestivalRow = {
   slug: string
   name: string
@@ -23,6 +29,7 @@ export type FestivalRow = {
   accentColor: string | null
   ticketUrl: string | null
   signupCount: number
+  goingAvatars: GoingAvatar[]
 }
 
 export default defineEventHandler(async (): Promise<FestivalRow[]> => {
@@ -52,9 +59,44 @@ export default defineEventHandler(async (): Promise<FestivalRow[]> => {
     .where(gte(festivals.endDate, today))
     .orderBy(festivals.startDate)
 
+  const slugs = rows.map(r => r.slug)
+
+  // Fetch the first few public dancers going to each festival for avatar stacks.
+  // Uses a lateral join equivalent: fetch all going dancers for these festivals,
+  // then group and cap in JS (row count is small — tens of festivals × ~50 each).
+  let avatarsBySlug = new Map<string, GoingAvatar[]>()
+
+  if (slugs.length > 0) {
+    const goingRows = await db
+      .select({
+        festivalSlug: planItems.itemId,
+        name: dancers.name,
+        photo: dancers.photo,
+      })
+      .from(planItems)
+      .innerJoin(dancers, eq(planItems.dancerId, dancers.id))
+      .where(
+        and(
+          eq(planItems.itemType, 'festival'),
+          inArray(planItems.itemId, slugs),
+          eq(dancers.profilePublic, true),
+        ),
+      )
+
+    for (const row of goingRows) {
+      const slug = row.festivalSlug
+      const list = avatarsBySlug.get(slug) ?? []
+      if (list.length < 5) {
+        list.push({ name: row.name, photo: row.photo })
+      }
+      avatarsBySlug.set(slug, list)
+    }
+  }
+
   return rows.map(r => ({
     ...r,
     styles: r.styles ?? [],
     signupCount: Number(r.signupCount) || 0,
+    goingAvatars: avatarsBySlug.get(r.slug) ?? [],
   }))
 })
