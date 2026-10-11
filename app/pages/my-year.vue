@@ -24,14 +24,6 @@ function loadProgress() {
   } catch { /* corrupt payload — treat as empty */ }
 }
 
-if (import.meta.client) {
-  loadProgress()
-  // Re-read when the user comes back from my-plan (tab focus / navigation).
-  window.addEventListener('storage', (e) => {
-    if (e.key === PROGRESS_KEY) loadProgress()
-  })
-}
-
 // Shared view detection — ?user=<username>.
 const sharerUsername = computed(() => {
   const u = route.query.user as string | undefined
@@ -78,8 +70,23 @@ function fetchMyPlan() {
   }).catch(() => {})
 }
 
-// Fetch data on mount.
-if (import.meta.client) {
+// All client-only data loading runs in onMounted so the initial (hydration)
+// render matches the server — server renders with empty state, client hydrates
+// identically, THEN loads real data. Running localStorage reads or tRPC queries
+// during setup (import.meta.client) caused a hydration mismatch: the server
+// rendered partnerMatchRate=0 while the client read a non-zero value from
+// localStorage during setup, producing different initial HTML.
+function onStorageChange(e: StorageEvent) {
+  if (e.key === PROGRESS_KEY) loadProgress()
+}
+
+onMounted(() => {
+  // Read progress from localStorage after hydration is complete.
+  loadProgress()
+  // Re-read when the user comes back from my-plan (another tab writes localStorage).
+  window.addEventListener('storage', onStorageChange)
+
+  // Fetch plan data.
   if (isSharedView.value && sharerUsername.value) {
     $trpc.plan.sharedPlan.query({ username: sharerUsername.value }).then((result) => {
       sharedData.value = result
@@ -93,7 +100,11 @@ if (import.meta.client) {
 
   // Re-fetch when the plan changes (add/remove festival) so stats update.
   watch(yearPlanIds, fetchMyPlan)
-}
+})
+
+onUnmounted(() => {
+  window.removeEventListener('storage', onStorageChange)
+})
 
 // Map shared data into YearPlanFestival shape.
 const sharedFestivals = computed<YearPlanFestival[]>(() => {
