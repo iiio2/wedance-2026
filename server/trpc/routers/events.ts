@@ -66,15 +66,24 @@ export const eventsRouter = router({
     }),
 
   // Upcoming events a venue hosts, an organiser runs or an artist plays — for /@handle.
+  // Optional `name` lets artist profiles also match events that list the artist
+  // by display name instead of @handle (name fallback).
   byProfile: publicProcedure
-    .input(z.object({ username: z.string().min(1).max(200), days: z.number().int().min(1).max(366).default(120) }))
+    .input(z.object({
+      username: z.string().min(1).max(200),
+      name: z.string().max(200).optional(),
+      days: z.number().int().min(1).max(366).default(120),
+    }))
     .query(async ({ ctx, input }) => {
       const now = new Date()
       const until = new Date(now.getTime() + input.days * 86400_000)
       const who = (withArtists: boolean) => or(
         eq(events.venueUsername, input.username),
         eq(events.organizerUsername, input.username),
-        ...(withArtists ? [sql`${events.artists} @> ${JSON.stringify([input.username])}::jsonb`] : []),
+        ...(withArtists ? [
+          sql`${events.artists} @> ${JSON.stringify([input.username])}::jsonb`,
+          ...(input.name ? [sql`${events.artists} @> ${JSON.stringify([input.name])}::jsonb`] : []),
+        ] : []),
       )
       const window = and(live(), gte(events.endDate, now), lt(events.startDate, until))
       try {

@@ -42,7 +42,10 @@ async function resolve() {
       const [sched, avail, synced] = await Promise.all([
         $trpc.booking.scheduleForProfile.query({ profileId: pro.profile.id }).catch(() => []),
         $trpc.booking.availabilityForProfile.query({ profileId: pro.profile.id }).catch(() => []),
-        $trpc.events.byProfile.query({ username: pro.profile.username }).catch(() => []),
+        $trpc.events.byProfile.query({
+          username: pro.profile.username,
+          ...(pro.profile.type === 'artist' ? { name: pro.profile.name } : {}),
+        }).catch(() => []),
       ])
       schedule.value = sched as any[]
       availability.value = avail as any[]
@@ -215,10 +218,10 @@ useHead(() => ({
 
       <!-- Scheduled events (first) -->
       <section class="max-w-2xl mx-auto px-4 pb-6" style="font-family:var(--wd-font-sans);">
-        <div class="flex items-center gap-2 mb-3"><Calendar class="w-5 h-5" style="color:var(--wd-red-600);" /><h2 class="text-2xl" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Scheduled</h2></div>
+        <div class="flex items-center gap-2 mb-3"><Calendar class="w-5 h-5" style="color:var(--wd-red-600);" /><h2 class="text-2xl" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">{{ profile.type === 'venue' ? 'Scheduled' : 'Events' }}</h2></div>
         <EventSchedule v-if="scheduleCards.length" :events="visibleScheduleCards" />
         <button v-if="scheduleCards.length > scheduleLimit" type="button" class="mt-4 text-xs font-bold underline" style="color:var(--wd-red-600);" @click="scheduleLimit += 24">Show more ({{ scheduleCards.length - scheduleLimit }} more)</button>
-        <p v-if="!scheduleCards.length" class="mt-3 text-sm italic" style="color:var(--wd-amber-600);">{{ spaces.length ? 'Nothing scheduled yet — book the first slot.' : 'Nothing scheduled yet.' }}</p>
+        <p v-if="!scheduleCards.length" class="mt-3 text-sm italic" style="color:var(--wd-amber-600);">{{ spaces.length ? 'Nothing scheduled yet — book the first slot.' : 'No upcoming events.' }}</p>
       </section>
 
       <!-- Book a (free) slot -->
