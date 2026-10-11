@@ -1311,6 +1311,7 @@ useHead({
         <section id="going" class="scroll-mt-16">
           <h2 class="text-2xl font-black leading-tight mb-1" style="color:var(--wd-brown-900);">Who's <em class="italic" style="color:var(--wd-red-600);">going</em></h2>
           <p class="text-sm mb-4" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">See who else is planning to be there — mark yourself as going so others see you too.</p>
+          <FestivalFriends :festival-slug="festival.slug" :accent-color="festival.accentColor" class="mb-6" />
           <GoingSection :festival-slug="festival.slug" :accent-color="festival.accentColor" />
         </section>
 

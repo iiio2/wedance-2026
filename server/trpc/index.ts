@@ -24,6 +24,7 @@ import { rideShareRouter } from './routers/rideShare'
 import { referralRouter } from './routers/referral'
 import { roommateRouter } from './routers/roommate'
 import { followRouter } from './routers/follow'
+import { waveRouter } from './routers/wave'
 
 export const appRouter = router({
   auth: authRouter,
@@ -51,6 +52,7 @@ export const appRouter = router({
   rideShare: rideShareRouter,
   follow: followRouter,
   roommate: roommateRouter,
+  wave: waveRouter,
 })
 
 export type AppRouter = typeof appRouter

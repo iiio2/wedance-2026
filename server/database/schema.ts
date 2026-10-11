@@ -711,3 +711,18 @@ export const artistFollows = pgTable('artist_follows', {
   unique('artist_follows_dancer_profile').on(t.dancerId, t.profileId),
   index('artist_follows_profile_idx').on(t.profileId),
 ])
+
+/**
+ * RAZ-82: "Wave" social gesture — a lightweight, per-festival expression
+ * of "I'd love to dance with you there." Mutual waves = festival friends.
+ */
+export const festivalWaves = pgTable('festival_waves', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  festivalSlug: text('festival_slug').notNull(),
+  dancerId: uuid('dancer_id').notNull().references(() => dancers.id),
+  targetDancerId: uuid('target_dancer_id').notNull().references(() => dancers.id),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  unique('festival_wave_unique').on(t.festivalSlug, t.dancerId, t.targetDancerId),
+  index('festival_waves_target_idx').on(t.festivalSlug, t.targetDancerId),
+])

@@ -8,8 +8,11 @@
  *
  * RAZ-115: when the signed-in dancer has this item in their plan, a
  * share toggle appears — opt-in to appear in the public going list.
+ *
+ * RAZ-82: wave button on each card (festivals only) — tap to express
+ * "I'd like to dance with you there." Mutual waves = festival friends.
  */
-import { Users, Eye, EyeOff } from 'lucide-vue-next'
+import { Users, Eye, EyeOff, Hand } from 'lucide-vue-next'
 
 const props = withDefaults(defineProps<{
   /** Legacy shorthand — sets itemType='festival', itemId=festivalSlug */
@@ -38,6 +41,7 @@ interface GoingDancer {
   photo: string | null
   city: string | null
   username: string | null
+  danceStyles?: string[]
 }
 
 const going = ref<GoingDancer[]>([])
@@ -46,6 +50,10 @@ const loading = ref(true)
 // Share toggle state
 const shareGoing = ref(false)
 const shareLoading = ref(false)
+
+// Wave state (festivals only, signed-in users)
+const wavedIds = ref<Set<string>>(new Set())
+const wavingId = ref<string | null>(null)
 
 async function load() {
   if (!resolvedId.value) return
@@ -97,14 +105,47 @@ async function toggleShare() {
   }
 }
 
+async function loadWaveState() {
+  if (!isSignedIn.value || resolvedType.value !== 'festival' || !resolvedId.value) return
+  try {
+    const ids = await $trpc.wave.myWaves.query({ festivalSlug: resolvedId.value })
+    wavedIds.value = new Set(ids)
+  } catch {
+    // non-critical
+  }
+}
+
+async function toggleWave(dancerId: string) {
+  if (wavingId.value) return
+  wavingId.value = dancerId
+  const wasWaved = wavedIds.value.has(dancerId)
+  try {
+    if (wasWaved) {
+      wavedIds.value.delete(dancerId)
+      await $trpc.wave.retract.mutate({ festivalSlug: resolvedId.value, targetDancerId: dancerId })
+    } else {
+      wavedIds.value.add(dancerId)
+      await $trpc.wave.send.mutate({ festivalSlug: resolvedId.value, targetDancerId: dancerId })
+    }
+  } catch {
+    // Roll back
+    if (wasWaved) wavedIds.value.add(dancerId)
+    else wavedIds.value.delete(dancerId)
+  } finally {
+    wavingId.value = null
+  }
+}
+
 onMounted(() => {
   load()
   loadShareState()
+  loadWaveState()
 })
 watch(resolvedId, (next, prev) => {
   if (next !== prev) {
     load()
     loadShareState()
+    loadWaveState()
   }
 })
 watch([isSignedIn, isInPlan], () => {
@@ -162,37 +203,58 @@ function initials(name: string): string {
     </div>
 
     <template v-else-if="going.length > 0">
+      <p v-if="isSignedIn && resolvedType === 'festival'" class="text-xs mb-3" style="color:var(--wd-brown-500); font-family:var(--wd-font-sans);">
+        Wave at dancers you'd like to meet — if they wave back, you become festival friends.
+      </p>
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <NuxtLink
+        <div
           v-for="d in going"
           :key="d.dancerId"
-          :to="d.username ? `/u/${d.username}` : ''"
-          :class="d.username ? 'hover:brightness-[0.97] cursor-pointer' : 'pointer-events-none'"
-          class="flex items-center gap-3 rounded-xl p-2.5 no-underline transition-colors"
+          class="relative flex items-center gap-3 rounded-xl p-2.5 transition-colors"
           style="background:white; border:1px solid color-mix(in srgb, var(--wd-brown-900) 10%, transparent);"
         >
-          <img
-            v-if="d.photo"
-            :src="d.photo"
-            :alt="d.name"
-            class="w-10 h-10 rounded-full object-cover shrink-0"
-          />
-          <div
-            v-else
-            class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-            :style="{ background: accentColor }"
+          <NuxtLink
+            :to="d.username ? `/u/${d.username}` : ''"
+            :class="d.username ? 'hover:brightness-[0.97] cursor-pointer' : 'pointer-events-none'"
+            class="flex items-center gap-3 no-underline min-w-0 flex-1"
           >
-            {{ initials(d.name) }}
-          </div>
-          <div class="min-w-0 flex-1">
-            <p class="text-sm font-medium truncate" style="color:var(--wd-brown-900);">
-              {{ d.name }}
-            </p>
-            <p v-if="d.city" class="text-xs truncate" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-              {{ d.city }}
-            </p>
-          </div>
-        </NuxtLink>
+            <img
+              v-if="d.photo"
+              :src="d.photo"
+              :alt="d.name"
+              class="w-10 h-10 rounded-full object-cover shrink-0"
+            />
+            <div
+              v-else
+              class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+              :style="{ background: accentColor }"
+            >
+              {{ initials(d.name) }}
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium truncate" style="color:var(--wd-brown-900);">
+                {{ d.name }}
+              </p>
+              <p v-if="d.city" class="text-xs truncate" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+                {{ d.city }}
+              </p>
+              <p v-if="d.danceStyles && d.danceStyles.length > 0" class="text-[10px] truncate mt-0.5" style="color:var(--wd-brown-500); font-family:var(--wd-font-sans);">
+                {{ d.danceStyles.slice(0, 3).join(' · ') }}
+              </p>
+            </div>
+          </NuxtLink>
+          <button
+            v-if="isSignedIn && resolvedType === 'festival'"
+            type="button"
+            :disabled="wavingId === d.dancerId"
+            class="absolute top-1.5 right-1.5 w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+            :style="{ background: wavedIds.has(d.dancerId) ? accentColor : 'color-mix(in srgb, var(--wd-brown-900) 8%, transparent)', color: wavedIds.has(d.dancerId) ? 'white' : 'var(--wd-brown-500)' }"
+            :title="wavedIds.has(d.dancerId) ? 'Undo wave' : 'Wave — I\'d like to dance with you'"
+            @click="toggleWave(d.dancerId)"
+          >
+            <Hand class="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </template>
 
