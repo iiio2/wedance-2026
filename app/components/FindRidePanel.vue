@@ -8,6 +8,11 @@
  */
 import { Car, Plane, ExternalLink } from 'lucide-vue-next'
 import { RidePostSchema } from '#shared/validation'
+import { accentText } from '~/lib/accent'
+import { WD } from '~/lib/brand'
+import { Button } from '~/components/ui/button'
+import { Field } from '~/components/ui/field'
+import { Input } from '~/components/ui/input'
 
 const props = defineProps<{
   festivalSlug: string
@@ -69,9 +74,10 @@ const flightsHref = computed(() =>
   `https://www.google.com/travel/flights?q=flights%20to%20${encodeURIComponent(props.festivalLocation)}%20${props.festivalStartDate}`,
 )
 
-const fieldClass = 'mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none transition-all'
-const fieldStyle = 'background:white; border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); color:var(--wd-brown-900); font-family:var(--wd-font-sans);'
-const labelStyle = 'color:var(--wd-amber-600); font-family:var(--wd-font-sans);'
+// Status chip text on its own 9 % tint, darkened where the hue is too light for 4.5:1.
+const CYAN_CHIP = accentText(WD.cyan600)
+const GREEN_CHIP = accentText(WD.green600)
+const AMBER_CHIP = accentText(WD.amber500)
 
 const hasOwnRide = computed(() => rideShares.value.some(r => r.isOwn))
 const othersRides = computed(() => rideShares.value.filter(r => !r.isOwn))
@@ -83,21 +89,21 @@ function onPhotoError(rideId: string) {
 </script>
 
 <template>
-  <div class="rounded-xl border overflow-hidden" style="border-color:color-mix(in srgb, var(--wd-cyan-600) 33.3%, transparent); background:white;">
+  <div class="rounded-xl border overflow-hidden bg-card" style="border-color:color-mix(in srgb, var(--wd-cyan-600) 33.3%, transparent);">
     <!-- Header -->
     <div class="flex items-center gap-2 px-3 py-2.5" style="background:color-mix(in srgb, var(--wd-cyan-600) 3.9%, transparent);">
-      <Car class="w-4 h-4 shrink-0" style="color:var(--wd-cyan-600); stroke-width:1.75;" />
-      <span class="text-sm font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+      <Car class="w-4 h-4 shrink-0 text-wd-cyan-600" aria-hidden="true" />
+      <span class="text-sm font-bold font-display text-foreground">
         Find a ride
       </span>
-      <span v-if="rideShares.length && !loading" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ml-auto" style="background:color-mix(in srgb, var(--wd-cyan-600) 9.4%, transparent); color:var(--wd-cyan-600);">
+      <span v-if="rideShares.length && !loading" class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ml-auto" :style="{ background: 'color-mix(in srgb, var(--wd-cyan-600) 9.4%, transparent)', color: CYAN_CHIP }">
         {{ rideShares.length }} sharing
       </span>
     </div>
 
     <div class="px-3 pb-3 grid gap-2.5">
       <!-- Loading -->
-      <p v-if="loading" class="text-xs py-2" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">
+      <p v-if="loading" class="text-xs py-2 font-sans text-secondary">
         Loading rides...
       </p>
 
@@ -117,11 +123,11 @@ function onPhotoError(rideId: string) {
               class="w-7 h-7 rounded-full shrink-0 object-cover"
               @error="onPhotoError(ride.id)"
             >
-            <span v-else class="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold uppercase" style="background:color-mix(in srgb, var(--wd-cyan-600) 9.4%, transparent); color:var(--wd-cyan-600);">
+            <span v-else class="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-eyebrow font-bold" :style="{ background: 'color-mix(in srgb, var(--wd-cyan-600) 9.4%, transparent)', color: CYAN_CHIP }">
               {{ ride.dancerName.charAt(0) }}
             </span>
-            <div class="min-w-0 flex-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-              <span class="font-bold" style="color:var(--wd-brown-900);">{{ ride.dancerName }}</span>
+            <div class="min-w-0 flex-1 text-xs font-sans text-muted-foreground">
+              <span class="font-bold text-foreground">{{ ride.dancerName }}</span>
               <span class="ml-1">
                 {{ ride.type === 'offering' ? 'from' : 'looking from' }} {{ ride.originCity }}
               </span>
@@ -129,32 +135,32 @@ function onPhotoError(rideId: string) {
               <span v-if="ride.seatsAvailable" class="ml-1">&middot; {{ ride.seatsAvailable }} seats</span>
             </div>
             <span
-              class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0"
-              :style="ride.type === 'offering' ? { background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: 'var(--wd-green-600)' } : { background: 'color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent)', color: 'var(--wd-amber-500)' }"
+              class="text-tag font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0"
+              :style="ride.type === 'offering' ? { background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: GREEN_CHIP } : { background: 'color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent)', color: AMBER_CHIP }"
             >{{ ride.type === 'offering' ? 'Offering' : 'Looking' }}</span>
-            <button
+            <Button
               v-if="ride.isOwn"
               type="button"
-              class="text-[10px] font-bold italic hover:underline shrink-0"
-              style="color:var(--wd-red-600);"
+              variant="link"
+              size="sm"
+              class="h-auto p-0 text-eyebrow font-bold italic shrink-0"
               @click="onDeleteRide"
-            >Remove</button>
+            >Remove</Button>
           </div>
         </div>
 
         <!-- No rides — flights fallback -->
         <div v-if="!rideShares.length" class="rounded-lg px-3 py-3 text-center" style="background:color-mix(in srgb, var(--wd-brown-900) 2%, transparent);">
-          <p class="text-xs mb-2" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <p class="text-xs mb-2 font-sans text-muted-foreground">
             No ride-shares yet. Be the first to offer one, or search flights.
           </p>
           <a
             :href="flightsHref"
             target="_blank"
             rel="noopener noreferrer"
-            class="inline-flex items-center gap-1 text-xs font-bold hover:underline"
-            style="color:var(--wd-cyan-600); font-family:var(--wd-font-sans);"
+            class="inline-flex items-center gap-1 text-xs font-bold hover:underline font-sans text-wd-cyan-700"
           >
-            <Plane class="w-3.5 h-3.5" /> Search flights <ExternalLink class="w-2.5 h-2.5" />
+            <Plane class="w-3.5 h-3.5" aria-hidden="true" /> Search flights <ExternalLink class="w-2.5 h-2.5" aria-hidden="true" />
           </a>
         </div>
 
@@ -164,70 +170,56 @@ function onPhotoError(rideId: string) {
             :href="flightsHref"
             target="_blank"
             rel="noopener noreferrer"
-            class="inline-flex items-center gap-1 text-[10px] italic hover:underline"
-            style="color:var(--wd-amber-600); font-family:var(--wd-font-display);"
+            class="inline-flex items-center gap-1 text-eyebrow italic hover:underline font-display text-secondary"
           >
-            or flights <ExternalLink class="w-2.5 h-2.5" />
+            or flights <ExternalLink class="w-2.5 h-2.5" aria-hidden="true" />
           </a>
         </div>
 
         <!-- Offer form (signed in) -->
         <div v-if="isSignedIn && !hasOwnRide" class="rounded-xl border p-3 grid gap-2" style="border-color:color-mix(in srgb, var(--wd-brown-900) 8.2%, transparent); background:color-mix(in srgb, var(--wd-brown-900) 2%, transparent);">
-          <p class="text-[10px] font-bold uppercase tracking-widest" :style="labelStyle">Offer or find a ride</p>
+          <p class="text-eyebrow font-bold uppercase tracking-widest font-sans text-secondary">Offer or find a ride</p>
           <div class="flex gap-2">
-            <button
+            <Button
               type="button"
-              class="flex-1 text-xs font-bold py-2 rounded-lg transition-all"
-              :style="rideMode === 'offering'
-                ? { background: 'var(--wd-cyan-600)', color: 'white' }
-                : { background: 'white', color: 'var(--wd-brown-700)', border: '1px solid color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent)' }"
+              :variant="rideMode === 'offering' ? 'default' : 'outline'"
+              size="sm"
+              accent="var(--wd-cyan-700)"
+              class="flex-1 text-xs font-bold rounded-lg"
+              :aria-pressed="rideMode === 'offering'"
               @click="rideMode = rideMode === 'offering' ? null : 'offering'"
-            >Offering a ride</button>
-            <button
+            >Offering a ride</Button>
+            <Button
               type="button"
-              class="flex-1 text-xs font-bold py-2 rounded-lg transition-all"
-              :style="rideMode === 'looking'
-                ? { background: 'var(--wd-cyan-600)', color: 'white' }
-                : { background: 'white', color: 'var(--wd-brown-700)', border: '1px solid color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent)' }"
+              :variant="rideMode === 'looking' ? 'default' : 'outline'"
+              size="sm"
+              accent="var(--wd-cyan-700)"
+              class="flex-1 text-xs font-bold rounded-lg"
+              :aria-pressed="rideMode === 'looking'"
               @click="rideMode = rideMode === 'looking' ? null : 'looking'"
-            >Looking for a ride</button>
+            >Looking for a ride</Button>
           </div>
 
-          <div v-if="rideMode" class="grid gap-2">
-            <div>
-              <label class="text-[10px] font-bold uppercase tracking-widest" :style="labelStyle">From city</label>
-              <input v-model="rideOriginCity" type="text" placeholder="e.g. Munich" :class="fieldClass" :style="fieldStyle" v-bind="rideForm.fieldAttrs('originCity', 'plan-ride-origin-error')">
-              <FieldError id="plan-ride-origin-error" :message="rideForm.errors.originCity" />
-            </div>
-            <div>
-              <label class="text-[10px] font-bold uppercase tracking-widest" :style="labelStyle">{{ rideMode === 'offering' ? 'Departure date' : 'Preferred date' }}</label>
-              <input v-model="rideDate" type="date" :class="fieldClass" :style="fieldStyle" v-bind="rideForm.fieldAttrs('date', 'plan-ride-date-error')">
-              <FieldError id="plan-ride-date-error" :message="rideForm.errors.date" />
-            </div>
-            <div v-if="rideMode === 'offering'">
-              <label class="text-[10px] font-bold uppercase tracking-widest" :style="labelStyle">Seats available</label>
-              <input v-model.number="rideSeats" type="number" min="1" max="6" :class="fieldClass" :style="fieldStyle" v-bind="rideForm.fieldAttrs('seats', 'plan-ride-seats-error')">
-              <FieldError id="plan-ride-seats-error" :message="rideForm.errors.seats" />
-            </div>
-            <button
-              type="button"
-              class="w-full py-2.5 rounded-full text-white text-xs font-bold uppercase tracking-wider"
-              :disabled="submitting"
-              style="background:var(--wd-cyan-600); box-shadow: 0 3px 0 -1px var(--wd-cyan-700);"
-              @click="submitRide"
-            >{{ submitting ? 'Posting...' : 'Post my ride' }}</button>
+          <div v-if="rideMode" class="grid gap-3">
+            <Field id="plan-ride-origin" label="From city" :error="rideForm.errors.originCity">
+              <Input v-model="rideOriginCity" type="text" placeholder="e.g. Munich" v-bind="rideForm.fieldAttrs('originCity', 'plan-ride-origin-error')" />
+            </Field>
+            <Field id="plan-ride-date" :label="rideMode === 'offering' ? 'Departure date' : 'Preferred date'" :error="rideForm.errors.date">
+              <Input v-model="rideDate" type="date" v-bind="rideForm.fieldAttrs('date', 'plan-ride-date-error')" />
+            </Field>
+            <Field v-if="rideMode === 'offering'" id="plan-ride-seats" label="Seats available" :error="rideForm.errors.seats">
+              <Input v-model.number="rideSeats" type="number" min="1" max="6" v-bind="rideForm.fieldAttrs('seats', 'plan-ride-seats-error')" />
+            </Field>
+            <Button type="button" variant="pill" size="pill-sm" accent="var(--wd-cyan-700)" class="w-full h-9" :loading="submitting" @click="submitRide">
+              {{ submitting ? 'Posting...' : 'Post my ride' }}
+            </Button>
           </div>
         </div>
 
         <!-- Not signed in -->
         <div v-if="!isSignedIn" class="rounded-xl border p-3 text-center" style="border-color:color-mix(in srgb, var(--wd-brown-900) 8.2%, transparent); background:color-mix(in srgb, var(--wd-brown-900) 2%, transparent);">
-          <p class="text-xs mb-2" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">Sign in to share or find a ride</p>
-          <button
-            type="button"
-            class="px-4 py-2 rounded-full text-white text-xs font-bold uppercase tracking-wider"
-            style="background:var(--wd-cyan-600); box-shadow: 0 3px 0 -1px var(--wd-cyan-700);"
-            @click="emit('sign-in')"
-          >Sign in</button>
+          <p class="text-xs mb-2 font-sans text-muted-foreground">Sign in to share or find a ride</p>
+          <Button type="button" variant="pill" size="pill-sm" accent="var(--wd-cyan-700)" @click="emit('sign-in')">Sign in</Button>
         </div>
       </template>
     </div>

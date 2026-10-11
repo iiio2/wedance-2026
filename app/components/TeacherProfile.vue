@@ -8,6 +8,10 @@
 import type { Teacher } from '~/types/festival'
 import { Instagram, Youtube, Globe, ArrowRight, X } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
+import { accentText } from '~/lib/accent'
+import { Button } from '~/components/ui/button'
+
+const STYLE_ACCENTS = [WD.red600, WD.cyan600, WD.green600, WD.purple500, WD.amber500]
 
 const props = defineProps<{
   teacher: Teacher
@@ -46,7 +50,7 @@ function toEmbedUrl(url: string): string {
 </script>
 
 <template>
-  <div class="rounded-2xl bg-white p-5 border" style="border-color:color-mix(in srgb, var(--wd-red-600) 20%, transparent); box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-red-600) 13.3%, transparent), 0 8px 22px rgba(59,31,18,0.05);">
+  <div class="rounded-2xl bg-card p-5 border" style="border-color:color-mix(in srgb, var(--wd-red-600) 20%, transparent); box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-red-600) 13.3%, transparent), 0 8px 22px rgba(59,31,18,0.05);">
     <div class="flex items-start gap-4">
       <img
         v-if="teacher.photo && !imgError"
@@ -65,33 +69,34 @@ function toEmbedUrl(url: string): string {
       <div class="flex-1 min-w-0">
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
-            <h3 class="text-xl font-black leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+            <h3 class="text-xl font-black leading-tight font-display text-foreground">
               {{ teacher.name }}
             </h3>
             <p v-if="teacher.styles.length" class="mt-1 flex flex-wrap gap-1.5">
               <span
                 v-for="(s, i) in teacher.styles"
                 :key="s"
-                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
                 :style="{
-                  background: [WD.red600, WD.cyan600, WD.green600, WD.purple500, WD.amber500][i % 5] + '18',
-                  color: [WD.red600, WD.cyan600, WD.green600, WD.purple500, WD.amber500][i % 5],
+                  background: STYLE_ACCENTS[i % 5] + '18',
+                  color: accentText(STYLE_ACCENTS[i % 5]!),
                 }"
               >{{ s }}</span>
             </p>
           </div>
-          <button
+          <Button
             type="button"
-            class="shrink-0 p-1 -m-1 rounded-full hover:bg-black/[0.04] transition-colors"
-            style="color:var(--wd-amber-600);"
+            variant="ghost"
+            size="icon-sm"
+            class="shrink-0 -m-2 rounded-full text-secondary"
             aria-label="Close preview"
             @click="$emit('close')"
           >
-            <X class="w-4 h-4" />
-          </button>
+            <X aria-hidden="true" />
+          </Button>
         </div>
 
-        <p v-if="teacher.bio" class="mt-2 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+        <p v-if="teacher.bio" class="mt-2 text-sm leading-relaxed font-sans text-muted-foreground">
           {{ teacher.bio }}
         </p>
 
@@ -103,9 +108,9 @@ function toEmbedUrl(url: string): string {
               :href="link.url"
               target="_blank"
               rel="noopener noreferrer"
-              class="transition-colors"
-              style="color:var(--wd-amber-600);"
+              class="transition-colors text-secondary hover:text-primary"
               :title="link.platform"
+              :aria-label="link.platform"
             >
               <component :is="platformIcon[link.platform]" v-if="platformIcon[link.platform]" class="w-4 h-4" />
               <span v-else class="text-xs italic capitalize">{{ link.platform }}</span>
@@ -114,8 +119,7 @@ function toEmbedUrl(url: string): string {
           <NuxtLink
             v-if="profileHref"
             :to="profileHref"
-            class="ml-auto inline-flex items-center gap-1 text-xs font-bold italic hover:underline"
-            style="color:var(--wd-red-600); font-family:var(--wd-font-display);"
+            class="ml-auto inline-flex items-center gap-1 text-xs font-bold italic hover:underline font-display text-primary"
           >
             Full profile <ArrowRight class="w-3.5 h-3.5" />
           </NuxtLink>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Festival, Teacher, Workshop, PlanEntry, DanceRole, DancePartner, FestivalFriend, PartnerMatch, ExtraActivity, SwipeCard, FreemiumState } from '~/types/festival'
 import { ArrowRight, Sparkles, Check } from 'lucide-vue-next'
+import { Button } from '~/components/ui/button'
 import { artistPlaces, artistLanguages } from '~/data/artists'
 import * as salsaOpen from '~/data/mock-festival'
 import * as meneate from '~/data/mock-meneate'
@@ -10,6 +11,15 @@ import * as aguaPichi from '~/data/mock-agua-pichi'
 import { liteFestivals } from '~/data/mock-festivals-lite'
 import type { FestivalDetail } from '~/server/api/festivals/[slug].get'
 import { WD } from '~/lib/brand'
+import { accentText } from '~/lib/accent'
+
+// Status chip text on its own 9 % tint — darkened where the hue is too light for 4.5:1.
+const CHIP = {
+  green: accentText(WD.green600),
+  cyan: accentText(WD.cyan600),
+  purple: accentText(WD.purple500),
+  amber: accentText(WD.amber500),
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -1102,7 +1112,7 @@ useHead({
   />
 
   <!-- Normal festival page -->
-  <div v-else class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div v-else class="min-h-screen bg-background text-foreground font-display">
     <!-- V3 header — same as /, /festivals, /organizers -->
     <SiteHeader />
 
@@ -1139,12 +1149,12 @@ useHead({
             >
             <div
               v-else
-              class="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
+              class="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-eyebrow font-bold text-white"
               :style="{ background: festival.accentColor }"
             >
               {{ festival.name.charAt(0) }}
             </div>
-            <span class="text-sm font-bold whitespace-nowrap hidden sm:inline" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+            <span class="text-sm font-bold whitespace-nowrap hidden sm:inline font-display text-foreground">
               {{ festival.name }}
             </span>
           </NuxtLink>
@@ -1154,12 +1164,10 @@ useHead({
             v-for="section in sections"
             :key="section"
             type="button"
-            class="relative px-3 py-3 text-sm italic whitespace-nowrap transition-colors"
-            :style="{
-              color: activeSection === section ? festival.accentColor : WD.brown700,
-              fontWeight: activeSection === section ? 700 : 400,
-              fontFamily: 'var(--wd-font-display)',
-            }"
+            class="relative px-3 py-3 text-sm italic whitespace-nowrap transition-colors font-display cursor-pointer"
+            :class="activeSection === section ? 'font-bold' : 'font-normal text-muted-foreground'"
+            :style="activeSection === section ? { color: festival.accentColor } : undefined"
+            :aria-current="activeSection === section ? 'location' : undefined"
             @click="scrollTo(section)"
           >
             {{ sectionLabels[section] }}
@@ -1187,15 +1195,15 @@ useHead({
 
         <section id="discover" class="scroll-mt-16">
           <div class="flex items-center gap-2 mb-1">
-            <h2 class="text-2xl font-black leading-tight" style="color:var(--wd-brown-900);">Shall we <em class="italic" style="color:var(--wd-red-600);">dance?</em></h2>
-            <span v-if="!isSignedIn && freeSpotsLeft > 0" class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full" style="background:color-mix(in srgb, var(--wd-green-600) 9.4%, transparent); color:var(--wd-green-600);">
+            <h2 class="text-2xl font-black leading-tight text-foreground">Shall we <em class="italic text-primary">dance?</em></h2>
+            <span v-if="!isSignedIn && freeSpotsLeft > 0" class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full" :style="{ background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: CHIP.green }">
               {{ freeSpotsLeft }} free {{ freeSpotsLeft === 1 ? 'spot' : 'spots' }} left
             </span>
-            <span v-else-if="!isSignedIn" class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full" style="background:color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent); color:var(--wd-amber-500);">
+            <span v-else-if="!isSignedIn" class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full" :style="{ background: 'color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent)', color: CHIP.amber }">
               From &euro;1
             </span>
           </div>
-          <p class="text-sm mb-4" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">Swipe to discover dancers, group dinners, and activities happening around the festival.</p>
+          <p class="text-sm mb-4 text-muted-foreground font-sans">Swipe to discover dancers, group dinners, and activities happening around the festival.</p>
           <DiscoverDancers
             :festival-slug="festival.slug"
             :extra-cards="extraSwipeCards"
@@ -1212,8 +1220,8 @@ useHead({
         </section>
 
         <section id="activities" class="scroll-mt-16">
-          <h2 class="text-2xl font-black leading-tight mb-1" style="color:var(--wd-brown-900);">Activities</h2>
-          <p class="text-sm mb-4" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">Rides, rooms, dinners and more — connect with fellow dancers.</p>
+          <h2 class="text-2xl font-black leading-tight mb-1 text-foreground">Activities</h2>
+          <p class="text-sm mb-4 text-muted-foreground font-sans">Rides, rooms, dinners and more — connect with fellow dancers.</p>
           <ActivitiesTab
             :ride-shares="rideShares"
             :group-dinners="groupDinners"
@@ -1246,18 +1254,19 @@ useHead({
 
         <section v-if="teachers.length > 0" id="lineup" class="scroll-mt-16">
           <div class="flex items-baseline justify-between gap-3 mb-1">
-            <h2 class="text-2xl font-black leading-tight" style="color:var(--wd-brown-900);">Lineup</h2>
-            <button
+            <h2 class="text-2xl font-black leading-tight text-foreground">Lineup</h2>
+            <Button
               v-if="selectedTeacherId"
               type="button"
-              class="text-xs font-bold whitespace-nowrap"
-              style="color:var(--wd-red-600); font-family:var(--wd-font-sans);"
+              variant="link"
+              size="sm"
+              class="h-auto p-0 text-xs font-bold font-sans"
               @click="selectedTeacherId = null"
             >
               Clear filter ✕
-            </button>
+            </Button>
           </div>
-          <p class="text-sm mb-4" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">Tap an artist to filter the schedule to their sessions — or open their full profile.</p>
+          <p class="text-sm mb-4 text-muted-foreground font-sans">Tap an artist to filter the schedule to their sessions — or open their full profile.</p>
           <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <ArtistCard
               v-for="c in lineupCards"
@@ -1276,17 +1285,19 @@ useHead({
 
         <section v-if="workshops.length > 0" id="schedule" class="scroll-mt-16">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-2xl font-black leading-tight" style="color:var(--wd-brown-900);">Schedule</h2>
-            <button
+            <h2 class="text-2xl font-black leading-tight text-foreground">Schedule</h2>
+            <Button
               v-if="selectedTeacherId"
               type="button"
-              class="text-xs font-bold flex items-center gap-1"
-              style="color:var(--wd-red-600); font-family:var(--wd-font-sans);"
+              variant="link"
+              size="sm"
+              class="h-auto p-0 gap-1 text-xs font-bold font-sans"
               @click="selectedTeacherId = null"
             >
               Filtering by {{ selectedTeacher?.name }}
-              <span style="color:var(--wd-amber-600);">✕</span>
-            </button>
+              <span class="text-secondary" aria-hidden="true">✕</span>
+              <span class="sr-only">— clear filter</span>
+            </Button>
           </div>
           <ScheduleTab
             :workshops="workshops"
@@ -1303,12 +1314,12 @@ useHead({
 
         <section v-if="festival.tickets?.length" id="tickets" class="scroll-mt-16">
           <div class="mb-4">
-            <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Passes</div>
-            <h2 v-if="hasTicket" class="mt-2 text-2xl font-black leading-tight" style="color:var(--wd-brown-900);">
-              You're <em class="italic" style="color:var(--wd-green-600);">in.</em>
+            <div class="text-xs uppercase tracking-[0.3em] text-secondary">Passes</div>
+            <h2 v-if="hasTicket" class="mt-2 text-2xl font-black leading-tight text-foreground">
+              You're <em class="italic text-wd-green-600">in.</em>
             </h2>
-            <h2 v-else class="mt-2 text-2xl font-black leading-tight" style="color:var(--wd-brown-900);">
-              Pick your <em class="italic" style="color:var(--wd-red-600);">pass.</em>
+            <h2 v-else class="mt-2 text-2xl font-black leading-tight text-foreground">
+              Pick your <em class="italic text-primary">pass.</em>
             </h2>
           </div>
 
@@ -1319,17 +1330,17 @@ useHead({
             style="background:linear-gradient(135deg, #dcfce7, #d1fae5); border:1px solid color-mix(in srgb, var(--wd-green-600) 20%, transparent);"
           >
             <div class="flex items-start gap-3">
-              <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style="background:white;">
-                <Check class="w-5 h-5" style="color:var(--wd-green-600);" />
+              <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-white">
+                <Check class="w-5 h-5 text-wd-green-600" />
               </div>
               <div class="flex-1 min-w-0">
-                <div class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-green-600);">
+                <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-wd-green-600">
                   You have a ticket
                 </div>
-                <div class="mt-1 text-sm" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+                <div class="mt-1 text-sm text-foreground font-display">
                   Your pass for {{ festival.name }} is confirmed.
                 </div>
-                <div class="mt-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+                <div class="mt-1 text-xs text-muted-foreground font-sans">
                   Plan your workshops in the schedule above and connect with other dancers.
                 </div>
               </div>
@@ -1343,45 +1354,44 @@ useHead({
             style="background:linear-gradient(135deg, var(--wd-amber-100), var(--wd-red-100)); border:1px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent);"
           >
             <div class="flex items-start gap-3">
-              <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style="background:white;">
-                <Sparkles class="w-5 h-5" style="color:var(--wd-red-600);" />
+              <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-white">
+                <Sparkles class="w-5 h-5 text-primary" />
               </div>
               <div class="flex-1 min-w-0">
-                <div class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-red-600);">
+                <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-primary">
                   Best value for your plan
                 </div>
                 <div class="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <span class="text-lg font-black" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+                  <span class="text-lg font-black font-display text-foreground">
                     {{ recommendation.tickets.map(t => t.name).join(' + ') }}
                   </span>
-                  <span class="text-2xl font-black" style="font-family:var(--wd-font-display); color:var(--wd-red-600);">
+                  <span class="text-2xl font-black font-display text-primary">
                     €{{ recommendation.total }}
                   </span>
                   <span
                     v-if="recommendation.savings"
-                    class="text-xs font-bold px-2 py-0.5 rounded-full"
-                    style="background:color-mix(in srgb, var(--wd-green-600) 9.4%, transparent); color:var(--wd-green-600); font-family:var(--wd-font-sans);"
+                    class="text-xs font-bold px-2 py-0.5 rounded-full font-sans"
+                    :style="{ background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: CHIP.green }"
                   >
                     saves €{{ recommendation.savings }}
                   </span>
                 </div>
-                <div class="mt-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+                <div class="mt-1 text-xs text-muted-foreground font-sans">
                   Covers your {{ plannedWorkshopCount }} workshop{{ plannedWorkshopCount === 1 ? '' : 's' }}<span v-if="hasPartyInPlan"> + parties</span>
                   across {{ plannedDays.size }} day{{ plannedDays.size === 1 ? '' : 's' }}.
                 </div>
-                <button
+                <Button
                   v-if="!recommendation.soldOut"
                   type="button"
-                  class="mt-3 inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-xs font-bold uppercase tracking-wider"
-                  style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 3px 0 -1px var(--wd-red-800);"
+                  variant="cta"
+                  class="mt-3 px-5 text-xs"
                   @click="getRecommendedPass"
                 >
-                  Get this pass <ArrowRight class="w-3.5 h-3.5" />
-                </button>
+                  Get this pass <ArrowRight aria-hidden="true" />
+                </Button>
                 <div
                   v-else
-                  class="mt-3 text-xs italic"
-                  style="color:var(--wd-brown-700); font-family:var(--wd-font-display);"
+                  class="mt-3 text-xs italic text-muted-foreground font-display"
                 >
                   Sold out — we'll notify you when a dancer offers theirs.
                 </div>
@@ -1397,16 +1407,16 @@ useHead({
             style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.4);"
             @click="scrollTo('schedule')"
           >
-            <Sparkles class="w-6 h-6 shrink-0" style="color:var(--wd-amber-600);" />
+            <Sparkles class="w-6 h-6 shrink-0 text-secondary" />
             <div>
-              <div class="text-sm font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+              <div class="text-sm font-bold text-foreground font-display">
                 Not sure which pass?
               </div>
-              <div class="text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+              <div class="text-xs text-muted-foreground font-sans">
                 Pick the workshops + parties you want in the schedule above — we'll find your best-value pass.
               </div>
             </div>
-            <ArrowRight class="w-4 h-4 ml-auto shrink-0" style="color:var(--wd-red-600);" />
+            <ArrowRight class="w-4 h-4 ml-auto shrink-0 text-primary" />
           </NuxtLink>
 
           <!-- Referral discount banner -->
@@ -1415,14 +1425,14 @@ useHead({
             class="rounded-2xl p-4 sm:p-5 mb-6 flex items-center gap-3"
             style="background:linear-gradient(135deg, #dcfce7, #d1fae5); border:1px solid color-mix(in srgb, var(--wd-green-600) 20%, transparent);"
           >
-            <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style="background:white;">
-              <span class="text-lg font-black" style="color:var(--wd-green-600);">%</span>
+            <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-white">
+              <span class="text-lg font-black text-wd-green-600">%</span>
             </div>
             <div class="flex-1 min-w-0">
-              <div class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-green-600);">
+              <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-wd-green-600">
                 Referral discount
               </div>
-              <div class="mt-0.5 text-sm" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+              <div class="mt-0.5 text-sm text-foreground font-display">
                 {{ referralInfo.referrerName }} shared this link — you both get {{ referralInfo.discountPercent }}% off.
               </div>
             </div>
@@ -1445,58 +1455,56 @@ useHead({
             >
               <div
                 v-if="isTopPass(t, i) && !t.soldOut"
-                class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-white whitespace-nowrap"
-                style="background:var(--wd-red-600);"
+                class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-eyebrow font-black uppercase tracking-widest text-white whitespace-nowrap bg-primary"
               >
                 {{ recommendation ? 'Recommended for you' : 'Best value' }}
               </div>
               <div
                 v-if="t.soldOut"
-                class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-white whitespace-nowrap"
-                style="background:var(--wd-brown-700);"
+                class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-eyebrow font-black uppercase tracking-widest text-white whitespace-nowrap bg-wd-brown-700"
               >
                 Sold out
               </div>
 
-              <div class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-amber-600);">
+              <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">
                 {{ t.name }}
               </div>
               <div class="mt-2 mb-1 flex items-baseline gap-1">
-                <span class="text-4xl font-black" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+                <span class="text-4xl font-black text-foreground font-display">
                   €{{ t.price }}
                 </span>
               </div>
-              <p v-if="t.description" class="text-sm mb-4" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+              <p v-if="t.description" class="text-sm mb-4 text-muted-foreground font-sans">
                 {{ t.description }}
               </p>
 
               <div class="flex flex-wrap gap-1.5 mb-4">
                 <span
                   v-if="t.days.length === 0 && !t.includesParty"
-                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                  style="background:color-mix(in srgb, var(--wd-green-600) 9.4%, transparent); color:var(--wd-green-600);"
+                  class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  :style="{ background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: CHIP.green }"
                 >
                   All days
                 </span>
                 <span
                   v-for="d in t.days"
                   :key="d"
-                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                  style="background:color-mix(in srgb, var(--wd-cyan-600) 9.4%, transparent); color:var(--wd-cyan-600);"
+                  class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  :style="{ background: 'color-mix(in srgb, var(--wd-cyan-600) 9.4%, transparent)', color: CHIP.cyan }"
                 >
                   {{ d }}
                 </span>
                 <span
                   v-if="t.includesParty"
-                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                  style="background:color-mix(in srgb, var(--wd-purple-500) 9.4%, transparent); color:var(--wd-purple-500);"
+                  class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  :style="{ background: 'color-mix(in srgb, var(--wd-purple-500) 9.4%, transparent)', color: CHIP.purple }"
                 >
                   Parties incl.
                 </span>
                 <span
                   v-if="t.workshopCount !== undefined && t.workshopCount !== null"
-                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                  style="background:color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent); color:var(--wd-amber-500);"
+                  class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  :style="{ background: 'color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent)', color: CHIP.amber }"
                 >
                   {{ t.workshopCount }} workshop{{ t.workshopCount === 1 ? '' : 's' }}
                 </span>
@@ -1505,27 +1513,26 @@ useHead({
               <div
                 v-if="hasTicket"
                 class="inline-flex items-center justify-center gap-2 w-full py-3 rounded-full text-xs font-bold uppercase tracking-wider"
-                style="background:color-mix(in srgb, var(--wd-green-600) 9.4%, transparent); color:var(--wd-green-600);"
+                :style="{ background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: CHIP.green }"
               >
                 <Check class="w-3.5 h-3.5" />
                 You have a ticket
               </div>
-              <button
+              <Button
                 v-else-if="!t.soldOut"
                 type="button"
-                class="inline-flex items-center justify-center gap-2 w-full py-3 rounded-full text-white text-xs font-bold uppercase tracking-wider transition-transform hover:-translate-y-0.5"
-                :style="i === 0
-                  ? { background: 'linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500))', boxShadow: '0 3px 0 -1px var(--wd-red-800)' }
-                  : { background: 'var(--wd-brown-900)' }"
+                :variant="i === 0 ? 'cta' : 'pill'"
+                :accent="i === 0 ? undefined : 'var(--wd-brown-900)'"
+                class="w-full h-11 text-xs"
                 @click="chooseTicket(t)"
               >
                 Get this pass
-                <ArrowRight class="w-3.5 h-3.5" />
-              </button>
+                <ArrowRight aria-hidden="true" />
+              </Button>
               <div
                 v-else
-                class="inline-flex items-center justify-center gap-2 w-full py-3 rounded-full text-xs font-bold uppercase tracking-wider"
-                style="background:color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent); color:var(--wd-amber-600);"
+                class="inline-flex items-center justify-center gap-2 w-full py-3 rounded-full text-xs font-bold uppercase tracking-wider text-secondary"
+                style="background:color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent);"
               >
                 No longer available
               </div>
@@ -1534,7 +1541,7 @@ useHead({
         </section>
 
         <section id="venue" class="scroll-mt-16">
-          <h2 class="text-2xl font-black leading-tight mb-4" style="color:var(--wd-brown-900);">Venue</h2>
+          <h2 class="text-2xl font-black leading-tight mb-4 text-foreground">Venue</h2>
           <VenueTab :venue="festival.venue" />
         </section>
     </div>
@@ -1554,15 +1561,15 @@ useHead({
         <NuxtLink
           v-if="planIds.size > 0"
           to="/my-plan"
-          class="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full text-white text-sm font-bold shadow-lg hover:shadow-xl transition-all"
-          :style="{ background: festival.accentColor, boxShadow: '0 6px 20px rgba(0,0,0,0.18), 0 3px 0 -1px rgba(0,0,0,0.15)' }"
+          class="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full text-white text-sm font-bold shadow-wd-float transition-all"
+          :style="{ background: festival.accentColor }"
         >
           <span
-            class="inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-black bg-white"
+            class="inline-flex items-center justify-center w-6 h-6 rounded-full text-meta font-black bg-white"
             :style="{ color: festival.accentColor }"
           >{{ planIds.size }}</span>
-          <span style="font-family:var(--wd-font-display); letter-spacing:0.01em;">in your plan</span>
-          <span style="font-family:var(--wd-font-display);font-style:italic; font-size:16px; opacity:0.85;">— see dashboard</span>
+          <span class="font-display tracking-[0.01em]">in your plan</span>
+          <span class="font-display italic text-base opacity-85">— see dashboard</span>
           <ArrowRight class="w-4 h-4" />
         </NuxtLink>
       </Transition>
@@ -1595,19 +1602,18 @@ useHead({
           @click.self="showCheckout = false"
         >
           <div
-            class="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl"
-            style="background:var(--wd-cream);"
+            class="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl bg-background"
           >
             <!-- Header band -->
             <div class="p-5 sm:p-6" style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500));">
-              <div class="flex items-center gap-2 text-white/90 text-[10px] font-bold uppercase tracking-[0.3em]">
+              <div class="flex items-center gap-2 text-white/90 text-eyebrow font-bold uppercase tracking-[0.3em]">
                 <img src="/icon.svg" alt="" class="w-4 h-4 brightness-0 invert" >
                 Checkout on WeDance
               </div>
-              <div class="mt-2 text-2xl font-black leading-tight text-white" style="font-family:var(--wd-font-display);">
+              <div class="mt-2 text-2xl font-black leading-tight text-white font-display">
                 {{ festival.name }}
               </div>
-              <div class="text-xs text-white/85 mt-0.5" style="font-family:var(--wd-font-sans);">
+              <div class="text-xs text-white/85 mt-0.5 font-sans">
                 {{ checkoutLabel }}
               </div>
             </div>
@@ -1621,12 +1627,11 @@ useHead({
                 :class="selectedTickets.length > 1 ? 'pb-2' : 'pb-4 mb-4 border-b'"
                 :style="selectedTickets.length > 1 ? '' : 'border-color:color-mix(in srgb, var(--wd-brown-900) 8.2%, transparent);'"
               >
-                <div class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+                <div class="text-sm text-muted-foreground font-sans">
                   {{ t.name }}
                 </div>
-                <div
+                <div class="text-foreground font-display"
                   :class="selectedTickets.length > 1 ? 'text-lg font-bold' : 'text-3xl font-black'"
-                  style="color:var(--wd-brown-900); font-family:var(--wd-font-display);"
                 >
                   €{{ t.price }}
                 </div>
@@ -1637,10 +1642,10 @@ useHead({
                 class="flex items-baseline justify-between pt-2 pb-4 mb-4 border-t border-b"
                 style="border-color:color-mix(in srgb, var(--wd-brown-900) 8.2%, transparent);"
               >
-                <div class="text-sm font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-sans);">
+                <div class="text-sm font-bold text-foreground font-sans">
                   Total
                 </div>
-                <div class="text-3xl font-black" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+                <div class="text-3xl font-black text-foreground font-display">
                   €{{ checkoutTotal }}
                 </div>
               </div>
@@ -1651,59 +1656,61 @@ useHead({
                 class="flex items-baseline justify-between pb-4 mb-4 border-b"
                 style="border-color:color-mix(in srgb, var(--wd-green-600) 20%, transparent);"
               >
-                <div class="text-sm" style="color:var(--wd-green-600); font-family:var(--wd-font-sans);">
+                <div class="text-sm text-wd-green-600 font-sans">
                   Referral {{ referralInfo.discountPercent }}% off
                 </div>
-                <div class="text-lg font-bold" style="color:var(--wd-green-600); font-family:var(--wd-font-display);">
+                <div class="text-lg font-bold text-wd-green-600 font-display">
                   −€{{ Math.round(checkoutTotal * referralInfo.discountPercent / 100) }}
                 </div>
               </div>
 
               <!-- What you get -->
-              <ul class="space-y-2 mb-5 text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+              <ul class="space-y-2 mb-5 text-sm text-muted-foreground font-sans">
                 <li class="flex items-start gap-2">
-                  <Check class="w-4 h-4 shrink-0 mt-0.5" style="color:var(--wd-green-600);" />
+                  <Check class="w-4 h-4 shrink-0 mt-0.5 text-wd-green-600" />
                   <span v-if="selectedTickets.length === 1 && selectedTickets[0].description">{{ selectedTickets[0].description }}</span>
                   <span v-else>Access to {{ festival.name }}</span>
                 </li>
                 <li class="flex items-start gap-2">
-                  <Check class="w-4 h-4 shrink-0 mt-0.5" style="color:var(--wd-green-600);" />
-                  <span>Your face on the event page — <strong style="color:var(--wd-brown-900);">see who else is going</strong></span>
+                  <Check class="w-4 h-4 shrink-0 mt-0.5 text-wd-green-600" />
+                  <span>Your face on the event page — <strong class="text-foreground">see who else is going</strong></span>
                 </li>
                 <li class="flex items-start gap-2">
-                  <Check class="w-4 h-4 shrink-0 mt-0.5" style="color:var(--wd-green-600);" />
+                  <Check class="w-4 h-4 shrink-0 mt-0.5 text-wd-green-600" />
                   <span>Plan workshops, find a partner, share your plan</span>
                 </li>
               </ul>
 
-              <div v-if="checkoutError" class="mb-3 rounded-lg px-4 py-2 text-sm text-center" style="background:#fef2f2; color:var(--wd-red-600); font-family:var(--wd-font-sans);">
+              <div v-if="checkoutError" class="mb-3 rounded-lg px-4 py-2 text-sm text-center bg-wd-red-50 text-destructive font-sans" role="alert">
                 {{ checkoutError }}
               </div>
 
-              <button
+              <Button
                 type="button"
-                class="inline-flex items-center justify-center gap-2 w-full py-3.5 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60"
-                style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-                :disabled="checkoutLoading"
+                variant="cta"
+                size="lg"
+                class="w-full h-12 px-4"
+                :loading="checkoutLoading"
                 @click="startTicketCheckout"
               >
                 <template v-if="checkoutLoading">Taking you to payment…</template>
                 <template v-else-if="!isSignedIn">Sign in &amp; pay €{{ checkoutTotal }}</template>
-                <template v-else>Pay €{{ checkoutTotal }} <ArrowRight class="w-4 h-4" /></template>
-              </button>
+                <template v-else>Pay €{{ checkoutTotal }} <ArrowRight aria-hidden="true" /></template>
+              </Button>
 
-              <div class="mt-3 text-center text-xs" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);font-style:italic; font-size:16px;">
+              <div class="mt-3 text-center text-xs text-secondary font-display italic" style="font-size:16px;">
                 — secure payment · instant confirmation
               </div>
 
-              <button
+              <Button
                 type="button"
-                class="mt-3 w-full text-xs italic hover:underline"
-                style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);"
+                variant="link"
+                size="sm"
+                class="mt-3 w-full h-auto py-1 text-xs italic font-sans text-secondary"
                 @click="showCheckout = false"
               >
                 Maybe later
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1726,18 +1733,17 @@ useHead({
           @click.self="dismissPaymentSuccess"
         >
           <div
-            class="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl"
-            style="background:var(--wd-cream);"
+            class="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl bg-background"
           >
             <!-- Success header -->
             <div class="p-6 sm:p-8 text-center" style="background:linear-gradient(135deg, var(--wd-green-600), #22c55e);">
               <div class="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center" style="background:rgba(255,255,255,0.25);">
                 <Check class="w-8 h-8 text-white" />
               </div>
-              <div class="text-2xl font-black text-white" style="font-family:var(--wd-font-display);">
+              <div class="text-2xl font-black text-white font-display">
                 You're in!
               </div>
-              <div class="text-sm text-white/90 mt-1" style="font-family:var(--wd-font-sans);">
+              <div class="text-sm text-white/90 mt-1 font-sans">
                 Payment confirmed
               </div>
             </div>
@@ -1746,32 +1752,33 @@ useHead({
               <!-- Purchase details -->
               <div class="space-y-3 pb-4 mb-4 border-b" style="border-color:color-mix(in srgb, var(--wd-brown-900) 8.2%, transparent);">
                 <div class="flex items-center justify-between">
-                  <span class="text-xs uppercase tracking-wider font-bold" style="color:var(--wd-amber-600);">Festival</span>
-                  <span class="text-sm font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">{{ paymentSuccessInfo.festivalName }}</span>
+                  <span class="text-xs uppercase tracking-wider font-bold text-secondary">Festival</span>
+                  <span class="text-sm font-bold text-foreground font-display">{{ paymentSuccessInfo.festivalName }}</span>
                 </div>
                 <div class="flex items-center justify-between">
-                  <span class="text-xs uppercase tracking-wider font-bold" style="color:var(--wd-amber-600);">Pass</span>
-                  <span class="text-sm font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">{{ paymentSuccessInfo.ticketName }}</span>
+                  <span class="text-xs uppercase tracking-wider font-bold text-secondary">Pass</span>
+                  <span class="text-sm font-bold text-foreground font-display">{{ paymentSuccessInfo.ticketName }}</span>
                 </div>
                 <div v-if="paymentSuccessInfo.amount > 0" class="flex items-center justify-between">
-                  <span class="text-xs uppercase tracking-wider font-bold" style="color:var(--wd-amber-600);">Paid</span>
-                  <span class="text-sm font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-display);">&euro;{{ paymentSuccessInfo.amount }}</span>
+                  <span class="text-xs uppercase tracking-wider font-bold text-secondary">Paid</span>
+                  <span class="text-sm font-bold text-foreground font-display">&euro;{{ paymentSuccessInfo.amount }}</span>
                 </div>
               </div>
 
-              <p class="text-xs text-center mb-4" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+              <p class="text-xs text-center mb-4 text-muted-foreground font-sans">
                 A confirmation email is on its way. Start planning your workshops and connect with other dancers!
               </p>
 
-              <button
+              <Button
                 type="button"
-                class="inline-flex items-center justify-center gap-2 w-full py-3.5 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-                style="background:linear-gradient(135deg, var(--wd-green-600), #22c55e); box-shadow: 0 4px 0 -1px var(--wd-green-700);"
+                variant="pill"
+                accent="var(--wd-green-700)"
+                class="w-full h-12"
                 @click="dismissPaymentSuccess"
               >
                 Let's go
-                <ArrowRight class="w-4 h-4" />
-              </button>
+                <ArrowRight aria-hidden="true" />
+              </Button>
             </div>
           </div>
         </div>
@@ -1793,15 +1800,14 @@ useHead({
           class="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-0 sm:px-4"
         >
           <div
-            class="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl"
-            style="background:var(--wd-cream);"
+            class="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl bg-background"
           >
             <!-- Nudge header -->
             <div class="p-6 sm:p-8 text-center" style="background:linear-gradient(135deg, var(--wd-red-600), #ef4444);">
-              <div class="text-2xl font-black text-white" style="font-family:var(--wd-font-display);">
+              <div class="text-2xl font-black text-white font-display">
                 One more step
               </div>
-              <div class="text-sm text-white/90 mt-1" style="font-family:var(--wd-font-sans);">
+              <div class="text-sm text-white/90 mt-1 font-sans">
                 Help us match you with the right people
               </div>
             </div>
@@ -1809,27 +1815,27 @@ useHead({
             <div class="p-5 sm:p-6">
               <!-- Dance styles -->
               <div class="mb-5">
-                <span class="text-sm font-bold block mb-2" style="color:var(--wd-brown-900);">Which dances?</span>
+                <span class="text-sm font-bold block mb-2 text-foreground">Which dances?</span>
                 <div class="flex flex-wrap gap-2">
-                  <button
+                  <Button
                     v-for="style in NUDGE_DANCE_STYLES"
                     :key="style"
                     type="button"
-                    class="inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors"
-                    :style="nudgeForm.danceStyles.includes(style)
-                      ? 'background:var(--wd-red-600); color:white; border:1px solid var(--wd-red-600);'
-                      : 'background:white; color:var(--wd-brown-700); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);'"
+                    :variant="nudgeForm.danceStyles.includes(style) ? 'pill' : 'outline-pill'"
+                    size="pill-sm"
+                    class="gap-1 px-3.5"
+                    :aria-pressed="nudgeForm.danceStyles.includes(style)"
                     @click="toggleNudgeStyle(style)"
                   >
-                    <Check v-if="nudgeForm.danceStyles.includes(style)" class="w-3 h-3" />
+                    <Check v-if="nudgeForm.danceStyles.includes(style)" class="w-3 h-3" aria-hidden="true" />
                     {{ style }}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               <!-- Role -->
               <div class="mb-5">
-                <span class="text-sm font-bold block mb-2" style="color:var(--wd-brown-900);">Do you lead or follow?</span>
+                <span class="text-sm font-bold block mb-2 text-foreground">Do you lead or follow?</span>
                 <div class="flex gap-3">
                   <label
                     v-for="r in [{ value: 'lead', label: 'Lead' }, { value: 'follow', label: 'Follow' }, { value: 'both', label: 'Both' }]"
@@ -1845,26 +1851,28 @@ useHead({
                 </div>
               </div>
 
-              <button
+              <Button
                 type="button"
-                :disabled="!nudgeForm.danceStyles.length || !nudgeForm.role || nudgeSaving"
-                class="inline-flex items-center justify-center gap-2 w-full py-3.5 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60"
-                style="background:var(--wd-red-600); box-shadow: 0 3px 0 -1px var(--wd-red-800);"
+                variant="pill"
+                class="w-full h-12"
+                :disabled="!nudgeForm.danceStyles.length || !nudgeForm.role"
+                :loading="nudgeSaving"
                 @click="submitNudge"
               >
                 {{ nudgeSaving ? 'Saving…' : 'Save & start planning' }}
-                <ArrowRight v-if="!nudgeSaving" class="w-4 h-4" />
-              </button>
+                <ArrowRight v-if="!nudgeSaving" aria-hidden="true" />
+              </Button>
 
               <div class="text-center mt-3">
-                <button
+                <Button
                   type="button"
-                  class="text-sm underline"
-                  style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);"
+                  variant="link"
+                  size="sm"
+                  class="h-auto p-0 text-sm underline font-sans text-secondary"
                   @click="showProfileNudge = false"
                 >
                   Skip for now
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -1904,12 +1912,15 @@ useHead({
           >
             {{ paymentLoading ? 'Redirecting...' : 'Unlock for €1' }}
           </Button>
-          <button
-            class="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            class="w-full text-xs text-muted-foreground hover:text-foreground"
             @click="showSocialPaywall = false"
           >
             Maybe later
-          </button>
+          </Button>
         </div>
       </div>
     </Teleport>

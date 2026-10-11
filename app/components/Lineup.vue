@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { Teacher } from '~/types/festival'
-import { WD } from '~/lib/brand'
 
 defineProps<{
   teachers: Teacher[]
@@ -44,7 +43,7 @@ function teacherInitials(name: string) {
           <img v-if="teacher.photo && !failedPhotos.has(teacher.id)" :src="teacher.photo" :alt="teacher.name" class="w-full h-full object-cover" @error="onImgError(teacher.id)">
           <div v-else class="w-full h-full flex items-center justify-center text-sm font-black" :style="{ background: WD.red600 + '18', color: WD.red600 }">{{ teacherInitials(teacher.name) }}</div>
         </div>
-        <span class="w-full text-xs text-center leading-tight line-clamp-2 break-words" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans); overflow-wrap:anywhere;">
+        <span class="w-full text-xs text-center leading-tight line-clamp-2 break-words wrap-anywhere font-sans text-muted-foreground">
           {{ teacher.name }}
         </span>
       </NuxtLink>
@@ -55,20 +54,21 @@ function teacherInitials(name: string) {
         type="button"
         class="flex flex-col items-center gap-1.5 shrink-0 w-20 group"
         :title="teacher.name"
+        :aria-pressed="selectedId === teacher.id"
         @click="$emit('select', selectedId === teacher.id ? null : teacher.id)"
       >
         <div
           class="w-16 h-16 rounded-full overflow-hidden border-2 transition-all"
           :style="selectedId === teacher.id
-            ? { borderColor: 'var(--wd-red-600)', boxShadow: '0 2px 10px rgba(220,38,38,0.25)' }
+            ? { borderColor: 'var(--primary)', boxShadow: '0 2px 10px rgba(220,38,38,0.25)' }
             : { borderColor: 'transparent' }"
         >
           <img v-if="teacher.photo && !failedPhotos.has(teacher.id)" :src="teacher.photo" :alt="teacher.name" class="w-full h-full object-cover" @error="onImgError(teacher.id)">
           <div v-else class="w-full h-full flex items-center justify-center text-sm font-black" :style="{ background: WD.red600 + '18', color: WD.red600 }">{{ teacherInitials(teacher.name) }}</div>
         </div>
         <span
-          class="w-full text-xs text-center leading-tight line-clamp-2 break-words"
-          :style="{ color: selectedId === teacher.id ? WD.brown900 : WD.brown700, fontWeight: selectedId === teacher.id ? 700 : 400, fontFamily: 'var(--wd-font-sans)', overflowWrap: 'anywhere' }"
+          class="w-full text-xs text-center leading-tight line-clamp-2 break-words wrap-anywhere font-sans"
+          :class="selectedId === teacher.id ? 'text-foreground font-bold' : 'text-muted-foreground font-normal'"
         >
           {{ teacher.name }}
         </span>
