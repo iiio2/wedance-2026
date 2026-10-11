@@ -5,7 +5,11 @@
  * Each card links to the unified /@<handle> profile.
  */
 import { ChevronDown, MapPin, Search } from 'lucide-vue-next'
+import { Button } from '~/components/ui/button'
+import { Field } from '~/components/ui/field'
+import { Input } from '~/components/ui/input'
 import { WD } from '~/lib/brand'
+import { readableOn } from '~/lib/contrast'
 
 definePageMeta({ layout: false })
 
@@ -70,6 +74,8 @@ const NuxtLinkC = resolveComponent('NuxtLink')
   <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
+    <main>
+
     <!-- HERO -->
     <section class="max-w-4xl mx-auto px-4 pt-10 pb-6 text-center">
       <h1 class="text-4xl sm:text-5xl leading-[0.98] text-foreground">
@@ -84,18 +90,20 @@ const NuxtLinkC = resolveComponent('NuxtLink')
     <section class="sticky top-0 z-30 bg-background border-b border-wd-brown-900/[8.2%]">
       <div class="max-w-5xl mx-auto px-4 py-2.5">
         <div class="flex flex-wrap items-center gap-3">
-          <div class="relative flex-1 min-w-[180px] max-w-xs">
-            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-secondary" />
-            <input
+          <Field id="artist-search" label="Search artists by name" hide-label class="relative flex-1 min-w-[180px] max-w-xs">
+            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-secondary" aria-hidden="true" />
+            <Input
               v-model="searchQuery"
               type="text"
               placeholder="Search by name"
-              class="w-full h-9 rounded-full pl-9 pr-3 text-sm outline-none transition-all bg-white border border-input text-foreground font-sans"
-            >
-          </div>
+              class="h-9 rounded-full pl-9 pr-3 bg-white"
+            />
+          </Field>
 
-          <div v-if="allCities.length" class="relative">
+          <!-- Native selects styled as filter pills (filled when active) — Field supplies the label. -->
+          <Field v-if="allCities.length" v-slot="{ id }" label="Filter by city" hide-label class="relative">
             <select
+              :id="id"
               v-model="selectedCity"
               class="h-9 pl-3 pr-8 rounded-full text-xs font-bold appearance-none cursor-pointer outline-none font-sans"
               :style="selectedCity
@@ -109,15 +117,16 @@ const NuxtLinkC = resolveComponent('NuxtLink')
                 {{ city }}
               </option>
             </select>
-            <ChevronDown class="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" :style="{ color: selectedCity ? WD.cream : WD.brown700 }" />
-          </div>
+            <ChevronDown class="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" :style="{ color: selectedCity ? WD.cream : WD.brown700 }" aria-hidden="true" />
+          </Field>
 
-          <div v-if="allStyles.length" class="relative">
+          <Field v-if="allStyles.length" v-slot="{ id }" label="Filter by dance style" hide-label class="relative">
             <select
+              :id="id"
               v-model="selectedStyle"
               class="h-9 pl-3 pr-8 rounded-full text-xs font-bold appearance-none cursor-pointer outline-none font-sans"
               :style="selectedStyle
-                ? { background: accents[allStyles.indexOf(selectedStyle) % accents.length], color: 'white' }
+                ? { background: readableOn(accents[allStyles.indexOf(selectedStyle) % accents.length]!), color: 'white' }
                 : { background: 'white', color: 'var(--wd-brown-700)', border: '1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent)' }"
             >
               <option value="">
@@ -127,10 +136,10 @@ const NuxtLinkC = resolveComponent('NuxtLink')
                 {{ style }}
               </option>
             </select>
-            <ChevronDown class="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" :style="{ color: selectedStyle ? 'white' : WD.brown700 }" />
-          </div>
+            <ChevronDown class="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" :style="{ color: selectedStyle ? 'white' : WD.brown700 }" aria-hidden="true" />
+          </Field>
 
-          <span class="text-xs ml-auto whitespace-nowrap text-secondary font-display italic" style="font-size:16px;">
+          <span class="text-xs ml-auto whitespace-nowrap text-secondary font-display italic" style="font-size:16px;" aria-live="polite">
             {{ filtered.length }} artist{{ filtered.length === 1 ? '' : 's' }}
           </span>
         </div>
@@ -154,9 +163,9 @@ const NuxtLinkC = resolveComponent('NuxtLink')
           <template v-else-if="searchQuery">Nothing matches "{{ searchQuery }}"</template>
           <template v-else>No artists yet.</template>
         </p>
-        <button v-if="searchQuery || selectedCity || selectedStyle" type="button" class="text-xs font-bold mt-2 underline text-primary font-sans" @click="searchQuery = ''; selectedCity = ''; selectedStyle = ''">
+        <Button v-if="searchQuery || selectedCity || selectedStyle" type="button" variant="link" class="mt-2 h-auto p-0 text-xs font-bold underline font-sans" @click="searchQuery = ''; selectedCity = ''; selectedStyle = ''">
           Clear filters
-        </button>
+        </Button>
       </div>
 
       <div v-else class="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -197,9 +206,9 @@ const NuxtLinkC = resolveComponent('NuxtLink')
             class="absolute inset-x-0 bottom-0 p-3 pt-10 z-10"
             style="background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.3) 60%, transparent 100%);"
           >
-            <h3 class="text-base font-bold leading-tight truncate text-white font-display">
+            <h2 class="text-base font-bold leading-tight truncate text-white font-display">
               {{ a.name }}
-            </h3>
+            </h2>
             <p v-if="a.city" class="text-xs inline-flex items-center gap-1 mt-0.5 text-white/80 font-sans">
               <MapPin class="w-3 h-3" /> {{ a.city }}
             </p>
@@ -207,6 +216,7 @@ const NuxtLinkC = resolveComponent('NuxtLink')
         </component>
       </div>
     </section>
+    </main>
 
     <SiteFooter />
   </div>

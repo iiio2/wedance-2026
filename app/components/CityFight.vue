@@ -10,7 +10,9 @@
  */
 import { Swords, Play, Trophy } from 'lucide-vue-next'
 import { parseVideoUrl } from '~/lib/videoEmbed'
+import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
+import { readableOn } from '~/lib/contrast'
 
 const { $trpc } = useNuxtApp()
 
@@ -102,26 +104,25 @@ const collapsed = computed(() => !loading.value && !matchup.value && !leaderboar
             class="absolute inset-0 h-full w-full" frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen
           />
-          <button v-else type="button" class="absolute inset-0 h-full w-full" @click="embed(f).embedUrl ? (activeEmbed = f.videoId) : window.open(f.videoUrl, '_blank')">
+          <Button v-else type="button" variant="ghost" class="absolute inset-0 block h-full w-full p-0 rounded-none font-normal whitespace-normal hover:bg-transparent [&_svg]:size-5" :aria-label="`Play the ${f.city} winning clip`" @click="embed(f).embedUrl ? (activeEmbed = f.videoId) : window.open(f.videoUrl, '_blank')">
             <img v-if="embed(f).thumbnailUrl" :src="embed(f).thumbnailUrl!" :alt="`${f.city} — winning clip`" class="absolute inset-0 w-full h-full object-cover" loading="lazy">
             <div class="absolute inset-0" style="background:linear-gradient(180deg, rgba(59,31,18,0) 40%, rgba(59,31,18,0.72) 100%);" />
             <span class="absolute inset-0 flex items-center justify-center">
               <span class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/90 shadow-lg">
-                <Play class="h-5 w-5 translate-x-0.5" :style="{ color: accents[i] }" fill="currentColor" />
+                <Play class="h-5 w-5 translate-x-0.5" :style="{ color: accents[i] }" fill="currentColor" aria-hidden="true" />
               </span>
             </span>
             <span class="absolute bottom-2 left-3 right-3 text-left">
               <span class="block font-bold text-lg sm:text-xl leading-tight text-white font-display" style="text-shadow:0 1px 12px rgba(0,0,0,0.4);">{{ f.city }}</span>
               <span v-if="f.danceStyle" class="block text-meta text-white/85 font-sans">{{ f.danceStyle }}</span>
             </span>
-          </button>
+          </Button>
         </div>
-        <button
-          type="button" :disabled="voting"
-          class="m-3 mt-3 inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all disabled:opacity-50"
-          :style="{ background: accents[i], boxShadow: '0 3px 0 -1px rgba(0,0,0,0.15)' }"
+        <Button
+          type="button" variant="pill" :accent="readableOn(accents[i])" :disabled="voting"
+          class="m-3 mt-3 gap-1.5"
           @click="voteCity(f, [matchup.a, matchup.b][i === 0 ? 1 : 0])"
-        >Vote {{ f.city }}</button>
+        >Vote {{ f.city }}</Button>
       </div>
 
       <div class="absolute left-1/2 top-[28%] -translate-x-1/2 -translate-y-1/2 pointer-events-none">

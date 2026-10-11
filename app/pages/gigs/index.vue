@@ -7,7 +7,12 @@
  */
 import { ArrowRight, MapPin, Calendar, Wallet, Plus, Megaphone, Hand, X } from 'lucide-vue-next'
 import { GigSchema } from '#shared/validation'
+import { Button } from '~/components/ui/button'
+import { Field } from '~/components/ui/field'
+import { Input } from '~/components/ui/input'
+import { Select } from '~/components/ui/select'
 import { WD } from '~/lib/brand'
+import { mixHex, readableOn } from '~/lib/contrast'
 
 definePageMeta({ layout: false })
 
@@ -183,12 +188,17 @@ const accentColors: { [key: string]: string } = {
 function getAccent(category: string): string {
   return accentColors[category] || WD.brown900
 }
+// Accent text darkened just enough for 4.5:1 — on white, or on its own tint (chips).
+const ink = (c: string) => readableOn(c)
+const chipInk = (c: string, alpha = 0.094) => readableOn(c, mixHex(c, '#fff', alpha))
 </script>
 
 <template>
   <div class="min-h-screen bg-background text-foreground font-display">
     <!-- V3 header -->
     <SiteHeader />
+
+    <main>
 
     <!-- HERO -->
     <section class="relative">
@@ -202,55 +212,54 @@ function getAccent(category: string): string {
         </p>
 
         <div class="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3">
-          <button
+          <Button
             v-if="isSignedIn"
             type="button"
-            class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-            style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
+            variant="cta"
+            size="lg"
+            class="px-6"
+            :aria-expanded="showForm ? 'true' : 'false'"
             @click="showForm = !showForm"
           >
-            <Plus class="w-4 h-4" /> {{ showForm ? 'Close' : 'Post a gig' }}
-          </button>
-          <a
-            v-else
-            href="/auth/signin"
-            class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-            style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-          >
-            <Plus class="w-4 h-4" /> Sign in to post
-          </a>
+            <Plus aria-hidden="true" /> {{ showForm ? 'Close' : 'Post a gig' }}
+          </Button>
+          <Button v-else as-child variant="cta" size="lg" class="px-6">
+            <a href="/auth/signin"><Plus aria-hidden="true" /> Sign in to post</a>
+          </Button>
         </div>
 
         <!-- Kind toggle -->
         <div class="mt-8 inline-flex rounded-full p-1 bg-white border border-border">
-          <button
+          <Button
             v-for="opt in [{ v: '', label: 'All' }, { v: 'role', label: 'Open roles' }, { v: 'offer', label: 'Services offered' }]"
             :key="opt.v"
             type="button"
-            class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all"
-            :style="kindFilter === opt.v
-              ? { background: 'var(--wd-brown-900)', color: 'var(--wd-cream)' }
-              : { background: 'transparent', color: 'var(--wd-brown-700)' }"
+            variant="ghost"
+            class="h-auto px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all"
+            :class="kindFilter === opt.v ? 'bg-foreground text-background hover:bg-foreground hover:text-background' : 'bg-transparent text-muted-foreground'"
+            :aria-pressed="kindFilter === opt.v ? 'true' : 'false'"
             @click="kindFilter = opt.v as 'role' | 'offer' | ''"
           >
             {{ opt.label }}
-          </button>
+          </Button>
         </div>
 
         <!-- Category chips -->
         <div class="flex flex-wrap items-center justify-center gap-2 mt-4">
-          <button
+          <Button
             v-for="cat in categories"
             :key="cat"
             type="button"
-            class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all"
-            :style="categoryFilter === cat
-              ? { background: 'var(--wd-red-600)', color: 'white', boxShadow: '0 2px 0 -1px var(--wd-red-600)' }
-              : { background: 'white', color: 'var(--wd-amber-600)', border: '1px solid color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent)' }"
+            variant="ghost"
+            class="h-auto px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all"
+            :class="categoryFilter === cat
+              ? 'bg-primary text-white shadow-[0_2px_0_-1px_var(--wd-red-600)] hover:bg-primary hover:text-white'
+              : 'bg-white text-secondary border border-border'"
+            :aria-pressed="categoryFilter === cat ? 'true' : 'false'"
             @click="categoryFilter = categoryFilter === cat ? '' : cat"
           >
             {{ cat }}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -263,44 +272,47 @@ function getAccent(category: string): string {
     <section v-if="showForm" class="max-w-2xl mx-auto px-4 mb-8 bg-white rounded-2xl p-6 border-2 border-primary/20">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-bold text-foreground">{{ formData.kind === 'role' ? 'Post an open role' : 'Offer your services' }}</h2>
-        <button
+        <Button
           type="button"
-          class="p-2 rounded-full hover:bg-gray-100"
+          variant="ghost"
+          size="icon"
+          class="rounded-full [&_svg]:size-5"
+          aria-label="Close the form"
           @click="showForm = false"
         >
-          <X class="w-5 h-5 text-foreground" />
-        </button>
+          <X class="text-foreground" aria-hidden="true" />
+        </Button>
       </div>
 
       <form class="space-y-4" novalidate @submit.prevent="submitForm">
         <!-- Kind toggle -->
-        <div>
-          <label class="block text-sm font-bold mb-1 text-muted-foreground">What are you posting?</label>
+        <div role="group" aria-labelledby="gig-kind-label">
+          <div id="gig-kind-label" class="text-sm font-bold mb-1.5 text-foreground font-sans">What are you posting?</div>
           <div class="inline-flex rounded-full p-1 w-full bg-background border border-border">
-            <button
+            <Button
               v-for="opt in [{ v: 'role' as const, label: 'I need someone', icon: Megaphone }, { v: 'offer' as const, label: 'I offer my services', icon: Hand }]"
               :key="opt.v"
               type="button"
-              class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all"
-              :style="formData.kind === opt.v
-                ? { background: opt.v === 'role' ? WD.red600 : WD.green600, color: 'white' }
-                : { background: 'transparent', color: 'var(--wd-brown-700)' }"
+              variant="ghost"
+              class="flex-1 h-auto gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider whitespace-normal transition-all [&_svg]:size-3.5"
+              :class="formData.kind === opt.v
+                ? (opt.v === 'role' ? 'bg-primary text-white hover:bg-primary hover:text-white' : 'bg-wd-green-700 text-white hover:bg-wd-green-700 hover:text-white')
+                : 'bg-transparent text-muted-foreground'"
+              :aria-pressed="formData.kind === opt.v ? 'true' : 'false'"
               @click="formData.kind = opt.v"
             >
-              <component :is="opt.icon" class="w-3.5 h-3.5" />
+              <component :is="opt.icon" aria-hidden="true" />
               {{ opt.label }}
-            </button>
+            </Button>
           </div>
         </div>
 
         <!-- Poster type (who is posting) -->
-        <div>
-          <label class="block text-sm font-bold mb-1 text-muted-foreground">{{ formData.kind === 'role' ? 'You are a…' : 'You are a…' }}</label>
-          <select
+        <Field id="gig-posterType" label="You are a…" :error="errors.posterType">
+          <Select
             v-model="formData.posterType"
             v-bind="fieldAttrs('posterType', 'gig-posterType-error')"
             required
-            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           >
             <template v-if="formData.kind === 'role'">
               <option value="Festival">Festival</option>
@@ -315,18 +327,15 @@ function getAccent(category: string): string {
               <option value="Photographer">Photographer</option>
               <option value="MC">MC</option>
             </template>
-          </select>
-          <FieldError id="gig-posterType-error" :message="errors.posterType" />
-        </div>
+          </Select>
+        </Field>
 
         <!-- Category -->
-        <div>
-          <label class="block text-sm font-bold mb-1 text-muted-foreground">{{ formData.kind === 'role' ? 'Role needed' : 'Service category' }}</label>
-          <select
+        <Field id="gig-category" :label="formData.kind === 'role' ? 'Role needed' : 'Service category'" :error="errors.category">
+          <Select
             v-model="formData.category"
             v-bind="fieldAttrs('category', 'gig-category-error')"
             required
-            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           >
             <option value="">Select a category</option>
             <option value="Teacher">Teacher</option>
@@ -336,71 +345,57 @@ function getAccent(category: string): string {
             <option value="Show">Show</option>
             <option value="Photographer">Photographer</option>
             <option value="Organizer">Organizer</option>
-          </select>
-          <FieldError id="gig-category-error" :message="errors.category" />
-        </div>
+          </Select>
+        </Field>
 
         <!-- Title -->
-        <div>
-          <label class="block text-sm font-bold mb-1 text-muted-foreground">{{ formData.kind === 'role' ? 'Role title' : 'Service title' }}</label>
-          <input
+        <Field id="gig-title" :label="formData.kind === 'role' ? 'Role title' : 'Service title'" :error="errors.title">
+          <Input
             v-model="formData.title"
             v-bind="fieldAttrs('title', 'gig-title-error')"
             type="text"
             required
             :placeholder="formData.kind === 'role' ? 'e.g., Salsa teacher needed for weekend festival' : 'e.g., Timba workshops for European festivals'"
-            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           />
-          <FieldError id="gig-title-error" :message="errors.title" />
-        </div>
+        </Field>
 
         <!-- Your name -->
-        <div>
-          <label class="block text-sm font-bold mb-1 text-muted-foreground">{{ formData.kind === 'role' ? 'Organisation / event name' : 'Your name' }}</label>
-          <input
+        <Field id="gig-posterName" :label="formData.kind === 'role' ? 'Organisation / event name' : 'Your name'" :error="errors.posterName">
+          <Input
             v-model="formData.posterName"
             v-bind="fieldAttrs('posterName', 'gig-posterName-error')"
             type="text"
             required
             :placeholder="formData.kind === 'role' ? 'e.g., Munich Salsa Festival' : 'Your name or artist name'"
-            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           />
-          <FieldError id="gig-posterName-error" :message="errors.posterName" />
-        </div>
+        </Field>
 
         <!-- Location -->
-        <div>
-          <label class="block text-sm font-bold mb-1 text-muted-foreground">Location or base</label>
-          <input
+        <Field id="gig-location" label="Location or base" :error="errors.location">
+          <Input
             v-model="formData.location"
             v-bind="fieldAttrs('location', 'gig-location-error')"
             type="text"
             required
             placeholder="e.g., Munich, Germany"
-            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           />
-          <FieldError id="gig-location-error" :message="errors.location" />
-        </div>
+        </Field>
 
         <!-- Styles -->
         <div>
-          <label class="block text-sm font-bold mb-1 text-muted-foreground">Dance styles</label>
-          <div class="flex gap-2 mb-2">
-            <input
-              v-model="styleInput"
-              type="text"
-              placeholder="Add style (e.g., Timba)"
-              class="flex-1 px-3 py-2 rounded-lg border border-border text-foreground"
-              @keyup.enter="addStyle"
-            />
-            <button
-              type="button"
-              class="px-4 py-2 rounded-lg font-bold text-white bg-primary"
-              @click="addStyle"
-            >
-              Add
-            </button>
-          </div>
+          <Field id="gig-style-input" label="Dance styles" optional>
+            <div class="flex gap-2 mb-2">
+              <Input
+                v-model="styleInput"
+                placeholder="Add style (e.g., Timba)"
+                class="flex-1"
+                @keydown.enter.prevent="addStyle"
+              />
+              <Button type="button" variant="pill" class="h-11" @click="addStyle">
+                Add
+              </Button>
+            </div>
+          </Field>
           <div class="flex flex-wrap gap-2">
             <span
               v-for="(style, idx) in formData.styles"
@@ -408,70 +403,60 @@ function getAccent(category: string): string {
               class="px-3 py-1 rounded-full text-sm font-bold flex items-center gap-2 bg-primary/[9.4%] text-primary"
             >
               {{ style }}
-              <button
+              <Button
                 type="button"
-                class="hover:opacity-70"
+                variant="ghost"
+                class="h-auto w-auto p-0 hover:bg-transparent hover:opacity-70 [&_svg]:size-3"
+                :aria-label="`Remove ${style}`"
                 @click="removeStyle(idx)"
               >
-                <X class="w-3 h-3" />
-              </button>
+                <X aria-hidden="true" />
+              </Button>
             </span>
           </div>
         </div>
 
         <!-- Availability / When -->
-        <div>
-          <label class="block text-sm font-bold mb-1 text-muted-foreground">{{ formData.kind === 'role' ? 'When is the event?' : 'When available' }}</label>
-          <input
+        <Field id="gig-when" :label="formData.kind === 'role' ? 'When is the event?' : 'When available'" :error="errors.when">
+          <Input
             v-model="formData.when"
             v-bind="fieldAttrs('when', 'gig-when-error')"
             type="text"
             required
             :placeholder="formData.kind === 'role' ? 'e.g., May 23–25, 2027' : 'e.g., Weekends, Booking 2026–27'"
-            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           />
-          <FieldError id="gig-when-error" :message="errors.when" />
-        </div>
+        </Field>
 
         <!-- Compensation -->
-        <div>
-          <label class="block text-sm font-bold mb-1 text-muted-foreground">{{ formData.kind === 'role' ? 'Budget / compensation offered' : 'Compensation / rate' }}</label>
-          <input
+        <Field id="gig-compensation" :label="formData.kind === 'role' ? 'Budget / compensation offered' : 'Compensation / rate'" :error="errors.compensation">
+          <Input
             v-model="formData.compensation"
             v-bind="fieldAttrs('compensation', 'gig-compensation-error')"
             type="text"
             required
             :placeholder="formData.kind === 'role' ? 'e.g., €500 + travel, Negotiable' : 'e.g., From €200/hour, On request'"
-            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           />
-          <FieldError id="gig-compensation-error" :message="errors.compensation" />
-        </div>
+        </Field>
 
         <!-- Contact email -->
-        <div>
-          <label class="block text-sm font-bold mb-1 text-muted-foreground">Contact email</label>
-          <input
+        <Field id="gig-contactEmail" label="Contact email" :error="errors.contactEmail">
+          <Input
             v-model="formData.contactEmail"
             v-bind="fieldAttrs('contactEmail', 'gig-contactEmail-error')"
             type="email"
             required
-            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           />
-          <FieldError id="gig-contactEmail-error" :message="errors.contactEmail" />
-        </div>
+        </Field>
 
         <!-- Website (optional) -->
-        <div>
-          <label class="block text-sm font-bold mb-1 text-muted-foreground">Website or portfolio (optional)</label>
-          <input
+        <Field id="gig-contactUrl" label="Website or portfolio" optional :error="errors.contactUrl">
+          <Input
             v-model="formData.contactUrl"
             v-bind="fieldAttrs('contactUrl', 'gig-contactUrl-error')"
             type="url"
             placeholder="https://..."
-            class="w-full px-3 py-2 rounded-lg border border-border text-foreground"
           />
-          <FieldError id="gig-contactUrl-error" :message="errors.contactUrl" />
-        </div>
+        </Field>
 
         <!-- Error message -->
         <div v-if="formError" class="p-3 rounded-lg text-sm font-bold bg-primary/[9.4%] text-primary">
@@ -484,14 +469,15 @@ function getAccent(category: string): string {
         </div>
 
         <!-- Submit -->
-        <button
+        <Button
           type="submit"
-          :disabled="submittingForm"
-          class="w-full px-6 py-3 rounded-full text-white font-bold uppercase tracking-wider"
-          style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
+          variant="cta"
+          size="lg"
+          class="w-full px-6"
+          :loading="submittingForm"
         >
           {{ submittingForm ? 'Posting...' : formData.kind === 'role' ? 'Post open role' : 'Post your offering' }}
-        </button>
+        </Button>
       </form>
     </section>
 
@@ -511,11 +497,14 @@ function getAccent(category: string): string {
       </div>
 
       <div v-else-if="gigsFailed" class="text-center py-14">
-        <p class="text-sm text-muted-foreground font-sans">Couldn't load gigs. <button type="button" class="underline" @click="refreshGigs()">Try again</button></p>
+        <p class="text-sm text-muted-foreground font-sans">Couldn't load gigs. <Button type="button" variant="link" class="h-auto p-0 align-baseline underline" @click="refreshGigs()">Try again</Button></p>
       </div>
 
       <div v-else-if="!allGigs.length" class="text-center py-14 rounded-2xl border-2 border-dashed border-input bg-white/50">
         <p class="text-sm text-muted-foreground font-sans">No gigs match your filters yet.</p>
+        <Button v-if="kindFilter || categoryFilter" type="button" variant="link" class="mt-2 h-auto p-0 text-xs font-bold underline font-sans" @click="kindFilter = ''; categoryFilter = ''">
+          Clear filters
+        </Button>
       </div>
 
       <div v-else class="grid gap-4 sm:grid-cols-2">
@@ -530,13 +519,13 @@ function getAccent(category: string): string {
             <span
               class="inline-flex items-center gap-1.5 text-eyebrow font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
               :style="g.kind === 'role'
-                ? { background: 'color-mix(in srgb, var(--wd-red-600) 9.4%, transparent)', color: 'var(--wd-red-600)' }
-                : { background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: 'var(--wd-green-600)' }"
+                ? { background: 'color-mix(in srgb, var(--wd-red-600) 9.4%, transparent)', color: 'var(--wd-red-800)' }
+                : { background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: 'var(--wd-green-700)' }"
             >
               <component :is="g.kind === 'role' ? Megaphone : Hand" class="w-3 h-3" />
               {{ g.kind === 'role' ? 'Wanted' : 'Offering' }}
             </span>
-            <span class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" :style="{ background: getAccent(g.category) + '18', color: getAccent(g.category) }">
+            <span class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" :style="{ background: getAccent(g.category) + '18', color: chipInk(getAccent(g.category)) }">
               {{ g.category }}
             </span>
           </div>
@@ -547,7 +536,7 @@ function getAccent(category: string): string {
 
           <!-- Poster -->
           <div class="mt-1 text-sm text-muted-foreground font-sans">
-            <span class="font-bold" :style="{ color: getAccent(g.category) }">{{ g.posterName }}</span>
+            <span class="font-bold" :style="{ color: ink(getAccent(g.category)) }">{{ g.posterName }}</span>
             <span class="text-secondary"> · {{ g.posterType }}</span>
           </div>
 
@@ -564,7 +553,7 @@ function getAccent(category: string): string {
               v-for="s in g.styles"
               :key="s"
               class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-              :style="{ background: getAccent(g.category) + '14', color: getAccent(g.category) }"
+              :style="{ background: getAccent(g.category) + '14', color: chipInk(getAccent(g.category), 0.078) }"
             >{{ s }}</span>
           </div>
 
@@ -590,30 +579,22 @@ function getAccent(category: string): string {
             </span>
             <span v-else />
             <div class="flex items-center gap-2">
-              <a
-                v-if="safeHref(g.contactUrl)"
-                :href="safeHref(g.contactUrl)"
-                target="_blank"
-                rel="noopener"
-                class="inline-flex items-center gap-1 px-3 py-2 rounded-full text-xs font-bold uppercase tracking-wider border"
-                :style="{ color: getAccent(g.category), borderColor: getAccent(g.category) + '55' }"
-              >
-                Profile
-              </a>
-              <a
-                v-if="gigMailto(g)"
-                :href="gigMailto(g)!"
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-white text-xs font-bold uppercase tracking-wider"
-                :style="{ background: getAccent(g.category), boxShadow: '0 3px 0 -1px ' + getAccent(g.category) + 'cc' }"
-                @click="handleApply(g)"
-              >
-                {{ g.kind === 'role' ? 'Apply' : 'Contact' }} <ArrowRight class="w-3.5 h-3.5" />
-              </a>
+              <Button v-if="safeHref(g.contactUrl)" as-child variant="outline-pill" size="pill-sm" class="px-3" :accent="ink(getAccent(g.category))">
+                <a :href="safeHref(g.contactUrl)" target="_blank" rel="noopener">Profile</a>
+              </Button>
+              <Button v-if="gigMailto(g)" as-child variant="pill" size="pill-sm" class="[&_svg]:size-3.5" :accent="ink(getAccent(g.category))">
+                <a :href="gigMailto(g)!" @click="handleApply(g)">
+                  {{ g.kind === 'role' ? 'Apply' : 'Contact' }} <ArrowRight aria-hidden="true" />
+                </a>
+              </Button>
             </div>
           </div>
         </div>
       </div>
     </section>
+
+    </main>
+
 
     <SiteFooter />
   </div>

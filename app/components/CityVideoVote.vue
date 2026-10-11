@@ -10,7 +10,9 @@
  */
 import { Play, Check } from 'lucide-vue-next'
 import { parseVideoUrl } from '~/lib/videoEmbed'
+import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
+import { mixHex, readableOn } from '~/lib/contrast'
 
 const props = defineProps<{
   citySlug: string
@@ -104,7 +106,7 @@ onMounted(loadPair)
     <!-- Compact header: one-line label. -->
     <div v-if="compact" class="mb-3">
       <p class="text-sm sm:text-base font-display text-foreground">
-        Which is better? <em class="italic" :style="{ color: accent }">Vote the daily matchup.</em>
+        Which is better? <em class="italic" :style="{ color: readableOn(accent, WD.cream) }">Vote the daily matchup.</em>
       </p>
     </div>
 
@@ -113,13 +115,13 @@ onMounted(loadPair)
       <div>
         <div class="text-xs uppercase tracking-[0.3em] text-secondary">Video of the day</div>
         <h3 class="mt-1 text-xl leading-tight font-display text-foreground">
-          Which one <em class="italic" :style="{ color: accent }">wins?</em>
+          Which one <em class="italic" :style="{ color: readableOn(accent, WD.cream) }">wins?</em>
         </h3>
       </div>
       <div
         v-if="votesCast > 0"
         class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
-        :style="{ background: accent + '18', color: accent, fontFamily: 'var(--wd-font-sans)' }"
+        :style="{ background: accent + '18', color: readableOn(accent, mixHex(accent, '#fff', 0.094)), fontFamily: 'var(--wd-font-sans)' }"
       >
         <Check class="h-3 w-3" /> {{ votesCast }} vote{{ votesCast === 1 ? '' : 's' }}
       </div>
@@ -148,10 +150,11 @@ onMounted(loadPair)
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen
           />
-          <button
+          <Button
             v-else
             type="button"
-            class="absolute inset-0 h-full w-full"
+            variant="ghost" class="absolute inset-0 block h-full w-full p-0 rounded-none font-normal whitespace-normal hover:bg-transparent [&_svg]:size-5"
+            :aria-label="`Play ${v.title}`"
             @click="embedFor(v).embedUrl ? (activeEmbed = v.id) : window.open(v.videoUrl, '_blank')"
           >
             <img
@@ -164,10 +167,10 @@ onMounted(loadPair)
             <div class="absolute inset-0" style="background:linear-gradient(to top, rgba(0,0,0,0.45), rgba(0,0,0,0.05));" />
             <span class="absolute inset-0 flex items-center justify-center">
               <span class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/90 shadow-lg transition-transform group-hover/card:scale-110">
-                <Play class="h-5 w-5 translate-x-0.5" :style="{ color: accent }" fill="currentColor" />
+                <Play class="h-5 w-5 translate-x-0.5" :style="{ color: accent }" fill="currentColor" aria-hidden="true" />
               </span>
             </span>
-          </button>
+          </Button>
         </div>
 
         <div class="p-3">
@@ -177,15 +180,17 @@ onMounted(loadPair)
           <p v-if="v.danceStyle" class="mt-0.5 text-meta text-muted-foreground font-sans">
             {{ v.danceStyle }}
           </p>
-          <button
+          <Button
             type="button"
+            variant="pill"
+            size="sm"
+            :accent="readableOn(accent)"
             :disabled="voting"
-            class="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold uppercase tracking-wider text-white transition-all disabled:opacity-50"
-            :style="{ background: accent, boxShadow: '0 3px 0 -1px rgba(0,0,0,0.15)' }"
+            class="mt-3 w-full gap-1.5 px-4"
             @click="vote(v, pair![idx === 0 ? 1 : 0])"
           >
             Vote this one
-          </button>
+          </Button>
         </div>
       </div>
     </div>

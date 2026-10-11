@@ -39,7 +39,7 @@ function initials(name: string) {
     <div v-if="loading" class="mt-4 text-sm text-secondary">Loading…</div>
     <div v-else class="mt-4 grid gap-3 sm:grid-cols-2">
       <NuxtLink v-for="v in venues" :key="v.username" :to="`/@${v.username}`"
-        class="group flex items-center gap-3 rounded-xl border p-3 bg-white transition-all hover:-translate-y-0.5 border-primary/20">
+        class="group flex min-w-0 items-center gap-3 rounded-xl border p-3 bg-white transition-all hover:-translate-y-0.5 border-primary/20">
         <img v-if="v.photo" :src="v.photo" :alt="v.name" class="w-12 h-12 rounded-lg object-cover shrink-0">
         <div v-else class="w-12 h-12 rounded-lg shrink-0 flex items-center justify-center text-sm font-bold text-white" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));">{{ initials(v.name) }}</div>
         <div class="min-w-0 flex-1">

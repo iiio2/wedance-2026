@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
+import { readableOn } from '~/lib/contrast'
 /**
  * /organizers — For festival organizers.
  * Restyled 2026-07-02 to match the V3 tropical direction on /.
@@ -120,18 +122,16 @@ const howItWorks = [
   { step: '4', title: 'You get insights',      description: 'Real demand data, audience geography, and post-event signal.',                   color: WD.cyan600 },
 ]
 
-const router = useRouter()
 
-function goToEditor(plan?: string) {
-  const query = plan ? { plan } : {}
-  router.push({ path: '/organizers/create', query })
-}
+const editorLink = (plan?: string) => ({ path: '/organizers/create', query: plan ? { plan } : {} })
 </script>
 
 <template>
   <div class="min-h-screen bg-background text-foreground font-display">
     <!-- Header — same as homepage -->
     <SiteHeader />
+
+    <main>
 
     <!-- HERO -->
     <section class="relative">
@@ -151,17 +151,12 @@ function goToEditor(plan?: string) {
               <span class="text-foreground">Workshop planner, partner matching, real faces on every event page.</span>
             </p>
             <div class="mt-8 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4">
-              <button
-                type="button"
-                class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-                style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-                @click="goToEditor('starter')"
-              >
-                List your festival <ArrowRight class="w-4 h-4" />
-              </button>
+              <Button as-child variant="cta" size="lg" class="px-6">
+                <NuxtLink :to="editorLink('starter')">List your festival <ArrowRight aria-hidden="true" /></NuxtLink>
+              </Button>
               <NuxtLink
                 to="/festivals/meneate-viena-2026"
-                class="inline-flex items-center gap-2 text-sm italic hover:underline text-info font-display"
+                class="inline-flex items-center gap-2 text-sm italic hover:underline text-wd-cyan-700 font-display"
                 style="font-style:italic; font-size:20px;"
               >
                 — see a live example
@@ -324,27 +319,10 @@ function goToEditor(plan?: string) {
               </li>
             </ul>
 
-            <a
-              v-if="plan.contact"
-              :href="salesMailto"
-              class="block text-center w-full py-3 rounded-full text-sm font-bold uppercase tracking-wider transition-all"
-              :style="plan.highlighted
-                ? { background: 'linear-gradient(135deg, ' + plan.color + ', var(--wd-orange-500))', color: 'white', boxShadow: '0 4px 0 -1px ' + plan.color }
-                : { border: '2px solid ' + plan.color, color: plan.color, background: 'white' }"
-            >
-              {{ plan.cta }}
-            </a>
-            <button
-              v-else
-              type="button"
-              class="w-full py-3 rounded-full text-sm font-bold uppercase tracking-wider transition-all"
-              :style="plan.highlighted
-                ? { background: 'linear-gradient(135deg, ' + plan.color + ', var(--wd-orange-500))', color: 'white', boxShadow: '0 4px 0 -1px ' + plan.color }
-                : { border: '2px solid ' + plan.color, color: plan.color, background: 'white' }"
-              @click="goToEditor(plan.plan)"
-            >
-              {{ plan.cta }}
-            </button>
+            <Button as-child :variant="plan.highlighted ? 'cta' : 'outline-pill'" size="lg" class="w-full" :accent="readableOn(plan.color)">
+              <a v-if="plan.contact" :href="salesMailto">{{ plan.cta }}</a>
+              <NuxtLink v-else :to="editorLink(plan.plan)">{{ plan.cta }}</NuxtLink>
+            </Button>
           </div>
         </div>
       </div>
@@ -359,18 +337,16 @@ function goToEditor(plan?: string) {
       <p class="mt-5 text-sm sm:text-base text-muted-foreground font-sans">
         List your festival in minutes. Your dancers will thank you.
       </p>
-      <button
-        type="button"
-        class="mt-8 inline-flex items-center gap-2 px-7 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-        style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-        @click="goToEditor('starter')"
-      >
-        Get started free <ArrowRight class="w-4 h-4" />
-      </button>
+      <Button as-child variant="cta" size="lg" class="mt-8 px-7">
+        <NuxtLink :to="editorLink('starter')">Get started free <ArrowRight aria-hidden="true" /></NuxtLink>
+      </Button>
       <div class="mt-3 text-sm font-display italic text-secondary">
         — free to list, free to browse
       </div>
     </section>
+
+    </main>
+
 
     <SiteFooter />
   </div>

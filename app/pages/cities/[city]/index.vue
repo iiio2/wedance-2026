@@ -17,7 +17,9 @@ import { MapPin, Calendar, ArrowRight, Sparkles } from 'lucide-vue-next'
 import type { Teacher } from '~/types/festival'
 import { eventLocalDate, eventLocalTime, eventLocalWeekday, formatEventWhen } from '#shared/utils/eventTime'
 import { isFreePrice, isTasterCandidate } from '#shared/utils/taster'
+import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
+import { mixHex, readableOn } from '~/lib/contrast'
 
 definePageMeta({ layout: false })
 
@@ -384,6 +386,15 @@ function scrollToAskLocals() {
   document.getElementById('ask-locals')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
+// Accent text darkened just enough for 4.5:1 — on white / cream, or on its own '18' tint (chips).
+const ink = (c: string, bg = '#fff') => readableOn(c, bg)
+const chipInk = (c: string) => readableOn(c, mixHex(c, '#fff', 0.094))
+
+function clearFilters() {
+  selectedStyle.value = ''
+  clearPersonFilter()
+}
+
 const styleChipColors = [WD.red600, WD.cyan600, WD.green600, WD.purple500, WD.amber500, WD.pink500, WD.violet600]
 
 // --- City video competition + giveaways (O-009) ---------------------------
@@ -442,6 +453,7 @@ onMounted(() => {
     <!-- V3 header — same as /, /festivals, /organizers, /for-events, /my-plan, /cities -->
     <SiteHeader />
 
+    <main>
     <!-- CITY HERO — landmark photo (Wikimedia) when we have one, else warm cream -->
     <section v-if="hero" class="relative">
       <div class="relative w-full h-64 sm:h-96 overflow-hidden">
@@ -456,7 +468,7 @@ onMounted(() => {
         <div class="absolute inset-0" style="background:linear-gradient(180deg, rgba(59,31,18,0.15) 0%, rgba(59,31,18,0.05) 40%, rgba(59,31,18,0.75) 100%);" />
 
         <div class="relative h-full max-w-4xl mx-auto px-4 flex flex-col justify-end pb-6">
-          <div class="text-lg leading-none mb-1 font-display italic" style="color:#fbe3c2;">
+          <div class="text-lg leading-none mb-1 font-display italic text-wd-amber-100">
             — {{ city.eventCount }} weekly events
           </div>
           <h1 class="text-5xl sm:text-7xl leading-[0.98] tracking-tight font-display text-white" style="text-shadow:0 2px 24px rgba(0,0,0,0.35);">
@@ -536,18 +548,20 @@ onMounted(() => {
 
         <!-- Tab headers -->
         <div class="flex gap-1 mt-4 border-b -mb-px overflow-x-auto border-border">
-          <button
+          <Button
             v-for="tab in peopleTabs"
             :key="tab.key"
             type="button"
-            class="px-4 py-3 text-sm italic whitespace-nowrap transition-all -mb-px border-b-2"
+            variant="ghost"
+            class="h-auto rounded-none px-4 py-3 text-sm italic font-normal font-display whitespace-nowrap transition-all -mb-px border-b-2 hover:bg-transparent"
+            :aria-pressed="activeTab === tab.key ? 'true' : 'false'"
             :style="activeTab === tab.key
-              ? { borderColor: accent, color: accent, fontWeight: 700, fontFamily: 'var(--wd-font-display)' }
-              : { borderColor: 'transparent', color: 'var(--wd-brown-700)', fontFamily: 'var(--wd-font-display)' }"
+              ? { borderColor: accent, color: ink(accent, WD.cream), fontWeight: 700 }
+              : { borderColor: 'transparent', color: 'var(--wd-brown-700)' }"
             @click="switchTab(tab.key)"
           >
             {{ tab.label }}
-          </button>
+          </Button>
         </div>
 
         <!-- This-week relevance label — the tab shows only who has an event this
@@ -635,7 +649,7 @@ onMounted(() => {
 
         <div v-else data-testid="taster-empty" class="mt-5 text-sm text-muted-foreground font-sans">
           No {{ selectedStyle ? `${selectedStyle} ` : '' }}classes listed here yet —
-          <button type="button" class="font-bold underline text-success" @click="scrollToAskLocals">ask the locals where beginners start</button>.
+          <Button type="button" variant="link" class="h-auto p-0 align-baseline whitespace-normal text-sm font-bold underline text-wd-green-700" @click="scrollToAskLocals">ask the locals where beginners start</Button>.
         </div>
       </div>
     </section>
@@ -658,23 +672,32 @@ onMounted(() => {
           <span>
             Filtering by {{ filterLabel.role }} <strong class="text-foreground">{{ filterLabel.name }}</strong>
           </span>
-          <button
+          <Button
             type="button"
-            class="text-xs font-bold underline"
-            :style="{ color: accent, fontFamily: 'var(--wd-font-sans)' }"
+            variant="link"
+            class="h-auto p-0 text-xs font-bold underline font-sans"
+            :style="{ color: ink(accent, WD.cream) }"
             @click="clearPersonFilter"
           >
             Clear
-          </button>
+          </Button>
         </div>
       </div>
       <WeeklyCalendar
         :events="filteredEvents"
         :week-plan-ids="weekPlanIds"
         :teachers="[...teachers, ...djs, ...organisers]"
+        :filtered="!!selectedStyle || !!selectedPersonId"
         @toggle="onToggleEvent"
         @select-teacher="onSelectPerson"
-      />
+        @clear-filters="clearFilters"
+      >
+        <template #empty-action>
+          <Button type="button" variant="link" class="mt-1 h-auto p-0 text-xs font-bold underline font-sans" @click="scrollToAskLocals">
+            Ask the locals what's on
+          </Button>
+        </template>
+      </WeeklyCalendar>
     </section>
 
     <!-- COMING UP — dated events after this week (wedance.vip mirror) -->
@@ -710,15 +733,16 @@ onMounted(() => {
           </div>
         </div>
       </div>
-      <button
+      <Button
         v-if="syncedLater.length + bookedLater.length > upcomingLimit"
         type="button"
-        class="mt-6 text-xs font-bold underline"
-        :style="{ color: accent, fontFamily: 'var(--wd-font-sans)' }"
+        variant="link"
+        class="mt-6 h-auto p-0 text-xs font-bold underline font-sans"
+        :style="{ color: ink(accent, WD.cream) }"
         @click="upcomingLimit += 24"
       >
         Show more ({{ syncedLater.length + bookedLater.length - upcomingLimit }} more)
-      </button>
+      </Button>
     </section>
 
     <!-- VIDEO OF THE DAY — pairwise vote -->
@@ -880,7 +904,7 @@ onMounted(() => {
                       v-for="style in f.styles.slice(0, 4)"
                       :key="style"
                       class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider"
-                      :style="{ background: f.accentColor + '18', color: f.accentColor }"
+                      :style="{ background: f.accentColor + '18', color: chipInk(f.accentColor) }"
                     >
                       {{ style }}
                     </span>
@@ -901,6 +925,7 @@ onMounted(() => {
         <AskLocalsSection :city-slug="slug" :city-name="city.name" />
       </section>
     </ClientOnly>
+    </main>
 
     <SiteFooter />
 
@@ -917,8 +942,8 @@ onMounted(() => {
         <NuxtLink
           v-if="weekCount > 0"
           to="/my-plan"
-          class="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full text-white text-sm font-bold shadow-lg hover:shadow-xl transition-all"
-          :style="{ background: accent, boxShadow: '0 6px 20px rgba(0,0,0,0.18), 0 3px 0 -1px rgba(0,0,0,0.15)' }"
+          class="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full text-white text-sm font-bold shadow-wd-float transition-all"
+          :style="{ background: accent }"
         >
           <span
             class="inline-flex items-center justify-center w-6 h-6 rounded-full text-meta font-black bg-white"

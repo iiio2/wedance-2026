@@ -7,8 +7,12 @@
 import { Instagram, Youtube, Globe, Calendar, MapPin, ArrowRight } from 'lucide-vue-next'
 import { findArtist, festivalAppearances, cityAppearances, artistOrigin, artistResidence, artistLanguages, placeFlag } from '~/data/artists'
 import { WD } from '~/lib/brand'
+import { mixHex, readableOn } from '~/lib/contrast'
 
 definePageMeta({ layout: false })
+
+// Accent text on its own '18' tint (chips), darkened just enough for 4.5:1.
+const chipInk = (c: string) => readableOn(c, mixHex(c, WD.cream, 0.094))
 
 const route = useRoute()
 const id = route.params.id as string
@@ -56,6 +60,8 @@ function formatDateRange(start: string, end: string) {
     <!-- V3 header -->
     <SiteHeader />
 
+    <main>
+
     <!-- HERO -->
     <section class="relative overflow-hidden">
       <!-- Sun rays -->
@@ -101,7 +107,7 @@ function formatDateRange(start: string, end: string) {
                 <span
                   v-for="l in languages"
                   :key="l.code"
-                  class="text-eyebrow font-bold tracking-wide px-1.5 py-0.5 rounded bg-primary/[7.8%] text-primary font-sans"
+                  class="text-eyebrow font-bold tracking-wide px-1.5 py-0.5 rounded bg-primary/[7.8%] text-wd-red-800 font-sans"
                 >{{ l.code }}</span>
               </span>
             </div>
@@ -112,7 +118,7 @@ function formatDateRange(start: string, end: string) {
                 class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
                 :style="{
                   background: [WD.red600, WD.cyan600, WD.green600, WD.purple500, WD.amber500][i % 5] + '18',
-                  color: [WD.red600, WD.cyan600, WD.green600, WD.purple500, WD.amber500][i % 5],
+                  color: chipInk([WD.red600, WD.cyan600, WD.green600, WD.purple500, WD.amber500][i % 5]!),
                 }"
               >
                 {{ s }}
@@ -234,7 +240,7 @@ function formatDateRange(start: string, end: string) {
           <div
             v-for="a in cities"
             :key="a.city.slug"
-            class="rounded-2xl bg-white border p-5 border-border"
+            class="min-w-0 rounded-2xl bg-white border p-5 border-border"
           >
             <NuxtLink :to="`/cities/${a.city.slug}`" class="inline-flex items-center gap-2 group">
               <h3 class="font-bold text-lg leading-tight text-foreground">{{ a.city.name }}</h3>
@@ -244,7 +250,7 @@ function formatDateRange(start: string, end: string) {
               <div
                 v-for="e in a.events"
                 :key="e.id"
-                class="text-sm flex items-center gap-2 text-muted-foreground font-sans"
+                class="min-w-0 text-sm flex items-center gap-2 text-muted-foreground font-sans"
               >
                 <span class="text-eyebrow font-black uppercase tracking-widest w-9 shrink-0 text-secondary">{{ e.day.slice(0, 3) }}</span>
                 <span class="font-bold text-foreground">{{ e.time }}</span>
@@ -270,6 +276,9 @@ function formatDateRange(start: string, end: string) {
         </section>
       </ClientOnly>
     </div>
+
+    </main>
+
 
     <SiteFooter />
   </div>

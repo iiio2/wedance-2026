@@ -8,7 +8,9 @@
 import { Check, Plus, ArrowLeft, MapPin, Globe, User, Euro } from 'lucide-vue-next'
 import { findMockEvent } from '~/lib/mockEvents'
 import { formatEventWhen, eventLocalDate } from '#shared/utils/eventTime'
+import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
+import { mixHex, readableOn } from '~/lib/contrast'
 
 definePageMeta({ layout: false })
 
@@ -87,6 +89,9 @@ const styleColor: Record<string, string> = {
   casino: WD.green600, rueda: WD.cyan600, afro: WD.violet600, zouk: WD.cyan600,
 }
 const accent = computed(() => styleColor[String(ev.value?.styles?.[0] || '').toLowerCase()] || WD.red600)
+// Accent text darkened just enough for 4.5:1 — on the cream page, or on its own '14' tint (chips).
+const ink = (c: string) => readableOn(c, WD.cream)
+const chipInk = (c: string) => readableOn(c, mixHex(c, WD.cream, 0.078))
 const picked = computed(() => !!ev.value && weekPlanIds?.value?.has(ev.value.id))
 const parentFestival = computed(() => ev.value?.parentFestival ?? null)
 
@@ -127,8 +132,10 @@ useHead(() => ({
   <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
+    <main>
+
     <section v-if="pending" class="max-w-2xl mx-auto px-4 py-24 text-center">
-      <div class="inline-block w-8 h-8 rounded-full border-2 animate-spin border-primary/20" style="border-top-color:var(--wd-red-600);" />
+      <div class="inline-block w-8 h-8 rounded-full border-2 animate-spin border-primary/20 border-t-primary" role="status" aria-label="Loading event" />
     </section>
 
     <section v-else-if="failed || !ev" class="max-w-xl mx-auto px-4 py-20 text-center">
@@ -154,9 +161,9 @@ useHead(() => ({
       </div>
 
       <!-- Section anchor nav (festival-style) -->
-      <nav class="sticky top-0 z-20 border-b border-border bg-background/95" style="backdrop-filter: blur(8px);">
+      <nav class="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm" aria-label="Event sections">
         <div class="max-w-3xl mx-auto flex items-center gap-1 px-4 overflow-x-auto">
-          <button v-for="s in sections" :key="s.id" type="button" class="px-3 py-3 text-sm italic whitespace-nowrap text-muted-foreground font-display" @click="scrollTo(s.id)">{{ s.label }}</button>
+          <Button v-for="s in sections" :key="s.id" type="button" variant="ghost" class="h-auto rounded-none px-3 py-3 text-sm italic font-normal whitespace-nowrap text-muted-foreground font-display hover:bg-transparent hover:text-foreground" @click="scrollTo(s.id)">{{ s.label }}</Button>
         </div>
       </nav>
 
@@ -167,7 +174,7 @@ useHead(() => ({
           <img v-if="ev.cover" :src="ev.cover" :alt="ev.title" class="w-full max-h-[28rem] object-contain rounded-2xl mb-4 bg-wd-brown-900/[3.9%]" loading="lazy">
           <div class="flex flex-wrap items-center gap-2 mb-4">
             <span v-if="ev.eventType" class="text-eyebrow font-black uppercase tracking-widest px-2 py-1 rounded bg-secondary/[9.4%] text-secondary">{{ ev.eventType }}</span>
-            <span v-for="s in (ev.styles || [])" :key="s" class="text-eyebrow font-bold uppercase tracking-wider px-2 py-1 rounded-full" :style="{ background: accent + '14', color: accent }">{{ s }}</span>
+            <span v-for="s in (ev.styles || [])" :key="s" class="text-eyebrow font-bold uppercase tracking-wider px-2 py-1 rounded-full" :style="{ background: accent + '14', color: chipInk(accent) }">{{ s }}</span>
           </div>
           <ul class="space-y-1.5 text-sm mb-4 text-foreground">
             <li v-if="ev.price" class="flex items-start gap-2"><Euro class="w-4 h-4 mt-0.5 shrink-0 text-secondary" /> {{ ev.price }}</li>
@@ -178,7 +185,7 @@ useHead(() => ({
             </li>
             <li v-if="ev.link" class="flex items-start gap-2">
               <Globe class="w-4 h-4 mt-0.5 shrink-0 text-secondary" />
-              <a :href="ev.link" target="_blank" rel="noopener noreferrer" class="font-bold hover:underline break-all" :style="{ color: accent }">Event website</a>
+              <a :href="ev.link" target="_blank" rel="noopener noreferrer" class="font-bold underline break-all" :style="{ color: ink(accent) }">Event website</a>
             </li>
           </ul>
           <p v-if="ev.message" class="text-sm leading-relaxed whitespace-pre-line break-words text-muted-foreground">{{ ev.message }}</p>
@@ -189,8 +196,8 @@ useHead(() => ({
           <h2 class="text-2xl font-black leading-tight mb-3 font-display text-foreground">Lineup</h2>
           <div class="flex flex-wrap gap-2">
             <template v-for="(a, i) in ev.artists" :key="i">
-              <NuxtLink v-if="String(a).startsWith('@')" :to="`/${a}`" class="rounded-full px-4 py-2 text-sm font-bold" :style="{ background: accent + '14', color: accent }">{{ a }}</NuxtLink>
-              <span v-else class="rounded-full px-4 py-2 text-sm font-bold" :style="{ background: accent + '14', color: accent }">{{ a }}</span>
+              <NuxtLink v-if="String(a).startsWith('@')" :to="`/${a}`" class="rounded-full px-4 py-2 text-sm font-bold" :style="{ background: accent + '14', color: chipInk(accent) }">{{ a }}</NuxtLink>
+              <span v-else class="rounded-full px-4 py-2 text-sm font-bold" :style="{ background: accent + '14', color: chipInk(accent) }">{{ a }}</span>
             </template>
           </div>
         </section>
@@ -205,7 +212,7 @@ useHead(() => ({
             <MapPin class="w-4 h-4 text-secondary" /> <span>{{ ev.venueName }}<template v-if="ev.venueCity">, {{ ev.venueCity }}</template></span>
           </span>
           <p v-if="ev.venueAddress" class="mt-1 text-xs text-secondary">{{ ev.venueAddress }}</p>
-          <a v-if="ev.mapUrl" :href="ev.mapUrl" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-xs font-bold underline" :style="{ color: accent }">Open in Google Maps</a>
+          <a v-if="ev.mapUrl" :href="ev.mapUrl" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-xs font-bold underline" :style="{ color: ink(accent) }">Open in Google Maps</a>
           <p v-if="ev.citySlug" class="mt-3 text-xs"><NuxtLink :to="`/cities/${ev.citySlug}`" class="font-bold hover:underline text-secondary">More dancing in {{ ev.venueCity }} →</NuxtLink></p>
         </section>
 
@@ -215,6 +222,9 @@ useHead(() => ({
         </section>
       </div>
     </template>
+
+    </main>
+
 
     <SiteFooter />
 

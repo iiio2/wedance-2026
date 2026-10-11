@@ -17,6 +17,8 @@ useHead({
   <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
+    <main>
+
     <section class="max-w-3xl mx-auto px-4 pt-12 pb-4">
       <NuxtLink to="/for-events" class="inline-flex items-center gap-1 text-xs font-bold mb-4 text-secondary font-sans">
         <ArrowLeft class="w-3 h-3" /> For your event
@@ -35,6 +37,9 @@ useHead({
         <BookableVenuesSection hide-heading />
       </section>
     </ClientOnly>
+
+    </main>
+
 
     <SiteFooter />
   </div>

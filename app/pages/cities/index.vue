@@ -7,7 +7,11 @@
  * the city page so its style filter / taster-class section pick it up.
  */
 import { Search, MapPin, ArrowRight, Users } from 'lucide-vue-next'
+import { Button } from '~/components/ui/button'
+import { Field } from '~/components/ui/field'
+import { Input } from '~/components/ui/input'
 import { WD } from '~/lib/brand'
+import { mixHex, readableOn } from '~/lib/contrast'
 
 definePageMeta({ layout: false })
 
@@ -18,7 +22,6 @@ useHead({
   ],
 })
 
-const router = useRouter()
 const route = useRoute()
 
 // Intent handed over by /find-your-dance — forwarded on every city link.
@@ -57,12 +60,16 @@ const displayedCities = computed(() =>
 )
 
 const accents = [WD.red600, WD.cyan600, WD.green600, WD.purple500, WD.amber500, WD.pink500, WD.violet600]
-const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.charCodeAt(0), 0) % accents.length]
+// Accent text on its own '18' tint, darkened just enough for 4.5:1.
+const chipInk = (c: string) => readableOn(c, mixHex(c, '#fff', 0.094))
+const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.charCodeAt(0), 0) % accents.length]!
 </script>
 
 <template>
   <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
+
+    <main>
 
     <!-- HERO -->
     <section class="relative">
@@ -87,16 +94,15 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
         </div>
 
         <div class="mt-8 max-w-lg mx-auto">
-          <div class="relative">
-            <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" />
-            <input
+          <Field id="city-search" label="Search cities" hide-label class="relative">
+            <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" aria-hidden="true" />
+            <Input
               v-model="searchQuery"
               type="text"
               placeholder="Search by city or country"
-              class="w-full h-12 rounded-full pl-11 pr-4 text-sm outline-none transition-all bg-white border border-input text-foreground font-sans"
-              style="box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent), 0 6px 16px rgba(59, 31, 18, 0.04);"
-            >
-          </div>
+              class="h-12 rounded-full pl-11 pr-4 bg-white shadow-[0_1px_0_color-mix(in_srgb,var(--wd-brown-900)_3.9%,transparent),0_6px_16px_rgba(59,31,18,0.04)] focus:shadow-wd-focus"
+            />
+          </Field>
         </div>
       </div>
 
@@ -132,7 +138,7 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
       >
         <Search class="w-8 h-8 mx-auto mb-3 text-secondary" />
         <p class="text-sm text-muted-foreground font-sans">Nothing matches "{{ searchQuery }}"</p>
-        <button type="button" class="text-xs font-bold mt-2 underline text-primary font-sans" @click="searchQuery = ''">Clear search</button>
+        <Button type="button" variant="link" class="mt-2 h-auto p-0 text-xs font-bold underline font-sans" @click="searchQuery = ''">Clear search</Button>
       </div>
 
       <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -170,7 +176,7 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
                 <h3 class="font-bold text-xl leading-tight text-foreground">{{ c.city }}</h3>
                 <div v-if="c.country" class="text-meta font-medium mt-0.5 text-secondary font-sans">{{ c.country }}</div>
               </div>
-              <span v-else class="text-xs font-bold uppercase tracking-wider" :style="{ color: accentFor(c.citySlug) }">Explore</span>
+              <span v-else class="text-xs font-bold uppercase tracking-wider" :style="{ color: readableOn(accentFor(c.citySlug)) }">Explore</span>
               <ArrowRight class="w-4 h-4 mt-0.5 shrink-0 transition-transform group-hover:translate-x-1" :style="{ color: accentFor(c.citySlug) }" />
             </div>
             <div class="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground font-sans">
@@ -178,9 +184,9 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
               <span>{{ c.total }} in the community</span>
             </div>
             <div class="flex flex-wrap gap-1.5 mt-3">
-              <span v-if="c.venues" class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider" :style="{ background: accentFor(c.citySlug) + '18', color: accentFor(c.citySlug) }">{{ c.venues }} venue{{ c.venues === 1 ? '' : 's' }}</span>
-              <span v-if="c.artists" class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider" :style="{ background: accentFor(c.citySlug) + '18', color: accentFor(c.citySlug) }">{{ c.artists }} artist{{ c.artists === 1 ? '' : 's' }}</span>
-              <span v-if="c.organizers" class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider" :style="{ background: accentFor(c.citySlug) + '18', color: accentFor(c.citySlug) }">{{ c.organizers }} organizer{{ c.organizers === 1 ? '' : 's' }}</span>
+              <span v-if="c.venues" class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider" :style="{ background: accentFor(c.citySlug) + '18', color: chipInk(accentFor(c.citySlug)) }">{{ c.venues }} venue{{ c.venues === 1 ? '' : 's' }}</span>
+              <span v-if="c.artists" class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider" :style="{ background: accentFor(c.citySlug) + '18', color: chipInk(accentFor(c.citySlug)) }">{{ c.artists }} artist{{ c.artists === 1 ? '' : 's' }}</span>
+              <span v-if="c.organizers" class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider" :style="{ background: accentFor(c.citySlug) + '18', color: chipInk(accentFor(c.citySlug)) }">{{ c.organizers }} organizer{{ c.organizers === 1 ? '' : 's' }}</span>
             </div>
           </div>
         </NuxtLink>
@@ -191,15 +197,16 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
     <section class="max-w-4xl mx-auto px-4 py-10">
       <div class="rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-wd-cyan-600/[33.3%]" style="box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-cyan-600) 13.3%, transparent), 0 8px 22px rgba(59,31,18,0.05);">
         <div>
-          <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mb-1 text-info">For organizers</div>
+          <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mb-1 text-wd-cyan-700">For organizers</div>
           <h3 class="text-lg font-bold text-foreground">Run a class or a weekly social?</h3>
           <p class="text-sm mt-1 text-muted-foreground font-sans">List your event for free. Local dancers find you.</p>
         </div>
-        <button type="button" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider shrink-0 bg-info" style="box-shadow: 0 3px 0 -1px var(--wd-cyan-700);" @click="router.push('/organizers/create')">
-          Create listing <ArrowRight class="w-4 h-4" />
-        </button>
+        <Button as-child variant="pill" accent="var(--wd-cyan-700)" class="px-5 shrink-0">
+          <NuxtLink to="/organizers/create">Create listing <ArrowRight aria-hidden="true" /></NuxtLink>
+        </Button>
       </div>
     </section>
+    </main>
 
     <SiteFooter />
   </div>
