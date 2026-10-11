@@ -1,17 +1,23 @@
 <script setup lang="ts">
 /**
- * "Who's going" section for a festival detail page.
+ * "Who's going" section for festival and event detail pages.
  *
  * Fetches the public list of dancers who marked "Going" (plan_items)
- * via `plan.goingList` and renders a grid of name + photo + city.
- * This is distinct from AttendeeRoster (verified ticket holders only).
+ * via `plan.goingList` and renders a grid of tappable profile cards.
+ * Each face links to the dancer's profile at /u/{username}.
  */
 import { Users } from 'lucide-vue-next'
 
-const props = defineProps<{
-  festivalSlug: string
+const props = withDefaults(defineProps<{
+  /** Legacy shorthand — sets itemType='festival', itemId=festivalSlug */
+  festivalSlug?: string
+  itemType?: 'festival' | 'event'
+  itemId?: string
   accentColor: string
-}>()
+}>(), { itemType: 'festival' })
+
+const resolvedType = computed(() => props.itemType ?? 'festival')
+const resolvedId = computed(() => props.itemId ?? props.festivalSlug ?? '')
 
 const { $trpc } = useNuxtApp()
 
@@ -20,16 +26,19 @@ interface GoingDancer {
   name: string
   photo: string | null
   city: string | null
+  username: string | null
 }
 
 const going = ref<GoingDancer[]>([])
 const loading = ref(true)
 
 async function load() {
+  if (!resolvedId.value) return
   loading.value = true
   try {
     const res = await $trpc.plan.goingList.query({
-      festivalSlug: props.festivalSlug,
+      itemType: resolvedType.value,
+      itemId: resolvedId.value,
     })
     going.value = res
   } catch {
@@ -40,7 +49,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => props.festivalSlug, (next, prev) => {
+watch(resolvedId, (next, prev) => {
   if (next !== prev) load()
 })
 
@@ -62,10 +71,12 @@ function initials(name: string): string {
 
     <template v-else-if="going.length > 0">
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div
+        <NuxtLink
           v-for="d in going"
           :key="d.dancerId"
-          class="flex items-center gap-3 rounded-xl p-2.5"
+          :to="d.username ? `/u/${d.username}` : ''"
+          :class="d.username ? 'hover:brightness-[0.97] cursor-pointer' : 'pointer-events-none'"
+          class="flex items-center gap-3 rounded-xl p-2.5 no-underline transition-colors"
           style="background:white; border:1px solid color-mix(in srgb, var(--wd-brown-900) 10%, transparent);"
         >
           <img
@@ -89,7 +100,7 @@ function initials(name: string): string {
               {{ d.city }}
             </p>
           </div>
-        </div>
+        </NuxtLink>
       </div>
     </template>
 

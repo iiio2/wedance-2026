@@ -109,6 +109,7 @@ const asFestival = computed(() => ({
 const sections = computed(() => {
   const s: { id: string; label: string }[] = []
   if (ev.value?.message || ev.value?.cover || ev.value?.link || ev.value?.price) s.push({ id: 'about', label: 'About' })
+  s.push({ id: 'going', label: "Who's going" })
   if (ev.value?.artists?.length) s.push({ id: 'lineup', label: 'Lineup' })
   s.push({ id: 'venue', label: 'Venue' })
   s.push({ id: 'reviews', label: 'Reviews' })
@@ -182,6 +183,13 @@ useHead(() => ({
             </li>
           </ul>
           <p v-if="ev.message" class="text-sm leading-relaxed whitespace-pre-line break-words" style="color:var(--wd-brown-700);">{{ ev.message }}</p>
+        </section>
+
+        <!-- Who's going -->
+        <section id="going" class="scroll-mt-16">
+          <h2 class="text-2xl font-black leading-tight mb-1" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Who's <em class="italic" :style="{ color: accent }">going</em></h2>
+          <p class="text-sm mb-4" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">See who else is planning to be there — mark yourself as going so others see you too.</p>
+          <GoingSection item-type="event" :item-id="ev.id" :accent-color="accent" />
         </section>
 
         <!-- Lineup -->

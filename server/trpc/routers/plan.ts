@@ -85,29 +85,43 @@ export const planRouter = router({
     }),
 
   /**
-   * Public list of dancers who marked "Going" for a festival.
+   * Public list of dancers who marked "Going" for a festival or event.
    *
-   * Returns name + photo + city for public profiles, capped at 50.
-   * Used by the festivals listing (avatar stack) and the detail page
-   * ("Who's going" section) so travelers can see real people before
-   * they book.
+   * Returns name + photo + city + username for public profiles, capped
+   * at 50.  Used by the festivals listing (avatar stack), the festival
+   * detail page ("Who's going" section), and event detail pages so
+   * visitors can see real people before they book.
+   *
+   * Accepts either `festivalSlug` (legacy shorthand for itemType=festival)
+   * or the generic `itemType` + `itemId` pair.
    */
   goingList: publicProcedure
-    .input(z.object({ festivalSlug: z.string().min(1).max(120) }))
+    .input(z.object({
+      festivalSlug: z.string().min(1).max(120).optional(),
+      itemType: z.enum(['festival', 'event']).optional(),
+      itemId: z.string().min(1).max(120).optional(),
+    }).refine(
+      d => d.festivalSlug || (d.itemType && d.itemId),
+      { message: 'Provide festivalSlug or itemType + itemId' },
+    ))
     .query(async ({ ctx, input }) => {
+      const type = input.itemType ?? 'festival'
+      const id = input.itemId ?? input.festivalSlug!
+
       const rows = await ctx.db
         .select({
           dancerId: planItems.dancerId,
           name: dancers.name,
           photo: dancers.photo,
           city: dancers.city,
+          username: dancers.username,
         })
         .from(planItems)
         .innerJoin(dancers, eq(planItems.dancerId, dancers.id))
         .where(
           and(
-            eq(planItems.itemType, 'festival'),
-            eq(planItems.itemId, input.festivalSlug),
+            eq(planItems.itemType, type),
+            eq(planItems.itemId, id),
             eq(dancers.profilePublic, true),
           ),
         )
@@ -118,6 +132,7 @@ export const planRouter = router({
         name: r.name,
         photo: r.photo,
         city: r.city,
+        username: r.username,
       }))
     }),
 
