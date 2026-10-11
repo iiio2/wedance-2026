@@ -22,6 +22,10 @@ import {
   MessageCircle,
   CheckCircle,
   Zap,
+  CalendarPlus,
+  Map,
+  UserPlus,
+  Send,
 } from 'lucide-vue-next'
 
 definePageMeta({ layout: false })
@@ -32,6 +36,13 @@ useHead({
     { name: 'description', content: 'Ticket your festival where the dancers are. Planning tools, partner matching, real faces on every event page.' },
   ],
 })
+
+const alreadyPlanning = [
+  { icon: CalendarPlus, title: 'Building their week', detail: 'Dancers browse classes and socials in their city and add them to a personal week plan.', color: WD.red600 },
+  { icon: Map,          title: 'Planning their festival year', detail: 'They map out which festivals to attend months ahead — your event shows up on that calendar.', color: WD.cyan600 },
+  { icon: UserPlus,     title: 'Finding partners', detail: 'Leads and follows match before the festival starts, so they arrive already connected.', color: WD.purple500 },
+  { icon: Send,         title: 'Sharing plans with friends', detail: 'Every shared plan is a personal invitation — your event gets passed along with it.', color: WD.green600 },
+]
 
 const features = [
   { icon: CalendarDays, title: 'Interactive schedule', description: 'Dancers browse workshops, filter by style and level, and build a plan — excitement builds weeks before the doors open.', color: WD.red600, link: '/festivals/meneate-viena-2026#schedule' },
@@ -203,6 +214,40 @@ function goToEditor(plan?: string) {
       </svg>
     </section>
 
+    <!-- ALREADY PLANNING — evidence section -->
+    <section class="max-w-5xl mx-auto px-4 py-16">
+      <div class="text-center mb-12">
+        <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Right now on WeDance</div>
+        <h2 class="mt-3 text-3xl sm:text-4xl leading-tight">
+          Dancers are already <em class="italic" style="color:var(--wd-red-600);">here.</em>
+        </h2>
+        <p class="mt-3 text-sm sm:text-base max-w-xl mx-auto" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          They're not waiting for your Instagram ad. They're actively planning their dance life on WeDance — your event meets them where they're looking.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-5">
+        <div
+          v-for="item in alreadyPlanning" :key="item.title"
+          class="rounded-2xl bg-white p-6 border flex gap-4 items-start"
+          :style="{ borderColor: item.color + '55', boxShadow: '0 1px 0 ' + item.color + '22, 0 8px 20px rgba(59,31,18,0.05)' }"
+        >
+          <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+               :style="{ background: item.color + '15' }">
+            <component :is="item.icon" class="w-5 h-5" :style="{ color: item.color, 'stroke-width': 1.5 }" />
+          </div>
+          <div>
+            <div class="text-lg font-bold leading-tight" style="color:var(--wd-brown-900);">{{ item.title }}</div>
+            <div class="mt-2 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ item.detail }}</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="mt-8 text-center text-sm italic" style="font-family:var(--wd-font-display); color:var(--wd-amber-600);">
+        — list your festival and show up where they're already looking
+      </p>
+    </section>
+
     <!-- HOW IT WORKS -->
     <section class="max-w-5xl mx-auto px-4 py-16">
       <div class="text-center mb-12">
@@ -230,12 +275,12 @@ function goToEditor(plan?: string) {
     <section class="border-y" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(251, 245, 234, 0.5);">
       <div class="max-w-5xl mx-auto px-4 py-16">
         <div class="text-center mb-12">
-          <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">The toolkit</div>
+          <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Your toolkit</div>
           <h2 class="mt-3 text-3xl sm:text-4xl leading-tight">
-            Everything <em class="italic" style="color:var(--wd-red-600);">your dancers</em> need.
+            Reach and <em class="italic" style="color:var(--wd-red-600);">engage</em> those dancers.
           </h2>
           <p class="mt-3 text-sm sm:text-base max-w-xl mx-auto" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-            Tools that turn browsers into ticket buyers.
+            Tools that put your event in front of dancers who are already planning — and turn that intent into ticket sales.
           </p>
         </div>
 
