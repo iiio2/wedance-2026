@@ -7,7 +7,7 @@
  * private profile 404s for everyone but its owner, who sees a "private" banner.
  * 2026 tropical style.
  */
-import { MapPin, Pencil, ArrowLeft, Instagram, Youtube, Globe, Play, EyeOff } from 'lucide-vue-next'
+import { MapPin, Pencil, ArrowLeft, Instagram, Youtube, Globe, Play, EyeOff, Calendar } from 'lucide-vue-next'
 
 definePageMeta({ layout: false })
 
@@ -23,11 +23,19 @@ const profile = ref<ProfileData | null>(null)
 const pending = ref(true)
 const failed = ref(false)
 
+// Festivals from the dancer's year plan (public sharedPlan endpoint).
+type SharedPlan = Awaited<ReturnType<typeof $trpc.plan.sharedPlan.query>>
+const yearPlan = ref<SharedPlan>(null)
+
 async function load() {
   pending.value = true
   failed.value = false
   try {
     profile.value = await $trpc.profile.getByUsername.query({ username: username.value })
+    // Fetch their year plan (non-blocking, non-critical)
+    $trpc.plan.sharedPlan.query({ username: username.value }).then((result) => {
+      yearPlan.value = result
+    }).catch(() => {})
   } catch {
     profile.value = null
     failed.value = true
@@ -36,6 +44,21 @@ async function load() {
   }
 }
 onMounted(load)
+
+const upcomingFestivals = computed(() => {
+  if (!yearPlan.value?.festivals) return []
+  const now = new Date().toISOString()
+  return yearPlan.value.festivals.filter(f => f.endDate >= now)
+})
+
+function formatDateRange(start: string, end: string): string {
+  const s = new Date(start)
+  const e = new Date(end)
+  const sMonth = s.toLocaleString('en', { month: 'short' })
+  const eMonth = e.toLocaleString('en', { month: 'short' })
+  if (sMonth === eMonth) return `${sMonth} ${s.getDate()}–${e.getDate()}`
+  return `${sMonth} ${s.getDate()} – ${eMonth} ${e.getDate()}`
+}
 
 const notFound = computed(() => !pending.value && (failed.value || !profile.value))
 
@@ -164,6 +187,40 @@ useHead(() => ({
               >{{ s }}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Upcoming festivals -->
+      <div v-if="upcomingFestivals.length" class="mt-6">
+        <div class="text-[10px] uppercase tracking-[0.3em] font-bold mb-3" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">Upcoming Festivals</div>
+        <div class="space-y-2">
+          <NuxtLink
+            v-for="f in upcomingFestivals"
+            :key="f.slug"
+            :to="`/festivals/${f.slug}`"
+            class="flex items-center gap-3 rounded-xl p-3 no-underline transition-colors hover:brightness-[0.97]"
+            style="background:white; border:1px solid color-mix(in srgb, var(--wd-brown-900) 10%, transparent);"
+          >
+            <img
+              v-if="f.logo"
+              :src="f.logo"
+              :alt="f.name"
+              class="w-10 h-10 rounded-lg object-cover shrink-0"
+            />
+            <div
+              v-else
+              class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+              :style="{ background: f.accentColor || 'var(--wd-red-600)' }"
+            >
+              <Calendar class="w-5 h-5 text-white" />
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium truncate" style="color:var(--wd-brown-900);">{{ f.name }}</p>
+              <p class="text-xs truncate" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+                {{ formatDateRange(f.startDate, f.endDate) }} · {{ f.location }}
+              </p>
+            </div>
+          </NuxtLink>
         </div>
       </div>
 

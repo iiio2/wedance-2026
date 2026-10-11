@@ -741,4 +741,47 @@ export const planRouter = router({
 
     return { cards: cards.slice(0, 20) }
   }),
+
+  /**
+   * Batch fetch "who's going" for multiple festivals/events at once.
+   *
+   * Returns a map of itemId → list of public dancers (name, photo, username).
+   * Used by the year-plan pages to populate friendsGoing without N+1 queries.
+   * Capped at 10 attendees per item and 50 items per request.
+   */
+  goingBatch: publicProcedure
+    .input(z.object({
+      itemType: z.enum(['festival', 'event']),
+      itemIds: z.array(z.string().min(1).max(120)).min(1).max(50),
+    }))
+    .query(async ({ ctx, input }) => {
+      const rows = await ctx.db
+        .select({
+          itemId: planItems.itemId,
+          name: dancers.name,
+          photo: dancers.photo,
+          username: dancers.username,
+        })
+        .from(planItems)
+        .innerJoin(dancers, eq(planItems.dancerId, dancers.id))
+        .where(
+          and(
+            eq(planItems.itemType, input.itemType),
+            inArray(planItems.itemId, input.itemIds),
+            eq(dancers.profilePublic, true),
+          ),
+        )
+
+      const result: Record<string, Array<{ name: string; photo: string | null; username: string | null }>> = {}
+      for (const id of input.itemIds) {
+        result[id] = []
+      }
+      for (const r of rows) {
+        const list = result[r.itemId]
+        if (list && list.length < 10) {
+          list.push({ name: r.name, photo: r.photo, username: r.username })
+        }
+      }
+      return result
+    }),
 })
