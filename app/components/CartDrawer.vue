@@ -152,6 +152,7 @@ watch(rideMode, () => rideForm.reset())
 
 // Use props from parent when available, fallback to empty
 const rides = computed(() => props.rideShares ?? [])
+const failedRidePhotos = ref(new Set<string>())
 const dinners = computed(() => props.groupDinners ?? [])
 const activities = computed(() => props.extraActivities ?? [])
 const isLookingForRoommate = computed(() => props.lookingForRoommate ?? false)
@@ -762,7 +763,8 @@ const googleMapsUrl = computed(() => {
             <div v-if="rides.length" class="space-y-1.5">
               <p class="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Others sharing rides</p>
               <div v-for="ride in rides" :key="ride.id" class="flex items-center gap-2 py-1">
-                <img :src="ride.dancerPhoto" :alt="ride.dancerName" class="w-6 h-6 rounded-full" />
+                <img v-if="ride.dancerPhoto && !failedRidePhotos.has(ride.id)" :src="ride.dancerPhoto" :alt="ride.dancerName" class="w-6 h-6 rounded-full object-cover" @error="failedRidePhotos.add(ride.id)" />
+                <span v-else class="w-6 h-6 rounded-full shrink-0 inline-flex items-center justify-center text-[9px] font-bold uppercase bg-secondary text-secondary-foreground">{{ ride.dancerName.charAt(0) }}</span>
                 <div class="min-w-0 flex-1">
                   <span class="text-xs font-medium">{{ ride.dancerName }}</span>
                   <span class="text-[10px] text-muted-foreground ml-1">

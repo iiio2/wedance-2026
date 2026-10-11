@@ -28,6 +28,7 @@ const emit = defineEmits<{
 }>()
 
 const expandedSections = ref(new Set<string>())
+const failedRidePhotos = ref(new Set<string>())
 function toggleSection(section: string) {
   const next = new Set(expandedSections.value)
   next.has(section) ? next.delete(section) : next.add(section)
@@ -176,7 +177,8 @@ function badgeFor(key: string): string | null {
         <div v-if="rideShares.length" class="grid gap-1.5">
           <p class="text-[10px] font-bold uppercase tracking-widest" :style="labelStyle">Others sharing rides</p>
           <div v-for="ride in rideShares" :key="ride.id" class="flex items-center gap-2.5 py-1.5 px-2 rounded-lg" style="background:color-mix(in srgb, var(--wd-brown-900) 2%, transparent);">
-            <img :src="ride.dancerPhoto" :alt="ride.dancerName" class="w-8 h-8 rounded-full shrink-0">
+            <img v-if="ride.dancerPhoto && !failedRidePhotos.has(ride.id)" :src="ride.dancerPhoto" :alt="ride.dancerName" class="w-8 h-8 rounded-full shrink-0 object-cover" @error="failedRidePhotos.add(ride.id)">
+            <span v-else class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-[11px] font-bold uppercase" style="background:color-mix(in srgb, var(--wd-cyan-600) 9.4%, transparent); color:var(--wd-cyan-600);">{{ ride.dancerName.charAt(0) }}</span>
             <div class="min-w-0 flex-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
               <span class="font-bold" style="color:var(--wd-brown-900);">{{ ride.dancerName }}</span>
               <span class="ml-1">

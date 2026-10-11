@@ -75,6 +75,11 @@ const labelStyle = 'color:var(--wd-amber-600); font-family:var(--wd-font-sans);'
 
 const hasOwnRide = computed(() => rideShares.value.some(r => r.isOwn))
 const othersRides = computed(() => rideShares.value.filter(r => !r.isOwn))
+
+const failedPhotos = ref(new Set<string>())
+function onPhotoError(rideId: string) {
+  failedPhotos.value.add(rideId)
+}
 </script>
 
 <template>
@@ -106,12 +111,13 @@ const othersRides = computed(() => rideShares.value.filter(r => !r.isOwn))
             style="background:color-mix(in srgb, var(--wd-brown-900) 2%, transparent);"
           >
             <img
-              v-if="ride.dancerPhoto"
+              v-if="ride.dancerPhoto && !failedPhotos.has(ride.id)"
               :src="ride.dancerPhoto"
               :alt="ride.dancerName"
               class="w-7 h-7 rounded-full shrink-0 object-cover"
+              @error="onPhotoError(ride.id)"
             >
-            <span v-else class="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold" style="background:color-mix(in srgb, var(--wd-cyan-600) 9.4%, transparent); color:var(--wd-cyan-600);">
+            <span v-else class="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold uppercase" style="background:color-mix(in srgb, var(--wd-cyan-600) 9.4%, transparent); color:var(--wd-cyan-600);">
               {{ ride.dancerName.charAt(0) }}
             </span>
             <div class="min-w-0 flex-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
