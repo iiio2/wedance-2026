@@ -4,8 +4,7 @@
   },
   "axe desktop /artists": {
     "color-contrast": "*",
-    "link-in-text-block": "*",
-    "select-name": "*"
+    "link-in-text-block": "*"
   },
   "axe desktop /cities/munich": {
     "color-contrast": "*",
@@ -100,8 +99,7 @@
   },
   "axe mobile /artists": {
     "color-contrast": "*",
-    "link-in-text-block": "*",
-    "select-name": "*"
+    "link-in-text-block": "*"
   },
   "axe mobile /cities/munich": {
     "color-contrast": "*",
@@ -161,13 +159,6 @@
   "basic desktop /": {
     "landmark-main": "*"
   },
-  "basic desktop /artists": {
-    "input-label": "*",
-    "landmark-main": "*"
-  },
-  "basic desktop /cities/munich": {
-    "landmark-main": "*"
-  },
   "basic desktop /design/patterns/heroes": {
     "single-h1": 1
   },
@@ -179,13 +170,6 @@
     "landmark-main": "*"
   },
   "basic mobile /": {
-    "landmark-main": "*"
-  },
-  "basic mobile /artists": {
-    "input-label": "*",
-    "landmark-main": "*"
-  },
-  "basic mobile /cities/munich": {
     "landmark-main": "*"
   },
   "basic mobile /design/patterns/heroes": {

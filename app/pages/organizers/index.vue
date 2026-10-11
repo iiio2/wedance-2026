@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
+import { readableOn } from '~/lib/contrast'
 /**
  * /organizers — For festival organizers.
  * Restyled 2026-07-02 to match the V3 tropical direction on /.
@@ -135,49 +137,42 @@ const howItWorks = [
   { step: '4', title: 'You get insights',      description: 'Real demand data, audience geography, and post-event signal.',                   color: WD.cyan600 },
 ]
 
-const router = useRouter()
 
-function goToEditor(plan?: string) {
-  const query = plan ? { plan } : {}
-  router.push({ path: '/organizers/create', query })
-}
+const editorLink = (plan?: string) => ({ path: '/organizers/create', query: plan ? { plan } : {} })
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <!-- Header — same as homepage -->
     <SiteHeader />
+
+    <main>
 
     <!-- HERO -->
     <section class="relative">
       <div class="max-w-6xl mx-auto px-4 pt-14 pb-16 text-center md:text-left">
-        <div class="text-sm tracking-widest uppercase mb-3" style="color:var(--wd-amber-600);">
+        <div class="text-sm tracking-widest uppercase mb-3 text-secondary">
           For festival organizers
         </div>
         <div class="grid md:grid-cols-12 gap-10 items-center">
           <div class="md:col-span-8">
-            <h1 class="text-5xl sm:text-6xl leading-[0.98]" style="color:var(--wd-brown-900);">
+            <h1 class="text-5xl sm:text-6xl leading-[0.98] text-foreground">
               Your dancers are<br>
-              already <em class="italic" style="color:var(--wd-red-600);">planning.</em><br>
-              <span style="font-family:var(--wd-font-display);font-style:italic; color:var(--wd-green-600); font-size:0.9em;">Give them the tools.</span>
+              already <em class="italic text-primary">planning.</em><br>
+              <span class="font-display italic text-success" style="font-size:0.9em;">Give them the tools.</span>
             </h1>
-            <p class="mt-6 text-base sm:text-lg leading-relaxed max-w-xl mx-auto md:mx-0" style="color:var(--wd-brown-700);">
+            <p class="mt-6 text-base sm:text-lg leading-relaxed max-w-xl mx-auto md:mx-0 text-muted-foreground">
               Ticket your festival where the dancers are.
-              <span style="color:var(--wd-brown-900);">Workshop planner, partner matching, real faces on every event page.</span>
+              <span class="text-foreground">Workshop planner, partner matching, real faces on every event page.</span>
             </p>
             <div class="mt-8 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4">
-              <button
-                type="button"
-                class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-                style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-                @click="goToEditor('starter')"
-              >
-                List your festival <ArrowRight class="w-4 h-4" />
-              </button>
+              <Button as-child variant="cta" size="lg" class="px-6">
+                <NuxtLink :to="editorLink('starter')">List your festival <ArrowRight aria-hidden="true" /></NuxtLink>
+              </Button>
               <NuxtLink
                 to="/festivals/meneate-viena-2026"
-                class="inline-flex items-center gap-2 text-sm italic hover:underline"
-                style="color:var(--wd-cyan-600); font-family:var(--wd-font-display);font-style:italic; font-size:20px;"
+                class="inline-flex items-center gap-2 text-sm italic hover:underline text-wd-cyan-700 font-display"
+                style="font-style:italic; font-size:20px;"
               >
                 — see a live example
               </NuxtLink>
@@ -186,25 +181,25 @@ function goToEditor(plan?: string) {
 
           <!-- Poster card — hint of the platform -->
           <div class="md:col-span-4 relative">
-            <div class="absolute -top-4 -left-3 w-16 h-4 rotate-[-6deg]" style="background:var(--wd-amber-100); box-shadow:0 2px 6px rgba(0,0,0,0.15);"/>
-            <div class="absolute -top-4 -right-3 w-16 h-4 rotate-[5deg]" style="background:var(--wd-amber-100); box-shadow:0 2px 6px rgba(0,0,0,0.15);"/>
-            <div class="rounded-2xl overflow-hidden shadow-2xl border-4 bg-white"
-                 style="border-color:var(--wd-cream); box-shadow: 8px 10px 0 -2px var(--wd-cyan-600);">
+            <div class="absolute -top-4 -left-3 w-16 h-4 rotate-[-6deg] bg-wd-amber-100" style="box-shadow:0 2px 6px rgba(0,0,0,0.15);"/>
+            <div class="absolute -top-4 -right-3 w-16 h-4 rotate-[5deg] bg-wd-amber-100" style="box-shadow:0 2px 6px rgba(0,0,0,0.15);"/>
+            <div class="rounded-2xl overflow-hidden shadow-2xl border-4 bg-white border-wd-cream"
+                 style="box-shadow: 8px 10px 0 -2px var(--wd-cyan-600);">
               <div class="p-5" style="background:linear-gradient(135deg,var(--wd-violet-600) 0%, #c026d3 50%, var(--wd-rose-500) 100%);">
-                <div class="text-[10px] uppercase tracking-[0.3em] text-white/90 font-bold">Live festival page</div>
-                <div class="mt-1 text-2xl leading-tight text-white" style="font-family:var(--wd-font-display);">
+                <div class="text-eyebrow uppercase tracking-[0.3em] text-white/90 font-bold">Live festival page</div>
+                <div class="mt-1 text-2xl leading-tight text-white font-display">
                   Your festival<br>on WeDance
                 </div>
               </div>
               <div class="p-4">
-                <div class="text-[10px] uppercase tracking-[0.25em] font-bold mb-3" style="color:var(--wd-amber-600);">
+                <div class="text-eyebrow uppercase tracking-[0.25em] font-bold mb-3 text-secondary">
                   What dancers see
                 </div>
-                <ul class="space-y-1.5 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-                  <li class="flex items-center gap-2"><CheckCircle class="w-3.5 h-3.5" style="color:var(--wd-green-600);"/> Real attendee faces</li>
-                  <li class="flex items-center gap-2"><CheckCircle class="w-3.5 h-3.5" style="color:var(--wd-green-600);"/> Workshop planner</li>
-                  <li class="flex items-center gap-2"><CheckCircle class="w-3.5 h-3.5" style="color:var(--wd-green-600);"/> Partner matching</li>
-                  <li class="flex items-center gap-2"><CheckCircle class="w-3.5 h-3.5" style="color:var(--wd-green-600);"/> One-tap checkout</li>
+                <ul class="space-y-1.5 text-xs text-muted-foreground font-sans">
+                  <li class="flex items-center gap-2"><CheckCircle class="w-3.5 h-3.5 text-success"/> Real attendee faces</li>
+                  <li class="flex items-center gap-2"><CheckCircle class="w-3.5 h-3.5 text-success"/> Workshop planner</li>
+                  <li class="flex items-center gap-2"><CheckCircle class="w-3.5 h-3.5 text-success"/> Partner matching</li>
+                  <li class="flex items-center gap-2"><CheckCircle class="w-3.5 h-3.5 text-success"/> One-tap checkout</li>
                 </ul>
               </div>
             </div>
@@ -255,9 +250,9 @@ function goToEditor(plan?: string) {
     <!-- HOW IT WORKS -->
     <section class="max-w-5xl mx-auto px-4 py-16">
       <div class="text-center mb-12">
-        <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Four steps</div>
+        <div class="text-xs uppercase tracking-[0.3em] text-secondary">Four steps</div>
         <h2 class="mt-3 text-3xl sm:text-4xl leading-tight">
-          From listing to <em class="italic" style="color:var(--wd-red-600);">insights.</em>
+          From listing to <em class="italic text-primary">insights.</em>
         </h2>
       </div>
 
@@ -269,17 +264,16 @@ function goToEditor(plan?: string) {
                :style="{ background: item.color }">
             {{ item.step }}
           </div>
-          <div class="text-base font-bold leading-tight" style="color:var(--wd-brown-900);">{{ item.title }}</div>
-          <div class="mt-2 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ item.description }}</div>
+          <div class="text-base font-bold leading-tight text-foreground">{{ item.title }}</div>
+          <div class="mt-2 text-sm leading-relaxed text-muted-foreground font-sans">{{ item.description }}</div>
           <div v-if="item.substeps" class="mt-4 space-y-2">
             <NuxtLink
               v-for="sub in item.substeps" :key="sub.label"
               :to="sub.link"
-              class="flex items-center gap-2 text-xs group"
-              style="font-family:var(--wd-font-sans);"
+              class="flex items-center gap-2 text-xs group font-sans"
               :style="{ color: item.color }"
             >
-              <component :is="sub.icon" class="w-3.5 h-3.5 shrink-0" style="stroke-width:1.5;" />
+              <component :is="sub.icon" class="w-3.5 h-3.5 shrink-0" />
               <span class="group-hover:underline">{{ sub.label }}</span>
             </NuxtLink>
           </div>
@@ -288,14 +282,14 @@ function goToEditor(plan?: string) {
     </section>
 
     <!-- FEATURES -->
-    <section class="border-y" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(251, 245, 234, 0.5);">
+    <section class="border-y border-border bg-background/50">
       <div class="max-w-5xl mx-auto px-4 py-16">
         <div class="text-center mb-12">
-          <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Your toolkit</div>
+          <div class="text-xs uppercase tracking-[0.3em] text-secondary">Your toolkit</div>
           <h2 class="mt-3 text-3xl sm:text-4xl leading-tight">
-            Reach and <em class="italic" style="color:var(--wd-red-600);">engage</em> those dancers.
+            Reach and <em class="italic text-primary">engage</em> those dancers.
           </h2>
-          <p class="mt-3 text-sm sm:text-base max-w-xl mx-auto" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <p class="mt-3 text-sm sm:text-base max-w-xl mx-auto text-muted-foreground font-sans">
             Tools that put your event in front of dancers who are already planning — and turn that intent into ticket sales.
           </p>
         </div>
@@ -309,8 +303,8 @@ function goToEditor(plan?: string) {
             class="rounded-2xl bg-white p-6 border transition-all hover:-translate-y-1"
             :style="{ borderColor: feature.color + '55', boxShadow: '0 1px 0 ' + feature.color + '22, 0 8px 20px rgba(59,31,18,0.05)' }">
             <component :is="feature.icon" class="w-7 h-7 mb-3" :style="{ color: feature.color, 'stroke-width': 1.5 }" />
-            <div class="text-lg font-bold leading-tight" style="color:var(--wd-brown-900);">{{ feature.title }}</div>
-            <div class="mt-2 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ feature.description }}</div>
+            <div class="text-lg font-bold leading-tight text-foreground">{{ feature.title }}</div>
+            <div class="mt-2 text-sm leading-relaxed text-muted-foreground font-sans">{{ feature.description }}</div>
             <div v-if="feature.link" class="mt-3 text-xs font-bold italic" :style="{ color: feature.color, fontFamily: 'var(--wd-font-display)', fontStyle: 'italic', fontSize: '16px' }">
               See it live →
             </div>
@@ -322,44 +316,42 @@ function goToEditor(plan?: string) {
     <!-- INSIGHTS -->
     <section class="max-w-5xl mx-auto px-4 py-16">
       <div class="text-center mb-12">
-        <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">The dashboard</div>
+        <div class="text-xs uppercase tracking-[0.3em] text-secondary">The dashboard</div>
         <h2 class="mt-3 text-3xl sm:text-4xl leading-tight">
-          Insights that shape <em class="italic" style="color:var(--wd-red-600);">your next event.</em>
+          Insights that shape <em class="italic text-primary">your next event.</em>
         </h2>
-        <p class="mt-3 text-sm sm:text-base max-w-xl mx-auto" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+        <p class="mt-3 text-sm sm:text-base max-w-xl mx-auto text-muted-foreground font-sans">
           Real data from real planning behaviour.
         </p>
       </div>
 
       <div class="grid md:grid-cols-2 gap-5">
         <div v-for="insight in insights" :key="insight.title"
-          class="rounded-2xl bg-white p-6 border flex gap-4 items-start"
-          style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
-          <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-               style="background:color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent);">
-            <component :is="insight.icon" class="w-5 h-5" style="color:var(--wd-amber-500); stroke-width:1.5;" />
+          class="rounded-2xl bg-white p-6 border flex gap-4 items-start border-border">
+          <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-warning/[9.4%]">
+            <component :is="insight.icon" class="w-5 h-5 text-warning" style="stroke-width:1.5;" />
           </div>
           <div>
-            <div class="text-lg font-bold leading-tight" style="color:var(--wd-brown-900);">{{ insight.title }}</div>
-            <div class="mt-2 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ insight.description }}</div>
+            <div class="text-lg font-bold leading-tight text-foreground">{{ insight.title }}</div>
+            <div class="mt-2 text-sm leading-relaxed text-muted-foreground font-sans">{{ insight.description }}</div>
           </div>
         </div>
       </div>
 
-      <p class="mt-6 text-center text-sm" style="font-family:var(--wd-font-sans); color:var(--wd-brown-700);">
+      <p class="mt-6 text-center text-sm font-sans text-muted-foreground">
         Already on WeDance?
-        <NuxtLink to="/organizers/insights" class="font-bold underline" style="color:var(--wd-red-600);">Open your insights →</NuxtLink>
+        <NuxtLink to="/organizers/insights" class="font-bold underline text-primary">Open your insights →</NuxtLink>
       </p>
     </section>
 
     <!-- PRICING -->
-    <section id="pricing" class="border-y" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(251, 245, 234, 0.5);">
+    <section id="pricing" class="border-y border-border bg-background/50">
       <div class="max-w-5xl mx-auto px-4 py-16">
         <div class="text-center mb-12">
-          <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Pricing</div>
+          <div class="text-xs uppercase tracking-[0.3em] text-secondary">Pricing</div>
           <h2 class="mt-3 text-3xl sm:text-4xl leading-tight">
             Start free.
-            <span style="font-family:var(--wd-font-display);font-style:italic; color:var(--wd-red-600); font-size:0.95em;">Upgrade when it works.</span>
+            <span class="font-display italic text-primary" style="font-size:0.95em;">Upgrade when it works.</span>
           </h2>
         </div>
 
@@ -369,45 +361,28 @@ function goToEditor(plan?: string) {
             :class="plan.highlighted ? 'md:-translate-y-2' : ''"
             :style="{ borderColor: plan.color + (plan.highlighted ? '' : '55'), borderWidth: plan.highlighted ? '2px' : '1px', boxShadow: plan.highlighted ? '8px 10px 0 -2px ' + plan.color + ', 0 12px 28px rgba(59,31,18,0.10)' : '0 1px 0 ' + plan.color + '22, 0 8px 20px rgba(59,31,18,0.05)' }">
             <div v-if="plan.highlighted"
-              class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-white text-[10px] font-bold uppercase tracking-widest rounded-full"
+              class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-white text-eyebrow font-bold uppercase tracking-widest rounded-full"
               :style="{ background: plan.color }">
               Most popular
             </div>
-            <div class="text-lg font-bold" style="color:var(--wd-brown-900);">{{ plan.name }}</div>
+            <div class="text-lg font-bold text-foreground">{{ plan.name }}</div>
             <div class="mt-2 mb-1 flex items-baseline gap-1">
               <span class="text-4xl font-bold" :style="{ color: plan.color }">{{ plan.price }}</span>
-              <span v-if="plan.period" class="text-sm" style="color:var(--wd-amber-600);">{{ plan.period }}</span>
+              <span v-if="plan.period" class="text-sm text-secondary">{{ plan.period }}</span>
             </div>
-            <p class="text-sm mb-5" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ plan.description }}</p>
+            <p class="text-sm mb-5 text-muted-foreground font-sans">{{ plan.description }}</p>
 
             <ul class="space-y-2 mb-6">
-              <li v-for="f in plan.features" :key="f" class="flex items-start gap-2 text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+              <li v-for="f in plan.features" :key="f" class="flex items-start gap-2 text-sm text-muted-foreground font-sans">
                 <CheckCircle class="w-4 h-4 shrink-0 mt-0.5" :style="{ color: plan.color }" />
                 <span>{{ f }}</span>
               </li>
             </ul>
 
-            <a
-              v-if="plan.contact"
-              :href="salesMailto"
-              class="block text-center w-full py-3 rounded-full text-sm font-bold uppercase tracking-wider transition-all"
-              :style="plan.highlighted
-                ? { background: 'linear-gradient(135deg, ' + plan.color + ', var(--wd-orange-500))', color: 'white', boxShadow: '0 4px 0 -1px ' + plan.color }
-                : { border: '2px solid ' + plan.color, color: plan.color, background: 'white' }"
-            >
-              {{ plan.cta }}
-            </a>
-            <button
-              v-else
-              type="button"
-              class="w-full py-3 rounded-full text-sm font-bold uppercase tracking-wider transition-all"
-              :style="plan.highlighted
-                ? { background: 'linear-gradient(135deg, ' + plan.color + ', var(--wd-orange-500))', color: 'white', boxShadow: '0 4px 0 -1px ' + plan.color }
-                : { border: '2px solid ' + plan.color, color: plan.color, background: 'white' }"
-              @click="goToEditor(plan.plan)"
-            >
-              {{ plan.cta }}
-            </button>
+            <Button as-child :variant="plan.highlighted ? 'cta' : 'outline-pill'" size="lg" class="w-full" :accent="readableOn(plan.color)">
+              <a v-if="plan.contact" :href="salesMailto">{{ plan.cta }}</a>
+              <NuxtLink v-else :to="editorLink(plan.plan)">{{ plan.cta }}</NuxtLink>
+            </Button>
           </div>
         </div>
       </div>
@@ -417,23 +392,21 @@ function goToEditor(plan?: string) {
     <section class="max-w-3xl mx-auto px-4 py-20 text-center">
       <h2 class="text-4xl sm:text-5xl leading-tight">
         Ready to fill
-        <em class="italic" style="color:var(--wd-red-600);">your dance floor?</em>
+        <em class="italic text-primary">your dance floor?</em>
       </h2>
-      <p class="mt-5 text-sm sm:text-base" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <p class="mt-5 text-sm sm:text-base text-muted-foreground font-sans">
         List your festival in minutes. Your dancers will thank you.
       </p>
-      <button
-        type="button"
-        class="mt-8 inline-flex items-center gap-2 px-7 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-        style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-        @click="goToEditor('starter')"
-      >
-        Get started free <ArrowRight class="w-4 h-4" />
-      </button>
-      <div class="mt-3 text-sm" style="font-family:var(--wd-font-display);font-style:italic; color:var(--wd-amber-600);">
+      <Button as-child variant="cta" size="lg" class="mt-8 px-7">
+        <NuxtLink :to="editorLink('starter')">Get started free <ArrowRight aria-hidden="true" /></NuxtLink>
+      </Button>
+      <div class="mt-3 text-sm font-display italic text-secondary">
         — free to list, free to browse
       </div>
     </section>
+
+    </main>
+
 
     <SiteFooter />
   </div>

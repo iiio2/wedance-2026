@@ -4,7 +4,7 @@
  * directory shown when WeDance has no events there yet. Client-side fetch.
  */
 import { MessageCircle, ArrowUpRight, BadgeCheck, Flag } from 'lucide-vue-next'
-import { WD } from '~/lib/brand'
+import { Button } from '~/components/ui/button'
 
 const props = defineProps<{ citySlug: string; cityName?: string }>()
 const { $trpc } = useNuxtApp()
@@ -48,47 +48,58 @@ const platformLabel: Record<string, string> = {
 </script>
 
 <template>
-  <!-- Only render the entire section (including wrapper) if there are groups to display -->
-  <section v-if="groups.length > 0" class="border-t" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(251, 245, 234, 0.5);">
-    <div class="max-w-4xl mx-auto px-4 py-12" style="font-family:var(--wd-font-sans);">
+  <!-- Hidden only while loading; an empty city gets an empty state, not silence. -->
+  <section v-if="!loading" class="border-t border-border bg-background/50">
+    <div class="max-w-4xl mx-auto px-4 py-12 font-sans">
       <div class="flex items-center gap-2">
-        <MessageCircle class="w-5 h-5" style="color:var(--wd-green-600);" />
-        <h3 class="text-2xl" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Local groups</h3>
+        <MessageCircle class="w-5 h-5 text-success" aria-hidden="true" />
+        <h2 class="text-2xl font-display text-foreground">Local groups</h2>
       </div>
-      <p class="mt-1 text-sm" style="color:var(--wd-brown-700);">
+      <p class="mt-1 text-sm text-muted-foreground">
         Community chats where the{{ cityName ? ` ${cityName}` : '' }} scene organises — WhatsApp, Telegram &amp; more. Join the locals.
       </p>
 
-      <ul class="mt-4 grid gap-2 sm:grid-cols-2">
+      <ul v-if="groups.length" class="mt-4 grid gap-2 sm:grid-cols-2">
         <li v-for="g in groups" :key="g.id" class="relative">
           <div class="group relative">
             <a :href="g.inviteUrl" target="_blank" rel="noopener"
-               class="flex items-center justify-between gap-3 rounded-xl border p-3 bg-white transition-all hover:-translate-y-0.5"
-               style="border-color:color-mix(in srgb, var(--wd-green-600) 20%, transparent);">
+               class="flex items-center justify-between gap-3 rounded-xl border p-3 bg-white transition-all hover:-translate-y-0.5 border-wd-green-600/20">
               <div class="min-w-0">
                 <div class="flex items-center gap-1.5">
-                  <span class="font-bold text-sm truncate" style="color:var(--wd-brown-900);">{{ g.name }}</span>
-                  <BadgeCheck v-if="g.verified" class="w-3.5 h-3.5 shrink-0" style="color:var(--wd-green-600);" />
+                  <span class="font-bold text-sm truncate text-foreground">{{ g.name }}</span>
+                  <BadgeCheck v-if="g.verified" class="w-3.5 h-3.5 shrink-0 text-success" aria-label="Verified" />
                 </div>
-                <div class="text-[11px] mt-0.5" style="color:var(--wd-amber-600);">
+                <div class="text-meta mt-0.5 text-secondary">
                   {{ platformLabel[g.platform] || 'Group' }}<span v-if="g.styles?.length"> · {{ g.styles.join(', ') }}</span>
                 </div>
               </div>
-              <ArrowUpRight class="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" style="color:var(--wd-green-600);" />
+              <ArrowUpRight class="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 text-success" aria-hidden="true" />
             </a>
-            <button
+            <Button
               type="button"
+              variant="ghost"
               :disabled="reportingId === g.id"
-              class="absolute top-2 right-2 p-1.5 rounded-lg transition-all opacity-60 sm:opacity-0 sm:group-hover:opacity-100"
-              style="background:rgba(220,38,38,0.1);"
+              class="absolute top-2 right-2 h-auto w-auto p-1.5 rounded-lg transition-all opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 bg-primary/10 hover:bg-primary/15 [&_svg]:size-3.5"
               title="Report broken invite link or inactive group"
+              :aria-label="`Report ${g.name} (broken link or inactive)`"
               @click.prevent="reportGroup(g.id)"
             >
-              <Flag class="w-3.5 h-3.5" :style="{ color: reportingId === g.id ? '#999' : WD.red600 }" />
-            </button>
+              <Flag aria-hidden="true" :class="reportingId === g.id ? 'text-wd-gray-500' : 'text-primary'" />
+            </Button>
           </div>
         </li>
       </ul>
+
+      <!-- Empty state: what's missing, why ("yet"), one next action. -->
+      <div v-else class="mt-4 text-center py-10 px-6 rounded-2xl border-2 border-dashed border-input bg-white/50">
+        <MessageCircle class="w-8 h-8 mx-auto mb-3 text-secondary" aria-hidden="true" />
+        <p class="text-sm text-muted-foreground">
+          No local groups listed{{ cityName ? ` for ${cityName}` : '' }} yet. Locals usually know the chats where the scene meets.
+        </p>
+        <Button as-child variant="link" class="mt-1 h-auto p-0 text-xs font-bold underline">
+          <NuxtLink :to="`/cities/${citySlug}#ask-locals`">Ask the locals</NuxtLink>
+        </Button>
+      </div>
     </div>
   </section>
 </template>

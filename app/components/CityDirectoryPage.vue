@@ -6,6 +6,9 @@
  * JSON-LD so each city×role page is independently indexable.
  */
 import { ArrowLeft, MapPin } from 'lucide-vue-next'
+import { Button } from '~/components/ui/button'
+import { WD } from '~/lib/brand'
+import { readableOn } from '~/lib/contrast'
 
 const props = defineProps<{ role: 'artists' | 'organisers' | 'venues' }>()
 
@@ -83,27 +86,29 @@ useHead(() => ({
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
+
+    <main>
 
     <section class="max-w-4xl mx-auto px-4 pt-8 pb-4">
       <!-- Breadcrumb back to the city hub -->
-      <nav class="text-xs mb-4" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);" aria-label="Breadcrumb">
-        <NuxtLink to="/cities" class="hover:underline">Cities</NuxtLink>
+      <nav class="text-xs mb-4 text-secondary font-sans" aria-label="Breadcrumb">
+        <NuxtLink to="/cities" class="underline underline-offset-2 hover:no-underline">Cities</NuxtLink>
         <span class="mx-1.5">/</span>
-        <NuxtLink :to="`/cities/${slug}`" class="hover:underline">{{ cityName }}</NuxtLink>
+        <NuxtLink :to="`/cities/${slug}`" class="underline underline-offset-2 hover:no-underline">{{ cityName }}</NuxtLink>
         <span class="mx-1.5">/</span>
-        <span style="color:var(--wd-brown-700);">{{ roleLabel }}</span>
+        <span class="text-muted-foreground">{{ roleLabel }}</span>
       </nav>
 
-      <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">{{ heading.kicker }}</div>
-      <h1 class="mt-2 text-4xl sm:text-5xl leading-[1.02] tracking-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+      <div class="text-xs uppercase tracking-[0.3em] text-secondary">{{ heading.kicker }}</div>
+      <h1 class="mt-2 text-4xl sm:text-5xl leading-[1.02] tracking-tight font-display text-foreground">
         {{ roleLabel }} in
         <em class="italic" :style="{ color: accent }">{{ cityName }}</em>
       </h1>
-      <p class="mt-2 text-sm italic" style="color:var(--wd-brown-700);">
+      <p class="mt-2 text-sm italic text-muted-foreground">
         {{ people.length }} {{ heading.accentWord }} in {{ cityName }}.
-        <NuxtLink :to="`/cities/${slug}`" class="not-italic font-bold hover:underline" :style="{ color: accent, fontFamily: 'var(--wd-font-sans)' }">
+        <NuxtLink :to="`/cities/${slug}`" class="not-italic font-bold underline underline-offset-2 font-sans" :style="{ color: readableOn(accent, WD.cream) }">
           ← Back to this week
         </NuxtLink>
       </p>
@@ -130,7 +135,7 @@ useHead(() => ({
             <span
               v-for="st in p.styles.slice(0, 3)"
               :key="st"
-              class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-white"
+              class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-white"
               style="background:rgba(59,31,18,0.55); backdrop-filter: blur(4px);"
             >{{ st }}</span>
           </div>
@@ -149,18 +154,13 @@ useHead(() => ({
 
       <div
         v-else
-        class="rounded-2xl border-2 border-dashed p-10 text-center"
-        style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);"
+        class="rounded-2xl border-2 border-dashed p-10 text-center border-input bg-white/50"
       >
-        <MapPin class="w-6 h-6 mx-auto mb-2" style="color:var(--wd-amber-600);" />
-        <p class="text-sm font-bold" style="color:var(--wd-brown-900);">No {{ roleLabel.toLowerCase() }} listed in {{ cityName }} yet.</p>
-        <NuxtLink
-          to="/for-events"
-          class="inline-flex items-center gap-2 mt-4 rounded-full px-5 py-2.5 text-white text-xs font-bold uppercase tracking-wider"
-          style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));"
-        >
-          List yours
-        </NuxtLink>
+        <MapPin class="w-6 h-6 mx-auto mb-2 text-secondary" aria-hidden="true" />
+        <p class="text-sm font-bold text-foreground">No {{ roleLabel.toLowerCase() }} listed in {{ cityName }} yet.</p>
+        <Button as-child variant="cta" size="sm" class="mt-4 px-5 text-xs">
+          <NuxtLink to="/for-events">List yours</NuxtLink>
+        </Button>
       </div>
 
       <!-- Local groups (WhatsApp / Telegram / …) live under Organisers — a
@@ -169,6 +169,9 @@ useHead(() => ({
         <CommunityGroupsSection :city-slug="slug" :city-name="cityName" />
       </ClientOnly>
     </section>
+
+    </main>
+
 
     <SiteFooter />
   </div>

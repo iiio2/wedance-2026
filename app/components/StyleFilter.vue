@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
+import { readableOn } from '~/lib/contrast'
 /**
  * StyleFilter — the dance-style chip row used on every filter surface.
  * Leads with the big three (Salsa, Bachata, Kizomba), collapses the rest
@@ -29,6 +31,9 @@ const leadCount = computed(() => Math.max(PRIMARY.filter((s) => props.styles.inc
 const visible = computed(() => (expanded.value ? ordered.value : ordered.value.slice(0, leadCount.value)))
 const hiddenCount = computed(() => Math.max(0, ordered.value.length - leadCount.value))
 
+// Accent text on white (and white on accent) darkened just enough for 4.5:1.
+const ink = (i: number) => readableOn(props.accents[i % props.accents.length] ?? WD.amber600)
+
 function select(s: string) {
   emit('update:modelValue', props.modelValue === s ? '' : s)
 }
@@ -37,37 +42,39 @@ function select(s: string) {
 <template>
   <div class="flex flex-wrap items-center gap-1.5">
     <div class="flex flex-wrap items-center gap-1.5">
-      <button
+      <Button
         v-for="(style, i) in visible"
         :key="style"
         type="button"
-        class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all"
+        variant="ghost"
+        class="h-auto px-2.5 py-1 rounded-full text-meta font-bold uppercase tracking-wider transition-all"
+        :aria-pressed="modelValue === style ? 'true' : 'false'"
         :style="modelValue === style
-          ? { background: accents[i % accents.length], color: 'white' }
-          : { background: 'white', color: accents[i % accents.length], border: '1px solid ' + accents[i % accents.length] + '55' }"
+          ? { background: ink(i), color: 'white' }
+          : { background: 'white', color: ink(i), border: '1px solid ' + accents[i % accents.length] + '55' }"
         @click="select(style)"
       >
         {{ style }}
-      </button>
+      </Button>
 
-      <button
+      <Button
         v-if="hiddenCount && !expanded"
         type="button"
-        class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all"
-        style="background:white; color:var(--wd-brown-700); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);"
+        variant="outline"
+        class="h-auto px-2.5 py-1 rounded-full text-meta font-bold uppercase tracking-wider transition-all bg-white text-muted-foreground border-input"
         @click="expanded = true"
       >
         + {{ hiddenCount }} more
-      </button>
-      <button
+      </Button>
+      <Button
         v-else-if="expanded && ordered.length > leadCount"
         type="button"
-        class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all"
-        style="background:white; color:var(--wd-amber-600); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);"
+        variant="outline"
+        class="h-auto px-2.5 py-1 rounded-full text-meta font-bold uppercase tracking-wider transition-all bg-white text-secondary border-input"
         @click="expanded = false"
       >
         Less
-      </button>
+      </Button>
     </div>
   </div>
 </template>
