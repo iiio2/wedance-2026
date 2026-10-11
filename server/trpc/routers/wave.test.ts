@@ -3,10 +3,11 @@
  *
  * Hermetic — no DATABASE_URL required. Uses an in-memory FakeDb that
  * mirrors enough of the Drizzle query builder to exercise the wave
- * procedures: send, retract, myWaves, wavesForMe, friends.
+ * procedures: send, retract, myWaves, wavesForMe, friends, discoverPool,
+ * incomingCount.
  *
  * We mock drizzle-orm by importing the real module and only overriding
- * eq/and/inArray to return predicate functions. This avoids breaking
+ * eq/and/inArray/ne to return predicate functions. This avoids breaking
  * pgTable internals that depend on the real drizzle-orm exports.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -48,16 +49,31 @@ vi.mock('drizzle-orm', async (importOriginal) => {
     }
   }
 
-  return { ...real, eq, and, inArray }
+  const ne = (col: any, val: any) => {
+    const dbName: string | undefined = col?.name
+    const jsKey = dbName ? snakeToCamel(dbName) : undefined
+    return (row: Record<string, any>) => {
+      if (jsKey && Object.prototype.hasOwnProperty.call(row, jsKey)) {
+        return row[jsKey] !== val
+      }
+      if (dbName && Object.prototype.hasOwnProperty.call(row, dbName)) {
+        return row[dbName] !== val
+      }
+      return true
+    }
+  }
+
+  return { ...real, eq, and, inArray, ne }
 })
 
 // ---------- FakeDb ----------
 
 interface FakeRow { [k: string]: any }
 
-// Two stores: waves and dancers (for profile joins)
+// Three stores: waves, dancers (for profile joins), plan items (for going list)
 let waveRows: FakeRow[] = []
 let dancerRows: FakeRow[] = []
+let planItemRows: FakeRow[] = []
 
 class FakeDb {
   select(columns: any) {
@@ -65,14 +81,17 @@ class FakeDb {
       from: (table: any) => {
         const tableName = table?.[Symbol.for('drizzle:Name')]
           || table?.constructor?.name || 'unknown'
-        const store = tableName === 'festival_waves' ? waveRows : dancerRows
+        const store = tableName === 'festival_waves' ? waveRows
+          : tableName === 'plan_items' ? planItemRows
+          : dancerRows
 
         return {
           where: (filter: (r: FakeRow) => boolean) => {
             const matched = store.filter(filter)
-            return Promise.resolve(
-              matched.map(r => this._project(columns, r)),
-            )
+            const result = matched.map(r => this._project(columns, r))
+            const p = Promise.resolve(result) as any
+            p.limit = (_n: number) => Promise.resolve(result)
+            return p
           },
           innerJoin: (_joinTable: any, _cond: any) => ({
             where: (filter: (r: FakeRow) => boolean) => {
@@ -163,10 +182,11 @@ describe('wave router (RAZ-82)', () => {
   beforeEach(() => {
     db = new FakeDb()
     waveRows = []
+    planItemRows = []
     dancerRows = [
-      { id: 'a0000000-0000-4000-a000-000000000001', name: 'Alice', photo: null, city: 'Munich', username: 'alice', danceStyles: ['Salsa'], role: 'follow', instagram: 'alice_dance', profilePublic: true },
-      { id: 'b0000000-0000-4000-b000-000000000002', name: 'Bob', photo: null, city: 'Berlin', username: 'bob', danceStyles: ['Bachata'], role: 'lead', instagram: null, profilePublic: true },
-      { id: 'c0000000-0000-4000-b000-000000000003', name: 'Carol', photo: null, city: 'Munich', username: 'carol', danceStyles: ['Kizomba'], role: 'follow', instagram: null, profilePublic: false },
+      { id: 'a0000000-0000-4000-a000-000000000001', name: 'Alice', photo: null, city: 'Munich', username: 'alice', danceStyles: ['Salsa'], danceLevels: { Salsa: 'Intermediate' }, role: 'follow', instagram: 'alice_dance', bio: 'I love salsa', profilePublic: true },
+      { id: 'b0000000-0000-4000-b000-000000000002', name: 'Bob', photo: null, city: 'Berlin', username: 'bob', danceStyles: ['Bachata'], danceLevels: { Bachata: 'Advanced' }, role: 'lead', instagram: null, bio: null, profilePublic: true },
+      { id: 'c0000000-0000-4000-b000-000000000003', name: 'Carol', photo: null, city: 'Munich', username: 'carol', danceStyles: ['Kizomba'], danceLevels: {}, role: 'follow', instagram: null, bio: null, profilePublic: false },
     ]
   })
 
@@ -272,6 +292,165 @@ describe('wave router (RAZ-82)', () => {
       expect(f).toHaveLength(1)
       expect(f[0].dancerId).toBe('b0000000-0000-4000-b000-000000000002')
       expect(f[0].name).toBe('Bob')
+    })
+  })
+
+  describe('discoverPool (RAZ-65)', () => {
+    const ALICE = 'a0000000-0000-4000-a000-000000000001'
+    const BOB = 'b0000000-0000-4000-b000-000000000002'
+    const CAROL = 'c0000000-0000-4000-b000-000000000003'
+
+    function addPlanItem(dancerId: string, slug = 'fest-1', shareGoing = true) {
+      planItemRows.push({
+        id: `plan-${planItemRows.length}`,
+        dancerId,
+        itemType: 'festival',
+        itemId: slug,
+        shareGoing,
+      })
+    }
+
+    it('returns attendees who opted into share going', async () => {
+      addPlanItem(BOB) // Bob is going and sharing
+      addPlanItem(ALICE) // Alice (self) is going too — should be excluded
+
+      const caller = makeCaller(db, ALICE)
+      const pool = await caller.wave.discoverPool({ festivalSlug: 'fest-1' })
+      expect(pool).toHaveLength(1)
+      expect(pool[0].id).toBe(BOB)
+      expect(pool[0].name).toBe('Bob')
+    })
+
+    it('excludes dancers the caller already swiped on', async () => {
+      addPlanItem(BOB)
+
+      // Alice already waved at Bob
+      const caller = makeCaller(db, ALICE)
+      await caller.wave.send({ festivalSlug: 'fest-1', targetDancerId: BOB })
+
+      const pool = await caller.wave.discoverPool({ festivalSlug: 'fest-1' })
+      expect(pool).toHaveLength(0)
+    })
+
+    it('excludes dancers with shareGoing=false', async () => {
+      addPlanItem(BOB, 'fest-1', false) // Bob is going but NOT sharing
+
+      const caller = makeCaller(db, ALICE)
+      const pool = await caller.wave.discoverPool({ festivalSlug: 'fest-1' })
+      expect(pool).toHaveLength(0)
+    })
+
+    it('excludes private profiles', async () => {
+      addPlanItem(CAROL) // Carol has profilePublic=false
+
+      const caller = makeCaller(db, ALICE)
+      const pool = await caller.wave.discoverPool({ festivalSlug: 'fest-1' })
+      expect(pool).toHaveLength(0)
+    })
+
+    it('prioritises dancers who waved at the caller (likedMe=true first)', async () => {
+      // Add a fourth public dancer so we have two candidates
+      dancerRows.push({
+        id: 'd0000000-0000-4000-d000-000000000004',
+        name: 'Dave',
+        photo: null,
+        city: 'Hamburg',
+        username: 'dave',
+        danceStyles: ['Salsa'],
+        danceLevels: {},
+        role: 'lead',
+        instagram: null,
+        bio: null,
+        profilePublic: true,
+      })
+
+      addPlanItem(BOB)
+      addPlanItem('d0000000-0000-4000-d000-000000000004')
+
+      // Bob waved at Alice (incoming) — Dave didn't
+      waveRows.push({
+        id: 'wave-incoming',
+        festivalSlug: 'fest-1',
+        dancerId: BOB,
+        targetDancerId: ALICE,
+        createdAt: new Date(),
+      })
+
+      const caller = makeCaller(db, ALICE)
+      const pool = await caller.wave.discoverPool({ festivalSlug: 'fest-1' })
+      expect(pool).toHaveLength(2)
+      expect(pool[0].id).toBe(BOB) // Bob first (waved at Alice)
+      expect(pool[0].likedMe).toBe(true)
+      expect(pool[1].id).toBe('d0000000-0000-4000-d000-000000000004')
+      expect(pool[1].likedMe).toBe(false)
+    })
+
+    it('returns enriched profile fields (styles with levels)', async () => {
+      addPlanItem(BOB)
+      const caller = makeCaller(db, ALICE)
+      const pool = await caller.wave.discoverPool({ festivalSlug: 'fest-1' })
+      expect(pool[0].styles).toEqual([{ name: 'Bachata', level: 'Advanced' }])
+      expect(pool[0].role).toBe('lead')
+    })
+
+    it('returns empty when no attendees', async () => {
+      const caller = makeCaller(db, ALICE)
+      const pool = await caller.wave.discoverPool({ festivalSlug: 'fest-1' })
+      expect(pool).toHaveLength(0)
+    })
+
+    it('rejects unauthenticated', async () => {
+      const caller = makeCaller(db, null)
+      await expect(caller.wave.discoverPool({ festivalSlug: 'fest-1' })).rejects.toThrow('Not signed in')
+    })
+  })
+
+  describe('incomingCount (RAZ-65)', () => {
+    const ALICE = 'a0000000-0000-4000-a000-000000000001'
+    const BOB = 'b0000000-0000-4000-b000-000000000002'
+
+    it('counts incoming waves not yet reciprocated', async () => {
+      // Bob waved at Alice
+      waveRows.push({
+        id: 'wave-1',
+        festivalSlug: 'fest-1',
+        dancerId: BOB,
+        targetDancerId: ALICE,
+        createdAt: new Date(),
+      })
+
+      const caller = makeCaller(db, ALICE)
+      const count = await caller.wave.incomingCount({ festivalSlug: 'fest-1' })
+      expect(count).toBe(1)
+    })
+
+    it('does not count waves already reciprocated', async () => {
+      // Bob waved at Alice
+      waveRows.push({
+        id: 'wave-1',
+        festivalSlug: 'fest-1',
+        dancerId: BOB,
+        targetDancerId: ALICE,
+        createdAt: new Date(),
+      })
+
+      // Alice waved back at Bob
+      const caller = makeCaller(db, ALICE)
+      await caller.wave.send({ festivalSlug: 'fest-1', targetDancerId: BOB })
+
+      const count = await caller.wave.incomingCount({ festivalSlug: 'fest-1' })
+      expect(count).toBe(0)
+    })
+
+    it('returns 0 when no incoming waves', async () => {
+      const caller = makeCaller(db, ALICE)
+      const count = await caller.wave.incomingCount({ festivalSlug: 'fest-1' })
+      expect(count).toBe(0)
+    })
+
+    it('rejects unauthenticated', async () => {
+      const caller = makeCaller(db, null)
+      await expect(caller.wave.incomingCount({ festivalSlug: 'fest-1' })).rejects.toThrow('Not signed in')
     })
   })
 

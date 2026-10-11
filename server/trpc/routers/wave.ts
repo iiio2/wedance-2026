@@ -1,7 +1,7 @@
 import { z } from 'zod'
-import { eq, and, inArray } from 'drizzle-orm'
+import { eq, and, inArray, notInArray, ne } from 'drizzle-orm'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
-import { festivalWaves, dancers } from '../../database/schema'
+import { festivalWaves, dancers, planItems } from '../../database/schema'
 
 export const waveRouter = router({
   /**
@@ -169,5 +169,143 @@ export const waveRouter = router({
         role: r.role,
         instagram: r.instagram,
       }))
+    }),
+
+  /**
+   * Discover pool — attendees who opted into "share going" for a festival,
+   * excluding the caller and anyone they've already swiped (waved at or
+   * retracted). Returns enriched profiles for the swipe deck.
+   *
+   * Prioritisation: dancers who waved at the caller appear first (they
+   * already expressed interest, so a right-swipe creates an instant match).
+   */
+  discoverPool: protectedProcedure
+    .input(z.object({ festivalSlug: z.string().min(1).max(120) }))
+    .query(async ({ ctx, input }) => {
+      // 1. IDs I've already swiped on (so we exclude them from the deck)
+      const alreadySwiped = await ctx.db
+        .select({ targetDancerId: festivalWaves.targetDancerId })
+        .from(festivalWaves)
+        .where(
+          and(
+            eq(festivalWaves.festivalSlug, input.festivalSlug),
+            eq(festivalWaves.dancerId, ctx.dancerId),
+          ),
+        )
+      const swipedIds = alreadySwiped.map(r => r.targetDancerId)
+
+      // 2. IDs of people who waved at me (for priority sorting)
+      const incomingWaves = await ctx.db
+        .select({ dancerId: festivalWaves.dancerId })
+        .from(festivalWaves)
+        .where(
+          and(
+            eq(festivalWaves.festivalSlug, input.festivalSlug),
+            eq(festivalWaves.targetDancerId, ctx.dancerId),
+          ),
+        )
+      const incomingIds = new Set(incomingWaves.map(r => r.dancerId))
+
+      // 3. Attendees who are "going" and opted to share
+      const goingRows = await ctx.db
+        .select({ dancerId: planItems.dancerId })
+        .from(planItems)
+        .where(
+          and(
+            eq(planItems.itemType, 'festival'),
+            eq(planItems.itemId, input.festivalSlug),
+            eq(planItems.shareGoing, true),
+            ne(planItems.dancerId, ctx.dancerId),
+          ),
+        )
+
+      // Filter out already-swiped
+      const swipedSet = new Set(swipedIds)
+      const candidateIds = goingRows
+        .map(r => r.dancerId)
+        .filter(id => !swipedSet.has(id))
+
+      if (candidateIds.length === 0) return []
+
+      // 4. Fetch profiles
+      const profiles = await ctx.db
+        .select({
+          id: dancers.id,
+          name: dancers.name,
+          photo: dancers.photo,
+          city: dancers.city,
+          username: dancers.username,
+          danceStyles: dancers.danceStyles,
+          danceLevels: dancers.danceLevels,
+          role: dancers.role,
+          bio: dancers.bio,
+        })
+        .from(dancers)
+        .where(
+          and(
+            inArray(dancers.id, candidateIds),
+            eq(dancers.profilePublic, true),
+          ),
+        )
+        .limit(50)
+
+      // 5. Sort: dancers who waved at us first, then the rest
+      const sorted = profiles.sort((a, b) => {
+        const aIncoming = incomingIds.has(a.id) ? 0 : 1
+        const bIncoming = incomingIds.has(b.id) ? 0 : 1
+        return aIncoming - bIncoming
+      })
+
+      return sorted.map(r => {
+        const styles = ((r.danceStyles as string[]) ?? [])
+        const levels = (r.danceLevels as Record<string, string>) ?? {}
+        return {
+          id: r.id,
+          name: r.name,
+          photo: r.photo,
+          city: r.city,
+          username: r.username,
+          role: r.role as 'lead' | 'follow' | null,
+          bio: r.bio,
+          styles: styles.map(s => ({
+            name: s,
+            level: (levels[s] as 'Beginner' | 'Intermediate' | 'Advanced') || 'Beginner',
+          })),
+          likedMe: incomingIds.has(r.id),
+        }
+      })
+    }),
+
+  /**
+   * Count of dancers who waved at me but I haven't waved back yet —
+   * the "N dancers already want to dance with you" teaser count.
+   */
+  incomingCount: protectedProcedure
+    .input(z.object({ festivalSlug: z.string().min(1).max(120) }))
+    .query(async ({ ctx, input }) => {
+      // People who waved at me
+      const incoming = await ctx.db
+        .select({ dancerId: festivalWaves.dancerId })
+        .from(festivalWaves)
+        .where(
+          and(
+            eq(festivalWaves.festivalSlug, input.festivalSlug),
+            eq(festivalWaves.targetDancerId, ctx.dancerId),
+          ),
+        )
+
+      // People I've already waved at
+      const myOutgoing = await ctx.db
+        .select({ targetDancerId: festivalWaves.targetDancerId })
+        .from(festivalWaves)
+        .where(
+          and(
+            eq(festivalWaves.festivalSlug, input.festivalSlug),
+            eq(festivalWaves.dancerId, ctx.dancerId),
+          ),
+        )
+
+      const outgoingSet = new Set(myOutgoing.map(r => r.targetDancerId))
+      return incoming.filter(r => !outgoingSet.has(r.dancerId)).length
     }),
 })

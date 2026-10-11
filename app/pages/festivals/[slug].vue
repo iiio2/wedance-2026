@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Festival, Teacher, Workshop, PlanEntry, DanceRole, DancePartner, FestivalFriend, PartnerMatch, DiscoverDancer, ExtraActivity, SwipeCard, FreemiumState } from '~/types/festival'
+import type { Festival, Teacher, Workshop, PlanEntry, DanceRole, DancePartner, FestivalFriend, PartnerMatch, ExtraActivity, SwipeCard, FreemiumState } from '~/types/festival'
 import { ArrowRight, Sparkles, Check } from 'lucide-vue-next'
 import { artistPlaces, artistLanguages } from '~/data/artists'
 import * as salsaOpen from '~/data/mock-festival'
@@ -457,126 +457,8 @@ const mockPartnerMatches: PartnerMatch[] = [
 
 const partnerMatches = computed<PartnerMatch[]>(() => isSignedIn.value ? mockPartnerMatches : [])
 
-// Mock discoverable dancers (for Tinder-style swiping)
-const mockDiscoverDancers: DiscoverDancer[] = [
-  {
-    id: 'disc-1',
-    name: 'Isabella Ruiz',
-    photo: 'https://i.pravatar.cc/400?u=isabella',
-    role: 'follow',
-    styles: [{ name: 'Salsa', level: 'Intermediate' }, { name: 'Bachata', level: 'Intermediate' }, { name: 'Cha Cha', level: 'Beginner' }],
-    workshopIds: ['fri-1', 'sat-1', 'sat-7', 'sun-4'],
-    bio: 'Love social dancing! This is my 3rd festival and I want to dance with everyone.',
-    mutualFriends: 2,
-    endorsements: { Salsa: 3, Bachata: 5 },
-  },
-  {
-    id: 'taxi-1',
-    name: 'Valentina Cruz',
-    photo: 'https://i.pravatar.cc/400?u=valentina',
-    role: 'follow',
-    styles: [{ name: 'Salsa', level: 'Advanced' }, { name: 'Bachata', level: 'Advanced' }, { name: 'Cha Cha', level: 'Advanced' }],
-    workshopIds: ['fri-1', 'fri-2', 'sat-1', 'sat-4', 'sat-7', 'sat-8', 'sun-1', 'sun-4', 'sun-7'],
-    bio: 'Professional dancer & instructor. Available for workshops — book me as your partner!',
-    endorsements: { Salsa: 15, Bachata: 12, 'Cha Cha': 8 },
-    serviceType: 'taxi-dancer',
-    hourlyRate: 10,
-  },
-  {
-    id: 'disc-2',
-    name: 'Tomás Herrera',
-    photo: 'https://i.pravatar.cc/400?u=tomas',
-    role: 'lead',
-    styles: [{ name: 'Salsa', level: 'Advanced' }, { name: 'Mambo', level: 'Advanced' }, { name: 'Son', level: 'Intermediate' }],
-    workshopIds: ['fri-1', 'fri-2', 'sat-1', 'sat-8', 'sun-1', 'sun-7'],
-    bio: 'Salsa instructor from Madrid. Here to learn and share the dance floor.',
-    endorsements: { Salsa: 12, Mambo: 7 },
-  },
-  {
-    id: 'video-1',
-    name: 'Marco Bellini',
-    photo: 'https://i.pravatar.cc/400?u=marco-video',
-    role: 'lead',
-    styles: [{ name: 'Salsa', level: 'Intermediate' }, { name: 'Bachata', level: 'Beginner' }],
-    workshopIds: [],
-    bio: 'Professional dance videographer. I capture your best moments on the floor — social clips, workshop highlights, or full festival recap.',
-    serviceType: 'videographer',
-    hourlyRate: 25,
-  },
-  {
-    id: 'disc-3',
-    name: 'Mira Johansson',
-    photo: 'https://i.pravatar.cc/400?u=mira',
-    role: 'follow',
-    styles: [{ name: 'Bachata', level: 'Beginner' }, { name: 'Kizomba', level: 'Beginner' }],
-    workshopIds: ['sat-4', 'sat-11', 'sun-4', 'sun-6'],
-    bio: 'First festival ever! A bit shy but really want to meet people and dance.',
-    mutualFriends: 1,
-  },
-  {
-    id: 'disc-4',
-    name: 'Rafael Santos',
-    photo: 'https://i.pravatar.cc/400?u=rafael',
-    role: 'lead',
-    styles: [{ name: 'Bachata', level: 'Intermediate' }, { name: 'Salsa', level: 'Intermediate' }],
-    workshopIds: ['fri-2', 'sat-4', 'sat-7', 'sun-1', 'sun-4'],
-    bio: 'Bachata sensual is my jam. Always up for a social dance between workshops!',
-    mutualFriends: 3,
-  },
-  {
-    id: 'taxi-2',
-    name: 'Diego Fernandez',
-    photo: 'https://i.pravatar.cc/400?u=diego',
-    role: 'lead',
-    styles: [{ name: 'Salsa', level: 'Advanced' }, { name: 'Son', level: 'Advanced' }, { name: 'Rumba', level: 'Intermediate' }],
-    workshopIds: ['fri-1', 'sat-1', 'sat-8', 'sun-1', 'sun-7'],
-    bio: 'Dance teacher from Havana. I make every follow shine — book me for any workshop!',
-    endorsements: { Salsa: 20, Son: 10 },
-    serviceType: 'taxi-dancer',
-    hourlyRate: 15,
-  },
-  {
-    id: 'disc-5',
-    name: 'Nadia Popov',
-    photo: 'https://i.pravatar.cc/400?u=nadia',
-    role: 'follow',
-    styles: [{ name: 'Salsa', level: 'Advanced' }, { name: 'Bachata', level: 'Intermediate' }, { name: 'Kizomba', level: 'Advanced' }],
-    workshopIds: ['fri-1', 'sat-1', 'sat-4', 'sat-8', 'sun-1', 'sun-7'],
-    bio: 'Dance is my language. Looking to connect with leads who enjoy musicality.',
-    endorsements: { Salsa: 8, Kizomba: 6 },
-  },
-  {
-    id: 'disc-6',
-    name: 'Kenji Yamamoto',
-    photo: 'https://i.pravatar.cc/400?u=kenji',
-    role: 'lead',
-    styles: [{ name: 'Salsa', level: 'Beginner' }],
-    workshopIds: ['sat-1', 'sat-7', 'sun-1'],
-    bio: 'Started salsa 4 months ago. Nervous but excited for my first congress!',
-    mutualFriends: 1,
-  },
-  {
-    id: 'disc-7',
-    name: 'Camila Vega',
-    photo: 'https://i.pravatar.cc/400?u=camila',
-    role: 'follow',
-    styles: [{ name: 'Salsa', level: 'Intermediate' }, { name: 'Cha Cha', level: 'Beginner' }],
-    workshopIds: ['fri-1', 'fri-2', 'sat-1', 'sat-7', 'sun-1', 'sun-4'],
-    bio: 'Traveling from Buenos Aires for this! Want to dance with as many people as possible.',
-    mutualFriends: 2,
-  },
-  {
-    id: 'disc-8',
-    name: 'André Müller',
-    photo: 'https://i.pravatar.cc/400?u=andre',
-    role: 'lead',
-    styles: [{ name: 'Kizomba', level: 'Advanced' }, { name: 'Bachata', level: 'Intermediate' }, { name: 'Salsa', level: 'Intermediate' }],
-    workshopIds: ['sat-4', 'sat-8', 'sat-11', 'sun-4', 'sun-6', 'sun-7'],
-    bio: 'Kizomba specialist but love all Latin dances. Let\'s share a dance!',
-  },
-]
-
-const discoverDancers = computed<DiscoverDancer[]>(() => mockDiscoverDancers)
+// Discover dancers are now loaded by the DiscoverDancers component itself
+// via tRPC (wave.discoverPool) — no mock data needed here.
 
 // Payment success confirmation
 const showPaymentSuccess = ref(false)
@@ -810,31 +692,16 @@ async function startCheckout() {
   }
 }
 
-// Combined swipe deck: interleave dancers with dinner/activity cards
-const swipeCards = computed<SwipeCard[]>(() => {
-  const dancers: SwipeCard[] = mockDiscoverDancers.map(d => ({ ...d, cardType: 'dancer' as const }))
+// Extra cards (dinner, activity, onboarding) interleaved into the swipe deck
+// by DiscoverDancers. Dancer cards come from the component's own tRPC query.
+const extraSwipeCards = computed<SwipeCard[]>(() => {
   const dinners: SwipeCard[] = groupDinners.value.map(d => ({ ...d, cardType: 'dinner' as const }))
   const activities: SwipeCard[] = extraActivities.value.map(a => ({ ...a, cardType: 'activity' as const }))
+  const result: SwipeCard[] = [...dinners, ...activities]
 
-  // Interleave: after every 3 dancers, insert a dinner or activity
-  const extras = [...dinners, ...activities]
-  const result: SwipeCard[] = []
-  let extraIdx = 0
-
-  for (let i = 0; i < dancers.length; i++) {
-    result.push(dancers[i])
-    if ((i + 1) % 3 === 0 && extraIdx < extras.length) {
-      result.push(extras[extraIdx++])
-    }
-  }
-  // Append remaining extras
-  while (extraIdx < extras.length) {
-    result.push(extras[extraIdx++])
-  }
-
-  // Insert onboarding cards after the first dancer when not signed in
+  // Insert onboarding cards at the front when not signed in
   if (!isSignedIn.value) {
-    const onboardingCards: SwipeCard[] = [
+    result.unshift(
       {
         id: 'onboarding-dancecard',
         cardType: 'onboarding-dancecard',
@@ -844,8 +711,7 @@ const swipeCards = computed<SwipeCard[]>(() => {
         id: 'onboarding-profile',
         cardType: 'onboarding-profile',
       },
-    ]
-    result.splice(1, 0, ...onboardingCards)
+    )
   }
 
   return result
@@ -1327,8 +1193,8 @@ useHead({
           </div>
           <p class="text-sm mb-4" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">Swipe to discover dancers, group dinners, and activities happening around the festival.</p>
           <DiscoverDancers
-            :dancers="discoverDancers"
-            :cards="swipeCards"
+            :festival-slug="festival.slug"
+            :extra-cards="extraSwipeCards"
             :workshops="workshops"
             :plan-ids="planIds"
             :is-signed-in="isSignedIn"

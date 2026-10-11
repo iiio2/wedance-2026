@@ -7,8 +7,9 @@ import { chilis } from '~/lib/levels'
 import { DanceCardSchema, DanceFeedbackSchema, DiscoverProfileSchema, validateForm } from '#shared/validation'
 
 const props = defineProps<{
-  dancers: DiscoverDancer[]
-  cards?: SwipeCard[]
+  festivalSlug: string
+  /** Extra non-dancer cards (dinners, activities, onboarding) interleaved into the deck */
+  extraCards?: SwipeCard[]
   workshops: Workshop[]
   planIds: Set<string>
   isSignedIn: boolean
@@ -23,25 +24,86 @@ const emit = defineEmits<{
   'show-paywall': []
 }>()
 
-// Swipe state
+const { $trpc } = useNuxtApp()
+
+// --- Real data from tRPC ---
+
+// Discover pool: attendees we haven't swiped yet
+const poolDancers = ref<DiscoverDancer[]>([])
+// Mutual matches (festival friends)
+const matchedFriends = ref<DiscoverDancer[]>([])
+// How many people liked us that we haven't seen
+const pendingLikesCount = ref(0)
+const poolLoading = ref(true)
+
+async function loadPool() {
+  if (!props.isSignedIn || !props.festivalSlug) {
+    poolLoading.value = false
+    return
+  }
+  poolLoading.value = true
+  try {
+    const [pool, friends, incoming] = await Promise.all([
+      $trpc.wave.discoverPool.query({ festivalSlug: props.festivalSlug }),
+      $trpc.wave.friends.query({ festivalSlug: props.festivalSlug }),
+      $trpc.wave.incomingCount.query({ festivalSlug: props.festivalSlug }),
+    ])
+    poolDancers.value = pool.map(d => ({
+      id: d.id,
+      name: d.name,
+      photo: d.photo ?? '',
+      role: d.role ?? 'follow',
+      styles: d.styles,
+      workshopIds: [],
+      bio: d.bio ?? '',
+    }))
+    matchedFriends.value = friends.map(d => ({
+      id: d.dancerId,
+      name: d.name,
+      photo: d.photo ?? '',
+      role: (d.role as DanceRole) ?? 'follow',
+      styles: ((d.danceStyles as string[]) ?? []).map(s => ({ name: s, level: 'Beginner' as const })),
+      workshopIds: [],
+      bio: '',
+    }))
+    pendingLikesCount.value = incoming
+  } catch {
+    // non-critical — fall back to empty
+  } finally {
+    poolLoading.value = false
+  }
+}
+
+onMounted(loadPool)
+watch(() => props.festivalSlug, loadPool)
+watch(() => props.isSignedIn, loadPool)
+
+// Swipe state — tracks IDs swiped during this session (pool already excludes
+// previously swiped dancers, so these only track the current session)
 const liked = ref(new Set<string>())
 const passed = ref(new Set<string>())
 
-// Mock: some dancers have already "liked" the user back
-const theyLikedUs = new Set(['disc-1', 'disc-3', 'disc-5', 'disc-7'])
-
-// Mock: some dancers have confirmed the dance from their side
-const theyConfirmedDance = new Set(['disc-1', 'disc-5'])
-
-// Mock: some dancers opted to share feedback (rating + text)
-const theySharedFeedback: Record<string, { rating: number; text: string }> = {
-  'disc-1': { rating: 4, text: 'Great connection and musicality! Would love to dance again.' },
-  'disc-5': { rating: 5, text: 'Amazing lead, very comfortable and fun to dance with!' },
-}
-
-// Merged deck: cards prop (if provided) or dancers
+// Merged deck: dancer cards from the pool + extra cards (dinners, activities, onboarding)
 const allCards = computed<SwipeCard[]>(() => {
-  return props.cards ?? props.dancers.map(d => ({ ...d, cardType: 'dancer' as const }))
+  const dancers: SwipeCard[] = poolDancers.value
+    .filter(d => !liked.value.has(d.id) && !passed.value.has(d.id))
+    .map(d => ({ ...d, cardType: 'dancer' as const }))
+  const extras = props.extraCards ?? []
+
+  // Interleave: after every 3 dancers, insert an extra card
+  const result: SwipeCard[] = []
+  let extraIdx = 0
+  for (let i = 0; i < dancers.length; i++) {
+    result.push(dancers[i])
+    if ((i + 1) % 3 === 0 && extraIdx < extras.length) {
+      result.push(extras[extraIdx++])
+    }
+  }
+  // Append remaining extras
+  while (extraIdx < extras.length) {
+    result.push(extras[extraIdx++])
+  }
+  return result
 })
 
 const currentCard = computed<SwipeCard | null>(() => {
@@ -62,7 +124,7 @@ const nextCard = computed<SwipeCard | null>(() => {
   return null
 })
 
-// For backward compat — only dancers
+// Only dancers (not dinner/activity/onboarding cards)
 const currentDancer = computed<DiscoverDancer | null>(() => {
   const c = currentCard.value
   if (!c || c.cardType === 'dinner' || c.cardType === 'activity' || c.cardType === 'onboarding-dancecard' || c.cardType === 'onboarding-profile') return null
@@ -255,12 +317,32 @@ function swipe(direction: 'left' | 'right') {
   swipeDirection.value = direction
   isAnimating.value = true
 
-  setTimeout(() => {
+  setTimeout(async () => {
     if (direction === 'right') {
       liked.value = new Set([...liked.value, id])
       // Emit join for activity cards
       if (card.cardType === 'dinner') emit('join-dinner', id)
-      if (card.cardType === 'activity') emit('join-activity', id)
+      else if (card.cardType === 'activity') emit('join-activity', id)
+      else if (!card.cardType || card.cardType === 'dancer') {
+        // Send wave (fire-and-forget, already idempotent)
+        $trpc.wave.send.mutate({
+          festivalSlug: props.festivalSlug,
+          targetDancerId: id,
+        }).then(() => {
+          // Refresh friends list to pick up any new mutual match
+          $trpc.wave.friends.query({ festivalSlug: props.festivalSlug }).then(f => {
+            matchedFriends.value = f.map(d => ({
+              id: d.dancerId,
+              name: d.name,
+              photo: d.photo ?? '',
+              role: (d.role as DanceRole) ?? 'follow',
+              styles: ((d.danceStyles as string[]) ?? []).map(s => ({ name: s, level: 'Beginner' as const })),
+              workshopIds: [],
+              bio: '',
+            }))
+          }).catch(() => {})
+        }).catch(() => {})
+      }
     } else {
       passed.value = new Set([...passed.value, id])
     }
@@ -314,8 +396,10 @@ function hasEndorsement(dancerId: string, styleName: string): boolean {
   return myEndorsements.value.get(dancerId)?.has(styleName) || false
 }
 
-function isEndorsementMutual(dancerId: string): boolean {
-  return theyConfirmedDance.has(dancerId)
+function isEndorsementMutual(_dancerId: string): boolean {
+  // Endorsement mutuality will be tracked in a future DB table;
+  // for now, all mutual matches implicitly confirm the dance intent.
+  return true
 }
 
 function setRating(dancerId: string, rating: number) {
@@ -339,39 +423,34 @@ function isFeedbackSent(dancerId: string): boolean {
   return myFeedbackSent.value.has(dancerId)
 }
 
-function isFeedbackRevealed(dancerId: string): boolean {
-  return myFeedbackSent.value.has(dancerId) && theySharedFeedback[dancerId] !== undefined
+function isFeedbackRevealed(_dancerId: string): boolean {
+  // Feedback reveal requires both parties to have sent — future DB feature
+  return false
 }
 
-// Dance list = mutual matches (both liked each other)
+// Dance list = mutual matches from the DB (both waved at each other)
 const danceList = computed<DanceListEntry[]>(() => {
-  return props.dancers
-    .filter((d) => liked.value.has(d.id) && theyLikedUs.has(d.id))
-    .map((d) => {
-      const endorsedStyles = myEndorsements.value.get(d.id) || new Set()
-      const endorsements: DanceEndorsement[] = [...endorsedStyles].map((style) => ({
-        style,
-        mutual: isEndorsementMutual(d.id),
-      }))
-      return {
-        dancer: d,
-        danced: dancedWith.value.has(d.id),
-        endorsements,
-      }
-    })
+  return matchedFriends.value.map((d) => {
+    const endorsedStyles = myEndorsements.value.get(d.id) || new Set()
+    const endorsements: DanceEndorsement[] = [...endorsedStyles].map((style) => ({
+      style,
+      mutual: isEndorsementMutual(d.id),
+    }))
+    return {
+      dancer: d,
+      danced: dancedWith.value.has(d.id),
+      endorsements,
+    }
+  })
 })
 
-// Dancers who liked us but we haven't seen yet (shown as a teaser)
-const pendingLikes = computed(() => {
-  return props.dancers.filter(
-    (d) => theyLikedUs.has(d.id) && !liked.value.has(d.id) && !passed.value.has(d.id),
-  ).length
-})
+// Pending likes = people who liked us that we haven't swiped on yet
+const pendingLikes = computed(() => pendingLikesCount.value)
 
 // Show/hide dance list
 const showDanceList = ref(true)
 
-// Undo last pass
+// Undo last pass (left-swipe only — passes don't create waves, so no retract needed)
 function undoLastPass() {
   const passedArr = [...passed.value]
   if (passedArr.length === 0) return
@@ -388,7 +467,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
 
 <template>
   <div class="space-y-4">
-    <template v-if="dancers.length > 0">
+    <template v-if="poolDancers.length > 0 || (extraCards && extraCards.length > 0)">
       <!-- Pending likes teaser -->
       <div v-if="isSignedIn && pendingLikes > 0" class="rounded-lg bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 p-3 flex items-center gap-3">
         <div class="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center shrink-0">
@@ -836,23 +915,8 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
                   Written feedback:
                 </p>
 
-                <!-- Feedback revealed: both sent -->
-                <div v-if="isFeedbackRevealed(entry.dancer.id)" class="space-y-2">
-                  <div class="p-2 rounded bg-muted/50 border">
-                    <p class="text-[10px] font-medium text-muted-foreground mb-0.5">You wrote:</p>
-                    <p class="text-xs italic">"{{ myFeedbackSent.get(entry.dancer.id) }}"</p>
-                  </div>
-                  <div class="p-2 rounded bg-amber-50 border border-amber-200">
-                    <p class="text-[10px] font-medium text-amber-800 mb-0.5">{{ entry.dancer.name }} wrote:</p>
-                    <p class="text-xs text-amber-700">
-                      {{ '★'.repeat(theySharedFeedback[entry.dancer.id].rating) }}{{ '☆'.repeat(5 - theySharedFeedback[entry.dancer.id].rating) }}
-                    </p>
-                    <p class="text-xs text-amber-700 italic">"{{ theySharedFeedback[entry.dancer.id].text }}"</p>
-                  </div>
-                </div>
-
                 <!-- Feedback sent, waiting for theirs -->
-                <div v-else-if="isFeedbackSent(entry.dancer.id)" class="space-y-1.5">
+                <div v-if="isFeedbackSent(entry.dancer.id)" class="space-y-1.5">
                   <div class="p-2 rounded bg-muted/50 border">
                     <p class="text-[10px] font-medium text-muted-foreground mb-0.5">You wrote:</p>
                     <p class="text-xs italic">"{{ myFeedbackSent.get(entry.dancer.id) }}"</p>
