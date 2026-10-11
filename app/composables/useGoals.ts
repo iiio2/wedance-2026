@@ -3,6 +3,7 @@ export interface Goal {
   title: string
   why: string
   progress: number
+  style: string
 }
 
 const goals = ref<Goal[]>([])
@@ -16,11 +17,13 @@ export function useGoals() {
       const dbGoals: Goal[] = []
       for (const r of rows) {
         if (r.itemType === 'goal' && r.metadata) {
+          const m = r.metadata as Record<string, string>
           dbGoals.push({
             id: r.itemId,
-            title: (r.metadata as Record<string, string>).title || '',
-            why: (r.metadata as Record<string, string>).why || '',
-            progress: Number((r.metadata as Record<string, string>).progress) || 0,
+            title: m.title || '',
+            why: m.why || '',
+            progress: Number(m.progress) || 0,
+            style: m.style || '',
           })
         }
       }
@@ -37,9 +40,9 @@ export function useGoals() {
     return goals.value.some(g => g.title.trim().toLowerCase() === t)
   }
 
-  async function addGoal(title: string, why: string) {
+  async function addGoal(title: string, why: string, style: string) {
     const id = `goal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    const goal: Goal = { id, title, why, progress: 0 }
+    const goal: Goal = { id, title, why, progress: 0, style }
     goals.value.push(goal)
 
     try {
@@ -47,11 +50,38 @@ export function useGoals() {
       await $trpc.plan.add.mutate({
         itemType: 'goal',
         itemId: id,
-        metadata: { title, why, progress: '0' },
+        metadata: { title, why, progress: '0', style },
       })
     } catch (err) {
       console.error('[useGoals] addGoal failed — rolling back:', err)
       goals.value = goals.value.filter(g => g.id !== id)
+    }
+  }
+
+  async function updateGoal(id: string, updates: Partial<Pick<Goal, 'progress' | 'style'>>) {
+    const goal = goals.value.find(g => g.id === id)
+    if (!goal) return
+
+    const prev = { progress: goal.progress, style: goal.style }
+    if (updates.progress !== undefined) goal.progress = updates.progress
+    if (updates.style !== undefined) goal.style = updates.style
+
+    try {
+      const { $trpc } = useNuxtApp()
+      await $trpc.plan.updateMetadata.mutate({
+        itemType: 'goal',
+        itemId: id,
+        metadata: {
+          title: goal.title,
+          why: goal.why,
+          progress: String(goal.progress),
+          style: goal.style,
+        },
+      })
+    } catch (err) {
+      console.error('[useGoals] updateGoal failed — rolling back:', err)
+      goal.progress = prev.progress
+      goal.style = prev.style
     }
   }
 
@@ -74,6 +104,7 @@ export function useGoals() {
     loadFromDb,
     hasGoal,
     addGoal,
+    updateGoal,
     removeGoal,
   }
 }

@@ -117,6 +117,7 @@ const catalogue = [
     ticketUrl: meneate.mockFestival.ticketUrl,
     ticketFromPrice: cheapestPrice(meneate.mockFestival.tickets),
     earlyBirdDeadline: undefined as string | undefined,
+    styles: ['Salsa', 'Bachata', 'Kizomba'] as string[],
   },
   {
     slug: cubanFire.mockFestival.slug,
@@ -131,6 +132,7 @@ const catalogue = [
     ticketUrl: (cubanFire.mockFestival as any).ticketUrl,
     ticketFromPrice: cheapestPrice(cubanFire.mockFestival.tickets),
     earlyBirdDeadline: undefined as string | undefined,
+    styles: ['Salsa', 'Timba', 'Afro-Cuban'] as string[],
   },
   {
     slug: caribbeanUrbanFire.mockFestival.slug,
@@ -145,6 +147,7 @@ const catalogue = [
     ticketUrl: (caribbeanUrbanFire.mockFestival as any).ticketUrl,
     ticketFromPrice: cheapestPrice(caribbeanUrbanFire.mockFestival.tickets),
     earlyBirdDeadline: undefined as string | undefined,
+    styles: ['Salsa', 'Bachata', 'Reggaeton'] as string[],
   },
   {
     slug: salsaOpen.mockFestival.slug,
@@ -159,6 +162,7 @@ const catalogue = [
     ticketUrl: (salsaOpen.mockFestival as any).ticketUrl,
     ticketFromPrice: cheapestPrice((salsaOpen.mockFestival as any).tickets || []),
     earlyBirdDeadline: '2026-06-01',
+    styles: ['Salsa', 'Bachata'] as string[],
   },
   {
     slug: 'bachata-stars-barcelona-2026',
@@ -176,6 +180,7 @@ const catalogue = [
     // fire on in the preview demo. When real data lands this becomes
     // whatever the organizer sets.
     earlyBirdDeadline: '2026-07-06',
+    styles: ['Bachata'] as string[],
   },
   {
     slug: 'timba-fest-london-2026',
@@ -190,6 +195,7 @@ const catalogue = [
     ticketUrl: 'https://timbafestlondon.co.uk/tickets',
     ticketFromPrice: 95,
     earlyBirdDeadline: undefined as string | undefined,
+    styles: ['Timba', 'Salsa'] as string[],
   },
   {
     slug: 'kizomba-prague-2026',
@@ -204,6 +210,7 @@ const catalogue = [
     ticketUrl: 'https://kizombaprague.com/tickets',
     ticketFromPrice: 110,
     earlyBirdDeadline: undefined as string | undefined,
+    styles: ['Kizomba', 'Semba'] as string[],
   },
 ]
 
@@ -229,6 +236,7 @@ async function loadMyPlanFestivals() {
       ticketUrl: '',
       ticketFromPrice: undefined as number | undefined,
       earlyBirdDeadline: undefined as string | undefined,
+      styles: (r.styles || []) as string[],
     }))
   } catch (err) {
     console.warn('[my-plan] loadMyPlanFestivals failed:', err)
@@ -809,15 +817,18 @@ function toggleExpanded(slug: string) {
 // user-owned data that will live server-side. Preview seeds a mix.
 // -----------------------------------------------------------------------
 // Preview goals for ?preview=1 mode.
-type PreviewGoal = { id: string; title: string; why: string; progress: number; nudge?: string; icon: any; color: string }
+type PreviewGoal = { id: string; title: string; why: string; progress: number; style: string; nudge?: string; icon: any; color: string }
 const previewGoals: PreviewGoal[] = [
-  { id: 'g1', title: 'Learn timba (advanced)',   why: 'Feel at home in a Cuban rueda.',             progress: 55, nudge: 'Book 2 more privates before Cuban Fire.', icon: Flame,     color: WD.red600 },
-  { id: 'g2', title: 'Perform at Cuban Fire',    why: 'Duet with Emilia — 3-minute son piece.',    progress: 20, nudge: 'Choose the song this week.',                icon: Sparkles,  color: WD.amber500 },
-  { id: 'g3', title: 'Teach my first class',     why: 'Kids salsa Saturdays at 15x4.',              progress: 10, nudge: 'Sit in on Anna\'s lesson Sunday.',           icon: GraduationCap, color: WD.green600 },
+  { id: 'g1', title: 'Learn timba (advanced)',   why: 'Feel at home in a Cuban rueda.',             progress: 55, style: 'Timba', nudge: 'Book 2 more privates before Cuban Fire.', icon: Flame,     color: WD.red600 },
+  { id: 'g2', title: 'Perform at Cuban Fire',    why: 'Duet with Emilia — 3-minute son piece.',    progress: 20, style: 'Salsa', nudge: 'Choose the song this week.',                icon: Sparkles,  color: WD.amber500 },
+  { id: 'g3', title: 'Teach my first class',     why: 'Kids salsa Saturdays at 15x4.',              progress: 10, style: 'Salsa', nudge: 'Sit in on Anna\'s lesson Sunday.',           icon: GraduationCap, color: WD.green600 },
 ]
 
 // Real goals — persisted via TRPC plan router.
-const { goals: dbGoals, addGoal, removeGoal, hasGoal, loadFromDb: loadGoalsFromDb } = useGoals()
+const { goals: dbGoals, addGoal, removeGoal, updateGoal, hasGoal, loadFromDb: loadGoalsFromDb } = useGoals()
+
+// Dance styles for goal tagging.
+const GOAL_DANCE_STYLES = ['Salsa', 'Bachata', 'Kizomba', 'Zouk', 'Timba', 'Semba', 'Afro-Cuban', 'Reggaeton', 'Cha-Cha']
 
 // Unified view: preview mode shows hard-coded preview goals; real mode shows DB goals.
 const goalsList = computed(() => {
@@ -827,17 +838,48 @@ const goalsList = computed(() => {
     title: g.title,
     why: g.why,
     progress: g.progress,
+    style: g.style,
     nudge: undefined as string | undefined,
     icon: Target,
     color: WD.amber600,
   }))
 })
 
+// Resolve a goal's effective style: explicit tag, or auto-detect from title.
+function goalEffectiveStyle(g: { title: string; style: string }): string {
+  if (g.style) return g.style
+  const t = g.title.toLowerCase()
+  return GOAL_DANCE_STYLES.find(s => t.includes(s.toLowerCase())) || ''
+}
+
+// Map from dance style → goal titles that target it.
+const goalsByStyle = computed(() => {
+  const map = new Map<string, string[]>()
+  for (const g of goalsList.value) {
+    const s = goalEffectiveStyle(g)
+    if (!s) continue
+    const list = map.get(s) || []
+    list.push(g.title)
+    map.set(s, list)
+  }
+  return map
+})
+
+// Check if any goal targets a given dance style.
+function goalsForStyle(style: string): string[] {
+  if (!style) return []
+  return goalsByStyle.value.get(style) || []
+}
+
 // Inline add-goal form state.
 const showGoalForm = ref(false)
 const goalFormTitle = ref('')
 const goalFormWhy = ref('')
+const goalFormStyle = ref('')
 const goalFormError = ref('')
+
+// Progress editing state.
+const editingProgressGoalId = ref<string | null>(null)
 
 watch(goalFormTitle, () => { goalFormError.value = '' })
 
@@ -849,16 +891,29 @@ async function onGoalSubmit() {
     return
   }
   const w = goalFormWhy.value.trim()
+  const s = goalFormStyle.value
   goalFormTitle.value = ''
   goalFormWhy.value = ''
+  goalFormStyle.value = ''
   goalFormError.value = ''
   showGoalForm.value = false
-  await addGoal(t, w)
+  await addGoal(t, w, s)
 }
 function onGoalCancel() {
   goalFormTitle.value = ''
   goalFormWhy.value = ''
+  goalFormStyle.value = ''
   showGoalForm.value = false
+}
+
+async function onProgressChange(goalId: string, value: number) {
+  await updateGoal(goalId, { progress: value })
+}
+function startEditingProgress(goalId: string) {
+  if (!previewMode.value) editingProgressGoalId.value = goalId
+}
+function stopEditingProgress() {
+  editingProgressGoalId.value = null
 }
 
 // -----------------------------------------------------------------------
@@ -1871,6 +1926,23 @@ function cardSummary(f: CatalogueEntry) {
                 style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-sans);"
               />
             </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-widest mb-1.5" style="color:var(--wd-amber-600);">
+                Dance style <span class="font-normal normal-case tracking-normal" style="color:var(--wd-brown-700);">(optional — links this goal to your courses &amp; festivals)</span>
+              </label>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="s in GOAL_DANCE_STYLES"
+                  :key="s"
+                  type="button"
+                  class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors"
+                  :style="goalFormStyle === s ? 'background:var(--wd-amber-600); color:white;' : 'background:color-mix(in srgb, var(--wd-amber-600) 9.4%, transparent); color:var(--wd-amber-600);'"
+                  @click="goalFormStyle = goalFormStyle === s ? '' : s"
+                >
+                  {{ s }}
+                </button>
+              </div>
+            </div>
             <div class="flex items-center gap-3 pt-1">
               <button
                 type="submit"
@@ -1914,6 +1986,13 @@ function cardSummary(f: CatalogueEntry) {
                 <div class="mt-1 text-xs italic" style="color:var(--wd-brown-700); font-family:var(--wd-font-display);">
                   {{ g.why }}
                 </div>
+                <span
+                  v-if="goalEffectiveStyle(g)"
+                  class="inline-block mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                  style="background:color-mix(in srgb, var(--wd-amber-600) 12%, transparent); color:var(--wd-amber-600);"
+                >
+                  {{ goalEffectiveStyle(g) }}
+                </span>
               </div>
               <button
                 v-if="!previewMode"
@@ -1925,13 +2004,33 @@ function cardSummary(f: CatalogueEntry) {
                 <X class="w-3.5 h-3.5" style="color:var(--wd-red-600);" />
               </button>
             </div>
-            <!-- Progress bar -->
+            <!-- Progress bar — editable in real mode -->
             <div class="mt-4">
               <div class="flex items-baseline justify-between mb-1">
                 <span class="text-[10px] uppercase tracking-widest font-bold" style="color:var(--wd-amber-600);">Progress</span>
-                <span class="text-xs font-black" :style="{ color: goalProgressColor(g.progress), fontFamily: 'var(--wd-font-display)' }">{{ g.progress }}%</span>
+                <button
+                  v-if="!previewMode"
+                  type="button"
+                  class="text-xs font-black cursor-pointer hover:underline"
+                  :style="{ color: goalProgressColor(g.progress), fontFamily: 'var(--wd-font-display)' }"
+                  @click="startEditingProgress(g.id)"
+                >
+                  {{ g.progress }}%
+                </button>
+                <span v-else class="text-xs font-black" :style="{ color: goalProgressColor(g.progress), fontFamily: 'var(--wd-font-display)' }">{{ g.progress }}%</span>
               </div>
-              <div class="w-full h-2 rounded-full overflow-hidden" style="background:color-mix(in srgb, var(--wd-brown-900) 6.3%, transparent);">
+              <input
+                v-if="editingProgressGoalId === g.id"
+                type="range"
+                min="0"
+                max="100"
+                :value="g.progress"
+                class="w-full h-2 rounded-full appearance-none cursor-pointer"
+                style="accent-color:var(--wd-amber-600);"
+                @input="onProgressChange(g.id, Number(($event.target as HTMLInputElement).value))"
+                @change="stopEditingProgress()"
+              />
+              <div v-else class="w-full h-2 rounded-full overflow-hidden" style="background:color-mix(in srgb, var(--wd-brown-900) 6.3%, transparent);">
                 <div class="h-full transition-all" :style="{ width: g.progress + '%', background: goalProgressColor(g.progress) }" />
               </div>
             </div>
@@ -2147,6 +2246,14 @@ function cardSummary(f: CatalogueEntry) {
                 <span class="inline-flex items-center gap-1">
                   <MapPin class="w-3 h-3" style="color:var(--wd-amber-600);" />
                   {{ f.venue }}, {{ f.location }}
+                </span>
+                <span
+                  v-if="f.styles?.some((s: string) => goalsForStyle(s).length)"
+                  class="inline-flex items-center gap-1 text-[10px] italic"
+                  style="color:var(--wd-green-600); font-family:var(--wd-font-display);"
+                >
+                  <Target class="w-3 h-3" />
+                  Serves: {{ f.styles.filter((s: string) => goalsForStyle(s).length).flatMap((s: string) => goalsForStyle(s)).filter((v: string, i: number, a: string[]) => a.indexOf(v) === i).join(', ') }}
                 </span>
               </div>
 
@@ -2501,6 +2608,13 @@ function cardSummary(f: CatalogueEntry) {
                 </div>
                 <div class="text-xs mt-0.5" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
                   {{ c.teacher }} · <span style="color:var(--wd-amber-600);">{{ c.style }} · {{ c.level }}</span>
+                </div>
+                <div
+                  v-if="goalsForStyle(c.style).length"
+                  class="text-[10px] mt-1 italic"
+                  style="color:var(--wd-green-600); font-family:var(--wd-font-display);"
+                >
+                  Serves your goal: {{ goalsForStyle(c.style).join(', ') }}
                 </div>
               </div>
               <div class="flex items-center gap-2 shrink-0">

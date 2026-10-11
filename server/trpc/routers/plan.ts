@@ -65,6 +65,27 @@ export const planRouter = router({
         .onConflictDoNothing()
     }),
 
+  updateMetadata: protectedProcedure
+    .input(
+      z.object({
+        itemType: z.enum(['festival', 'event', 'goal', 'workshop']),
+        itemId: z.string(),
+        metadata: z.record(z.string(), z.string()),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .update(planItems)
+        .set({ metadata: input.metadata })
+        .where(
+          and(
+            eq(planItems.dancerId, ctx.dancerId),
+            eq(planItems.itemType, input.itemType),
+            eq(planItems.itemId, input.itemId),
+          ),
+        )
+    }),
+
   remove: protectedProcedure
     .input(
       z.object({
