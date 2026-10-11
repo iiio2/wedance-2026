@@ -82,9 +82,9 @@ const todayIso = iso(new Date())
   <div class="font-sans">
     <!-- Week nav -->
     <div class="flex items-center justify-between mb-3">
-      <button type="button" class="w-8 h-8 rounded-full flex items-center justify-center text-primary" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);" aria-label="Previous week" @click="weekOffset--"><ChevronLeft class="w-4 h-4" /></button>
-      <div class="text-sm font-bold text-foreground font-display">{{ weekLabel }}<button v-if="weekOffset !== 0" type="button" class="ml-2 text-eyebrow uppercase tracking-wider text-primary" @click="weekOffset = 0">Today</button></div>
-      <button type="button" class="w-8 h-8 rounded-full flex items-center justify-center text-primary" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);" aria-label="Next week" @click="weekOffset++"><ChevronRight class="w-4 h-4" /></button>
+      <Button variant="soft" size="icon-sm" class="size-8" aria-label="Previous week" @click="weekOffset--"><ChevronLeft aria-hidden="true" /></Button>
+      <div class="text-sm font-bold text-foreground font-display">{{ weekLabel }}<Button v-if="weekOffset !== 0" variant="link" class="ml-2 h-auto p-0 text-eyebrow font-normal uppercase tracking-wider text-primary" @click="weekOffset = 0">Today</Button></div>
+      <Button variant="soft" size="icon-sm" class="size-8" aria-label="Next week" @click="weekOffset++"><ChevronRight aria-hidden="true" /></Button>
     </div>
 
     <div class="overflow-x-auto -mx-4 px-4">
@@ -109,8 +109,8 @@ const todayIso = iso(new Date())
                 <span v-if="b.startTime" class="font-bold">{{ b.startTime }}</span> {{ b.title || 'Event' }}
               </div>
             </template>
-            <button v-else-if="isAvailable(sp.id, d)" type="button" class="w-full h-full min-h-[36px] rounded flex items-center justify-center border border-dashed transition-colors hover:text-white" style="border-color:color-mix(in srgb, var(--wd-red-600) 33.3%, transparent); color:var(--wd-red-600);" onmouseover="this.style.background='var(--wd-red-600)'" onmouseout="this.style.background='transparent'" :aria-label="`Book ${sp.name} on ${iso(d)}`" @click="emit('book', { spaceId: sp.id, spaceName: sp.name, date: iso(d) })">
-              <Plus class="w-4 h-4" />
+            <button v-else-if="isAvailable(sp.id, d)" type="button" class="w-full h-full min-h-[36px] rounded flex items-center justify-center border border-dashed border-primary/33 text-primary transition-colors hover:bg-primary hover:text-white focus-visible:outline-2 focus-visible:outline-ring" :aria-label="`Book ${sp.name} on ${iso(d)}`" @click="emit('book', { spaceId: sp.id, spaceName: sp.name, date: iso(d) })">
+              <Plus class="w-4 h-4" aria-hidden="true" />
             </button>
             <!-- unavailable + no bookings: empty greyed-out cell -->
           </div>

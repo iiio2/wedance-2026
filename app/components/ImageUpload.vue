@@ -6,6 +6,7 @@ const model = defineModel<string>({ default: '' })
 const uploading = ref(false)
 const dragOver = ref(false)
 const errorMsg = ref('')
+const fileInput = ref<HTMLInputElement | null>(null)
 
 async function uploadFile(file: File) {
   if (!file.type.startsWith('image/')) {
@@ -62,59 +63,57 @@ function remove() {
         alt="Profile photo"
         class="w-28 h-28 rounded-xl object-cover"
       >
-      <button
-        type="button"
-        class="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center bg-wd-red-600"
-        style="color:white;"
+      <Button
+        variant="pill"
+        size="icon-sm"
+        class="absolute -top-2 -right-2 size-6 p-0 shadow-none [&_svg]:size-3.5"
+        aria-label="Remove photo"
         @click="remove"
       >
-        <X class="w-3.5 h-3.5" />
-      </button>
+        <X aria-hidden="true" />
+      </Button>
     </div>
 
-    <!-- Drop zone -->
-    <div
+    <!-- Drop zone — a real button so it is reachable by keyboard -->
+    <button
       v-if="!model"
-      class="relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 cursor-pointer transition-colors"
-      :style="dragOver
-        ? 'border-color:var(--wd-red-600); background:color-mix(in srgb, var(--wd-red-600) 3.1%, transparent);'
-        : 'border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:white;'"
+      type="button"
+      class="relative w-full flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      :class="dragOver ? 'border-primary bg-primary/3' : 'border-input bg-card'"
+      :disabled="uploading"
       @dragover.prevent="dragOver = true"
       @dragleave="dragOver = false"
       @drop.prevent="onDrop"
-      @click="($refs.fileInput as HTMLInputElement).click()"
+      @click="fileInput?.click()"
     >
-      <Loader2 v-if="uploading" class="w-6 h-6 animate-spin text-secondary" />
-      <Upload v-else class="w-6 h-6 text-secondary" />
+      <Loader2 v-if="uploading" class="w-6 h-6 animate-spin text-secondary" aria-hidden="true" />
+      <Upload v-else class="w-6 h-6 text-secondary" aria-hidden="true" />
       <span class="text-sm text-muted-foreground">
         {{ uploading ? 'Uploading...' : 'Drop a photo here or click to choose' }}
       </span>
-      <input
-        ref="fileInput"
-        type="file"
-        accept="image/*"
-        class="hidden"
-        @change="onFileInput"
-      >
-    </div>
-
-    <!-- Upload / replace button when photo exists -->
-    <button
-      v-if="model && !uploading"
-      type="button"
-      class="text-xs font-bold text-primary"
-      @click="($refs.fileInput2 as HTMLInputElement).click()"
-    >
-      Replace photo
-      <input
-        ref="fileInput2"
-        type="file"
-        accept="image/*"
-        class="hidden"
-        @change="onFileInput"
-      >
     </button>
 
-    <p v-if="errorMsg" class="text-xs font-bold text-primary">{{ errorMsg }}</p>
+    <!-- Upload / replace button when photo exists -->
+    <Button
+      v-if="model && !uploading"
+      variant="link"
+      class="h-auto p-0 text-xs font-bold text-primary"
+      @click="fileInput?.click()"
+    >
+      Replace photo
+    </Button>
+
+    <!-- One hidden file input for both the drop zone and "Replace photo" -->
+    <input
+      ref="fileInput"
+      type="file"
+      accept="image/*"
+      class="hidden"
+      tabindex="-1"
+      aria-hidden="true"
+      @change="onFileInput"
+    >
+
+    <p v-if="errorMsg" role="alert" class="text-xs font-bold text-primary">{{ errorMsg }}</p>
   </div>
 </template>

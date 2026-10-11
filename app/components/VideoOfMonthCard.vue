@@ -108,10 +108,9 @@ onMounted(load)
          the surrounding city card already links through to the city page. -->
     <div
       v-else
-      class="flex aspect-video w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed text-center"
-      style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);"
+      class="flex aspect-video w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-input bg-white/50 text-center"
     >
-      <Trophy class="h-5 w-5 text-secondary" />
+      <Trophy class="h-5 w-5 text-secondary" aria-hidden="true" />
       <p class="text-xs font-bold" :style="{ color: accent, fontFamily: 'var(--wd-font-sans)' }">
         Be the first to enter
       </p>

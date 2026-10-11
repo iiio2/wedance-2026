@@ -149,6 +149,7 @@ useHead(() => ({
   <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
+    <main>
     <section v-if="pending" class="max-w-2xl mx-auto px-4 py-24 text-center">
       <div class="inline-block w-8 h-8 rounded-full border-2 animate-spin" style="border-color:color-mix(in srgb, var(--wd-red-600) 20%, transparent); border-top-color:var(--wd-red-600);" />
     </section>
@@ -158,7 +159,7 @@ useHead(() => ({
       <p class="mt-4 text-sm text-muted-foreground font-sans">
         <span class="font-bold">@{{ handle }}</span> doesn't have a page here yet. Run this venue or organise here? Claim it.
       </p>
-      <NuxtLink to="/for-events" class="inline-flex items-center gap-2 mt-6 rounded-full px-5 py-2.5 text-white text-sm font-bold uppercase tracking-wider" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));">Claim / list a space</NuxtLink>
+      <Button as-child variant="cta" class="mt-6"><NuxtLink to="/for-events">Claim / list a space</NuxtLink></Button>
       <div class="mt-4"><NuxtLink to="/cities" class="inline-flex items-center gap-1 text-xs font-bold text-primary font-sans"><ArrowLeft class="w-3 h-3" /> Browse cities</NuxtLink></div>
     </section>
 
@@ -212,7 +213,7 @@ useHead(() => ({
       <section class="max-w-2xl mx-auto px-4 pb-6 font-sans">
         <div class="flex items-center gap-2 mb-3"><Calendar class="w-5 h-5 text-primary" /><h2 class="text-2xl font-display text-foreground">Scheduled</h2></div>
         <EventSchedule v-if="scheduleCards.length" :events="visibleScheduleCards" />
-        <button v-if="scheduleCards.length > scheduleLimit" type="button" class="mt-4 text-xs font-bold underline text-primary" @click="scheduleLimit += 24">Show more ({{ scheduleCards.length - scheduleLimit }} more)</button>
+        <Button v-if="scheduleCards.length > scheduleLimit" variant="link" size="sm" class="mt-4 px-0 h-auto text-xs font-bold underline text-primary" @click="scheduleLimit += 24">Show more ({{ scheduleCards.length - scheduleLimit }} more)</Button>
         <p v-if="!scheduleCards.length" class="mt-3 text-sm italic text-secondary">{{ spaces.length ? 'Nothing scheduled yet — book the first slot.' : 'Nothing scheduled yet.' }}</p>
       </section>
 
@@ -220,7 +221,7 @@ useHead(() => ({
       <section v-if="spaces.length" class="max-w-2xl mx-auto px-4 pb-4 font-sans">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2"><LayoutGrid class="w-5 h-5 text-primary" /><h2 class="text-2xl font-display text-foreground">{{ isFree ? 'Book a free slot' : 'Book a space' }}</h2></div>
-          <button type="button" class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shrink-0" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));" @click="openBooking(spaces[0])"><Plus class="w-3.5 h-3.5" /> Propose an event</button>
+          <Button variant="cta" size="pill-sm" class="shrink-0" @click="openBooking(spaces[0])"><Plus aria-hidden="true" /> Propose an event</Button>
         </div>
         <p class="mt-1 text-sm text-muted-foreground">{{ isFree ? `Tap a free cell to reserve that area — it's free. A community moderator confirms it against the guidelines.` : `Tap an available slot in one of the ${spaces.length} areas.` }}</p>
         <AvailabilityCalendar :spaces="spaces" :bookings="schedule" :availability="availability" class="mt-4" @book="onCalendarBook" />
@@ -238,79 +239,77 @@ useHead(() => ({
         <ReviewsSection :target-type="profile.type" :target-slug="profile.username" :target-name="profile.name" :city-slug="profile.citySlug || undefined" />
       </section>
     </template>
+    </main>
 
     <SiteFooter />
 
     <!-- Booking modal -->
     <div v-if="booking.open" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style="background:rgba(59,31,18,0.4);" @click.self="booking.open = false">
-      <div class="w-full max-w-md rounded-2xl bg-white p-6 font-sans" style="box-shadow: 0 20px 50px rgba(0,0,0,0.25);">
+      <div role="dialog" aria-modal="true" aria-labelledby="booking-dialog-title" class="w-full max-w-md rounded-2xl bg-white p-6 font-sans" style="box-shadow: 0 20px 50px rgba(0,0,0,0.25);">
         <template v-if="!booking.done">
-          <h3 class="text-xl font-bold font-display text-foreground">{{ isFree ? 'Propose an event' : 'Request a space' }}</h3>
+          <h3 id="booking-dialog-title" class="text-xl font-bold font-display text-foreground">{{ isFree ? 'Propose an event' : 'Request a space' }}</h3>
           <p class="text-xs mt-1 text-secondary">{{ isFree ? 'Free — a community moderator confirms it against the guidelines.' : 'WeDance connects you with the venue — no payment here.' }}</p>
-          <div class="mt-4 space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+          <form id="booking-form" class="mt-4 space-y-3 max-h-[60vh] overflow-y-auto pr-1" novalidate @submit.prevent="submitBooking">
             <div class="grid grid-cols-2 gap-2">
-              <select v-model="booking.spaceId" class="h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="Area">
-                <option v-for="sp in spaces" :key="sp.id" :value="sp.id">{{ sp.name }}</option>
-              </select>
-              <select v-model="booking.eventType" class="h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="Type">
-                <option v-for="t in EVENT_TYPES" :key="t" :value="t">{{ t }}</option>
-              </select>
+              <Field id="booking-space" label="Area" :error="bookingForm.errors.spaceId">
+                <Select v-model="booking.spaceId" size="sm" :options="spaces.map((sp: any) => ({ label: sp.name, value: sp.id }))" v-bind="bookingForm.fieldAttrs('spaceId', 'booking-space-error')" />
+              </Field>
+              <Field id="booking-type" label="Type">
+                <Select v-model="booking.eventType" size="sm" :options="EVENT_TYPES" />
+              </Field>
             </div>
-            <div>
-              <input v-model="booking.title" type="text" maxlength="120" placeholder="Event name — e.g. Sunday Salsa Social" class="w-full h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('title', 'booking-title-error')">
-              <FieldError id="booking-title-error" :message="bookingForm.errors.title" />
-            </div>
-            <div>
-              <div class="text-eyebrow uppercase tracking-wider font-bold mb-1.5 text-secondary">Styles</div>
-              <div class="flex flex-wrap gap-1.5">
-                <button v-for="s in DANCE_STYLES" :key="s" type="button" class="px-2.5 py-1 rounded-full text-meta font-bold uppercase tracking-wider" :style="booking.styles.includes(s) ? 'background:var(--wd-red-600); color:white;' : 'background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600);'" @click="toggleBookingStyle(s)">{{ s }}</button>
+            <Field id="booking-title" label="Event name" :error="bookingForm.errors.title">
+              <Input v-model="booking.title" size="sm" maxlength="120" placeholder="e.g. Sunday Salsa Social" v-bind="bookingForm.fieldAttrs('title', 'booking-title-error')" />
+            </Field>
+            <div class="flex flex-col gap-1.5">
+              <span id="booking-styles-label" class="text-sm font-bold text-foreground leading-snug">Styles <span class="font-normal text-muted-foreground">(optional)</span></span>
+              <div role="group" aria-labelledby="booking-styles-label" class="flex flex-wrap gap-1.5">
+                <ToggleChip v-for="s in DANCE_STYLES" :key="s" variant="soft" :pressed="booking.styles.includes(s)" class="px-2.5 py-1 text-meta uppercase tracking-wider" @click="toggleBookingStyle(s)">{{ s }}</ToggleChip>
               </div>
             </div>
-            <div>
-              <div class="flex gap-2">
-                <input v-model="booking.eventDate" type="date" class="flex-1 h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="Date" v-bind="bookingForm.fieldAttrs('eventDate', 'booking-date-error')">
-                <input v-model="booking.startTime" type="time" class="w-28 h-10 rounded-xl px-2 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="Start" v-bind="bookingForm.fieldAttrs('startTime', 'booking-start-error')">
-                <input v-model="booking.endTime" type="time" class="w-28 h-10 rounded-xl px-2 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" aria-label="End" v-bind="bookingForm.fieldAttrs('endTime', 'booking-end-error')">
-              </div>
-              <FieldError id="booking-date-error" :message="bookingForm.errors.eventDate" />
-              <FieldError id="booking-start-error" :message="bookingForm.errors.startTime" />
-              <FieldError id="booking-end-error" :message="bookingForm.errors.endTime" />
+            <Field id="booking-date" label="Date" optional :error="bookingForm.errors.eventDate">
+              <Input v-model="booking.eventDate" type="date" size="sm" v-bind="bookingForm.fieldAttrs('eventDate', 'booking-date-error')" />
+            </Field>
+            <div class="grid grid-cols-2 gap-2">
+              <Field id="booking-start" label="Start" optional :error="bookingForm.errors.startTime">
+                <Input v-model="booking.startTime" type="time" size="sm" v-bind="bookingForm.fieldAttrs('startTime', 'booking-start-error')" />
+              </Field>
+              <Field id="booking-end" label="End" optional :error="bookingForm.errors.endTime">
+                <Input v-model="booking.endTime" type="time" size="sm" v-bind="bookingForm.fieldAttrs('endTime', 'booking-end-error')" />
+              </Field>
             </div>
-            <input v-model="booking.artists" type="text" placeholder="Artists / DJs / teachers (comma-separated · @handle or name)" class="w-full h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);">
-            <div>
-              <input v-model="booking.organizerHandle" type="text" placeholder="Organiser @handle (optional — who runs this event)" class="w-full h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('organizerHandle', 'booking-organizer-error')">
-              <FieldError id="booking-organizer-error" :message="bookingForm.errors.organizerHandle" />
+            <Field id="booking-artists" label="Artists, DJs, teachers" optional hint="Comma-separated — @handle or name.">
+              <Input v-model="booking.artists" size="sm" />
+            </Field>
+            <Field id="booking-organizer" label="Organiser @handle" optional hint="Who runs this event." :error="bookingForm.errors.organizerHandle">
+              <Input v-model="booking.organizerHandle" size="sm" v-bind="bookingForm.fieldAttrs('organizerHandle', 'booking-organizer-error')" />
+            </Field>
+            <Field id="booking-message" label="Anything the community should know" optional :error="bookingForm.errors.message">
+              <Textarea v-model="booking.message" :rows="2" maxlength="2000" :resize="false" class="min-h-16" placeholder="Level, entry…" v-bind="bookingForm.fieldAttrs('message', 'booking-message-error')" />
+            </Field>
+            <div class="grid grid-cols-[minmax(0,1fr)_6rem] gap-2">
+              <Field id="booking-name" label="Your name" optional :error="bookingForm.errors.name">
+                <Input v-model="booking.name" size="sm" autocomplete="name" v-bind="bookingForm.fieldAttrs('name', 'booking-name-error')" />
+              </Field>
+              <Field id="booking-headcount" label="Guests" optional :error="bookingForm.errors.headcount">
+                <Input v-model="booking.headcount" type="number" min="1" size="sm" v-bind="bookingForm.fieldAttrs('headcount', 'booking-headcount-error')" />
+              </Field>
             </div>
-            <div>
-              <textarea v-model="booking.message" rows="2" maxlength="2000" placeholder="Anything the community should know (level, entry…)" class="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('message', 'booking-message-error')" />
-              <FieldError id="booking-message-error" :message="bookingForm.errors.message" />
-            </div>
-            <div>
-              <div class="flex gap-2">
-                <input v-model="booking.name" type="text" placeholder="Your name" class="flex-1 h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('name', 'booking-name-error')">
-                <input v-model="booking.headcount" type="number" min="1" placeholder="Guests" class="w-24 h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('headcount', 'booking-headcount-error')">
-              </div>
-              <FieldError id="booking-name-error" :message="bookingForm.errors.name" />
-              <FieldError id="booking-headcount-error" :message="bookingForm.errors.headcount" />
-            </div>
-            <div>
-              <input v-model="booking.email" type="email" placeholder="Email (so the moderator can reply)" class="w-full h-10 rounded-xl px-3 text-sm outline-none bg-background" style="border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);" v-bind="bookingForm.fieldAttrs('email', 'booking-email-error')">
-              <FieldError id="booking-email-error" :message="bookingForm.errors.email" />
-            </div>
-            <div>
-              <label class="flex items-start gap-2 text-xs cursor-pointer text-muted-foreground">
-                <input v-model="booking.terms" type="checkbox" class="mt-0.5 w-4 h-4 accent-wd-red-600" v-bind="bookingForm.fieldAttrs('terms', 'booking-terms-error')">
+            <Field id="booking-email" label="Email" hint="So the moderator can reply." :error="bookingForm.errors.email">
+              <Input v-model="booking.email" type="email" size="sm" autocomplete="email" v-bind="bookingForm.fieldAttrs('email', 'booking-email-error')" />
+            </Field>
+            <Field id="booking-terms" :error="bookingForm.errors.terms">
+              <Checkbox v-model="booking.terms" class="items-start text-xs text-muted-foreground min-h-0" v-bind="bookingForm.fieldAttrs('terms', 'booking-terms-error')">
                 <span v-if="isFree && profile.guidelines">I've read and will follow the <a href="#guidelines" class="underline font-bold text-primary" @click.prevent="document.getElementById('guidelines')?.scrollIntoView({behavior:'smooth'})">community guidelines</a>.</span>
                 <span v-else-if="isFree">I'll respect this space and its community.</span>
                 <span v-else>I accept the <NuxtLink to="/booking-terms" target="_blank" class="underline font-bold text-primary">booking terms</NuxtLink>.</span>
-              </label>
-              <FieldError id="booking-terms-error" :message="bookingForm.errors.terms" />
-            </div>
-            <p v-if="booking.err" class="text-sm font-bold text-primary">{{ booking.err }}</p>
-          </div>
+              </Checkbox>
+            </Field>
+            <p v-if="booking.err" role="alert" class="text-sm font-bold text-primary">{{ booking.err }}</p>
+          </form>
           <div class="mt-4 flex gap-2">
-            <button type="button" :disabled="booking.busy" class="flex-1 h-11 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));" @click="submitBooking">{{ booking.busy ? 'Sending…' : (isFree ? 'Book it' : 'Send request') }}</button>
-            <button type="button" class="h-11 px-4 rounded-full text-sm font-bold text-secondary" @click="booking.open = false">Cancel</button>
+            <Button type="submit" form="booking-form" variant="cta" class="flex-1 h-11" :loading="booking.busy">{{ booking.busy ? 'Sending…' : (isFree ? 'Book it' : 'Send request') }}</Button>
+            <Button type="button" variant="ghost" class="h-11 px-4 rounded-full font-bold text-secondary" @click="booking.open = false">Cancel</Button>
           </div>
         </template>
         <template v-else>
@@ -318,7 +317,7 @@ useHead(() => ({
             <div class="w-12 h-12 rounded-full mx-auto flex items-center justify-center text-white bg-wd-green-600"><Check class="w-6 h-6" /></div>
             <h3 class="text-xl font-bold mt-3 font-display text-foreground">{{ isFree ? 'Slot proposed' : 'Request sent' }}</h3>
             <p class="text-sm mt-1 text-muted-foreground">{{ isFree ? 'The moderator will confirm against the guidelines. See you on the floor!' : 'The venue will reply to your email.' }}</p>
-            <button type="button" class="mt-4 rounded-full px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white bg-wd-red-600" @click="booking.open = false">Done</button>
+            <Button variant="pill" class="mt-4" @click="booking.open = false">Done</Button>
           </div>
         </template>
       </div>

@@ -76,7 +76,7 @@ function formatDateRange(start: string, end: string): string {
         style="border-color:color-mix(in srgb, var(--wd-red-600) 26.7%, transparent);"
       />
       <div>
-        <h2 class="text-xl font-bold font-display text-foreground">{{ sharer.name }}'s 2026 Dance Year</h2>
+        <h1 class="text-xl font-bold font-display text-foreground">{{ sharer.name }}'s 2026 Dance Year</h1>
         <div class="flex items-center justify-center gap-2 mt-2 flex-wrap">
           <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium text-foreground" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(251,245,234,0.8);">{{ sharer.role === 'lead' ? 'Lead' : 'Follow' }}</span>
           <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium text-secondary" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">{{ festivals.length }} festivals</span>
@@ -88,24 +88,14 @@ function formatDateRange(start: string, end: string): string {
       </div>
 
       <!-- Add friend button -->
-      <button
-        v-if="!friendAdded"
-        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-xs font-bold uppercase tracking-wider mx-auto"
-        style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-        @click="addFriend"
-      >
-        <UserPlus class="w-4 h-4" />
+      <Button v-if="!friendAdded" variant="cta" class="mx-auto px-5 text-xs" @click="addFriend">
+        <UserPlus aria-hidden="true" />
         Add {{ sharer.name }} as friend
-      </button>
-      <button
-        v-else
-        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider mx-auto opacity-60 cursor-default text-foreground"
-        style="border: 2px dashed color-mix(in srgb, var(--wd-brown-900) 26.7%, transparent);"
-        disabled
-      >
-        <Check class="w-4 h-4" />
+      </Button>
+      <p v-else role="status" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider mx-auto text-foreground opacity-60 border-2 border-dashed border-foreground/27">
+        <Check class="w-4 h-4" aria-hidden="true" />
         Friend added
-      </button>
+      </p>
     </div>
 
     <!-- Overlap banner — shared festivals -->
@@ -229,23 +219,14 @@ function formatDateRange(start: string, end: string): string {
 
               <!-- Actions -->
               <div class="flex items-center gap-2">
-                <button
-                  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border-2 border-dashed hover:-translate-y-0.5 transition-transform text-foreground"
-                  style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent);"
-                  @click="emit('open-festival', f.slug)"
-                >
+                <Button variant="outline-pill" size="pill-sm" class="px-3" @click="emit('open-festival', f.slug)">
                   See plan
-                  <ChevronRight class="w-3 h-3" />
-                </button>
-                <button
-                  v-if="f.lookingCount > 0"
-                  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border-2 border-dashed hover:-translate-y-0.5 transition-transform text-wd-amber-800"
-                  style="border-color:color-mix(in srgb, var(--wd-amber-500) 33.3%, transparent);"
-                  @click="emit('open-festival', f.slug)"
-                >
-                  <Heart class="w-3 h-3" />
+                  <ChevronRight class="size-3" aria-hidden="true" />
+                </Button>
+                <Button v-if="f.lookingCount > 0" variant="soft" size="pill-sm" class="px-3" @click="emit('open-festival', f.slug)">
+                  <Heart class="size-3" aria-hidden="true" />
                   Be their partner
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -260,14 +241,10 @@ function formatDateRange(start: string, end: string): string {
       <p class="text-sm text-muted-foreground">
         Browse festivals, pick workshops, find partners, and share your year with friends.
       </p>
-      <button
-        class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-        style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-        @click="emit('create-year-plan')"
-      >
+      <Button variant="cta" size="lg" class="px-6" @click="emit('create-year-plan')">
         Create my year plan
-        <ArrowRight class="w-4 h-4" />
-      </button>
+        <ArrowRight aria-hidden="true" />
+      </Button>
     </div>
   </div>
 </template>

@@ -82,12 +82,10 @@ async function handleResetPassword() {
   }
 }
 
-const inputClass = 'w-full h-11 rounded-full px-4 text-sm outline-none transition-all'
-const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d; font-family: system-ui, sans-serif;'
 </script>
 
 <template>
-  <div
+  <main
     class="flex min-h-screen items-center justify-center px-4 bg-background"
   >
     <div class="w-full max-w-sm">
@@ -127,59 +125,48 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
           </div>
 
           <form class="space-y-4 pt-2" novalidate @submit.prevent="handleResetPassword">
-            <div class="space-y-1.5">
-              <label for="new-password" class="text-sm font-bold text-foreground">New password</label>
+            <Field id="new-password" label="New password" :error="errors.password">
               <div class="relative">
-                <input
-                  id="new-password"
+                <Input
                   v-model="newPassword"
                   :type="showPassword ? 'text' : 'password'"
                   placeholder="At least 8 characters"
                   autocomplete="new-password"
                   required
-                  :class="inputClass + ' pr-16'"
-                  :style="inputStyle"
+                  class="pr-20"
                   v-bind="fieldAttrs('password', 'new-password-error')"
-                >
-                <button
+                />
+                <Button
                   type="button"
-                  class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold uppercase tracking-wider text-secondary font-sans"
+                  variant="ghost"
+                  size="sm"
+                  class="absolute right-1 top-1/2 -translate-y-1/2 text-xs font-bold uppercase tracking-wider text-secondary"
+                  :aria-pressed="showPassword"
                   @click="showPassword = !showPassword"
                 >
                   {{ showPassword ? 'Hide' : 'Show' }}
-                </button>
+                </Button>
               </div>
-              <FieldError id="new-password-error" :message="errors.password" />
-            </div>
+            </Field>
 
-            <div class="space-y-1.5">
-              <label for="confirm-password" class="text-sm font-bold text-foreground">Confirm password</label>
-              <input
-                id="confirm-password"
+            <Field id="confirm-password" label="Confirm password" :error="errors.confirmPassword">
+              <Input
                 v-model="confirmPassword"
                 :type="showPassword ? 'text' : 'password'"
                 placeholder="Repeat your password"
                 autocomplete="new-password"
                 required
-                :class="inputClass"
-                :style="inputStyle"
                 v-bind="fieldAttrs('confirmPassword', 'confirm-password-error')"
-              >
-              <FieldError id="confirm-password-error" :message="errors.confirmPassword" />
-            </div>
+              />
+            </Field>
 
-            <p v-if="resetError" class="text-sm font-bold text-primary font-sans">
+            <p v-if="resetError" role="alert" class="text-sm font-bold text-primary font-sans">
               {{ resetError }}
             </p>
 
-            <button
-              type="submit"
-              :disabled="resetLoading"
-              class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60 bg-wd-red-600 font-sans"
-              style="box-shadow: 0 3px 0 -1px var(--wd-red-800);"
-            >
+            <Button type="submit" variant="pill" size="lg" class="w-full" :loading="resetLoading">
               {{ resetLoading ? 'Saving…' : 'Save new password' }}
-            </button>
+            </Button>
           </form>
         </template>
 
@@ -225,5 +212,5 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
         <Brand />
       </div>
     </div>
-  </div>
+  </main>
 </template>

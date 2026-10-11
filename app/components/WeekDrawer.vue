@@ -97,20 +97,23 @@ const typeBadge: Record<string, { label: string; class: string }> = {
         <span class="text-sm font-semibold">My Week</span>
         <span v-if="count > 0" class="bg-primary-foreground/20 text-xs font-medium px-1.5 py-0.5 rounded">{{ count }}</span>
       </div>
-      <button class="p-1 rounded hover:bg-primary-foreground/10 lg:hidden" @click="emit('close')">
-        <X class="w-4 h-4" />
-      </button>
+      <Button variant="ghost" size="icon-sm" class="lg:hidden hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Close my week" @click="emit('close')">
+        <X aria-hidden="true" />
+      </Button>
     </div>
 
     <!-- Content -->
     <div class="flex-1 overflow-y-auto">
       <!-- Empty state -->
-      <div v-if="count === 0" class="px-4 py-8 text-center">
-        <CalendarDays class="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-        <p class="text-sm font-medium">Build your week</p>
-        <p class="text-xs text-muted-foreground mt-1">
-          Tap "Going?" on classes and socials to plan your dance week in {{ cityName }}.
+      <div v-if="count === 0" class="m-4 text-center py-8 px-4 rounded-2xl border-2 border-dashed border-input bg-white/50">
+        <CalendarDays class="w-8 h-8 mx-auto mb-3 text-secondary" aria-hidden="true" />
+        <p class="text-sm font-bold font-display text-foreground">Build your week</p>
+        <p class="text-xs text-muted-foreground mt-1 font-sans">
+          Tap “Going?” on classes and socials to plan your dance week in {{ cityName }}.
         </p>
+        <Button variant="soft" size="pill-sm" class="mt-3 lg:hidden" @click="emit('close')">
+          See this week’s classes
+        </Button>
       </div>
 
       <!-- Picked events by day -->
@@ -149,12 +152,15 @@ const typeBadge: Record<string, { label: string; class: string }> = {
                   </span>
                 </div>
               </div>
-              <button
-                class="shrink-0 text-muted-foreground hover:text-destructive p-0.5 mt-1"
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="shrink-0 size-7 text-muted-foreground hover:text-destructive [&_svg]:size-3"
+                :aria-label="`Remove ${event.name}`"
                 @click="emit('remove', event.id)"
               >
-                <X class="w-3 h-3" />
-              </button>
+                <X aria-hidden="true" />
+              </Button>
             </div>
           </div>
         </div>

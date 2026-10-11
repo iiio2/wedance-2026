@@ -117,7 +117,9 @@ function toggleMatchWorkshop(id: string) {
         >
           <!-- Friend header -->
           <button
+            type="button"
             class="w-full flex items-center gap-3 p-3 text-left hover:bg-muted/50 transition-colors"
+            :aria-expanded="expandedFriendId === friend.id"
             @click="toggleFriend(friend.id)"
           >
             <img
@@ -179,6 +181,7 @@ function toggleMatchWorkshop(id: string) {
 
         <!-- Invite more -->
         <button
+          type="button"
           class="w-full rounded-lg border border-dashed p-3 flex items-center gap-3 text-left hover:bg-muted/50 transition-colors group"
           @click="emit('invite-friends')"
         >
@@ -230,7 +233,9 @@ function toggleMatchWorkshop(id: string) {
         >
           <!-- Workshop header -->
           <button
+            type="button"
             class="w-full flex items-center gap-3 p-3 text-left hover:bg-muted/50 transition-colors"
+            :aria-expanded="expandedMatchWorkshopId === workshop.id"
             @click="toggleMatchWorkshop(workshop.id)"
           >
             <div class="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center shrink-0">

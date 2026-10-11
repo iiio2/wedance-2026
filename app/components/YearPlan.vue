@@ -78,14 +78,10 @@ const ticketStatusClass: Record<string, string> = {
           {{ stats.totalFestivals }} festivals · {{ stats.totalWorkshops }} workshops · {{ stats.countries.length }} {{ stats.countries.length === 1 ? 'country' : 'countries' }}
         </p>
       </div>
-      <button
-        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border-2 border-dashed hover:-translate-y-0.5 transition-transform text-foreground"
-        style="border-color:color-mix(in srgb, var(--wd-brown-900) 26.7%, transparent);"
-        @click="emit('share')"
-      >
-        <Share2 class="w-3.5 h-3.5" />
+      <Button variant="outline-pill" size="pill-sm" @click="emit('share')">
+        <Share2 class="size-3.5" aria-hidden="true" />
         Share
-      </button>
+      </Button>
     </div>
 
     <!-- Ticket deadline alerts -->
@@ -93,15 +89,16 @@ const ticketStatusClass: Record<string, string> = {
       <div
         v-for="f in upcomingDeadlines"
         :key="f.slug + '-deadline'"
-        class="rounded-xl border-2 border-dashed p-3 flex items-center gap-3 cursor-pointer hover:-translate-y-0.5 transition-transform border-wd-amber-500"
+        class="relative rounded-xl border-2 border-dashed p-3 flex items-center gap-3 cursor-pointer hover:-translate-y-0.5 transition-transform border-wd-amber-500 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
         style="background:rgba(245, 158, 11, 0.08);"
-        @click="emit('open-festival', f.slug)"
       >
         <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background:rgba(245, 158, 11, 0.15);">
           <Clock class="w-4 h-4 text-wd-amber-500" />
         </div>
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-bold text-foreground font-display">Early bird for {{ f.name }}</p>
+          <p class="text-sm font-bold text-foreground font-display">
+            <button type="button" class="text-left after:absolute after:inset-0 after:content-[''] after:rounded-xl outline-none cursor-pointer" @click="emit('open-festival', f.slug)">Early bird for {{ f.name }}</button>
+          </p>
           <p class="text-xs text-secondary">Expires in {{ daysUntil(f.earlyBirdDeadline!) }} days</p>
         </div>
         <ChevronRight class="w-4 h-4 shrink-0 text-wd-amber-500" />
@@ -117,10 +114,9 @@ const ticketStatusClass: Record<string, string> = {
           <div
             v-for="f in monthFestivals"
             :key="f.slug"
-            class="rounded-xl border-2 overflow-hidden cursor-pointer hover:-translate-y-0.5 transition-all"
+            class="relative rounded-xl border-2 overflow-hidden cursor-pointer hover:-translate-y-0.5 transition-all focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
             :style="{ borderColor: f.accentColor + '55', boxShadow: '3px 4px 0 -1px ' + f.accentColor + '2e' }"
             style="background:rgba(255,255,255,0.85);"
-            @click="emit('open-festival', f.slug)"
           >
             <!-- Festival header with accent -->
             <div
@@ -141,7 +137,9 @@ const ticketStatusClass: Record<string, string> = {
                 {{ f.name.charAt(0) }}
               </div>
               <div class="flex-1 min-w-0">
-                <h3 class="text-sm font-bold leading-tight font-display text-foreground">{{ f.name }}</h3>
+                <h3 class="text-sm font-bold leading-tight font-display text-foreground">
+                  <button type="button" class="text-left after:absolute after:inset-0 after:content-[''] after:rounded-xl outline-none cursor-pointer" @click="emit('open-festival', f.slug)">{{ f.name }}</button>
+                </h3>
                 <div class="flex items-center gap-2 mt-0.5">
                   <span class="text-xs flex items-center gap-1 text-secondary">
                     <Calendar class="w-3 h-3" />
@@ -235,9 +233,8 @@ const ticketStatusClass: Record<string, string> = {
       <div
         v-for="f in suggestions"
         :key="f.slug"
-        class="rounded-xl border-2 border-dashed p-4 cursor-pointer hover:-translate-y-0.5 transition-transform"
+        class="relative rounded-xl border-2 border-dashed p-4 cursor-pointer hover:-translate-y-0.5 transition-transform focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
         style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(255,255,255,0.7);"
-        @click="emit('open-festival', f.slug)"
       >
         <div class="flex items-center gap-3">
           <img
@@ -254,7 +251,9 @@ const ticketStatusClass: Record<string, string> = {
             {{ f.name.charAt(0) }}
           </div>
           <div class="flex-1 min-w-0">
-            <h4 class="text-sm font-bold font-display text-foreground">{{ f.name }}</h4>
+            <h4 class="text-sm font-bold font-display text-foreground">
+              <button type="button" class="text-left after:absolute after:inset-0 after:content-[''] after:rounded-xl outline-none cursor-pointer" @click="emit('open-festival', f.slug)">{{ f.name }}</button>
+            </h4>
             <p class="text-xs text-secondary">
               {{ formatDateRange(f.startDate, f.endDate) }} · {{ f.location }}
             </p>
@@ -321,11 +320,7 @@ const ticketStatusClass: Record<string, string> = {
       <p class="text-sm text-muted-foreground">
         Sign in to save your plans across festivals and share your year with friends.
       </p>
-      <button
-        class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-        style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-        @click="emit('sign-in')"
-      >Sign in</button>
+      <Button variant="cta" size="lg" class="px-6" @click="emit('sign-in')">Sign in</Button>
     </div>
   </div>
 </template>

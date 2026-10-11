@@ -1639,6 +1639,8 @@ function cardSummary(f: CatalogueEntry) {
     <!-- V3 header -->
     <SiteHeader />
 
+    <main>
+
     <!-- HERO -->
     <section class="max-w-4xl mx-auto px-4 pt-12 pb-6 text-center">
       <div class="text-sm tracking-widest uppercase mb-3 text-secondary">
@@ -1743,22 +1745,12 @@ function cardSummary(f: CatalogueEntry) {
 
         <!-- Sign in / join -->
         <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 font-sans">
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-            style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-            @click="openAuth('dashboard')"
-          >
-            Join &amp; build my dashboard <ArrowRight class="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold uppercase tracking-wider border text-foreground"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent);"
-            @click="openAuth('signin')"
-          >
+          <Button variant="cta" size="lg" class="px-6" @click="openAuth('dashboard')">
+            Join &amp; build my dashboard <ArrowRight aria-hidden="true" />
+          </Button>
+          <Button variant="outline-pill" size="lg" class="px-6" @click="openAuth('signin')">
             Sign in
-          </button>
+          </Button>
         </div>
         <p class="mt-4 text-center text-sm text-muted-foreground font-sans">
           Just looking? <NuxtLink to="/festivals" class="italic underline text-secondary">Browse festivals</NuxtLink>
@@ -1769,21 +1761,19 @@ function cardSummary(f: CatalogueEntry) {
 
     <!-- SIGNED IN, EMPTY -->
     <section v-else-if="picked.length === 0 && courses.length === 0 && socials.length === 0" class="max-w-2xl mx-auto px-4 py-10">
-      <div class="rounded-2xl p-10 text-center border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);">
-        <Search class="w-10 h-10 mx-auto mb-4 text-secondary" />
+      <div class="rounded-2xl p-10 text-center border-2 border-dashed border-input bg-white/50">
+        <Search class="w-10 h-10 mx-auto mb-4 text-secondary" aria-hidden="true" />
         <p class="text-lg font-display text-foreground">
           You haven't picked anything yet.
         </p>
         <p class="mt-2 text-sm text-muted-foreground font-sans">
           Start by picking one festival — the rest of the year plans itself.
         </p>
-        <NuxtLink
-          to="/festivals"
-          class="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-          style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-        >
-          Browse festivals <ArrowRight class="w-4 h-4" />
-        </NuxtLink>
+        <Button as-child variant="cta" size="lg" class="mt-6 px-6">
+          <NuxtLink to="/festivals">
+            Browse festivals <ArrowRight aria-hidden="true" />
+          </NuxtLink>
+        </Button>
       </div>
     </section>
 
@@ -1829,14 +1819,14 @@ function cardSummary(f: CatalogueEntry) {
               Where you're <em class="italic text-primary">headed.</em>
             </h2>
           </div>
-          <button
+          <Button
             v-if="!showGoalForm"
-            type="button"
-            class="text-xs italic hover:underline text-secondary font-display"
+            variant="link"
+            class="h-auto p-0 text-xs font-normal italic text-secondary font-display"
             @click="showGoalForm = true"
           >
             + Add a goal
-          </button>
+          </Button>
         </div>
 
         <!-- Inline add-goal form -->
@@ -1844,57 +1834,32 @@ function cardSummary(f: CatalogueEntry) {
           <div class="text-sm font-bold mb-4 text-foreground font-display">
             What are you working toward this year?
           </div>
-          <form class="space-y-4" @submit.prevent="onGoalSubmit">
-            <div>
-              <label for="goal-title" class="block text-xs font-bold uppercase tracking-widest mb-1.5 text-secondary">Your goal</label>
-              <input
-                id="goal-title"
-                v-model="goalFormTitle"
-                type="text"
-                placeholder="e.g. Learn Bachata Sensual"
-                class="w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 bg-background text-foreground font-sans"
-                style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);"
-              />
-              <p v-if="goalFormError" class="text-xs mt-1 text-primary">{{ goalFormError }}</p>
-            </div>
-            <div>
-              <label for="goal-why" class="block text-xs font-bold uppercase tracking-widest mb-1.5 text-secondary">
-                Why does it matter? <span class="font-normal normal-case tracking-normal text-muted-foreground">(optional)</span>
-              </label>
-              <input
-                id="goal-why"
-                v-model="goalFormWhy"
-                type="text"
-                placeholder="e.g. Feel confident on the dance floor"
-                class="w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 bg-background text-foreground font-sans"
-                style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);"
-              />
-            </div>
+          <form class="space-y-4" novalidate @submit.prevent="onGoalSubmit">
+            <Field id="goal-title" label="Your goal" :error="goalFormError || undefined">
+              <Input v-model="goalFormTitle" placeholder="e.g. Learn Bachata Sensual" />
+            </Field>
+            <Field id="goal-why" label="Why does it matter?" optional>
+              <Input v-model="goalFormWhy" placeholder="e.g. Feel confident on the dance floor" />
+            </Field>
             <div class="flex items-center gap-3 pt-1">
-              <button
-                type="submit"
-                :disabled="!goalFormTitle.trim() || !!goalFormError"
-                class="px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-40 bg-wd-red-600"
-              >
+              <Button type="submit" variant="pill" :disabled="!goalFormTitle.trim() || !!goalFormError">
                 Add goal
-              </button>
-              <button
-                type="button"
-                class="px-4 py-2.5 rounded-full text-sm font-bold uppercase tracking-wider text-muted-foreground"
-                style="background:color-mix(in srgb, var(--wd-brown-900) 6.7%, transparent);"
-                @click="onGoalCancel"
-              >
+              </Button>
+              <Button type="button" variant="ghost" class="rounded-full font-bold uppercase tracking-wider text-muted-foreground" @click="onGoalCancel">
                 Cancel
-              </button>
+              </Button>
             </div>
           </form>
         </div>
 
-        <div v-if="!goalsList.length && !showGoalForm" class="rounded-2xl p-6 text-center border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);">
-          <Target class="w-8 h-8 mx-auto mb-3 text-secondary" />
+        <div v-if="!goalsList.length && !showGoalForm" class="rounded-2xl p-6 text-center border-2 border-dashed border-input bg-white/50">
+          <Target class="w-8 h-8 mx-auto mb-3 text-secondary" aria-hidden="true" />
           <p class="text-sm text-muted-foreground font-sans">
             No goals yet. One year, one arc, one reason to keep showing up.
           </p>
+          <Button variant="link" class="mt-2 h-auto p-0 text-xs font-bold underline text-primary font-sans" @click="showGoalForm = true">
+            Set a goal
+          </Button>
         </div>
         <div v-else-if="goalsList.length" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
@@ -1913,15 +1878,16 @@ function cardSummary(f: CatalogueEntry) {
                   {{ g.why }}
                 </div>
               </div>
-              <button
+              <Button
                 v-if="!previewMode"
-                type="button"
-                class="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 p-1 rounded hover:bg-red-50"
-                title="Remove goal"
+                variant="ghost"
+                size="icon-sm"
+                class="size-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity shrink-0 rounded hover:bg-wd-red-50 text-primary hover:text-primary [&_svg]:size-3.5"
+                :aria-label="`Remove goal: ${g.title}`"
                 @click="removeGoal(g.id)"
               >
-                <X class="w-3.5 h-3.5 text-primary" />
-              </button>
+                <X aria-hidden="true" />
+              </Button>
             </div>
             <!-- Progress bar -->
             <div class="mt-4">
@@ -2048,7 +2014,7 @@ function cardSummary(f: CatalogueEntry) {
             class="inline-flex items-center gap-1.5 text-eyebrow font-black uppercase tracking-widest px-2.5 py-1 rounded-full"
             :style="{ background: n.festivalColor + '18', color: n.festivalColor }"
           >
-            <UsersIcon class="w-3 h-3" style="stroke-width:2;" /> {{ n.dancerNames.length }} match{{ n.dancerNames.length === 1 ? '' : 'es' }}
+            <UsersIcon class="w-3 h-3" /> {{ n.dancerNames.length }} match{{ n.dancerNames.length === 1 ? '' : 'es' }}
           </span>
           <div class="min-w-0 flex-1">
             <div class="text-sm font-bold text-foreground">
@@ -2059,21 +2025,12 @@ function cardSummary(f: CatalogueEntry) {
               Not in your year yet — add it and you'll meet them there.
             </div>
           </div>
-          <button
-            type="button"
-            class="text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full text-white whitespace-nowrap"
-            :style="{ background: n.festivalColor, boxShadow: '0 3px 0 -1px ' + n.festivalColor + 'CC' }"
-            @click="acceptFestivalNudge(n)"
-          >
+          <Button variant="pill" size="pill-sm" :accent="n.festivalColor" class="tracking-widest" @click="acceptFestivalNudge(n)">
             Add to year
-          </button>
-          <button
-            type="button"
-            class="text-xs italic hover:underline shrink-0 text-secondary"
-            @click="dismissFestivalNudge(n)"
-          >
+          </Button>
+          <Button variant="link" class="h-auto p-0 text-xs font-normal italic shrink-0 text-secondary" @click="dismissFestivalNudge(n)">
             Not this year
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -2313,18 +2270,17 @@ function cardSummary(f: CatalogueEntry) {
                       {{ day }}
                     </div>
                     <div class="space-y-2">
-                      <div
+                      <label
                         v-for="w in getWorkshopsForFestival(f.slug).filter(ws => ws.day === day && ws.type !== 'party')"
                         :key="w.id"
                         class="flex items-start gap-3 p-2.5 rounded-lg hover:bg-black/[0.02] cursor-pointer"
-                        @click.stop="toggleWorkshop(f.slug, w.id)"
+                        @click.stop
                       >
                         <input
                           type="checkbox"
                           :checked="getSelectedWorkshops(f.slug).has(w.id)"
-                          :aria-label="`Select ${w.time} ${w.title}`"
-                          class="mt-0.5 cursor-pointer"
-                          @click.stop="toggleWorkshop(f.slug, w.id)"
+                          class="mt-0.5 size-4 shrink-0 cursor-pointer accent-primary"
+                          @change="toggleWorkshop(f.slug, w.id)"
                         >
                         <div class="flex-1 min-w-0">
                           <div class="text-sm font-bold leading-tight text-foreground">
@@ -2340,7 +2296,7 @@ function cardSummary(f: CatalogueEntry) {
                             </template>
                           </div>
                         </div>
-                      </div>
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -2385,13 +2341,9 @@ function cardSummary(f: CatalogueEntry) {
               >
                 Open festival page →
               </NuxtLink>
-              <button
-                type="button"
-                class="ml-auto italic hover:underline text-secondary font-sans"
-                @click.stop="onRemove(f.slug)"
-              >
+              <Button variant="link" class="ml-auto h-auto p-0 text-xs font-normal italic text-secondary font-sans" @click.stop="onRemove(f.slug)">
                 Remove
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -2406,22 +2358,22 @@ function cardSummary(f: CatalogueEntry) {
               Where you <em class="italic text-primary">show up.</em>
             </h2>
           </div>
-          <button
+          <Button
             v-if="!showEnrollPicker && availableClasses.length > 0"
-            type="button"
-            class="text-xs italic hover:underline text-secondary font-display"
+            variant="link"
+            class="h-auto p-0 text-xs font-normal italic text-secondary font-display"
             @click="showEnrollPicker = true"
           >
             + Enroll
-          </button>
-          <button
+          </Button>
+          <Button
             v-else-if="showEnrollPicker"
-            type="button"
-            class="text-xs italic hover:underline text-muted-foreground font-display"
+            variant="link"
+            class="h-auto p-0 text-xs font-normal italic text-muted-foreground font-display"
             @click="showEnrollPicker = false"
           >
             Done
-          </button>
+          </Button>
         </div>
 
         <!-- Enroll picker — available classes from the city -->
@@ -2433,45 +2385,39 @@ function cardSummary(f: CatalogueEntry) {
             No upcoming classes found. Check your city page for more.
           </div>
           <div v-else class="space-y-2">
-            <div
+            <button
               v-for="cls in availableClasses"
               :key="cls.id"
-              class="flex items-center gap-3 px-3 py-2.5 rounded-xl border hover:bg-amber-50/50 cursor-pointer transition-colors"
+              type="button"
+              class="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border hover:bg-amber-50/50 cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
               style="border-color:color-mix(in srgb, var(--wd-brown-900) 6.7%, transparent);"
               @click="enrollClass(cls)"
             >
-              <div class="w-2 h-2 rounded-full shrink-0" :style="{ background: STYLE_COLORS_ENROLL[cls.style] || WD.gray500 }" />
-              <div class="flex-1 min-w-0">
-                <div class="text-sm font-bold text-foreground">{{ cls.name }}</div>
-                <div class="text-xs text-muted-foreground font-sans">
+              <span class="w-2 h-2 rounded-full shrink-0" :style="{ background: STYLE_COLORS_ENROLL[cls.style] || WD.gray500 }" />
+              <span class="block flex-1 min-w-0">
+                <span class="block text-sm font-bold text-foreground">{{ cls.name }}</span>
+                <span class="block text-xs text-muted-foreground font-sans">
                   {{ cls.date ? formatShortDate(cls.date) : cls.day }}, {{ cls.time }} · {{ cls.venue }} · {{ cls.level || 'All levels' }}
-                </div>
-              </div>
+                </span>
+              </span>
               <span class="text-xs font-bold italic shrink-0 text-primary">+ Add</span>
-            </div>
+            </button>
           </div>
         </div>
 
-        <div v-if="!courses.length && !showEnrollPicker" class="rounded-2xl p-6 text-center border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);">
+        <div v-if="!courses.length && !showEnrollPicker" class="rounded-2xl p-6 text-center border-2 border-dashed border-input bg-white/50">
           <GraduationCap class="w-8 h-8 mx-auto mb-3 text-secondary" />
           <p class="text-sm mb-3 text-muted-foreground font-sans">
             No monthly cadence yet. A weekly class is the quickest way to keep momentum.
           </p>
-          <button
-            v-if="availableClasses.length > 0"
-            type="button"
-            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider bg-wd-red-600"
-            @click="showEnrollPicker = true"
-          >
-            Browse classes <ArrowRight class="w-4 h-4" />
-          </button>
-          <NuxtLink
-            v-else
-            :to="citySocialsLink"
-            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider bg-wd-red-600"
-          >
-            Browse city page <ArrowRight class="w-4 h-4" />
-          </NuxtLink>
+          <Button v-if="availableClasses.length > 0" variant="pill" class="px-5" @click="showEnrollPicker = true">
+            Browse classes <ArrowRight aria-hidden="true" />
+          </Button>
+          <Button v-else as-child variant="pill" class="px-5">
+            <NuxtLink :to="citySocialsLink">
+              Browse city page <ArrowRight aria-hidden="true" />
+            </NuxtLink>
+          </Button>
         </div>
         <div v-else class="grid sm:grid-cols-2 gap-4">
           <div
@@ -2505,14 +2451,15 @@ function cardSummary(f: CatalogueEntry) {
                 >
                   Paid
                 </span>
-                <button
-                  type="button"
-                  class="p-1 rounded hover:bg-red-50"
-                  title="Remove course"
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  class="size-7 rounded hover:bg-wd-red-50 text-primary hover:text-primary [&_svg]:size-3.5"
+                  :aria-label="`Remove course: ${c.school}`"
                   @click="unenrollCourse(c.id)"
                 >
-                  <X class="w-3.5 h-3.5 text-primary" />
-                </button>
+                  <X aria-hidden="true" />
+                </Button>
               </div>
             </div>
 
@@ -2559,8 +2506,8 @@ function cardSummary(f: CatalogueEntry) {
           </NuxtLink>
         </div>
 
-        <div v-if="!upcomingSocials.length" class="rounded-2xl p-6 text-center border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);">
-          <Sparkles class="w-8 h-8 mx-auto mb-3 text-secondary" />
+        <div v-if="!upcomingSocials.length" class="rounded-2xl p-6 text-center border-2 border-dashed border-input bg-white/50">
+          <Sparkles class="w-8 h-8 mx-auto mb-3 text-secondary" aria-hidden="true" />
           <p class="text-sm text-muted-foreground font-sans">
             <template v-if="dancerCity">
               We're still gathering this week's socials in {{ dancerCity }}<template v-if="stylesLabel"> for {{ stylesLabel }}</template>. Check back soon.
@@ -2569,6 +2516,9 @@ function cardSummary(f: CatalogueEntry) {
               Pick your city and we'll surface this week's socials here.
             </template>
           </p>
+          <NuxtLink v-if="!dancerCity" to="/settings" class="mt-2 inline-block font-sans text-xs font-bold underline text-primary">
+            Set your city
+          </NuxtLink>
         </div>
         <div v-else class="rounded-2xl bg-white border overflow-hidden" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
           <div
@@ -2594,6 +2544,7 @@ function cardSummary(f: CatalogueEntry) {
             <button
               type="button"
               class="text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap"
+              :aria-pressed="s.rsvpd"
               :style="s.rsvpd
                 ? { background: 'var(--wd-green-600)', color: 'white' }
                 : { background: 'white', color: s.color, border: '1.5px solid ' + s.color + '55' }"
@@ -2643,6 +2594,7 @@ function cardSummary(f: CatalogueEntry) {
               :key="k"
               type="button"
               class="text-xs font-bold px-3 py-1.5 rounded-full capitalize"
+              :aria-pressed="newHangout.kind === k"
               :style="newHangout.kind === k
                 ? { background: hangoutColors[k], color: 'white' }
                 : { background: 'white', color: hangoutColors[k], border: '1.5px solid ' + hangoutColors[k] + '55' }"
@@ -2651,52 +2603,39 @@ function cardSummary(f: CatalogueEntry) {
               {{ k }}
             </button>
           </div>
-          <input
-            v-model="newHangout.title"
-            type="text"
-            placeholder="What's the plan? e.g. Dinner before La Rumba"
-            class="w-full text-sm rounded-lg border px-3 py-2 mb-2 text-foreground font-sans"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);"
-          />
-          <div class="flex gap-2 mb-3">
-            <input
-              v-model="newHangout.time"
-              type="time"
-              class="text-sm rounded-lg border px-3 py-2 text-foreground font-sans"
-              style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); width:110px;"
-            />
-            <input
-              v-model="newHangout.venue"
-              type="text"
-              placeholder="Where? (venue / address)"
-              class="flex-1 text-sm rounded-lg border px-3 py-2 text-foreground font-sans"
-              style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);"
-            />
+          <div class="space-y-2 mb-3">
+            <Field id="hangout-title" label="What's the plan?">
+              <Input v-model="newHangout.title" size="sm" placeholder="e.g. Dinner before La Rumba" />
+            </Field>
+            <div class="grid grid-cols-[110px_minmax(0,1fr)] gap-2">
+              <Field id="hangout-time" label="Time">
+                <Input v-model="newHangout.time" type="time" size="sm" />
+              </Field>
+              <Field id="hangout-venue" label="Where?" optional>
+                <Input v-model="newHangout.venue" size="sm" placeholder="Venue or address" />
+              </Field>
+            </div>
           </div>
           <p v-if="hangoutError" class="text-xs mb-2 px-1 text-primary font-sans" role="alert">
             {{ hangoutError }}
           </p>
           <div class="flex justify-end gap-2">
-            <button
-              type="button"
-              class="text-xs px-3 py-1.5 rounded-full text-muted-foreground font-sans"
-              @click="showHangoutForm = false"
-            >
+            <Button variant="ghost" size="sm" class="rounded-full text-xs text-muted-foreground" @click="showHangoutForm = false">
               Cancel
-            </button>
-            <button
-              type="button"
-              class="text-xs font-bold px-4 py-1.5 rounded-full"
-              :style="{ background: 'var(--wd-brown-900)', color: 'white', opacity: creatingHangout || !newHangout.title.trim() ? 0.5 : 1 }"
-              :disabled="creatingHangout || !newHangout.title.trim()"
+            </Button>
+            <Button
+              variant="pill"
+              size="pill-sm"
+              :loading="creatingHangout"
+              :disabled="!newHangout.title.trim()"
               @click="createHangout"
             >
               {{ creatingHangout ? 'Posting…' : 'Post' }}
-            </button>
+            </Button>
           </div>
         </div>
 
-        <div v-if="!hangouts.length && !showHangoutForm" class="rounded-2xl p-6 text-center border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);">
+        <div v-if="!hangouts.length && !showHangoutForm" class="rounded-2xl p-6 text-center border-2 border-dashed border-input bg-white/50">
           <MoonStar class="w-8 h-8 mx-auto mb-3 text-secondary" />
           <p class="text-sm text-muted-foreground font-sans">
             Nobody's out yet. Post a dinner, a bar hop, or a ride — dancers show up when someone starts.
@@ -2725,6 +2664,7 @@ function cardSummary(f: CatalogueEntry) {
             <button
               type="button"
               class="text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap"
+              :aria-pressed="h.going"
               :style="h.going
                 ? { background: 'var(--wd-green-600)', color: 'white' }
                 : { background: 'white', color: h.color, border: '1.5px solid ' + h.color + '55' }"
@@ -2732,15 +2672,16 @@ function cardSummary(f: CatalogueEntry) {
             >
               {{ h.going ? '✓ In' : 'Join' }}
             </button>
-            <button
+            <Button
               v-if="h.mine"
-              type="button"
-              class="text-xs px-1.5 py-1 rounded-full text-secondary"
-              title="Close this hangout"
+              variant="ghost"
+              size="icon-sm"
+              class="size-7 rounded-full text-secondary [&_svg]:size-3.5"
+              aria-label="Close this hangout"
               @click="closeHangout(h.id)"
             >
-              <X class="w-3.5 h-3.5" />
-            </button>
+              <X aria-hidden="true" />
+            </Button>
           </div>
         </div>
       </div>
@@ -2754,14 +2695,14 @@ function cardSummary(f: CatalogueEntry) {
               What could <em class="italic text-primary">rearrange</em> the year?
             </h2>
           </div>
-          <button
-            type="button"
-            class="inline-flex items-center gap-1 text-xs italic hover:underline text-secondary font-display"
-            :class="canUndo ? '' : 'opacity-40 pointer-events-none'"
+          <Button
+            variant="link"
+            class="h-auto p-0 gap-1 text-xs font-normal italic text-secondary font-display disabled:opacity-40 [&_svg]:size-3"
+            :disabled="!canUndo"
             @click="undoSwipe"
           >
-            <Undo2 class="w-3 h-3" /> Undo
-          </button>
+            <Undo2 aria-hidden="true" /> Undo
+          </Button>
         </div>
         <p class="text-sm mb-6 max-w-xl text-muted-foreground font-sans">
           People and places that could pull you somewhere new. Yes = we surface it above. Skip = we won't.
@@ -2769,7 +2710,7 @@ function cardSummary(f: CatalogueEntry) {
 
         <!-- Deck -->
         <div class="relative mx-auto max-w-md">
-          <div v-if="!deckCurrent" class="rounded-2xl p-10 text-center border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);">
+          <div v-if="!deckCurrent" class="rounded-2xl p-10 text-center border-2 border-dashed border-input bg-white/50">
             <Sparkles class="w-10 h-10 mx-auto mb-3 text-secondary" />
             <p class="text-lg font-display text-foreground">
               That's it for this pass.
@@ -2926,7 +2867,7 @@ function cardSummary(f: CatalogueEntry) {
               aria-label="Skip"
               @click="commitSwipe('skip')"
             >
-              <X class="w-6 h-6" style="stroke-width:2;" />
+              <X class="w-6 h-6" />
             </button>
             <button
               type="button"
@@ -2935,7 +2876,7 @@ function cardSummary(f: CatalogueEntry) {
               aria-label="Save for later"
               @click="commitSwipe('save')"
             >
-              <Star class="w-5 h-5" style="stroke-width:2;" />
+              <Star class="w-5 h-5" />
             </button>
             <button
               type="button"
@@ -2944,7 +2885,7 @@ function cardSummary(f: CatalogueEntry) {
               aria-label="Yes"
               @click="commitSwipe('yes')"
             >
-              <Heart class="w-6 h-6" style="stroke-width:2;" />
+              <Heart class="w-6 h-6" />
             </button>
           </div>
 
@@ -2954,6 +2895,8 @@ function cardSummary(f: CatalogueEntry) {
         </div>
       </div>
     </section>
+
+    </main>
 
     <SiteFooter />
 

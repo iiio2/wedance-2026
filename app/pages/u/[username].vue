@@ -72,6 +72,8 @@ useHead(() => ({
   <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
+    <main>
+
     <!-- Loading -->
     <section v-if="pending" class="max-w-xl mx-auto px-4 py-24 text-center">
       <div class="inline-block w-8 h-8 rounded-full border-2 animate-spin" style="border-color:color-mix(in srgb, var(--wd-red-600) 20%, transparent); border-top-color:var(--wd-red-600);" />
@@ -132,14 +134,11 @@ useHead(() => ({
               </div>
             </div>
 
-            <NuxtLink
-              v-if="profile?.isOwner"
-              to="/settings"
-              class="shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-primary font-sans"
-              style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);"
-            >
-              <Pencil class="w-3 h-3" /> Edit
-            </NuxtLink>
+            <Button v-if="profile?.isOwner" as-child variant="soft" size="pill-sm" class="shrink-0 px-3">
+              <NuxtLink to="/settings">
+                <Pencil class="size-3" aria-hidden="true" /> Edit
+              </NuxtLink>
+            </Button>
           </div>
 
           <!-- Bio -->
@@ -194,6 +193,7 @@ useHead(() => ({
         </div>
       </div>
     </section>
+    </main>
 
     <SiteFooter />
   </div>

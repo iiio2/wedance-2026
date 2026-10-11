@@ -25,16 +25,8 @@ function confirm() {
         </DialogDescription>
       </DialogHeader>
       <DialogFooter class="gap-2 sm:gap-0">
-        <button
-          type="button"
-          class="h-10 px-4 rounded-md text-sm font-medium border hover:bg-muted transition-colors"
-          @click="cancel"
-        >Cancel</button>
-        <button
-          type="button"
-          class="h-10 px-4 rounded-md text-sm font-medium text-white bg-primary hover:bg-primary/90 transition-colors"
-          @click="confirm"
-        >Sign out</button>
+        <Button variant="outline" @click="cancel">Cancel</Button>
+        <Button @click="confirm">Sign out</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

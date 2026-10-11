@@ -11,7 +11,7 @@
  * completeOnboarding, and redirects to the persona's landing. Skip still stamps
  * onboardedAt (intent 'skipped') so the guard never nags, and lands on my-plan.
  *
- * 2026 tropical style: Playfair/Caveat, #fbf5ea / #3b1f0d / #dc2626.
+ * 2026 tropical style — design-system tokens (cream / brown / red).
  */
 import { ArrowRight, ArrowLeft, Check } from 'lucide-vue-next'
 import { onboardingDetailsSchema } from '#shared/validation'
@@ -64,7 +64,6 @@ const { errors, fieldAttrs } = details
 
 // Refs for focus management.
 const firstIntentBtn = ref<HTMLButtonElement | null>(null)
-const cityInput = ref<HTMLInputElement | null>(null)
 const detailsHeading = ref<HTMLElement | null>(null)
 
 // Redirect signed-out users to home — onboarding requires a session.
@@ -93,7 +92,12 @@ function pickIntent(p: Persona) {
   details.reset()
   if (detailsNeeded.value) {
     step.value = 'details'
-    nextTick(() => (cityInput.value?.focus() ?? detailsHeading.value?.focus()))
+    nextTick(() => {
+      // focus() returns undefined, so `a?.focus() ?? b?.focus()` would focus both — pick one.
+      const city = document.getElementById('onb-city')
+      if (city) city.focus()
+      else detailsHeading.value?.focus()
+    })
   } else {
     // No fields to collect — finish immediately.
     finish()
@@ -144,15 +148,13 @@ async function skip() {
   }
 }
 
-const inputClass = 'w-full h-11 rounded-full px-4 text-sm outline-none transition-all'
-const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d; font-family: system-ui, sans-serif;'
 </script>
 
 <template>
   <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
-    <section class="max-w-2xl mx-auto px-4 pt-10 pb-16">
+    <main class="max-w-2xl mx-auto px-4 pt-10 pb-16">
       <!-- Progress indicator -->
       <div class="flex items-center justify-center gap-2 mb-8" aria-hidden="true">
         <span class="h-1.5 rounded-full transition-all" :style="{ width: '40px', background: 'var(--wd-red-600)' }" />
@@ -203,14 +205,9 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
         </p>
 
         <div class="text-center mt-8">
-          <button
-            type="button"
-            class="text-sm underline text-secondary font-sans"
-            :disabled="loading"
-            @click="skip"
-          >
+          <Button variant="link" class="text-secondary underline font-sans" :disabled="loading" @click="skip">
             Skip for now
-          </button>
+          </Button>
         </div>
       </template>
 
@@ -234,40 +231,29 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
 
         <form class="space-y-6" novalidate @submit.prevent="finish">
           <!-- City -->
-          <div v-if="chosen?.collects.city" class="space-y-1.5">
-            <label for="onb-city" class="text-sm font-bold text-foreground">Your city</label>
-            <input
-              id="onb-city"
-              ref="cityInput"
+          <Field v-if="chosen?.collects.city" id="onb-city" label="Your city" :error="errors.city">
+            <Input
               v-model="form.city"
-              type="text"
               placeholder="Munich, Berlin…"
               autocomplete="address-level2"
-              :class="inputClass"
-              :style="inputStyle"
               v-bind="fieldAttrs('city', 'onb-city-error')"
-            >
-            <FieldError id="onb-city-error" :message="errors.city" />
-          </div>
+            />
+          </Field>
 
           <!-- Styles -->
           <div v-if="chosen?.collects.styles" class="space-y-2">
             <span id="onb-styles-label" class="text-sm font-bold text-foreground">Which dances?</span>
             <div role="group" aria-labelledby="onb-styles-label" class="flex flex-wrap gap-2" v-bind="fieldAttrs('danceStyles', 'onb-styles-error')">
-              <button
+              <ToggleChip
                 v-for="style in DANCE_STYLES"
                 :key="style"
-                type="button"
-                :aria-pressed="form.danceStyles.includes(style)"
-                class="inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors"
-                :style="form.danceStyles.includes(style)
-                  ? 'background:var(--wd-red-600); color:white; border:1px solid var(--wd-red-600);'
-                  : 'background:white; color:var(--wd-brown-700); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);'"
+                :pressed="form.danceStyles.includes(style)"
+                class="px-3.5 py-1.5 text-xs uppercase tracking-wider"
                 @click="toggleStyle(style)"
               >
-                <Check v-if="form.danceStyles.includes(style)" class="w-3 h-3" />
+                <Check v-if="form.danceStyles.includes(style)" class="w-3 h-3" aria-hidden="true" />
                 {{ style }}
-              </button>
+              </ToggleChip>
             </div>
             <FieldError id="onb-styles-error" :message="errors.danceStyles" />
             <NuxtLink
@@ -302,37 +288,22 @@ const inputStyle = 'background:white; border:1px solid #3b1f0d33; color:#3b1f0d;
           </p>
 
           <div class="flex items-center gap-3 pt-2">
-            <button
-              type="button"
-              class="inline-flex items-center gap-1.5 px-4 py-3 rounded-full text-sm font-bold uppercase tracking-wider text-muted-foreground font-sans"
-              style="background:white; border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent);"
-              @click="back"
-            >
-              <ArrowLeft class="w-4 h-4" /> Back
-            </button>
-            <button
-              type="submit"
-              :disabled="loading"
-              class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60 bg-wd-red-600 font-sans"
-              style="box-shadow: 0 3px 0 -1px var(--wd-red-800);"
-            >
+            <Button type="button" variant="outline-pill" size="lg" class="px-4" @click="back">
+              <ArrowLeft aria-hidden="true" /> Back
+            </Button>
+            <Button type="submit" variant="pill" size="lg" class="flex-1 px-5" :loading="loading">
               {{ loading ? 'Setting up…' : 'Take me to my plan' }}
-              <ArrowRight v-if="!loading" class="w-4 h-4" />
-            </button>
+              <ArrowRight v-if="!loading" aria-hidden="true" />
+            </Button>
           </div>
 
           <div class="text-center pt-1">
-            <button
-              type="button"
-              class="text-sm underline text-secondary font-sans"
-              :disabled="loading"
-              @click="skip"
-            >
+            <Button variant="link" class="text-secondary underline font-sans" :disabled="loading" @click="skip">
               Skip for now
-            </button>
+            </Button>
           </div>
         </form>
       </template>
-    </section>
+    </main>
   </div>
 </template>

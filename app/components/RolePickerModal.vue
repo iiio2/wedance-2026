@@ -90,17 +90,14 @@ function createAndSelect() {
             Follow
           </Button>
         </div>
-        <label class="flex items-center gap-2 pt-1 cursor-pointer">
-          <input v-model="remember" type="checkbox" class="rounded border-input" />
-          <span class="text-xs text-muted-foreground">Remember my choices for all workshops</span>
-        </label>
+        <Checkbox v-model="remember" class="min-h-9 gap-2 text-xs text-muted-foreground">Remember my choices for all workshops</Checkbox>
       </div>
 
       <!-- Step 2: Has partner? -->
       <div v-else-if="step === 'partner'" class="space-y-3 py-2">
         <p class="text-sm">
           You're joining as <span class="font-semibold">{{ selectedRole === 'lead' ? 'Lead' : 'Follow' }}</span>.
-          <button class="text-primary text-xs hover:underline ml-1" @click="step = 'role'">Change</button>
+          <Button variant="link" class="ml-1 h-auto p-0 text-xs text-primary" @click="step = 'role'">Change</Button>
         </p>
         <p class="text-sm font-medium">Do you have a dance partner?</p>
         <div class="grid grid-cols-2 gap-3">
@@ -111,16 +108,13 @@ function createAndSelect() {
             No, I'm looking
           </Button>
         </div>
-        <label v-if="!rememberedRole" class="flex items-center gap-2 pt-1 cursor-pointer">
-          <input v-model="remember" type="checkbox" class="rounded border-input" />
-          <span class="text-xs text-muted-foreground">Remember my choices for all workshops</span>
-        </label>
+        <Checkbox v-if="!rememberedRole" v-model="remember" class="min-h-9 gap-2 text-xs text-muted-foreground">Remember my choices for all workshops</Checkbox>
       </div>
 
       <!-- Step 3: Pick which partner -->
       <div v-else-if="step === 'pick-partner'" class="space-y-3 py-2">
         <p class="text-sm">
-          <button class="text-primary text-xs hover:underline" @click="step = 'partner'">← Back</button>
+          <Button variant="link" class="h-auto p-0 text-xs text-primary" @click="step = 'partner'">← Back</Button>
         </p>
         <p class="text-sm font-medium">Who is your partner?</p>
 
@@ -139,13 +133,9 @@ function createAndSelect() {
 
         <!-- Add new partner -->
         <div class="flex gap-2">
-          <input
-            v-model="newPartnerName"
-            type="text"
-            placeholder="Partner's name"
-            class="flex-1 h-10 rounded-md border border-input bg-background px-3 text-sm"
-            @keydown.enter="createAndSelect"
-          />
+          <Field id="role-picker-partner-name" label="Partner's name" hide-label class="flex-1">
+            <Input v-model="newPartnerName" size="sm" class="h-10" placeholder="Partner's name" @keydown.enter="createAndSelect" />
+          </Field>
           <Button
             variant="outline"
             size="sm"
@@ -153,7 +143,7 @@ function createAndSelect() {
             :disabled="!newPartner.success"
             @click="createAndSelect"
           >
-            <Plus class="w-4 h-4 mr-1" />
+            <Plus aria-hidden="true" />
             Add
           </Button>
         </div>

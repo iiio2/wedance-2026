@@ -1,9 +1,8 @@
 {
   "$comment": "Design-system ratchet. Numbers may only go DOWN. Regenerate with `bun scripts/design-guardrails/update-baseline.ts` after removing hex/font literals. See docs/design-system.md → Guardrails.",
   "hex": {
-    "total": 86,
+    "total": 72,
     "perFile": {
-      "app/components/ActivitiesTab.vue": 3,
       "app/components/AvailabilityCalendar.vue": 2,
       "app/components/CityFight.vue": 2,
       "app/components/ReportProblem.vue": 21,
@@ -11,7 +10,6 @@
       "app/components/StyleLevelMix.vue": 5,
       "app/pages/admin/community-groups.vue": 3,
       "app/pages/admin/giveaways.vue": 2,
-      "app/pages/auth/verify.vue": 2,
       "app/pages/booking-terms.vue": 1,
       "app/pages/cities/[city]/index.vue": 1,
       "app/pages/design/foundations/colors.vue": 2,
@@ -19,20 +17,15 @@
       "app/pages/festivals/[slug].vue": 8,
       "app/pages/for-events.vue": 2,
       "app/pages/index.vue": 2,
-      "app/pages/onboarding.vue": 5,
       "app/pages/organizers/create.vue": 13,
-      "app/pages/organizers/index.vue": 1,
-      "app/pages/settings.vue": 4
+      "app/pages/organizers/index.vue": 1
     }
   },
   "fontFamily": {
     "perFile": {
-      "app/components/ActivitiesTab.vue": 2,
       "app/pages/admin/community-groups.vue": 1,
       "app/pages/admin/giveaways.vue": 1,
-      "app/pages/auth/verify.vue": 1,
-      "app/pages/for-events.vue": 1,
-      "app/pages/onboarding.vue": 1
+      "app/pages/for-events.vue": 1
     }
   }
 }

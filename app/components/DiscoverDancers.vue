@@ -426,6 +426,8 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
             <div class="flex gap-2 justify-center" @mousedown.stop @touchstart.stop>
               <button
                 class="flex-1 max-w-[120px] py-2 rounded-full text-sm font-medium border-2 transition-all"
+                type="button"
+                :aria-pressed="selectedRole === 'lead'"
                 :class="selectedRole === 'lead' ? 'border-violet-500 bg-violet-500 text-white' : 'border-violet-200 bg-white hover:border-violet-300'"
                 @click.stop="selectedRole = selectedRole === 'lead' ? null : 'lead'"
               >
@@ -433,6 +435,8 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
               </button>
               <button
                 class="flex-1 max-w-[120px] py-2 rounded-full text-sm font-medium border-2 transition-all"
+                type="button"
+                :aria-pressed="selectedRole === 'follow'"
                 :class="selectedRole === 'follow' ? 'border-violet-500 bg-violet-500 text-white' : 'border-violet-200 bg-white hover:border-violet-300'"
                 @click.stop="selectedRole = selectedRole === 'follow' ? null : 'follow'"
               >
@@ -459,6 +463,9 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
                   <button
                     v-for="level in (['Beginner', 'Intermediate', 'Advanced'] as const)"
                     :key="level"
+                    type="button"
+                    :aria-pressed="selectedStyles.get(style) === level"
+                    :aria-label="`${style}: ${level}`"
                     class="px-2 py-1 rounded-full text-eyebrow border transition-all whitespace-nowrap"
                     :class="selectedStyles.get(style) === level ? 'border-sky-500 bg-sky-500 text-white' : 'border-muted-foreground/20 hover:border-sky-300'"
                     @click.stop="toggleStyleLevel(style, level)"
@@ -627,6 +634,8 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
         <div v-if="!isDanceCard && !isProfileCard" class="flex items-center justify-center gap-6 mt-4">
           <button
             class="w-14 h-14 rounded-full border-2 border-muted-foreground/20 flex items-center justify-center hover:border-red-300 hover:bg-red-50 transition-colors"
+            type="button"
+            aria-label="Pass"
             :disabled="isAnimating"
             @click="swipe('left')"
           >
@@ -635,6 +644,8 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
           <button
             v-if="passed.size > 0"
             class="w-10 h-10 rounded-full border-2 border-muted-foreground/20 flex items-center justify-center hover:border-amber-300 hover:bg-amber-50 transition-colors"
+            type="button"
+            aria-label="Undo last pass"
             :disabled="isAnimating"
             @click="undoLastPass"
           >
@@ -642,6 +653,8 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
           </button>
           <button
             class="w-14 h-14 rounded-full border-2 border-muted-foreground/20 flex items-center justify-center hover:border-green-300 hover:bg-green-50 transition-colors"
+            type="button"
+            aria-label="Like"
             :disabled="isAnimating"
             @click="swipe('right')"
           >
@@ -669,27 +682,18 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
 
         <!-- Name + City row -->
         <div class="grid grid-cols-2 gap-2">
-          <input
-            v-model="profileName"
-            type="text"
-            placeholder="Name"
-            class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          />
-          <input
-            v-model="profileCity"
-            type="text"
-            placeholder="City"
-            class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          />
+          <Field id="discover-profile-name" label="Name">
+            <Input v-model="profileName" size="sm" autocomplete="name" />
+          </Field>
+          <Field id="discover-profile-city" label="City">
+            <Input v-model="profileCity" size="sm" autocomplete="address-level2" />
+          </Field>
         </div>
 
         <!-- Bio -->
-        <textarea
-          v-model="profileBio"
-          placeholder="Short bio (optional)"
-          rows="2"
-          class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
-        />
+        <Field id="discover-profile-bio" label="Short bio" optional>
+          <Textarea v-model="profileBio" :rows="2" :resize="false" class="min-h-16" />
+        </Field>
 
         <!-- Continue button -->
         <Button
@@ -711,7 +715,9 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
       <!-- Dance List (mutual matches) -->
       <div v-if="props.isSignedIn && danceList.length > 0" class="mt-4">
         <button
+          type="button"
           class="w-full flex items-center justify-between mb-2"
+          :aria-expanded="showDanceList"
           @click="showDanceList = !showDanceList"
         >
           <h4 class="text-sm font-semibold flex items-center gap-2">
@@ -785,6 +791,8 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
                   <button
                     v-for="style in entry.dancer.styles"
                     :key="style.name"
+                    type="button"
+                    :aria-pressed="hasEndorsement(entry.dancer.id, style.name)"
                     class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border transition-colors"
                     :class="hasEndorsement(entry.dancer.id, style.name)
                       ? 'bg-pink-50 border-pink-300 text-pink-700'
@@ -816,7 +824,10 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
                   <button
                     v-for="n in 5"
                     :key="n"
+                    type="button"
                     class="transition-colors"
+                    :aria-label="`Rate ${n} of 5`"
+                    :aria-pressed="(myRatings.get(entry.dancer.id) || 0) === n"
                     @click="setRating(entry.dancer.id, n)"
                   >
                     <Star
@@ -864,13 +875,16 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
 
                 <!-- Draft: write and send -->
                 <template v-else>
-                  <textarea
-                    class="w-full text-xs border rounded-md p-2 resize-none bg-background"
-                    rows="2"
-                    placeholder="What did you enjoy about dancing together?"
-                    :value="myFeedbackDraft.get(entry.dancer.id) || ''"
-                    @input="updateFeedbackDraft(entry.dancer.id, ($event.target as HTMLTextAreaElement).value)"
-                  />
+                  <Field :id="`discover-feedback-${entry.dancer.id}`" label="Feedback" hide-label>
+                    <Textarea
+                      :model-value="myFeedbackDraft.get(entry.dancer.id) || ''"
+                      :rows="2"
+                      :resize="false"
+                      class="min-h-16 text-xs"
+                      placeholder="What did you enjoy about dancing together?"
+                      @update:model-value="updateFeedbackDraft(entry.dancer.id, $event ?? '')"
+                    />
+                  </Field>
                   <Button
                     v-if="myFeedbackDraft.get(entry.dancer.id)?.trim()"
                     size="sm"
@@ -884,12 +898,9 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
               </div>
 
               <!-- Close -->
-              <button
-                class="text-meta text-muted-foreground hover:text-foreground"
-                @click="expandedDancerId = null"
-              >
+              <Button variant="link" class="h-auto p-0 text-meta font-normal text-muted-foreground hover:text-foreground" @click="expandedDancerId = null">
                 Done
-              </button>
+              </Button>
             </div>
 
             <!-- Compact endorsement summary (when collapsed) -->

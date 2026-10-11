@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Workshop, Teacher, PlanEntry, DanceRole, PartnerStatus, TicketOption, DancePartner } from '~/types/festival'
-import { Share2, ChevronDown, ChevronUp, Save, ArrowUp } from 'lucide-vue-next'
+import { Share2, ChevronDown, ChevronUp, Save, ArrowUp, CalendarDays } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 
@@ -93,7 +93,17 @@ function partnerName(entry: PlanEntry): string {
             <Save class="w-3.5 h-3.5 mr-1.5" />
             Save
           </Button>
-          <component :is="open ? ChevronDown : ChevronUp" class="w-4 h-4 text-primary-foreground/70" />
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            class="text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10"
+            :aria-expanded="open"
+            aria-controls="my-plan-panel"
+            :aria-label="open ? 'Collapse my plan' : 'Expand my plan'"
+            @click.stop="open = !open"
+          >
+            <component :is="open ? ChevronDown : ChevronUp" aria-hidden="true" />
+          </Button>
         </div>
       </div>
     </div>
@@ -101,6 +111,7 @@ function partnerName(entry: PlanEntry): string {
     <!-- Expanded content -->
     <div
       v-if="open"
+      id="my-plan-panel"
       class="bg-background border-t overflow-y-auto"
       :class="count > 0 ? 'max-h-[40vh]' : ''"
     >
@@ -148,12 +159,17 @@ function partnerName(entry: PlanEntry): string {
         </div>
 
         <!-- Empty state -->
-        <div v-if="count === 0" class="flex items-center justify-between py-1">
-          <button class="text-sm text-primary hover:underline font-medium flex items-center gap-1" @click.stop="emit('scroll-schedule')">
-            <ArrowUp class="w-3.5 h-3.5" />
+        <div v-if="count === 0" class="text-center py-6 px-4 rounded-2xl border-2 border-dashed border-input bg-white/50">
+          <CalendarDays class="w-8 h-8 mx-auto mb-3 text-secondary" aria-hidden="true" />
+          <p class="text-sm font-bold font-display text-foreground">Build your festival plan</p>
+          <p class="text-xs text-muted-foreground mt-1 font-sans">
+            Tap the workshops you want to take — they land here, sorted by day.
+            Planned before? <Button variant="link" class="h-auto p-0 text-xs font-bold underline text-primary" @click.stop="emit('sign-in')">Sign in</Button> to restore it.
+          </p>
+          <Button variant="soft" size="pill-sm" class="mt-3" @click.stop="emit('scroll-schedule')">
+            <ArrowUp aria-hidden="true" />
             Browse schedule
-          </button>
-          <span class="text-xs text-muted-foreground">or <button class="text-primary hover:underline font-medium" @click.stop="emit('sign-in')">sign in</button> to restore</span>
+          </Button>
         </div>
 
         <!-- Ticket recommendation -->
