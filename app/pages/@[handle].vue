@@ -13,13 +13,13 @@
  */
 import { eventLocalDate, eventLocalTime } from '#shared/utils/eventTime'
 import { bookingRequestSchema } from '#shared/validation'
-import { MapPin, Instagram, Youtube, Globe, Facebook, LayoutGrid, ArrowLeft, Check, Calendar, ScrollText, ShieldCheck, Trees, Plus } from 'lucide-vue-next'
+import { MapPin, Instagram, Youtube, Globe, Facebook, LayoutGrid, ArrowLeft, Check, Calendar, ScrollText, ShieldCheck, Trees, Plus, Heart } from 'lucide-vue-next'
 
 definePageMeta({ layout: false })
 
 const route = useRoute()
 const { $trpc } = useNuxtApp()
-const { dancerName } = useAuth()
+const { dancerName, isSignedIn } = useAuth()
 
 const handle = computed(() => String(route.params.handle))
 
@@ -61,6 +61,31 @@ async function resolve() {
   pending.value = false
 }
 onMounted(resolve)
+
+// --- Follow artist ---
+const following = ref(false)
+const followBusy = ref(false)
+const followerCount = ref(0)
+
+watch(() => data.value?.profile, async (p) => {
+  if (!p) return
+  try { followerCount.value = await $trpc.follow.count.query({ profileId: p.id }) } catch {}
+  if (isSignedIn.value) {
+    try { following.value = await $trpc.follow.isFollowing.query({ profileId: p.id }) } catch {}
+  }
+}, { immediate: true })
+
+async function toggleFollow() {
+  const p = data.value?.profile
+  if (!p || followBusy.value) return
+  if (!isSignedIn.value) { await navigateTo('/auth/login'); return }
+  followBusy.value = true
+  try {
+    const result = await $trpc.follow.toggle.mutate({ profileId: p.id })
+    following.value = result.following
+    followerCount.value += result.following ? 1 : -1
+  } catch {} finally { followBusy.value = false }
+}
 
 const profile = computed(() => data.value?.profile ?? null)
 const spaces = computed(() => data.value?.spaces ?? [])
@@ -199,6 +224,24 @@ useHead(() => ({
             </div>
             <div v-if="profile.socials?.length" class="mt-4 flex items-center gap-2">
               <a v-for="s in profile.socials" :key="s.platform" :href="s.url" target="_blank" rel="noopener" class="inline-flex items-center justify-center w-9 h-9 rounded-full" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600);" :aria-label="s.platform"><component :is="socialIcon[s.platform] || Globe" class="w-4 h-4" /></a>
+            </div>
+            <div v-if="profile.type === 'artist'" class="mt-4 flex items-center gap-3">
+              <button
+                type="button"
+                :disabled="followBusy"
+                class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors"
+                :style="following
+                  ? { background: 'var(--wd-red-600)', color: 'white' }
+                  : { background: 'color-mix(in srgb, var(--wd-red-600) 7.8%, transparent)', color: 'var(--wd-red-600)' }"
+                style="font-family:var(--wd-font-sans);"
+                @click="toggleFollow"
+              >
+                <Heart class="w-3.5 h-3.5" :style="{ fill: following ? 'white' : 'none' }" />
+                {{ following ? 'Following' : 'Follow' }}
+              </button>
+              <span v-if="followerCount" class="text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+                {{ followerCount }} follower{{ followerCount === 1 ? '' : 's' }}
+              </span>
             </div>
             <div v-if="profile.moderatorName" class="mt-4 flex items-center gap-1.5 text-xs" style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);">
               <ShieldCheck class="w-3.5 h-3.5" /> Moderated by the {{ profile.moderatorName }}<span v-if="profile.moderatorSince"> · since {{ profile.moderatorSince }}</span>

@@ -697,3 +697,17 @@ export const referrals = pgTable('referrals', {
   unique('referral_festival_referee_unique').on(t.festivalId, t.refereeId),
   index('referrals_referrer_idx').on(t.referrerId),
 ])
+
+// ---------------------------------------------------------------------------
+// Artist Follows — a dancer follows a professional artist profile to track
+// where they appear across festivals and cities (RAZ-55).
+// ---------------------------------------------------------------------------
+export const artistFollows = pgTable('artist_follows', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dancerId: uuid('dancer_id').notNull().references(() => dancers.id),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  unique('artist_follows_dancer_profile').on(t.dancerId, t.profileId),
+  index('artist_follows_profile_idx').on(t.profileId),
+])

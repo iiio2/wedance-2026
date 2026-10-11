@@ -4,7 +4,7 @@
  * (entity.listArtists). The tRPC client is client-only, so we fetch on mount.
  * Each card links to the unified /@<handle> profile.
  */
-import { ChevronDown, MapPin, Search } from 'lucide-vue-next'
+import { ChevronDown, Heart, MapPin, Search } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
 
 definePageMeta({ layout: false })
@@ -21,8 +21,10 @@ type Artist = { username: string; name: string; photo: string | null; city: stri
 const langLabel: Record<string, string> = { en: 'EN', es: 'ES', de: 'DE', fr: 'FR', pt: 'PT', it: 'IT', ru: 'RU', hu: 'HU', sl: 'SL' }
 
 const { $trpc } = useNuxtApp()
+const { isSignedIn } = useAuth()
 const artists = ref<Artist[]>([])
 const loading = ref(true)
+const followedUsernames = ref(new Set<string>())
 
 onMounted(async () => {
   try {
@@ -30,6 +32,13 @@ onMounted(async () => {
   }
   catch { /* leave empty */ }
   finally { loading.value = false }
+
+  if (isSignedIn.value) {
+    try {
+      const usernames = await $trpc.follow.myFollows.query()
+      followedUsernames.value = new Set(usernames)
+    } catch {}
+  }
 })
 
 const searchQuery = ref('')
@@ -186,6 +195,11 @@ const NuxtLinkC = resolveComponent('NuxtLink')
             :style="{ background: accents[i % accents.length] }"
           >
             {{ a.name.charAt(0) }}
+          </div>
+
+          <!-- Following indicator -->
+          <div v-if="followedUsernames.has(a.username)" class="absolute top-2.5 right-2.5 z-10">
+            <Heart class="w-4 h-4 text-white drop-shadow" style="fill:var(--wd-red-600); color:var(--wd-red-600);" />
           </div>
 
           <!-- Style labels at top -->
