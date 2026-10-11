@@ -12,6 +12,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'open-festival': [slug: string]
+  'add-festival': [slug: string]
   'share': []
   'sign-in': []
   'browse-festivals': []
@@ -271,48 +272,80 @@ const ticketStatusClass: Record<string, string> = {
     <div v-if="suggestions.length > 0" class="space-y-3">
       <div class="flex items-center gap-2">
         <Sparkles class="w-4 h-4" style="color:var(--wd-amber-600);" />
-        <h3 class="text-sm font-bold" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);">Suggested for you</h3>
+        <h3 class="text-sm font-bold" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);">Discover festivals</h3>
       </div>
 
       <div
         v-for="f in suggestions"
         :key="f.slug"
-        class="rounded-xl border-2 border-dashed p-4 cursor-pointer hover:-translate-y-0.5 transition-transform"
+        class="rounded-xl border-2 border-dashed p-4 hover:-translate-y-0.5 transition-transform"
         style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(255,255,255,0.7);"
-        @click="emit('open-festival', f.slug)"
       >
         <div class="flex items-center gap-3">
           <img
             v-if="f.logo"
             :src="f.logo"
             :alt="f.name"
-            class="w-10 h-10 rounded-lg object-cover shrink-0"
+            class="w-10 h-10 rounded-lg object-cover shrink-0 cursor-pointer"
+            @click="emit('open-festival', f.slug)"
           />
           <div
             v-else
-            class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0"
+            class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0 cursor-pointer"
             :style="{ background: f.accentColor || WD.amber600 }"
+            @click="emit('open-festival', f.slug)"
           >
             {{ f.name.charAt(0) }}
           </div>
-          <div class="flex-1 min-w-0">
+          <div class="flex-1 min-w-0 cursor-pointer" @click="emit('open-festival', f.slug)">
             <h4 class="text-sm font-bold" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">{{ f.name }}</h4>
             <p class="text-xs" style="color:var(--wd-amber-600);">
               {{ formatDateRange(f.startDate, f.endDate) }} · {{ f.location }}
             </p>
           </div>
-          <ChevronRight class="w-4 h-4 shrink-0" style="color:var(--wd-amber-600);" />
+          <button
+            type="button"
+            class="text-xs font-bold px-3 py-1.5 rounded-full shrink-0 transition-all"
+            :style="{ background: 'white', color: f.accentColor || WD.red600, border: '1.5px solid ' + (f.accentColor || WD.red600) + '55' }"
+            @click="emit('add-festival', f.slug)"
+          >
+            Going?
+          </button>
         </div>
         <div class="mt-2 flex items-center gap-3">
-          <span v-if="f.friendsGoing.length > 0" class="text-xs flex items-center gap-1" style="color:var(--wd-amber-600);">
-            <Users class="w-3 h-3" />
-            {{ f.friendsGoing.length }} {{ f.friendsGoing.length === 1 ? 'friend' : 'friends' }} going
-          </span>
           <span v-if="f.styles.length > 0" class="text-xs" style="color:var(--wd-amber-600);">
             {{ f.styles.join(', ') }}
           </span>
         </div>
       </div>
+
+      <NuxtLink
+        to="/festivals"
+        class="block text-center text-sm font-bold py-2 hover:underline"
+        style="color:#dc2626; font-family:'Caveat', cursive; font-size:18px;"
+      >
+        Browse all festivals →
+      </NuxtLink>
+    </div>
+
+    <!-- Empty state: no festivals yet -->
+    <div
+      v-else-if="festivals.length === 0"
+      class="rounded-xl border-2 border-dashed p-6 text-center space-y-3"
+      style="border-color:#dc262644; background:rgba(255,255,255,0.8);"
+    >
+      <Sparkles class="w-8 h-8 mx-auto" style="color:#dc2626;" />
+      <h3 class="text-lg font-bold" style="font-family:'Playfair Display', serif; color:#3b1f0d;">Start planning your dance year</h3>
+      <p class="text-sm" style="color:#5b3a1d;">
+        Browse upcoming festivals and add them to your year plan.
+      </p>
+      <NuxtLink
+        to="/festivals"
+        class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
+        style="background:linear-gradient(135deg, #dc2626, #f97316); box-shadow: 0 4px 0 -1px #b91c1c;"
+      >
+        Explore festivals
+      </NuxtLink>
     </div>
 
     <!-- Year stats -->

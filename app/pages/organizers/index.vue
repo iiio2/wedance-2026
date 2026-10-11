@@ -51,7 +51,7 @@ const features = [
   { icon: Ticket,       title: 'Smart ticket picks',  description: 'As dancers add workshops to their plan, we suggest the best-value ticket. Your pass tiers, their perfect fit.',       color: WD.amber500, link: '/festivals/meneate-viena-2026#tickets' },
   { icon: Zap,          title: 'One-tap checkout',    description: 'Signed-in dancers buy their pass in a single tap — no forms, no re-entering details. Fewer drop-offs, more sold tickets.', color: WD.pink500, link: '/festivals/meneate-viena-2026#tickets' },
   { icon: Share2,       title: 'Plan sharing',        description: 'Dancers share their festival plan with friends. Every share is a personalized invitation with your event front and centre.', color: WD.green600 },
-  { icon: TrendingUp,   title: 'Year planning',       description: 'Dancers plan their whole festival year on WeDance. Get discovered by dancers looking for their next event.',            color: WD.red600, link: '/my-year' },
+  { icon: TrendingUp,   title: 'Year planning',       description: 'Dancers plan their whole festival year on WeDance. Your festival appears in their year plan and in discovery suggestions.',            color: WD.red600, link: '/festivals' },
 ]
 
 const insights = [

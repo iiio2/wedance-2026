@@ -1028,4 +1028,71 @@ export const planRouter = router({
       })),
     }
   }),
+
+  /**
+   * Festival suggestions for the My Year page — upcoming festivals the dancer
+   * hasn't added to their plan yet, sorted by popularity (signup count).
+   * Public so unauthenticated visitors also see suggestions.
+   */
+  suggestions: publicProcedure.query(async ({ ctx }) => {
+    const today = new Date().toISOString().slice(0, 10)
+
+    // Get the caller's existing plan slugs (if signed in).
+    let excludeSlugs: string[] = []
+    if (ctx.dancerId) {
+      const myItems = await ctx.db
+        .select({ itemId: planItems.itemId })
+        .from(planItems)
+        .where(
+          and(
+            eq(planItems.dancerId, ctx.dancerId),
+            eq(planItems.itemType, 'festival'),
+          ),
+        )
+      excludeSlugs = myItems.map((i) => i.itemId)
+    }
+
+    // Fetch upcoming festivals with signup counts, excluding already-planned ones.
+    const rows = await ctx.db
+      .select({
+        slug: festivals.slug,
+        name: festivals.name,
+        startDate: festivals.startDate,
+        endDate: festivals.endDate,
+        city: festivals.city,
+        country: festivals.country,
+        logo: festivals.logo,
+        accentColor: festivals.accentColor,
+        styles: festivals.styles,
+        signupCount: sql<number>`coalesce((
+          select count(*)::int from plan_items
+          where plan_items.item_type = 'festival'
+            and plan_items.item_id = ${festivals.slug}
+        ), 0)`,
+      })
+      .from(festivals)
+      .where(gte(festivals.endDate, today))
+      .orderBy(sql`coalesce((
+        select count(*)::int from plan_items
+        where plan_items.item_type = 'festival'
+          and plan_items.item_id = ${festivals.slug}
+      ), 0) desc`, asc(festivals.startDate))
+
+    const filtered = rows
+      .filter((r) => !excludeSlugs.includes(r.slug))
+      .slice(0, 6)
+
+    return filtered.map((r) => ({
+      slug: r.slug,
+      name: r.name,
+      startDate: r.startDate ?? '',
+      endDate: r.endDate ?? '',
+      location: r.city ?? '',
+      country: r.country ?? '',
+      logo: r.logo ?? '',
+      accentColor: r.accentColor ?? '',
+      styles: (r.styles as string[]) ?? [],
+      signupCount: Number(r.signupCount) || 0,
+    }))
+  }),
 })
