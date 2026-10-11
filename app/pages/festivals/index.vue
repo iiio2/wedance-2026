@@ -14,7 +14,6 @@ import {
   Search,
   ArrowRight,
 } from 'lucide-vue-next'
-import { WD } from '~/lib/brand'
 import { Button } from '~/components/ui/button'
 import { Field } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
@@ -133,9 +132,7 @@ const styleChips = ['Salsa', 'Bachata', 'Timba', 'Kizomba', 'Son']
       </div>
 
       <!-- Wave divider -->
-      <svg class="block w-full h-10" viewBox="0 0 1440 60" preserveAspectRatio="none">
-        <path d="M0,40 Q360,0 720,30 T1440,20 V60 H0 Z" :fill="WD.brown900" opacity="0.08"/>
-      </svg>
+      <WaveDivider />
     </section>
 
     <!-- Festival grid -->

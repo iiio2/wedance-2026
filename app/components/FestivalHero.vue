@@ -2,7 +2,6 @@
 import type { Festival } from '~/types/festival'
 import { Instagram, Globe, Facebook, Users, Star, Ticket, Check, Plus } from 'lucide-vue-next'
 import { daysUntil as formatDaysUntil } from '#shared/utils/festivalDateFormatter'
-import { WD } from '~/lib/brand'
 import { accentText, readableAccent } from '~/lib/accent'
 import { Button } from '~/components/ui/button'
 
@@ -205,16 +204,6 @@ const rays = Array.from({ length: 24 }, (_, i) => {
     </div>
 
     <!-- Wave divider, matching the homepage -->
-    <svg
-      class="block w-full h-10 -mb-px"
-      viewBox="0 0 1440 60"
-      preserveAspectRatio="none"
-    >
-      <path
-        d="M0,40 Q360,0 720,30 T1440,20 V60 H0 Z"
-        :fill="WD.brown900"
-        opacity="0.08"
-      />
-    </svg>
+    <WaveDivider class="-mb-px" />
   </section>
 </template>

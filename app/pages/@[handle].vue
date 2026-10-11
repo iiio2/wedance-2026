@@ -220,8 +220,8 @@ useHead(() => ({
               <span v-for="st in profile.styles" :key="st" class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider text-primary font-sans" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);">{{ st }}</span>
             </div>
             <div v-if="profile.languages?.length" class="mt-2 flex flex-wrap items-center gap-1.5">
-              <span class="text-[10px] uppercase tracking-wider" style="color:#9a5614; font-family: system-ui, sans-serif;">Speaks</span>
-              <span v-for="lang in profile.languages" :key="lang" class="text-[10px] font-bold tracking-wide px-1.5 py-0.5 rounded" style="background:#0891b214; color:#0891b2; font-family: system-ui, sans-serif;">{{ langLabel[lang] || lang.toUpperCase() }}</span>
+              <span class="text-eyebrow uppercase tracking-wider text-secondary font-sans">Speaks</span>
+              <span v-for="lang in profile.languages" :key="lang" class="text-eyebrow font-bold tracking-wide px-1.5 py-0.5 rounded font-sans bg-wd-cyan-600/8 text-wd-cyan-700">{{ langLabel[lang] || lang.toUpperCase() }}</span>
             </div>
             <div v-if="profile.socials?.length" class="mt-4 flex items-center gap-2">
               <a v-for="s in profile.socials" :key="s.platform" :href="s.url" target="_blank" rel="noopener" class="inline-flex items-center justify-center w-9 h-9 rounded-full text-primary" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);" :aria-label="s.platform"><component :is="socialIcon[s.platform] || Globe" class="w-4 h-4" /></a>

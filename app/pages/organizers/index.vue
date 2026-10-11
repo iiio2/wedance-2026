@@ -208,9 +208,7 @@ const editorLink = (plan?: string) => ({ path: '/organizers/create', query: plan
       </div>
 
       <!-- Wave divider -->
-      <svg class="block w-full h-12" viewBox="0 0 1440 60" preserveAspectRatio="none">
-        <path d="M0,40 Q360,0 720,30 T1440,20 V60 H0 Z" :fill="WD.brown900" opacity="0.08"/>
-      </svg>
+      <WaveDivider class="h-12" />
     </section>
 
     <!-- ALREADY PLANNING — evidence section -->

@@ -319,8 +319,7 @@ const ticketStatusClass: Record<string, string> = {
 
       <NuxtLink
         to="/festivals"
-        class="block text-center text-sm font-bold py-2 hover:underline"
-        style="color:#dc2626; font-family:'Caveat', cursive; font-size:18px;"
+        class="block text-center text-lg font-bold py-2 hover:underline text-wd-red-800 font-display italic"
       >
         Browse all festivals →
       </NuxtLink>
@@ -329,21 +328,16 @@ const ticketStatusClass: Record<string, string> = {
     <!-- Empty state: no festivals yet -->
     <div
       v-else-if="festivals.length === 0"
-      class="rounded-xl border-2 border-dashed p-6 text-center space-y-3"
-      style="border-color:#dc262644; background:rgba(255,255,255,0.8);"
+      class="rounded-xl border-2 border-dashed border-primary/25 bg-white/80 p-6 text-center space-y-3"
     >
-      <Sparkles class="w-8 h-8 mx-auto" style="color:#dc2626;" />
-      <h3 class="text-lg font-bold" style="font-family:'Playfair Display', serif; color:#3b1f0d;">Start planning your dance year</h3>
-      <p class="text-sm" style="color:#5b3a1d;">
+      <Sparkles class="w-8 h-8 mx-auto text-primary" aria-hidden="true" />
+      <h3 class="text-lg font-bold font-display text-foreground">Start planning your dance year</h3>
+      <p class="text-sm text-muted-foreground">
         Browse upcoming festivals and add them to your year plan.
       </p>
-      <NuxtLink
-        to="/festivals"
-        class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-        style="background:linear-gradient(135deg, #dc2626, #f97316); box-shadow: 0 4px 0 -1px #b91c1c;"
-      >
-        Explore festivals
-      </NuxtLink>
+      <Button as-child variant="cta" size="lg">
+        <NuxtLink to="/festivals">Explore festivals</NuxtLink>
+      </Button>
     </div>
 
     <!-- Year stats -->

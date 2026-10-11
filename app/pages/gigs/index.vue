@@ -263,9 +263,7 @@ const chipInk = (c: string, alpha = 0.094) => readableOn(c, mixHex(c, '#fff', al
         </div>
       </div>
 
-      <svg class="block w-full h-10" viewBox="0 0 1440 60" preserveAspectRatio="none">
-        <path d="M0,40 Q360,0 720,30 T1440,20 V60 H0 Z" :fill="WD.brown900" opacity="0.08"/>
-      </svg>
+      <WaveDivider />
     </section>
 
     <!-- FORM (when user clicks Post a gig) -->

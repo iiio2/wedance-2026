@@ -86,7 +86,7 @@ const eventCode = `<EventSchedule :events="events" />
 const a11y = [
   '<strong>One link per card.</strong> A card with no inner controls can be the <code>&lt;a&gt;</code> (NuxtLink) itself — ArtistCard does this.',
   '<strong>Card with an inner button</strong> (Going?): a <code>&lt;button&gt;</code> inside an <code>&lt;a&gt;</code> is invalid HTML and screen readers announce it as one blob. Use the <em>stretched link</em> instead — root <code>relative</code>, the title is the link with <code>after:absolute after:inset-0</code>, the button sits above it with <code>relative z-10</code>. The anatomy example above is built this way.',
-  '<strong>Selectable cards are buttons</strong> (ArtistCard <code>selectable</code>): the root becomes <code>&lt;button&gt;</code> and the profile gets its own separate link.',
+  '<strong>Selectable cards use the stretched pattern</strong> (ArtistCard <code>selectable</code>): the name is a <code>&lt;button&gt;</code> stretched over the card, and the profile link sits above it — never a link inside a button.',
   '<strong>Never make a <code>&lt;div @click&gt;</code> card.</strong> It can’t be reached by keyboard. Use a link or button root.',
   '<strong>Accent text on accent tint</strong> (chips) is decorative only for light accents (amber, yellow, sky): the chip text repeats information that is also in the title or filter, so it may sit below 4.5:1 — anything essential goes in brown.',
   '<strong>Images:</strong> artist photos use the person’s name as <code>alt</code>; festival logos use the festival name.',
@@ -218,7 +218,7 @@ const a11y = [
       </DesignExample>
     </DesignSection>
 
-    <DesignSection id="festival" title="Festival card" lead="Lives inline in /festivals today (not yet a component). Recipe:">
+    <DesignSection id="festival" title="Festival card" lead="Use the FestivalCard component (app/components/FestivalCard.vue) — stretched-link title, Going? above it, accent-aware chips and an avatar row. Recipe:">
       <DesignCode :code="recipe" />
     </DesignSection>
 

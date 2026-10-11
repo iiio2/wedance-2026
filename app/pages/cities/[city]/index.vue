@@ -502,9 +502,7 @@ onMounted(() => {
         <StyleFilter :styles="city.styles" v-model="selectedStyle" :accents="styleChipColors" />
       </div>
 
-      <svg class="block w-full h-10 -mb-px" viewBox="0 0 1440 60" preserveAspectRatio="none">
-        <path d="M0,40 Q360,0 720,30 T1440,20 V60 H0 Z" :fill="WD.brown900" opacity="0.08"/>
-      </svg>
+      <WaveDivider class="h-10 -mb-px" />
     </section>
 
     <!-- CITY HERO — fallback (no landmark image): original warm cream design -->
@@ -535,9 +533,7 @@ onMounted(() => {
       </div>
 
       <!-- Wave divider -->
-      <svg class="block w-full h-10 -mb-px" viewBox="0 0 1440 60" preserveAspectRatio="none">
-        <path d="M0,40 Q360,0 720,30 T1440,20 V60 H0 Z" :fill="WD.brown900" opacity="0.08"/>
-      </svg>
+      <WaveDivider class="h-10 -mb-px" />
     </section>
 
     <!-- PEOPLE TABS -->

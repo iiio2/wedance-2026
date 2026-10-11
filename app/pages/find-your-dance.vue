@@ -164,7 +164,7 @@ const quickPicks = [
           <span>Question {{ currentStep + 1 }} of {{ questions.length }}</span>
           <span>{{ progress }}%</span>
         </div>
-        <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--wd-sand-100, #ede4d3);">
+        <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--wd-sand-100);">
           <div
             class="h-full rounded-full transition-all duration-300"
             :style="{ width: progress + '%', background: WD.red600 }"
@@ -255,7 +255,7 @@ const quickPicks = [
 
     <!-- Divider -->
     <div class="max-w-3xl mx-auto px-4">
-      <hr style="border-color:var(--wd-sand-100, #ede4d3);" />
+      <hr style="border-color:var(--wd-sand-100);" />
     </div>
 
     <!-- Quick picks (already know what you want) -->

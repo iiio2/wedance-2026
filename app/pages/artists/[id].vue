@@ -152,9 +152,7 @@ function formatDateRange(start: string, end: string) {
         </div>
       </div>
 
-      <svg class="block w-full h-10 -mb-px" viewBox="0 0 1440 60" preserveAspectRatio="none">
-        <path d="M0,40 Q360,0 720,30 T1440,20 V60 H0 Z" :fill="WD.brown900" opacity="0.08"/>
-      </svg>
+      <WaveDivider class="h-10 -mb-px" />
     </section>
 
     <div class="max-w-4xl mx-auto px-4 py-10 space-y-12">
