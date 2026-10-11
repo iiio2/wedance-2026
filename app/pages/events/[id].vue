@@ -90,6 +90,16 @@ const accent = computed(() => styleColor[String(ev.value?.styles?.[0] || '').toL
 const picked = computed(() => !!ev.value && weekPlanIds?.value?.has(ev.value.id))
 const parentFestival = computed(() => ev.value?.parentFestival ?? null)
 
+// Live going count from plan items (replaces static headcount).
+const liveGoingCount = ref(0)
+async function loadGoingCount() {
+  if (!id.value) return
+  try {
+    liveGoingCount.value = await $trpc.plan.count.query({ itemType: 'event', itemId: id.value })
+  } catch { /* non-critical */ }
+}
+onMounted(loadGoingCount)
+
 // Adapt the event into the Festival shape FestivalHero expects.
 const asFestival = computed(() => ({
   slug: ev.value.id,
@@ -99,7 +109,7 @@ const asFestival = computed(() => ({
   startDate: ev.value.startDate || ev.value.eventDate,
   endDate: ev.value.endDate || ev.value.eventDate,
   venue: { name: [ev.value.spaceName, ev.value.venueName].filter(Boolean).join(' · ') },
-  attendeeCount: ev.value.headcount || 0,
+  attendeeCount: liveGoingCount.value,
   socialLinks: [] as any[],
   ticketUrl: ev.value.ticketUrl || undefined,
   tickets: [] as any[],

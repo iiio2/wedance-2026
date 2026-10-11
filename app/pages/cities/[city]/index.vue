@@ -72,6 +72,8 @@ const bookedEvents = ref<any[]>([])
 const bookedEventsLoaded = ref(false)
 // Dated public events (the wedance.vip mirror — scripts/sync-v3-events.ts).
 const syncedEvents = ref<any[]>([])
+// Going counts per event, batch-fetched after events load.
+const eventGoingCounts = ref<Record<string, number>>({})
 onMounted(async () => {
   try {
     const [booked, synced] = await Promise.all([
@@ -80,6 +82,16 @@ onMounted(async () => {
     ])
     bookedEvents.value = booked
     syncedEvents.value = synced as any[]
+    // Batch-fetch going counts for all events so cards show real attendees.
+    const allIds = [
+      ...booked.map((b: any) => b.id),
+      ...(synced as any[]).map((e: any) => e.id),
+    ].filter(Boolean)
+    if (allIds.length > 0) {
+      try {
+        eventGoingCounts.value = await $trpc.plan.countBatch.query({ itemType: 'event', itemIds: allIds })
+      } catch { /* non-critical */ }
+    }
   } finally { bookedEventsLoaded.value = true }
 })
 const bookedTypeMap: Record<string, string> = { Social: 'social', Party: 'social', Workshop: 'workshop', Class: 'class', Practica: 'practica' }
@@ -100,7 +112,7 @@ const bookedThisWeek = computed(() => bookedEvents.value
     id: b.id, name: b.title || 'Social', type: bookedTypeMap[b.eventType] || 'social',
     style: b.styles?.[0] || '', day: new Date(String(b.eventDate).slice(0, 10)).toLocaleDateString('en-US', { weekday: 'long' }),
     time: b.startTime || '', duration: 0, venue: b.venueName, address: '', organizer: '',
-    accentColor: WD.red600, attendeeCount: 0, recurring: false, date: b.eventDate,
+    accentColor: WD.red600, attendeeCount: eventGoingCounts.value[b.id] ?? 0, recurring: false, date: b.eventDate,
     venueHandle: b.venueHandle || undefined,
   })))
 
@@ -116,7 +128,7 @@ const toCityEvent = (e: any) => ({
   venueId: e.venueUsername || undefined,
   venueHandle: e.venueUsername || undefined,
   artists: e.artists || [],
-  accentColor: WD.red600, attendeeCount: 0, recurring: false,
+  accentColor: WD.red600, attendeeCount: eventGoingCounts.value[e.id] ?? 0, recurring: false,
   date: eventLocalDate(e.startDate, e.timezone),
 })
 // Festivals get their own section below — the week list is classes & socials.

@@ -74,12 +74,42 @@ const stages = [
   },
 ]
 
-const attendees = [
+// Proof section: real attendees from the DB (fallback to static samples).
+const { $trpc } = useNuxtApp()
+const proofData = ref<{
+  title: string; city: string; venue: string; startDate: string; endDate: string
+  styles: string[]; link: string; itemType: 'festival' | 'event'; attendeeCount: number
+  attendees: { name: string; photo: string | null; city: string | null }[]
+} | null>(null)
+
+const FALLBACK_ATTENDEES = [
   { n: 'Maxine', c: 'Vienna', col: WD.red600 },
   { n: 'Dayron', c: 'Madrid', col: WD.cyan600 },
   { n: 'Sofia',  c: 'Munich', col: WD.green600 },
   { n: 'Mark',   c: 'Berlin', col: WD.amber500 },
 ]
+const AVATAR_COLORS = [WD.red600, WD.cyan600, WD.green600, WD.amber500, WD.purple500, WD.pink500, WD.violet600, WD.orange500]
+
+onMounted(async () => {
+  try {
+    proofData.value = await $trpc.plan.proofShowcase.query()
+  } catch { /* keep fallback */ }
+})
+
+const hasRealProof = computed(() => !!proofData.value && proofData.value.attendees.length > 0)
+
+const proofEvent = computed(() => {
+  if (!proofData.value) return null
+  const s = new Date(proofData.value.startDate)
+  const e = proofData.value.endDate ? new Date(proofData.value.endDate) : s
+  const dateStr = s.toDateString() === e.toDateString()
+    ? s.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : `${s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+  return { ...proofData.value, dateStr }
+})
+
+function avatarInitial(name: string) { return name.charAt(0).toUpperCase() }
+function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length] }
 </script>
 
 <template>
@@ -301,7 +331,7 @@ const attendees = [
             Every ticket sold turns into a face on the event page. <span class="italic" style="font-family:var(--wd-font-display);font-style:italic; font-size:20px;">No fake friends.</span>
           </p>
 
-          <!-- Event card as concert poster -->
+          <!-- Event card as concert poster — real data when available, sample fallback -->
           <div class="mt-10 mx-auto max-w-md text-left relative">
             <!-- Tape strips -->
             <div class="absolute -top-3 left-6 w-20 h-4 bg-yellow-200/80 rotate-[-4deg] shadow"/>
@@ -309,35 +339,59 @@ const attendees = [
 
             <div class="rounded-lg overflow-hidden shadow-2xl bg-white border" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
               <div class="p-6" style="background:linear-gradient(135deg,var(--wd-violet-600) 0%, #c026d3 50%, var(--wd-rose-500) 100%);">
-                <div class="text-[10px] uppercase tracking-[0.3em] text-white/90 font-bold">In 3 days · Barcelona</div>
-                <h3 class="mt-2 text-3xl text-white leading-tight" style="font-family:var(--wd-font-display);">
-                  Bachata Stars<br>Barcelona
-                </h3>
-                <div class="mt-2 text-xs text-white/80 flex flex-wrap gap-3">
-                  <span class="inline-flex items-center gap-1"><Calendar class="w-3 h-3" /> Jul 3–6, 2026</span>
-                  <span class="inline-flex items-center gap-1"><MapPin class="w-3 h-3" /> Sala Apolo</span>
-                </div>
+                <template v-if="hasRealProof">
+                  <div class="text-[10px] uppercase tracking-[0.3em] text-white/90 font-bold">{{ proofEvent!.city }}</div>
+                  <h3 class="mt-2 text-3xl text-white leading-tight" style="font-family:var(--wd-font-display);">
+                    {{ proofEvent!.title }}
+                  </h3>
+                  <div class="mt-2 text-xs text-white/80 flex flex-wrap gap-3">
+                    <span class="inline-flex items-center gap-1"><Calendar class="w-3 h-3" /> {{ proofEvent!.dateStr }}</span>
+                    <span v-if="proofEvent!.venue" class="inline-flex items-center gap-1"><MapPin class="w-3 h-3" /> {{ proofEvent!.venue }}</span>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="text-[10px] uppercase tracking-[0.3em] text-white/90 font-bold">In 3 days · Barcelona</div>
+                  <h3 class="mt-2 text-3xl text-white leading-tight" style="font-family:var(--wd-font-display);">
+                    Bachata Stars<br>Barcelona
+                  </h3>
+                  <div class="mt-2 text-xs text-white/80 flex flex-wrap gap-3">
+                    <span class="inline-flex items-center gap-1"><Calendar class="w-3 h-3" /> Jul 3–6, 2026</span>
+                    <span class="inline-flex items-center gap-1"><MapPin class="w-3 h-3" /> Sala Apolo</span>
+                  </div>
+                </template>
               </div>
               <div class="p-5">
                 <div class="text-[10px] uppercase tracking-[0.25em] font-bold mb-3 flex items-center justify-between" style="color:var(--wd-amber-600);">
                   <span>Who's coming</span>
-                  <span class="px-1.5 py-0.5 rounded text-[9px]" style="background:var(--wd-amber-100); color:var(--wd-amber-800);">Sample</span>
+                  <span v-if="!hasRealProof" class="px-1.5 py-0.5 rounded text-[9px]" style="background:var(--wd-amber-100); color:var(--wd-amber-800);">Sample</span>
                 </div>
                 <ul class="grid grid-cols-2 gap-2">
-                  <li v-for="a in attendees" :key="a.n" class="flex items-center gap-2 p-1">
-                    <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow" :style="{background: a.col}">{{ a.n.charAt(0) }}</div>
-                    <div class="min-w-0">
-                      <div class="text-sm font-bold truncate">{{ a.n }}</div>
-                      <div class="text-[10px]" style="color:var(--wd-amber-600);">{{ a.c }}</div>
-                    </div>
-                  </li>
+                  <template v-if="hasRealProof">
+                    <li v-for="(a, i) in proofData!.attendees" :key="a.name" class="flex items-center gap-2 p-1">
+                      <img v-if="a.photo" :src="a.photo" :alt="a.name" class="w-9 h-9 rounded-full object-cover shadow" />
+                      <div v-else class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow" :style="{background: avatarColor(i)}">{{ avatarInitial(a.name) }}</div>
+                      <div class="min-w-0">
+                        <div class="text-sm font-bold truncate">{{ a.name }}</div>
+                        <div v-if="a.city" class="text-[10px]" style="color:var(--wd-amber-600);">{{ a.city }}</div>
+                      </div>
+                    </li>
+                  </template>
+                  <template v-else>
+                    <li v-for="a in FALLBACK_ATTENDEES" :key="a.n" class="flex items-center gap-2 p-1">
+                      <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow" :style="{background: a.col}">{{ a.n.charAt(0) }}</div>
+                      <div class="min-w-0">
+                        <div class="text-sm font-bold truncate">{{ a.n }}</div>
+                        <div class="text-[10px]" style="color:var(--wd-amber-600);">{{ a.c }}</div>
+                      </div>
+                    </li>
+                  </template>
                 </ul>
                 <NuxtLink
-                  to="/festivals/bachata-stars-barcelona-2026"
+                  :to="hasRealProof ? proofData!.link : '/festivals/bachata-stars-barcelona-2026'"
                   class="mt-4 block text-center w-full py-3 rounded-full text-white text-xs font-bold uppercase tracking-widest"
                   style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
                 >
-                  Get tickets ✨
+                  {{ hasRealProof ? 'See all attendees' : 'Get tickets ✨' }}
                 </NuxtLink>
               </div>
             </div>

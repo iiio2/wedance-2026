@@ -5,7 +5,7 @@
  * on mobile, aligned with the cream + Playfair Display + Caveat
  * language used on /, /festivals, /cities, /my-plan.
  */
-import { Flame, MapPin, Plus, Check } from 'lucide-vue-next'
+import { Flame, MapPin, Plus, Check, Users } from 'lucide-vue-next'
 import type { CityEvent, DayOfWeek } from '~/types/city'
 import type { Teacher } from '~/types/festival'
 import { getStyleColors } from '~/lib/style-colors'
@@ -222,6 +222,14 @@ function eventHref(e: CityEvent): string | undefined {
                 style="color:var(--wd-amber-600);"
               >
                 {{ e.level }}
+              </span>
+              <span
+                v-if="e.attendeeCount > 0"
+                class="inline-flex items-center gap-0.5 text-[10px] font-bold"
+                style="color:var(--wd-amber-600);"
+              >
+                <Users class="w-3 h-3" />
+                {{ e.attendeeCount }} going
               </span>
             </div>
           </div>

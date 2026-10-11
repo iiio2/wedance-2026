@@ -15,6 +15,37 @@ export const planRouter = router({
       return row?.count ?? 0
     }),
 
+  /**
+   * Batch count of plan items per event/festival.
+   * Returns a map of itemId → count. Used by city pages to populate
+   * attendee counts on event cards without N+1 queries.
+   */
+  countBatch: publicProcedure
+    .input(z.object({
+      itemType: z.enum(['festival', 'event']),
+      itemIds: z.array(z.string().min(1).max(120)).min(1).max(100),
+    }))
+    .query(async ({ ctx, input }) => {
+      const rows = await ctx.db
+        .select({
+          itemId: planItems.itemId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(planItems)
+        .where(
+          and(
+            eq(planItems.itemType, input.itemType),
+            inArray(planItems.itemId, input.itemIds),
+          ),
+        )
+        .groupBy(planItems.itemId)
+
+      const result: Record<string, number> = {}
+      for (const id of input.itemIds) result[id] = 0
+      for (const r of rows) result[r.itemId] = r.count
+      return result
+    }),
+
   // Basic list — only itemType + itemId. Used by the hydration plugin and
   // composables (useWeekPlan, useYearPlan) that don't need metadata.
   // Deliberately avoids selecting the metadata column so the query works
@@ -871,4 +902,130 @@ export const planRouter = router({
         )
       return { share: row?.shareGoing ?? false }
     }),
+
+  /**
+   * Landing page proof showcase: find the upcoming event or festival with the
+   * most public "going" dancers and return the item details + attendee profiles.
+   *
+   * Returns null when no item has public attendees yet.
+   */
+  proofShowcase: publicProcedure.query(async ({ ctx }) => {
+    // Find the item with the most public going dancers.
+    const [top] = await ctx.db
+      .select({
+        itemId: planItems.itemId,
+        itemType: planItems.itemType,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(planItems)
+      .innerJoin(dancers, eq(planItems.dancerId, dancers.id))
+      .where(
+        and(
+          eq(planItems.shareGoing, true),
+          eq(dancers.profilePublic, true),
+          sql`${planItems.itemType} IN ('festival', 'event')`,
+        ),
+      )
+      .groupBy(planItems.itemId, planItems.itemType)
+      .orderBy(sql`count(*) desc`)
+      .limit(1)
+
+    if (!top || top.count === 0) return null
+
+    // Fetch the attendee profiles (capped at 8 for the proof card).
+    const attendees = await ctx.db
+      .select({
+        name: dancers.name,
+        photo: dancers.photo,
+        city: dancers.city,
+      })
+      .from(planItems)
+      .innerJoin(dancers, eq(planItems.dancerId, dancers.id))
+      .where(
+        and(
+          eq(planItems.itemType, top.itemType as 'festival' | 'event'),
+          eq(planItems.itemId, top.itemId),
+          eq(planItems.shareGoing, true),
+          eq(dancers.profilePublic, true),
+        ),
+      )
+      .limit(8)
+
+    // Fetch the event or festival details for the card.
+    let title = ''
+    let city = ''
+    let venue = ''
+    let startDate = ''
+    let endDate = ''
+    let styles: string[] = []
+    let link = ''
+    let itemSlug = top.itemId
+
+    if (top.itemType === 'festival') {
+      const [f] = await ctx.db
+        .select({
+          name: festivals.name,
+          city: festivals.city,
+          startDate: festivals.startDate,
+          endDate: festivals.endDate,
+          styles: festivals.styles,
+          slug: festivals.slug,
+        })
+        .from(festivals)
+        .where(eq(festivals.slug, top.itemId))
+
+      if (f) {
+        title = f.name
+        city = f.city ?? ''
+        startDate = f.startDate ?? ''
+        endDate = f.endDate ?? ''
+        styles = (f.styles as string[]) ?? []
+        link = `/festivals/${f.slug}`
+        itemSlug = f.slug
+      }
+    } else {
+      const [e] = await ctx.db
+        .select({
+          id: events.id,
+          name: events.name,
+          city: events.city,
+          venueName: events.venueName,
+          startDate: events.startDate,
+          endDate: events.endDate,
+          styles: events.styles,
+        })
+        .from(events)
+        .where(eq(events.id, top.itemId))
+
+      if (e) {
+        title = e.name ?? ''
+        city = e.city ?? ''
+        venue = e.venueName ?? ''
+        startDate = e.startDate?.toISOString() ?? ''
+        endDate = e.endDate?.toISOString() ?? ''
+        styles = (e.styles as string[]) ?? []
+        link = `/events/${e.id}`
+      }
+    }
+
+    if (!title) return null
+
+    return {
+      title,
+      city,
+      venue,
+      startDate,
+      endDate,
+      styles,
+      link,
+      itemType: top.itemType as 'festival' | 'event',
+      itemSlug,
+      attendeeCount: top.count,
+      attendees: attendees.map(a => ({
+        name: a.name,
+        photo: a.photo,
+        city: a.city,
+      })),
+    }
+  }),
 })
