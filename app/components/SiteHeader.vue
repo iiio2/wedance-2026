@@ -58,18 +58,21 @@ const links = [
             to="/settings"
             class="hidden sm:inline italic hover:underline text-secondary"
           >Settings</NuxtLink>
-          <button
+          <Button
             type="button"
-            class="italic hover:underline text-secondary"
+            variant="link"
+            class="h-auto p-0 font-normal italic text-secondary"
             @click="showSignOutConfirm = true"
-          >Sign out</button>
+          >Sign out</Button>
         </template>
-        <button
+        <Button
           v-else
           type="button"
-          class="inline-flex items-center px-4 py-1.5 rounded-full text-white text-xs font-bold uppercase tracking-wider shrink-0 bg-gradient-to-br from-primary to-wd-orange-500 shadow-[0_3px_0_-1px_var(--wd-red-800)]"
+          variant="pill"
+          size="pill-sm"
+          class="h-7 shrink-0"
           @click="showSignIn = true"
-        >Sign in</button>
+        >Sign in</Button>
       </nav>
     </div>
 

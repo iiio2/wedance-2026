@@ -34,17 +34,18 @@ const formats = [
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
+    <main>
 
     <!-- HERO -->
     <section class="max-w-5xl mx-auto px-4 pt-14 pb-10">
-      <div class="text-sm tracking-widest uppercase mb-3" style="color:var(--wd-amber-600);">For sponsors</div>
-      <h1 class="text-5xl sm:text-6xl leading-[0.95]" style="color:var(--wd-brown-900);">
+      <div class="text-sm tracking-widest uppercase mb-3 text-secondary">For sponsors</div>
+      <h1 class="text-5xl sm:text-6xl leading-[0.95] text-foreground">
         Sponsor a moment<br>
-        the city <em class="italic" style="color:var(--wd-red-600);">actually shows up for.</em>
+        the city <em class="italic text-primary">actually shows up for.</em>
       </h1>
-      <p class="mt-6 text-base sm:text-lg leading-relaxed max-w-xl" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <p class="mt-6 text-base sm:text-lg leading-relaxed max-w-xl text-muted-foreground font-sans">
         Dance nights and festivals are where a warm, loyal community gathers on purpose. Put your brand in the room — not in the way of it.
       </p>
       <!-- TODO: sourced stat — reach / attendance figures once we have defensible, cited numbers. Do not invent. -->
@@ -59,8 +60,8 @@ const formats = [
           :style="{ borderColor: [WD.red600, WD.amber500, WD.cyan600, WD.green600, WD.purple500][i % 5] + '55' }"
         >
           <component :is="p.icon" class="w-6 h-6 mb-3" :style="{ color: [WD.red600, WD.amber500, WD.cyan600, WD.green600, WD.purple500][i % 5], 'stroke-width': 1.5 }" />
-          <div class="text-lg font-bold" style="color:var(--wd-brown-900);">{{ p.title }}</div>
-          <div class="mt-2 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ p.detail }}</div>
+          <div class="text-lg font-bold text-foreground">{{ p.title }}</div>
+          <div class="mt-2 text-sm leading-relaxed text-muted-foreground font-sans">{{ p.detail }}</div>
         </div>
       </div>
     </section>
@@ -68,7 +69,7 @@ const formats = [
     <!-- FORMATS -->
     <section class="max-w-5xl mx-auto px-4 pb-10">
       <h2 class="text-3xl sm:text-4xl leading-tight mb-6">
-        Ways to <em class="italic" style="color:var(--wd-red-600);">show up.</em>
+        Ways to <em class="italic text-primary">show up.</em>
       </h2>
       <div class="grid md:grid-cols-2 gap-5">
         <div
@@ -77,33 +78,35 @@ const formats = [
           :style="{ borderColor: [WD.amber500, WD.red600, WD.cyan600, WD.purple500, WD.green600][i % 5] + '55' }"
         >
           <component :is="f.icon" class="w-6 h-6 mb-3" :style="{ color: [WD.amber500, WD.red600, WD.cyan600, WD.purple500, WD.green600][i % 5], 'stroke-width': 1.5 }" />
-          <div class="text-lg font-bold" style="color:var(--wd-brown-900);">{{ f.label }}</div>
-          <div class="mt-2 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ f.detail }}</div>
+          <div class="text-lg font-bold text-foreground">{{ f.label }}</div>
+          <div class="mt-2 text-sm leading-relaxed text-muted-foreground font-sans">{{ f.detail }}</div>
         </div>
       </div>
     </section>
 
     <!-- CTA -->
     <section class="max-w-3xl mx-auto px-4 py-16 text-center">
-      <Megaphone class="w-8 h-8 mx-auto mb-4" style="color:var(--wd-red-600); stroke-width:1.5;" />
+      <Megaphone class="w-8 h-8 mx-auto mb-4 text-primary" style="stroke-width:1.5;" />
       <h2 class="text-3xl sm:text-4xl leading-tight">
-        Let's find <em class="italic" style="color:var(--wd-red-600);">your moment.</em>
+        Let's find <em class="italic text-primary">your moment.</em>
       </h2>
-      <p class="mt-4 text-sm sm:text-base" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <p class="mt-4 text-sm sm:text-base text-muted-foreground font-sans">
         Tell us what you sell and who you want to reach. We come back with the events that fit and what a package looks like.
       </p>
-      <a
-        href="mailto:hello@wedance.vip?subject=Sponsoring%20with%20WeDance&body=Brand%3A%0AWhat%20you%20sell%3A%0AWho%20you%20want%20to%20reach%3A%0ABudget%20range%3A%0AAnything%20else%3A%20"
-        class="mt-8 inline-flex items-center gap-2 px-7 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-        style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-        @click="useTrack().track('sponsor_cta_click', { surface: 'for-sponsors' })"
-      >
-        Talk to us about sponsoring <ArrowRight class="w-4 h-4" />
-      </a>
-      <div class="mt-3 text-sm" style="font-family:var(--wd-font-display);font-style:italic; color:var(--wd-amber-600);">
+      <Button as-child variant="cta" size="lg" class="mt-8 h-auto min-h-11 whitespace-normal px-7 py-3">
+        <a
+          href="mailto:hello@wedance.vip?subject=Sponsoring%20with%20WeDance&body=Brand%3A%0AWhat%20you%20sell%3A%0AWho%20you%20want%20to%20reach%3A%0ABudget%20range%3A%0AAnything%20else%3A%20"
+          @click="useTrack().track('sponsor_cta_click', { surface: 'for-sponsors' })"
+        >
+          Talk to us about sponsoring <ArrowRight aria-hidden="true" />
+        </a>
+      </Button>
+      <div class="mt-3 text-sm font-display italic text-secondary">
         — we usually respond same day
       </div>
     </section>
+
+    </main>
 
     <SiteFooter />
   </div>
