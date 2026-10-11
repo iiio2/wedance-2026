@@ -120,7 +120,7 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
         <h2 class="text-2xl leading-tight font-display text-foreground">
           {{ searchQuery ? 'Results' : 'Biggest communities' }}
         </h2>
-        <span v-if="!loading" class="text-xs text-secondary font-display italic" style="font-size:18px;">
+        <span v-if="!loading" class="text-xs text-secondary font-hand" style="font-size:18px;">
           <template v-if="searchQuery">— {{ displayedCities.length }} cit{{ displayedCities.length === 1 ? 'y' : 'ies' }}</template>
           <template v-else>— top {{ displayedCities.length }} of {{ cities.length }}</template>
         </span>

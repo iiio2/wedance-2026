@@ -96,7 +96,7 @@ const dateRange = computed(() => {
             </h3>
             <span
               v-if="festival.startDate"
-              class="font-display italic text-[15px] font-bold shrink-0 mt-1"
+              class="font-hand text-[15px] font-bold shrink-0 mt-1"
               :style="{ color: accent }"
             >
               {{ daysUntil(festival.startDate) }}

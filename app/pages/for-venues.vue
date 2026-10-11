@@ -106,7 +106,7 @@ const spaceTypes = ['Dance studios', 'Event halls', 'Bars & clubs', 'Rooftops', 
           List your venue <ArrowRight aria-hidden="true" />
         </a>
       </Button>
-      <div class="mt-3 text-sm font-display italic text-secondary">
+      <div class="mt-3 text-sm font-hand text-secondary">
         — free to list, no commission
       </div>
     </section>

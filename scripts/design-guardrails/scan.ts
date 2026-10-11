@@ -88,7 +88,7 @@ export function scanFontFamily(files = listAppFiles()) {
 }
 
 const GFONTS_RE = /https:\/\/fonts\.googleapis\.com\/css2?\?[^'"`\s)]+/g
-export const ALLOWED_GOOGLE_FAMILIES = ['Playfair Display']
+export const ALLOWED_GOOGLE_FAMILIES = ['Playfair Display', 'Caveat']
 
 export function scanGoogleFonts(files = [...listAppFiles(), 'nuxt.config.ts']) {
   const hits: Hit[] = []

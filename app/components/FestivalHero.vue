@@ -116,7 +116,7 @@ const rays = Array.from({ length: 24 }, (_, i) => {
         <div class="flex-1 min-w-0">
           <!-- Eyebrow: days-until in Caveat, colored -->
           <div
-            class="text-lg leading-none mb-2 font-display italic"
+            class="text-lg leading-none mb-2 font-hand"
             :style="{ color: festival.accentColor }"
           >
             — {{ daysUntil }}

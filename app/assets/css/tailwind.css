@@ -17,10 +17,11 @@
  *   cyan-600    #0891b2   — info
  *   amber-500   #f59e0b   — warning
  *
- * Font families (consolidated 2026-10-10 — Caveat, Permanent Marker, Anton and
- * DM Serif Display were retired):
+ * Font families (2026-10-12: Permanent Marker, Anton and DM Serif Display retired;
+ * Caveat kept as the handwritten accent — dropping it made the homepage generic):
  *   --wd-font-display  'Playfair Display', serif  — headings, brand; italic for highlights
  *   --wd-font-sans     system-ui, sans-serif      — body, UI
+ *   --wd-font-hand     'Caveat', cursive          — handwritten asides, signatures
  *
  * Extended palette (--wd-purple-500 … --wd-blue-600) is listed on /design/foundations/colors.
  * JS mirror: app/lib/brand.ts (WD).
@@ -74,6 +75,8 @@
     /* Fonts — the core pair. Handwritten-feel highlights use display + italic. */
     --wd-font-display: 'Playfair Display', serif;
     --wd-font-sans: system-ui, sans-serif;
+    /* Handwritten accent — short warm asides only (restored 2026-10-12). */
+    --wd-font-hand: 'Caveat', cursive;
 
     /* ── Semantic tokens (shadcn mapping) ── */
     --background: var(--wd-cream);
@@ -229,6 +232,7 @@
   /* ── Font families ── */
   --font-display: var(--wd-font-display);
   --font-sans: var(--wd-font-sans);
+  --font-hand: var(--wd-font-hand);
 }
 
 /*

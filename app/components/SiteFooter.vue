@@ -84,7 +84,7 @@ const year = 2026
           Made by
           <a href="https://razbakov.com" target="_blank" rel="noopener" class="hover:underline text-primary">Alösha</a>
         </div>
-        <div class="text-sm font-display italic text-secondary" style="font-size:18px;">
+        <div class="text-sm font-hand text-secondary" style="font-size:18px;">
           Made for dancers, by dancers.
         </div>
       </div>

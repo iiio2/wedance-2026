@@ -159,7 +159,7 @@ const editorLink = (plan?: string) => ({ path: '/organizers/create', query: plan
             <h1 class="text-5xl sm:text-6xl leading-[0.98] text-foreground">
               Your dancers are<br>
               already <em class="italic text-primary">planning.</em><br>
-              <span class="font-display italic text-success" style="font-size:0.9em;">Give them the tools.</span>
+              <span class="font-hand text-success" style="font-size:0.9em;">Give them the tools.</span>
             </h1>
             <p class="mt-6 text-base sm:text-lg leading-relaxed max-w-xl mx-auto md:mx-0 text-muted-foreground">
               Ticket your festival where the dancers are.
@@ -171,7 +171,7 @@ const editorLink = (plan?: string) => ({ path: '/organizers/create', query: plan
               </Button>
               <NuxtLink
                 to="/festivals/meneate-viena-2026"
-                class="inline-flex items-center gap-2 text-sm italic hover:underline text-wd-cyan-700 font-display"
+                class="inline-flex items-center gap-2 text-sm hover:underline text-wd-cyan-700 font-hand"
                 style="font-style:italic; font-size:20px;"
               >
                 — see a live example
@@ -303,7 +303,7 @@ const editorLink = (plan?: string) => ({ path: '/organizers/create', query: plan
             <component :is="feature.icon" class="w-7 h-7 mb-3" :style="{ color: feature.color, 'stroke-width': 1.5 }" />
             <div class="text-lg font-bold leading-tight text-foreground">{{ feature.title }}</div>
             <div class="mt-2 text-sm leading-relaxed text-muted-foreground font-sans">{{ feature.description }}</div>
-            <div v-if="feature.link" class="mt-3 text-xs font-bold italic" :style="{ color: feature.color, fontFamily: 'var(--wd-font-display)', fontStyle: 'italic', fontSize: '16px' }">
+            <div v-if="feature.link" class="mt-3 text-xs font-bold italic" :style="{ color: feature.color, fontFamily: 'var(--wd-font-hand)', fontSize: '16px' }">
               See it live →
             </div>
           </component>
@@ -349,7 +349,7 @@ const editorLink = (plan?: string) => ({ path: '/organizers/create', query: plan
           <div class="text-xs uppercase tracking-[0.3em] text-secondary">Pricing</div>
           <h2 class="mt-3 text-3xl sm:text-4xl leading-tight">
             Start free.
-            <span class="font-display italic text-primary" style="font-size:0.95em;">Upgrade when it works.</span>
+            <span class="font-hand text-primary" style="font-size:0.95em;">Upgrade when it works.</span>
           </h2>
         </div>
 
@@ -398,7 +398,7 @@ const editorLink = (plan?: string) => ({ path: '/organizers/create', query: plan
       <Button as-child variant="cta" size="lg" class="mt-8 px-7">
         <NuxtLink :to="editorLink('starter')">Get started free <ArrowRight aria-hidden="true" /></NuxtLink>
       </Button>
-      <div class="mt-3 text-sm font-display italic text-secondary">
+      <div class="mt-3 text-sm font-hand text-secondary">
         — free to list, free to browse
       </div>
     </section>

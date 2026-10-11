@@ -176,7 +176,7 @@ useHead({
           Contact us <ArrowRight aria-hidden="true" />
         </a>
       </Button>
-      <div class="mt-3 text-sm font-display italic text-secondary">
+      <div class="mt-3 text-sm font-hand text-secondary">
         hello@wedance.vip
       </div>
     </section>

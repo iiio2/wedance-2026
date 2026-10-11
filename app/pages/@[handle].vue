@@ -210,7 +210,7 @@ useHead(() => ({
                   <span v-if="isFree" class="text-eyebrow font-bold uppercase tracking-wider rounded-full px-2 py-0.5 text-primary font-sans" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);">Free · community-run</span>
                 </div>
                 <h1 class="text-3xl leading-tight mt-0.5 text-foreground">{{ profile.name }}</h1>
-                <div class="text-sm mt-0.5 text-secondary font-display italic" style="font-size:18px;">@{{ profile.username }}</div>
+                <div class="text-sm mt-0.5 text-secondary font-hand" style="font-size:18px;">@{{ profile.username }}</div>
                 <div v-if="profile.address" class="flex items-start gap-1 mt-2 text-xs text-muted-foreground font-sans"><MapPin class="w-3 h-3 mt-0.5 shrink-0 text-secondary" /> <span>{{ profile.address }}<a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener noreferrer" class="ml-1.5 font-bold underline text-primary">Map</a></span></div>
                 <NuxtLink v-if="profile.citySlug && profile.city" :to="`/cities/${profile.citySlug}`" class="inline-block mt-1 text-xs font-bold hover:underline text-secondary font-sans">{{ profile.city }} →</NuxtLink>
               </div>

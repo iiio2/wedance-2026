@@ -148,7 +148,7 @@ useHead(() => ({
 
             <div class="min-w-0 flex-1">
               <h1 class="text-3xl leading-tight text-foreground">{{ profile?.name }}</h1>
-              <div class="text-sm mt-0.5 text-secondary font-display italic" style="font-size:18px;">@{{ profile?.username }}</div>
+              <div class="text-sm mt-0.5 text-secondary font-hand" style="font-size:18px;">@{{ profile?.username }}</div>
               <div v-if="profile?.city" class="flex items-center gap-1 mt-2 text-xs text-muted-foreground font-sans">
                 <MapPin class="w-3 h-3 text-secondary" /> {{ profile.city }}
               </div>

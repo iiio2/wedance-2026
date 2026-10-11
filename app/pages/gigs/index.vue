@@ -485,7 +485,7 @@ const chipInk = (c: string, alpha = 0.094) => readableOn(c, mixHex(c, '#fff', al
         <h2 class="text-2xl leading-tight font-display text-foreground">
           {{ kindFilter === 'role' ? 'Open roles' : kindFilter === 'offer' ? 'Services offered' : 'All gigs' }}
         </h2>
-        <span class="text-xs text-secondary font-display italic" style="font-size:18px;">
+        <span class="text-xs text-secondary font-hand" style="font-size:18px;">
           — {{ allGigs.length }} gig{{ allGigs.length === 1 ? '' : 's' }}
         </span>
       </div>

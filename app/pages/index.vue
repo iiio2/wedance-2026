@@ -103,7 +103,10 @@ onMounted(async () => {
   } catch { /* keep fallback */ }
 })
 
-const hasRealProof = computed(() => !!proofData.value && proofData.value.attendees.length > 0)
+// Real proof only once it fills the 2×2 grid; one lonely face reads as broken,
+// so below that the section keeps the (labelled) sample.
+const MIN_REAL_PROOF = 4
+const hasRealProof = computed(() => (proofData.value?.attendees.length ?? 0) >= MIN_REAL_PROOF)
 
 const proofEvent = computed(() => {
   if (!proofData.value) return null
@@ -156,7 +159,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                   <path d="M0,8 Q25,2 50,7 T100,4" fill="none" :stroke="WD.red600" stroke-width="2" stroke-linecap="round"/>
                 </svg>
               </span>
-              <span class="italic font-display text-wd-green-600"> year.</span>
+              <span class="font-hand italic text-wd-green-600"> year.</span>
             </h1>
             <p class="mt-6 text-base sm:text-lg leading-relaxed max-w-md mx-auto md:mx-0 text-muted-foreground">
               Every dance. Every teacher. Every city.
@@ -169,7 +172,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                   <ArrowRight class="relative z-10 transition-transform duration-200 ease-out group-hover:translate-x-1 group-active:translate-x-0" aria-hidden="true" />
                 </NuxtLink>
               </Button>
-              <p class="mt-3 text-sm sm:text-base italic text-secondary font-display">
+              <p class="mt-3 text-lg italic text-secondary font-hand">
                 — see who's going before you book
               </p>
             </div>
@@ -188,7 +191,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
               <img src="/alosha-charanga.jpg" alt="Alösha on stage at the end of the Charanga Habanera Munich concert he hosted" class="w-full aspect-[4/5] object-cover" style="object-position: center 30%;">
               <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
                 <div class="text-eyebrow uppercase tracking-[0.3em] opacity-90">Your host · the night he brought the band</div>
-                <div class="text-xl mt-1 font-display italic">— Alösha · Charanga Habanera, München</div>
+                <div class="text-xl mt-1 font-hand">— Alösha · Charanga Habanera, München</div>
               </div>
             </div>
           </div>
@@ -207,7 +210,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
             </h2>
             <p class="mt-4 text-sm sm:text-base max-w-xl mx-auto leading-relaxed text-muted-foreground">
               Whatever the dance.
-              <span class="font-display italic text-wd-green-600" style="font-size:20px;">Whichever step you're on.</span>
+              <span class="font-hand text-wd-green-600" style="font-size:20px;">Whichever step you're on.</span>
             </p>
           </div>
 
@@ -242,7 +245,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                 </div>
                 <div class="mt-1 text-lg font-bold leading-tight font-display">{{ s.title }}</div>
                 <div class="mt-2 text-xs leading-relaxed text-muted-foreground">{{ s.detail }}</div>
-                <div class="mt-auto pt-4 text-lg leading-none font-display italic text-secondary">
+                <div class="mt-auto pt-4 text-lg leading-none font-hand text-secondary">
                   {{ s.horizon }}
                 </div>
               </NuxtLink>
@@ -277,7 +280,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
           <div class="lg:hidden relative">
             <!-- Vertical dashed line -->
             <div class="absolute left-6 top-6 bottom-6 w-px" style="background-image: linear-gradient(to bottom, var(--wd-amber-600) 0, var(--wd-amber-600) 4px, transparent 4px, transparent 10px); background-size: 100% 10px; opacity: 0.5;"/>
-            <div class="text-eyebrow uppercase tracking-widest ml-12 mb-4 font-display italic text-secondary" style="font-size: 15px;">
+            <div class="text-eyebrow uppercase tracking-widest ml-12 mb-4 font-hand text-secondary" style="font-size: 15px;">
               you are here ↓
             </div>
             <div class="space-y-4">
@@ -306,14 +309,14 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                 <component :is="s.icon" class="w-6 h-6 shrink-0" :style="{color: [WD.red600, WD.cyan600, WD.green600, WD.amber500, WD.purple500][i], 'stroke-width': 1.5}" />
                 <div class="flex-1 min-w-0">
                   <div class="text-eyebrow uppercase tracking-widest font-bold" :style="{color: [WD.red600, WD.cyan600, WD.green600, WD.amber500, WD.purple500][i]}">
-                    {{ s.label }} · <span class="font-display italic text-secondary" style="font-size:14px; text-transform:none; letter-spacing:normal;">{{ s.horizon }}</span>
+                    {{ s.label }} · <span class="font-hand text-secondary" style="font-size:14px; text-transform:none; letter-spacing:normal;">{{ s.horizon }}</span>
                   </div>
                   <div class="mt-0.5 text-base font-bold leading-tight font-display">{{ s.title }}</div>
                   <div class="mt-1 text-xs leading-snug text-muted-foreground">{{ s.detail }}</div>
                 </div>
               </NuxtLink>
             </div>
-            <div class="text-eyebrow uppercase tracking-widest ml-12 mt-4 font-display italic text-secondary" style="font-size: 15px;">
+            <div class="text-eyebrow uppercase tracking-widest ml-12 mt-4 font-hand text-secondary" style="font-size: 15px;">
               → the rest of your life
             </div>
           </div>
@@ -328,7 +331,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
             <em class="italic">See who else is</em> <span class="text-primary">going</span>.
           </h2>
           <p class="mt-4 text-sm sm:text-base leading-relaxed max-w-xl mx-auto text-muted-foreground">
-            Every ticket sold turns into a face on the event page. <span class="italic font-display" style="font-size:20px;">No fake friends.</span>
+            Every ticket sold turns into a face on the event page. <span class="font-hand italic" style="font-size:20px;">No fake friends.</span>
           </p>
 
           <!-- Event card as concert poster — real data when available, sample fallback -->
@@ -485,7 +488,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
         <div class="max-w-2xl mx-auto px-4">
           <div class="bg-white/80 rounded-2xl p-8 shadow-xl border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-red-600) 26.7%, transparent);">
             <div class="text-eyebrow uppercase tracking-[0.3em] mb-4 text-secondary">A letter from the founder</div>
-            <p class="text-2xl leading-relaxed font-display italic text-foreground">
+            <p class="text-2xl leading-relaxed font-hand text-foreground">
               Dear dancer —<br><br>
               The first time I flew to a festival alone, I spent half the first night by the wall. I built WeDance so the next dancer does not have to.<br><br>
               See you on the floor.
@@ -493,7 +496,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
             <div class="mt-6 flex items-center gap-3 border-t pt-4 border-border">
               <img src="/alosha-dj.jpg" alt="Alösha" class="w-12 h-12 rounded-full object-cover">
               <div>
-                <div class="text-lg font-display italic">— Alösha</div>
+                <div class="text-lg font-hand">— Alösha</div>
                 <div class="text-meta text-secondary">Munich · 2026</div>
               </div>
             </div>

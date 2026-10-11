@@ -240,7 +240,7 @@ async function submit() {
           </Button>
         </form>
 
-        <div class="mt-3 text-sm text-center font-display italic text-secondary">
+        <div class="mt-3 text-sm text-center font-hand text-secondary">
           — we usually respond same day
         </div>
       </div>
@@ -256,7 +256,7 @@ async function submit() {
         <Button type="button" variant="cta" size="lg" class="mt-8 h-auto min-h-11 whitespace-normal px-7 py-3" @click="openForm">
           Tell us about your event <ArrowRight aria-hidden="true" />
         </Button>
-        <div class="mt-3 text-sm font-display italic text-secondary">
+        <div class="mt-3 text-sm font-hand text-secondary">
           — we usually respond same day
         </div>
       </div>

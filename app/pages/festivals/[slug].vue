@@ -1569,7 +1569,7 @@ useHead({
             :style="{ color: festival.accentColor }"
           >{{ planIds.size }}</span>
           <span class="font-display tracking-[0.01em]">in your plan</span>
-          <span class="font-display italic text-base opacity-85">— see dashboard</span>
+          <span class="font-hand text-base opacity-85">— see dashboard</span>
           <ArrowRight class="w-4 h-4" />
         </NuxtLink>
       </Transition>
@@ -1698,7 +1698,7 @@ useHead({
                 <template v-else>Pay €{{ checkoutTotal }} <ArrowRight aria-hidden="true" /></template>
               </Button>
 
-              <div class="mt-3 text-center text-xs text-secondary font-display italic" style="font-size:16px;">
+              <div class="mt-3 text-center text-xs text-secondary font-hand" style="font-size:16px;">
                 — secure payment · instant confirmation
               </div>
 

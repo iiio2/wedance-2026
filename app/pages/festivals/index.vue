@@ -109,7 +109,7 @@ const styleChips = ['Salsa', 'Bachata', 'Timba', 'Kizomba', 'Son']
         </div>
         <h1 class="text-5xl sm:text-6xl leading-[0.98] text-foreground">
           Pick your <em class="italic text-primary">next one.</em>
-          <span class="font-display italic text-wd-green-600 text-[0.9em]"> Plan the year.</span>
+          <span class="font-hand text-wd-green-600 text-[0.9em]"> Plan the year.</span>
         </h1>
         <p class="mt-5 text-base sm:text-lg leading-relaxed max-w-xl mx-auto text-muted-foreground">
           Every festival mapped. See who is going before you book.
@@ -142,7 +142,7 @@ const styleChips = ['Salsa', 'Bachata', 'Timba', 'Kizomba', 'Son']
         <h2 class="text-2xl leading-tight font-display text-foreground">
           {{ searchQuery ? 'Results' : 'Upcoming festivals' }}
         </h2>
-        <span class="font-display italic text-[18px] text-secondary">
+        <span class="font-hand text-[18px] text-secondary">
           — {{ filteredFestivals.length }} event{{ filteredFestivals.length === 1 ? '' : 's' }}
         </span>
       </div>
@@ -214,7 +214,7 @@ const styleChips = ['Salsa', 'Bachata', 'Timba', 'Kizomba', 'Son']
             class="inline-flex items-center justify-center w-6 h-6 rounded-full text-meta font-black bg-white text-primary"
           >{{ yearCount }}</span>
           <span class="font-display tracking-[0.01em]">in your year</span>
-          <span class="font-display italic text-base opacity-85">— see dashboard</span>
+          <span class="font-hand text-base opacity-85">— see dashboard</span>
           <ArrowRight class="w-4 h-4" />
         </NuxtLink>
       </Transition>

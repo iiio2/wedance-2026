@@ -480,7 +480,7 @@ onMounted(() => {
         <div class="absolute inset-0" style="background:linear-gradient(180deg, rgba(59,31,18,0.15) 0%, rgba(59,31,18,0.05) 40%, rgba(59,31,18,0.75) 100%);" />
 
         <div class="relative h-full max-w-4xl mx-auto px-4 flex flex-col justify-end pb-6">
-          <div class="text-lg leading-none mb-1 font-display italic text-wd-amber-100">
+          <div class="text-lg leading-none mb-1 font-hand text-wd-amber-100">
             — {{ city.eventCount }} weekly events
           </div>
           <h1 class="text-5xl sm:text-7xl leading-[0.98] tracking-tight font-display text-white" style="text-shadow:0 2px 24px rgba(0,0,0,0.35);">
@@ -517,7 +517,7 @@ onMounted(() => {
       </svg>
 
       <div class="relative max-w-4xl mx-auto px-4 pt-10 pb-6">
-        <div class="text-lg leading-none mb-2" :style="{ fontFamily: 'var(--wd-font-display)', fontStyle: 'italic', color: accent }">
+        <div class="text-lg leading-none mb-2" :style="{ fontFamily: 'var(--wd-font-hand)', color: accent }">
           — {{ city.eventCount }} weekly events
         </div>
         <h1 class="text-5xl sm:text-7xl leading-[0.98] tracking-tight font-display text-foreground">
@@ -958,7 +958,7 @@ onMounted(() => {
             :style="{ color: accent }"
           >{{ weekCount }}</span>
           <span class="font-display" style="letter-spacing:0.01em;">in your week</span>
-          <span class="font-display italic" style="font-size:16px; opacity:0.85;">— see dashboard</span>
+          <span class="font-hand" style="font-size:16px; opacity:0.85;">— see dashboard</span>
           <ArrowRight class="w-4 h-4" />
         </NuxtLink>
       </Transition>

@@ -150,7 +150,7 @@ const NuxtLinkC = resolveComponent('NuxtLink')
             <ChevronDown class="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" :style="{ color: selectedStyle ? 'white' : WD.brown700 }" aria-hidden="true" />
           </Field>
 
-          <span class="text-xs ml-auto whitespace-nowrap text-secondary font-display italic" style="font-size:16px;" aria-live="polite">
+          <span class="text-xs ml-auto whitespace-nowrap text-secondary font-hand" style="font-size:16px;" aria-live="polite">
             {{ filtered.length }} artist{{ filtered.length === 1 ? '' : 's' }}
           </span>
         </div>

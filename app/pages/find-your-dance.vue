@@ -290,7 +290,7 @@ const quickPicks = [
         class="group mt-8 block rounded-2xl border border-dashed px-5 py-4 text-center transition-all hover:-translate-y-0.5"
         style="border-color:color-mix(in srgb, var(--wd-amber-600) 40%, transparent); background:rgba(255,255,255,0.55);"
       >
-        <span class="block text-secondary font-display italic" style="font-size:22px; line-height:1.2;">
+        <span class="block text-secondary font-hand" style="font-size:22px; line-height:1.2;">
           — or just <span class="underline decoration-dotted underline-offset-4 text-wd-green-600">try a free taster class</span> and see what sticks.
           <ArrowRight class="inline w-4 h-4 align-middle transition-transform group-hover:translate-x-1 text-wd-green-600" />
         </span>

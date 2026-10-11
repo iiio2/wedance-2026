@@ -132,12 +132,13 @@ Documented on `/design/foundations/icons`. `lucide-vue-next` only — 106 distin
 
 ## Font Families
 
-Consolidated 2026-10-10 to one pair. Caveat, Permanent Marker, Anton and DM Serif Display are retired.
+Three families since 2026-10-12: Playfair (display), system-ui (UI), Caveat (handwritten accent). Permanent Marker, Anton and DM Serif Display are retired. Caveat was briefly folded into Playfair italic on 2026-10-10 — that made the homepage read generic, so it came back.
 
 | Token | Tailwind class | Inline CSS | Stack | Usage |
 |---|---|---|---|---|
 | `--wd-font-display` | `font-display` | `font-family:var(--wd-font-display)` | Playfair Display, serif | Headings, brand text |
-| `--wd-font-display` + italic | `font-display italic` | `…;font-style:italic` | Playfair Display italic | Handwritten-feel highlights (the old Caveat slot) |
+| `--wd-font-display` + italic | `font-display italic` | `…;font-style:italic` | Playfair Display italic | Emphasis inside serif headings ("your *own stage*") |
+| `--wd-font-hand` | `font-hand` | `font-family:var(--wd-font-hand)` | Caveat | Short handwritten asides: captions under CTAs, signatures, card footers, "you are here". Never body text, never more than a line |
 | `--wd-font-sans` | `font-sans` | `font-family:var(--wd-font-sans)` | system-ui, sans-serif | Body text, UI, forms |
 
 ## Decisions (2026-10-10)

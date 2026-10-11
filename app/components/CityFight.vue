@@ -79,7 +79,7 @@ const collapsed = computed(() => !loading.value && !matchup.value && !leaderboar
       <h2 class="text-2xl sm:text-3xl mt-1 font-display text-foreground">
         Which city <em class="italic text-primary">wins?</em>
       </h2>
-      <p class="text-xs mt-1 text-secondary font-display italic" style="font-size:16px;">
+      <p class="text-xs mt-1 text-secondary font-hand" style="font-size:16px;">
         — vote the winning clips, city vs city
       </p>
     </div>
@@ -141,7 +141,7 @@ const collapsed = computed(() => !loading.value && !matchup.value && !leaderboar
     <div v-if="leaderboard.length" class="mt-8">
       <div class="flex items-center gap-2 mb-3">
         <Trophy class="w-4 h-4 text-warning" />
-        <h3 class="text-lg font-display text-foreground">Top dance cities <span class="text-xs text-secondary font-display italic" style="font-size:15px;">— this month</span></h3>
+        <h3 class="text-lg font-hand text-foreground">Top dance cities <span class="text-xs text-secondary font-display" style="font-size:15px;">— this month</span></h3>
       </div>
       <ol class="space-y-1.5">
         <li

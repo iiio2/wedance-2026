@@ -1838,7 +1838,7 @@ function cardSummary(f: CatalogueEntry) {
       <div v-if="heatItems.length" class="rounded-2xl mb-8 p-5 sm:p-6 relative overflow-hidden" style="background:linear-gradient(135deg, var(--wd-amber-100) 0%, var(--wd-red-100) 100%); border:1px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent);">
         <div class="flex items-baseline justify-between mb-3">
           <div class="text-xs uppercase tracking-[0.3em] font-bold text-primary">This week · do these first</div>
-          <span class="text-xs text-secondary font-display italic" style="font-size:18px;">
+          <span class="text-xs text-secondary font-hand" style="font-size:18px;">
             — 3 things across your plan
           </span>
         </div>
@@ -1997,7 +1997,7 @@ function cardSummary(f: CatalogueEntry) {
                 <div class="h-full transition-all" :style="{ width: g.progress + '%', background: goalProgressColor(g.progress) }" />
               </div>
             </div>
-            <div v-if="g.nudge" class="mt-3 text-sm font-display italic text-secondary" style="font-size:17px;">
+            <div v-if="g.nudge" class="mt-3 text-sm font-hand text-secondary" style="font-size:17px;">
               — {{ g.nudge }}
             </div>
           </div>
@@ -2059,7 +2059,7 @@ function cardSummary(f: CatalogueEntry) {
       <div class="mb-10">
         <div class="flex items-baseline justify-between mb-3">
           <div class="text-xs uppercase tracking-[0.3em] text-secondary">Your year at a glance</div>
-          <span class="text-xs text-secondary font-display italic" style="font-size:18px;">
+          <span class="text-xs text-secondary font-hand" style="font-size:18px;">
             — click a chip to jump
           </span>
         </div>
@@ -2091,7 +2091,7 @@ function cardSummary(f: CatalogueEntry) {
                 />
                 <div
                   v-if="i === todayMonth && !m.entries.length"
-                  class="text-[8px] font-bold uppercase tracking-widest mt-1 text-primary font-display italic"
+                  class="text-[8px] font-bold uppercase tracking-widest mt-1 text-primary font-hand"
                   style="font-size:13px; text-transform:none; letter-spacing:normal;"
                 >you're here</div>
               </div>
@@ -2134,7 +2134,7 @@ function cardSummary(f: CatalogueEntry) {
 
       <div class="flex items-baseline justify-between mb-4">
         <div class="text-xs uppercase tracking-[0.3em] text-secondary">Going</div>
-        <span class="text-xs text-secondary font-display italic" style="font-size:18px;">
+        <span class="text-xs text-secondary font-hand" style="font-size:18px;">
           — {{ picked.length }} in your year
         </span>
       </div>
@@ -2182,7 +2182,7 @@ function cardSummary(f: CatalogueEntry) {
                   class="text-xs shrink-0 mt-1 whitespace-nowrap"
                   :style="{
                     color: daysUntilLabel(f.startDate).urgent ? WD.red600 : f.accentColor,
-                    fontFamily: 'var(--wd-font-display)', fontStyle: 'italic',
+                    fontFamily: 'var(--wd-font-hand)',
                     fontSize: '16px',
                   }"
                 >
@@ -2833,7 +2833,8 @@ function cardSummary(f: CatalogueEntry) {
             </p>
           </div>
 
-          <div v-else class="relative" style="height: 400px;">
+          <!-- min-height, not a fixed height: the card grows with its text (it used to clip). -->
+          <div v-else class="relative min-h-[400px]">
             <!-- Peek: card 3 behind -->
             <div v-if="deckAfter" class="absolute inset-0 rounded-3xl bg-white border" style="transform: scale(0.88) translateY(20px); opacity:0.35; border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); box-shadow: 0 6px 22px rgba(0,0,0,0.08);" />
             <!-- Peek: card 2 behind -->
@@ -2841,7 +2842,7 @@ function cardSummary(f: CatalogueEntry) {
             <!-- Current card — gestures live here -->
             <div
               :key="deckCurrent.id"
-              class="absolute inset-0 rounded-3xl bg-white border overflow-hidden touch-none select-none cursor-grab active:cursor-grabbing"
+              class="relative rounded-3xl bg-white border overflow-hidden touch-none select-none cursor-grab active:cursor-grabbing"
               :style="{
                 borderColor: 'color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent)',
                 boxShadow: '0 12px 32px rgba(0,0,0,0.14)',
@@ -2867,7 +2868,7 @@ function cardSummary(f: CatalogueEntry) {
 
               <!-- DANCER CARDS (any of the 3 dancer kinds) -->
               <template v-if="deckCurrent.kind === 'dancer-your-fest' || deckCurrent.kind === 'dancer-new-fest' || deckCurrent.kind === 'dancer-local'">
-                <img :src="deckCurrent.photo" :alt="deckCurrent.name" class="w-full h-2/3 object-cover" draggable="false">
+                <img :src="deckCurrent.photo" :alt="deckCurrent.name" class="w-full h-64 object-cover" draggable="false">
                 <div class="p-5">
                   <div class="flex items-baseline justify-between gap-3">
                     <div class="text-xl font-black font-display text-foreground">
@@ -2911,7 +2912,7 @@ function cardSummary(f: CatalogueEntry) {
 
               <!-- EVENT: FESTIVAL -->
               <template v-else-if="deckCurrent.kind === 'event-festival'">
-                <div class="h-2/3 p-6 flex flex-col justify-end" :style="{ background: 'linear-gradient(135deg, ' + (deckCurrent as any).color + ', var(--wd-orange-500))' }">
+                <div class="h-64 p-6 flex flex-col justify-end" :style="{ background: 'linear-gradient(135deg, ' + (deckCurrent as any).color + ', var(--wd-orange-500))' }">
                   <div class="text-eyebrow uppercase tracking-widest font-bold text-white/90">Festival · not in your year</div>
                   <div class="mt-1 text-3xl font-black leading-none text-white font-display">
                     {{ deckCurrent.name }}
@@ -2941,7 +2942,7 @@ function cardSummary(f: CatalogueEntry) {
 
               <!-- EVENT: LOCAL SOCIAL -->
               <template v-else>
-                <div class="h-2/3 p-6 flex flex-col justify-end" :style="{ background: 'linear-gradient(135deg, ' + (deckCurrent as any).color + ', var(--wd-violet-600))' }">
+                <div class="h-64 p-6 flex flex-col justify-end" :style="{ background: 'linear-gradient(135deg, ' + (deckCurrent as any).color + ', var(--wd-violet-600))' }">
                   <div class="text-eyebrow uppercase tracking-widest font-bold text-white/90">Local · {{ (deckCurrent as any).style }}</div>
                   <div class="mt-1 text-3xl font-black leading-none text-white font-display">
                     {{ deckCurrent.name }}
