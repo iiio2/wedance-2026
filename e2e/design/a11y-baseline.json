@@ -74,8 +74,7 @@
     "color-contrast": 1
   },
   "axe desktop /design/patterns/cards": {
-    "color-contrast": 26,
-    "nested-interactive": 1
+    "color-contrast": 18
   },
   "axe desktop /design/patterns/empty-states": {
     "color-contrast": 4
@@ -84,7 +83,7 @@
     "color-contrast": 1
   },
   "axe desktop /design/patterns/heroes": {
-    "color-contrast": 6
+    "color-contrast": 4
   },
   "axe desktop /festivals": {
     "color-contrast": "*",
@@ -139,14 +138,10 @@
     "color-contrast": 1
   },
   "axe mobile /design/patterns/cards": {
-    "color-contrast": 25,
-    "nested-interactive": 1
+    "color-contrast": 17
   },
   "axe mobile /design/patterns/empty-states": {
     "color-contrast": 3
-  },
-  "axe mobile /design/patterns/heroes": {
-    "color-contrast": 1
   },
   "axe mobile /festivals": {
     "color-contrast": "*",
@@ -156,30 +151,10 @@
     "color-contrast": "*",
     "link-in-text-block": "*"
   },
-  "basic desktop /": {
-    "landmark-main": "*"
-  },
   "basic desktop /design/patterns/heroes": {
     "single-h1": 1
   },
-  "basic desktop /festivals": {
-    "input-label": "*",
-    "landmark-main": "*"
-  },
-  "basic desktop /for-organizers": {
-    "landmark-main": "*"
-  },
-  "basic mobile /": {
-    "landmark-main": "*"
-  },
   "basic mobile /design/patterns/heroes": {
     "single-h1": 1
-  },
-  "basic mobile /festivals": {
-    "input-label": "*",
-    "landmark-main": "*"
-  },
-  "basic mobile /for-organizers": {
-    "landmark-main": "*"
   }
 }

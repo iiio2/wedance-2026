@@ -99,6 +99,7 @@ const styleChips = ['Salsa', 'Bachata', 'Timba', 'Kizomba', 'Son']
   <div class="min-h-screen bg-background text-foreground font-display">
     <!-- V3 header — same as / and /organizers -->
     <SiteHeader />
+    <main>
 
     <!-- HERO -->
     <section class="relative">
@@ -189,6 +190,7 @@ const styleChips = ['Salsa', 'Bachata', 'Timba', 'Kizomba', 'Son']
       </div>
     </section>
 
+    </main>
     <SiteFooter />
 
     <!-- Soft year-plan nudge — appears only when the user has picks.
