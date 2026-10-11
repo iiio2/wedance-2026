@@ -29,6 +29,7 @@ export type FestivalRow = {
   accentColor: string | null
   ticketUrl: string | null
   signupCount: number
+  publicGoingCount: number
   goingAvatars: GoingAvatar[]
 }
 
@@ -61,17 +62,16 @@ export default defineEventHandler(async (): Promise<FestivalRow[]> => {
 
   const slugs = rows.map(r => r.slug)
 
-  // Fetch the first few public dancers going to each festival for avatar stacks.
-  // Uses a lateral join equivalent: fetch all going dancers for these festivals,
-  // then group and cap in JS (row count is small — tens of festivals × ~50 each).
-  let avatarsBySlug = new Map<string, GoingAvatar[]>()
+  // Per-festival public going counts + first 5 avatars, both resolved in SQL.
+  const avatarsBySlug = new Map<string, GoingAvatar[]>()
+  const publicCountBySlug = new Map<string, number>()
 
   if (slugs.length > 0) {
-    const goingRows = await db
+    // Count public-profile attendees per festival.
+    const countRows = await db
       .select({
         festivalSlug: planItems.itemId,
-        name: dancers.name,
-        photo: dancers.photo,
+        cnt: sql<number>`count(*)::int`,
       })
       .from(planItems)
       .innerJoin(dancers, eq(planItems.dancerId, dancers.id))
@@ -82,13 +82,38 @@ export default defineEventHandler(async (): Promise<FestivalRow[]> => {
           eq(dancers.profilePublic, true),
         ),
       )
+      .groupBy(planItems.itemId)
 
-    for (const row of goingRows) {
-      const slug = row.festivalSlug
+    for (const row of countRows) {
+      publicCountBySlug.set(row.festivalSlug, Number(row.cnt) || 0)
+    }
+
+    // First 5 public avatars per festival via row_number window — avoids
+    // fetching every attendee row and capping in JS.
+    const avatarRows = await db.execute<{
+      festival_slug: string
+      name: string
+      photo: string | null
+    }>(sql`
+      select festival_slug, name, photo from (
+        select
+          pi.item_id as festival_slug,
+          d.name,
+          d.photo,
+          row_number() over (partition by pi.item_id order by pi.created_at) as rn
+        from plan_items pi
+        inner join dancers d on d.id = pi.dancer_id
+        where pi.item_type = 'festival'
+          and pi.item_id = any(${slugs})
+          and d.profile_public = true
+      ) sub
+      where rn <= 5
+    `)
+
+    for (const row of avatarRows) {
+      const slug = row.festival_slug
       const list = avatarsBySlug.get(slug) ?? []
-      if (list.length < 5) {
-        list.push({ name: row.name, photo: row.photo })
-      }
+      list.push({ name: row.name, photo: row.photo })
       avatarsBySlug.set(slug, list)
     }
   }
@@ -97,6 +122,7 @@ export default defineEventHandler(async (): Promise<FestivalRow[]> => {
     ...r,
     styles: r.styles ?? [],
     signupCount: Number(r.signupCount) || 0,
+    publicGoingCount: publicCountBySlug.get(r.slug) ?? 0,
     goingAvatars: avatarsBySlug.get(r.slug) ?? [],
   }))
 })

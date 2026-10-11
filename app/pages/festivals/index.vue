@@ -38,6 +38,7 @@ interface FestivalRow {
   accentColor: string | null
   ticketUrl: string | null
   signupCount: number
+  publicGoingCount: number
   goingAvatars: GoingAvatar[]
 }
 
@@ -286,11 +287,11 @@ const styleChips = ['Salsa', 'Bachata', 'Timba', 'Kizomba', 'Son']
                         </div>
                       </template>
                       <div
-                        v-if="f.signupCount > 5"
+                        v-if="f.publicGoingCount > 5"
                         class="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[8px] font-bold"
                         style="border-color:white; background:var(--wd-cream); color:var(--wd-brown-700);"
                       >
-                        +{{ f.signupCount - 5 }}
+                        +{{ f.publicGoingCount - 5 }}
                       </div>
                     </div>
                     <span class="ml-2 flex items-center gap-1">

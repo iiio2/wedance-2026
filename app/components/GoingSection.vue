@@ -46,6 +46,7 @@ interface GoingDancer {
 
 const going = ref<GoingDancer[]>([])
 const loading = ref(true)
+const loadError = ref(false)
 
 // Share toggle state
 const shareGoing = ref(false)
@@ -58,6 +59,7 @@ const wavingId = ref<string | null>(null)
 async function load() {
   if (!resolvedId.value) return
   loading.value = true
+  loadError.value = false
   try {
     const res = await $trpc.plan.goingList.query({
       itemType: resolvedType.value,
@@ -65,11 +67,13 @@ async function load() {
     })
     going.value = res
   } catch {
-    // non-critical — keep empty
+    loadError.value = true
   } finally {
     loading.value = false
   }
 }
+
+defineExpose({ reload: load })
 
 async function loadShareState() {
   if (!isSignedIn.value || !isInPlan.value || !resolvedId.value) return
@@ -200,6 +204,24 @@ function initials(name: string): string {
 
     <div v-if="loading" class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
       Loading…
+    </div>
+
+    <div
+      v-else-if="loadError"
+      class="rounded-xl border-2 border-dashed p-5 text-center"
+      style="border-color:color-mix(in srgb, var(--wd-red-600) 25%, transparent); background:rgba(255,255,255,0.5);"
+    >
+      <p class="text-sm" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+        Couldn't load the going list.
+      </p>
+      <button
+        type="button"
+        class="mt-2 text-xs font-bold underline"
+        style="color:var(--wd-red-600); font-family:var(--wd-font-sans);"
+        @click="load"
+      >
+        Try again
+      </button>
     </div>
 
     <template v-else-if="going.length > 0">
