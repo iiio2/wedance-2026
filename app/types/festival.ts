@@ -196,7 +196,7 @@ export interface YearPlanFestival {
   earlyBirdOffer?: string
   /** External ticket purchase URL. */
   ticketUrl?: string
-  friendsGoing: { name: string; photo: string }[]
+  friendsGoing: { name: string; photo: string | null }[]
   styles: string[]
   /** Referral discount percentage for this festival (0 = no referral program). */
   referralDiscountPercent?: number

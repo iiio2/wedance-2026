@@ -219,14 +219,22 @@ const ticketStatusClass: Record<string, string> = {
               <!-- Friends going -->
               <div v-if="f.friendsGoing.length > 0" class="flex items-center gap-2">
                 <div class="flex -space-x-2">
-                  <img
-                    v-for="friend in f.friendsGoing.slice(0, 5)"
-                    :key="friend.name"
-                    :src="friend.photo"
-                    :alt="friend.name"
-                    class="w-6 h-6 rounded-full border-2 object-cover"
-                    style="border-color:var(--wd-cream);"
-                  />
+                  <template v-for="friend in f.friendsGoing.slice(0, 5)" :key="friend.name">
+                    <img
+                      v-if="friend.photo"
+                      :src="friend.photo"
+                      :alt="friend.name"
+                      class="w-6 h-6 rounded-full border-2 object-cover"
+                      style="border-color:var(--wd-cream);"
+                    />
+                    <div
+                      v-else
+                      class="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold text-white"
+                      style="border-color:var(--wd-cream); background:var(--wd-amber-600);"
+                    >
+                      {{ friend.name.charAt(0).toUpperCase() }}
+                    </div>
+                  </template>
                 </div>
                 <span class="text-xs" style="color:var(--wd-amber-600);">
                   {{ f.friendsGoing.map((fr) => fr.name.split(' ')[0]).slice(0, 3).join(', ') }}
