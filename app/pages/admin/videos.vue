@@ -6,7 +6,7 @@
  * Reject → hidden. Admin-gated the same way as /admin/festivals: a page-scoped
  * admin auth token, restored on leave.
  */
-import { Loader2, ExternalLink, Check, X, RotateCcw } from 'lucide-vue-next'
+import { ExternalLink, Check, X, RotateCcw } from 'lucide-vue-next'
 
 definePageMeta({ layout: 'admin' })
 
@@ -65,105 +65,65 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="flex items-baseline justify-between gap-3">
-      <div>
-        <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Admin</div>
-        <h1 class="mt-2 text-3xl sm:text-4xl leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
-          Video <em class="italic" style="color:var(--wd-red-600);">moderation</em>
-        </h1>
-      </div>
-      <button
-        type="button"
-        class="inline-flex items-center gap-1.5 text-xs font-bold hover:underline"
-        style="color:var(--wd-amber-600); font-family:var(--wd-font-sans);"
-        :disabled="loading"
-        @click="load"
-      >
-        <RotateCcw class="w-3.5 h-3.5" /> Refresh
-      </button>
-    </div>
-    <p class="mt-1 text-sm italic" style="color:var(--wd-brown-700);">
-      Pending submissions to the city-video competition. Approve to publish to the leaderboard + vote.
-    </p>
+    <AdminPageHeader
+      title="Video moderation"
+      description="Pending submissions to the city-video competition. Approve to publish to the leaderboard + vote."
+    >
+      <Button variant="ghost" size="sm" class="text-secondary" :disabled="loading" @click="load">
+        <RotateCcw /> Refresh
+      </Button>
+    </AdminPageHeader>
 
-      <div v-if="error" class="mt-6 rounded-xl border p-4 text-sm" style="border-color:color-mix(in srgb, var(--wd-red-600) 33.3%, transparent); background:var(--wd-red-50); color:var(--wd-red-900); font-family:var(--wd-font-sans);">
-        {{ error }}
-      </div>
+    <AdminState v-if="error" kind="error" :message="error" />
+    <AdminState v-if="loading" kind="loading" message="Loading queue…" />
+    <AdminState v-else-if="!videos.length" kind="empty" message="No pending videos 🎉" hint="The moderation queue is clear." />
 
-      <div v-if="loading" class="flex items-center gap-2 py-16 justify-center" style="color:var(--wd-amber-600);">
-        <Loader2 class="w-5 h-5 animate-spin" />
-        <span class="text-sm italic">Loading queue…</span>
-      </div>
-
+    <div v-else class="mt-6 grid gap-4">
       <div
-        v-else-if="!videos.length"
-        class="mt-8 rounded-2xl border-2 border-dashed p-10 text-center"
-        style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.5);"
+        v-for="v in videos"
+        :key="v.id"
+        class="flex flex-col sm:flex-row gap-4 rounded-2xl border bg-card p-4 shadow-wd-card"
       >
-        <p class="text-sm font-bold" style="color:var(--wd-brown-900);">No pending videos 🎉</p>
-        <p class="mt-1 text-xs" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">The moderation queue is clear.</p>
-      </div>
-
-      <div v-else class="mt-6 grid gap-4">
-        <div
-          v-for="v in videos"
-          :key="v.id"
-          class="flex flex-col sm:flex-row gap-4 rounded-2xl bg-white border p-4"
-          style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); box-shadow:0 1px 0 color-mix(in srgb, var(--wd-brown-900) 5.9%, transparent);"
+        <a
+          :href="v.videoUrl"
+          target="_blank"
+          rel="noopener"
+          class="block shrink-0 rounded-xl overflow-hidden bg-black/5 relative w-full sm:w-48 aspect-video"
         >
-          <a
-            :href="v.videoUrl"
-            target="_blank"
-            rel="noopener"
-            class="block shrink-0 rounded-xl overflow-hidden bg-black/5 relative w-full sm:w-48 aspect-video"
+          <img
+            v-if="v.thumbnailUrl"
+            :src="v.thumbnailUrl"
+            :alt="v.title"
+            class="w-full h-full object-cover"
+            loading="lazy"
           >
-            <img
-              v-if="v.thumbnailUrl"
-              :src="v.thumbnailUrl"
-              :alt="v.title"
-              class="w-full h-full object-cover"
-              loading="lazy"
-            >
-            <div class="absolute inset-0 flex items-center justify-center">
-              <ExternalLink class="w-5 h-5 text-white drop-shadow" />
-            </div>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <ExternalLink class="size-5 text-white drop-shadow" aria-hidden="true" />
+          </div>
+        </a>
+
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <AdminStatus tone="accent">{{ cityLabel(v.citySlug) }}</AdminStatus>
+            <AdminStatus v-if="v.danceStyle" tone="warning">{{ v.danceStyle }}</AdminStatus>
+            <span class="text-eyebrow uppercase tracking-wider text-secondary">{{ v.competitionMonth }}</span>
+          </div>
+          <h3 class="mt-1.5 font-display text-base font-bold leading-tight truncate text-foreground">{{ v.title }}</h3>
+          <p class="text-xs truncate text-muted-foreground">{{ v.submittedByEmail }}</p>
+          <a :href="v.videoUrl" target="_blank" rel="noopener" class="inline-flex items-center gap-1 mt-1 text-xs font-bold text-wd-cyan-700 hover:underline">
+            Watch <ExternalLink class="size-3" aria-hidden="true" />
           </a>
+        </div>
 
-          <div class="flex-1 min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5" style="background:color-mix(in srgb, var(--wd-red-600) 10.2%, transparent); color:var(--wd-red-600);">{{ cityLabel(v.citySlug) }}</span>
-              <span v-if="v.danceStyle" class="text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5" style="background:color-mix(in srgb, var(--wd-amber-600) 10.2%, transparent); color:var(--wd-amber-600);">{{ v.danceStyle }}</span>
-              <span class="text-[10px] uppercase tracking-wider" style="color:var(--wd-amber-600);">{{ v.competitionMonth }}</span>
-            </div>
-            <h3 class="mt-1.5 text-base font-bold leading-tight truncate" style="color:var(--wd-brown-900);">{{ v.title }}</h3>
-            <p class="text-xs truncate" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ v.submittedByEmail }}</p>
-            <a :href="v.videoUrl" target="_blank" rel="noopener" class="inline-flex items-center gap-1 mt-1 text-xs font-bold hover:underline" style="color:var(--wd-cyan-600); font-family:var(--wd-font-sans);">
-              Watch <ExternalLink class="w-3 h-3" />
-            </a>
-          </div>
-
-          <div class="flex sm:flex-col gap-2 sm:justify-center shrink-0">
-            <button
-              type="button"
-              class="inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-white text-xs font-bold uppercase tracking-wider disabled:opacity-50"
-              style="background:var(--wd-green-600);"
-              :disabled="busyId === v.id"
-              @click="setStatus(v, 'approved')"
-            >
-              <Loader2 v-if="busyId === v.id" class="w-3.5 h-3.5 animate-spin" />
-              <Check v-else class="w-3.5 h-3.5" /> Approve
-            </button>
-            <button
-              type="button"
-              class="inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
-              style="border:1px solid color-mix(in srgb, var(--wd-red-600) 33.3%, transparent); color:var(--wd-red-600);"
-              :disabled="busyId === v.id"
-              @click="setStatus(v, 'rejected')"
-            >
-              <X class="w-3.5 h-3.5" /> Reject
-            </button>
-          </div>
+        <div class="flex sm:flex-col gap-2 sm:justify-center shrink-0">
+          <Button variant="pill" size="pill-sm" accent="var(--wd-green-700)" :loading="busyId === v.id" @click="setStatus(v, 'approved')">
+            <Check v-if="busyId !== v.id" /> Approve
+          </Button>
+          <Button variant="outline-pill" size="pill-sm" :disabled="busyId === v.id" @click="setStatus(v, 'rejected')">
+            <X /> Reject
+          </Button>
         </div>
       </div>
+    </div>
   </div>
 </template>
