@@ -6,6 +6,13 @@
  */
 import { Star } from 'lucide-vue-next'
 import { ReviewSchema } from '#shared/validation'
+import { accentText } from '~/lib/accent'
+import { WD } from '~/lib/brand'
+import { Button } from '~/components/ui/button'
+import { Field } from '~/components/ui/field'
+import { Textarea } from '~/components/ui/textarea'
+
+const GREEN_CHIP = accentText(WD.green600)
 
 const props = defineProps<{
   targetType: 'festival' | 'venue' | 'artist' | 'organizer' | 'event'
@@ -65,60 +72,55 @@ function fmtDate(d: any) {
 </script>
 
 <template>
-  <section class="mt-10" style="font-family:var(--wd-font-sans);">
+  <section class="mt-10 font-sans">
     <div class="flex items-center justify-between">
-      <h3 class="text-2xl" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Reviews</h3>
+      <h3 class="text-2xl font-display text-foreground">Reviews</h3>
       <div v-if="data.count" class="flex items-center gap-1.5">
-        <Star class="w-4 h-4" style="color:var(--wd-amber-500); fill:var(--wd-amber-500);" />
-        <span class="font-bold" style="color:var(--wd-brown-900);">{{ data.average.toFixed(1) }}</span>
-        <span class="text-xs" style="color:var(--wd-amber-600);">· {{ data.count }} review{{ data.count === 1 ? '' : 's' }}</span>
+        <Star class="w-4 h-4 text-wd-amber-500 fill-wd-amber-500" aria-hidden="true" />
+        <span class="font-bold text-foreground">{{ data.average.toFixed(1) }}</span>
+        <span class="text-xs text-secondary">· {{ data.count }} review{{ data.count === 1 ? '' : 's' }}</span>
       </div>
     </div>
 
     <!-- Write CTA / form -->
     <div v-if="isSignedIn" class="mt-4">
-      <button
-        v-if="!showForm"
-        type="button"
-        class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider"
-        style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent); color:var(--wd-red-600);"
-        @click="showForm = true"
-      >Write a review</button>
+      <Button v-if="!showForm" type="button" variant="soft" size="pill-sm" @click="showForm = true">Write a review</Button>
 
-      <div v-else class="rounded-2xl border p-4 mt-1" style="border-color:color-mix(in srgb, var(--wd-red-600) 20%, transparent); background:white;">
+      <div v-else class="rounded-2xl border p-4 mt-1 bg-card" style="border-color:color-mix(in srgb, var(--wd-red-600) 20%, transparent);">
         <div class="flex items-center gap-1 mb-3" role="group" aria-label="Rating" v-bind="fieldAttrs('rating', `${uid}-rating-error`)">
-          <button v-for="n in 5" :key="n" type="button" @click="form.rating = n" :aria-label="`${n} stars`">
-            <Star class="w-6 h-6" :style="n <= form.rating ? 'color:var(--wd-amber-500); fill:var(--wd-amber-500);' : 'color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent);'" />
+          <button v-for="n in 5" :key="n" type="button" class="cursor-pointer" :aria-label="`${n} stars`" :aria-pressed="n <= form.rating" @click="form.rating = n">
+            <Star class="w-6 h-6" :class="n <= form.rating ? 'text-wd-amber-500 fill-wd-amber-500' : 'text-input'" aria-hidden="true" />
           </button>
         </div>
         <FieldError :id="`${uid}-rating-error`" :message="errors.rating" class="-mt-2 mb-2" />
-        <textarea v-model="form.text" rows="3" maxlength="1000" placeholder="What was it like?" class="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none" style="background:var(--wd-cream); border:1px solid color-mix(in srgb, var(--wd-brown-900) 20%, transparent); color:var(--wd-brown-900);" v-bind="fieldAttrs('text', `${uid}-text-error`)" />
-        <FieldError :id="`${uid}-text-error`" :message="errors.text" />
-        <p v-if="err" class="text-sm font-bold mt-2" style="color:var(--wd-red-600);">{{ err }}</p>
+        <Field :id="`${uid}-text`" label="Your review" hide-label :error="errors.text">
+          <Textarea v-model="form.text" :rows="3" :resize="false" maxlength="1000" placeholder="What was it like?" v-bind="fieldAttrs('text', `${uid}-text-error`)" />
+        </Field>
+        <p v-if="err" class="text-sm font-bold mt-2 text-destructive">{{ err }}</p>
         <div class="flex gap-2 mt-3">
-          <button type="button" :disabled="submitting" class="rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-60" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));" @click="submit">{{ submitting ? 'Posting…' : 'Post review' }}</button>
-          <button type="button" class="rounded-full px-4 py-2 text-xs font-bold" style="color:var(--wd-amber-600);" @click="showForm = false; resetValidation()">Cancel</button>
+          <Button type="button" variant="pill" size="pill-sm" :loading="submitting" @click="submit">{{ submitting ? 'Posting…' : 'Post review' }}</Button>
+          <Button type="button" variant="ghost" size="sm" class="rounded-full text-xs font-bold text-secondary" @click="showForm = false; resetValidation()">Cancel</Button>
         </div>
       </div>
     </div>
 
     <!-- List -->
-    <div v-if="loading" class="mt-4 text-sm" style="color:var(--wd-amber-600);">Loading reviews…</div>
-    <p v-else-if="!data.count" class="mt-4 text-sm italic" style="color:var(--wd-amber-600);">No reviews yet. Be the first.</p>
+    <div v-if="loading" class="mt-4 text-sm text-secondary">Loading reviews…</div>
+    <p v-else-if="!data.count" class="mt-4 text-sm italic text-secondary">No reviews yet. Be the first.</p>
     <ul v-else class="mt-5 space-y-4">
-      <li v-for="r in data.reviews" :key="r.id" class="rounded-2xl border p-4" style="border-color:color-mix(in srgb, var(--wd-brown-900) 10.2%, transparent); background:white;">
+      <li v-for="r in data.reviews" :key="r.id" class="rounded-2xl border p-4 bg-card" style="border-color:color-mix(in srgb, var(--wd-brown-900) 10.2%, transparent);">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <NuxtLink v-if="r.reviewerUsername" :to="`/u/${r.reviewerUsername}`" class="text-sm font-bold hover:underline" style="color:var(--wd-brown-900);">{{ r.reviewerName || 'A dancer' }}</NuxtLink>
-            <span v-else class="text-sm font-bold" style="color:var(--wd-brown-900);">{{ r.reviewerName || 'A dancer' }}</span>
-            <span v-if="r.source === 'recommendation'" class="text-[9px] uppercase tracking-wider font-bold rounded-full px-1.5 py-0.5" style="background:color-mix(in srgb, var(--wd-green-600) 9.4%, transparent); color:var(--wd-green-600);">Recommended</span>
+            <NuxtLink v-if="r.reviewerUsername" :to="`/u/${r.reviewerUsername}`" class="text-sm font-bold hover:underline text-foreground">{{ r.reviewerName || 'A dancer' }}</NuxtLink>
+            <span v-else class="text-sm font-bold text-foreground">{{ r.reviewerName || 'A dancer' }}</span>
+            <span v-if="r.source === 'recommendation'" class="text-tag uppercase tracking-wider font-bold rounded-full px-1.5 py-0.5" :style="{ background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: GREEN_CHIP }">Recommended</span>
           </div>
           <div class="flex items-center gap-0.5">
-            <Star v-for="n in 5" :key="n" class="w-3.5 h-3.5" :style="n <= r.rating ? 'color:var(--wd-amber-500); fill:var(--wd-amber-500);' : 'color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);'" />
+            <Star v-for="n in 5" :key="n" class="w-3.5 h-3.5" :class="n <= r.rating ? 'text-wd-amber-500 fill-wd-amber-500' : 'text-border'" aria-hidden="true" />
           </div>
         </div>
-        <p v-if="r.text" class="mt-2 text-sm leading-relaxed" style="color:var(--wd-brown-700);">{{ r.text }}</p>
-        <div class="mt-1 text-[10px]" style="color:var(--wd-amber-600);">{{ fmtDate(r.createdAt) }}</div>
+        <p v-if="r.text" class="mt-2 text-sm leading-relaxed text-muted-foreground">{{ r.text }}</p>
+        <div class="mt-1 text-eyebrow text-secondary">{{ fmtDate(r.createdAt) }}</div>
       </li>
     </ul>
   </section>

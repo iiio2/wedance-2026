@@ -243,6 +243,7 @@ const soldOutCount = computed(() => props.tickets.filter((t) => t.soldOut).lengt
     <!-- Friend promo code hint (not signed in) -->
     <button
       v-if="!isSignedIn"
+      type="button"
       class="w-full rounded-lg border border-dashed p-3 flex items-center gap-3 text-left hover:bg-muted/50 transition-colors group"
       @click="emit('signIn')"
     >
@@ -255,6 +256,7 @@ const soldOutCount = computed(() => props.tickets.filter((t) => t.soldOut).lengt
 
     <!-- Can't make it? Resale offer -->
     <button
+      type="button"
       class="w-full rounded-lg border border-dashed p-3 flex items-center gap-3 text-left hover:bg-muted/50 transition-colors group"
       @click="emit('offerTicket')"
     >
@@ -267,6 +269,7 @@ const soldOutCount = computed(() => props.tickets.filter((t) => t.soldOut).lengt
 
     <!-- Subscribe to organizer -->
     <button
+      type="button"
       class="w-full rounded-lg border border-dashed p-3 flex items-center gap-3 text-left hover:bg-muted/50 transition-colors group"
       @click="emit('subscribe')"
     >

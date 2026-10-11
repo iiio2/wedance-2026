@@ -3,6 +3,8 @@ import type { Festival } from '~/types/festival'
 import { Instagram, Globe, Facebook, Users, Star, Ticket, Check, Plus } from 'lucide-vue-next'
 import { daysUntil as formatDaysUntil } from '#shared/utils/festivalDateFormatter'
 import { WD } from '~/lib/brand'
+import { accentText, readableAccent } from '~/lib/accent'
+import { Button } from '~/components/ui/button'
 
 // Shared hero for festivals AND events (an event is just a smaller festival).
 // `reviewTargetType` + `entityLabel` let the same hero serve either.
@@ -58,23 +60,36 @@ const platformIcon: Record<string, any> = {
 }
 
 const daysUntil = computed(() => formatDaysUntil(props.festival.startDate))
+
+// Accent text on its own tint / white-on-accent buttons, darkened only when the
+// festival colour is too light for 4.5:1.
+const chipText = computed(() => accentText(props.festival.accentColor))
+const buttonAccent = computed(() => readableAccent(props.festival.accentColor))
+
+// Sun rays. Rounded so SSR and the client serialise identical coordinates
+// (raw Math.cos output differed in the last digits → hydration mismatch).
+const rays = Array.from({ length: 24 }, (_, i) => {
+  const a = 2 * Math.PI * (i + 1) / 24
+  return { x: Math.round((50 + 48 * Math.cos(a)) * 1000) / 1000, y: Math.round((50 + 48 * Math.sin(a)) * 1000) / 1000 }
+})
 </script>
 
 <template>
-  <section class="relative overflow-hidden" style="background:var(--wd-cream);">
+  <section class="relative overflow-hidden bg-background">
     <!-- Sun rays behind the whole hero, tinted by festival accent -->
     <svg
       class="absolute -top-16 -right-16 w-72 h-72 opacity-20 pointer-events-none"
       viewBox="0 0 100 100"
+      aria-hidden="true"
     >
       <g :stroke="festival.accentColor" stroke-width="1.5" fill="none">
         <line
-          v-for="i in 24"
+          v-for="(r, i) in rays"
           :key="i"
           x1="50"
           y1="50"
-          :x2="50 + 48 * Math.cos(2 * Math.PI * i / 24)"
-          :y2="50 + 48 * Math.sin(2 * Math.PI * i / 24)"
+          :x2="r.x"
+          :y2="r.y"
         />
       </g>
     </svg>
@@ -87,13 +102,13 @@ const daysUntil = computed(() => formatDaysUntil(props.festival.startDate))
             v-if="festival.logo"
             :src="festival.logo"
             :alt="festival.name"
-            class="w-20 h-20 rounded-full border-4"
-            :style="{ borderColor: 'var(--wd-cream)', boxShadow: '4px 5px 0 -1px ' + festival.accentColor }"
+            class="w-20 h-20 rounded-full border-4 border-background"
+            :style="{ boxShadow: '4px 5px 0 -1px ' + festival.accentColor }"
           >
           <div
             v-else
-            class="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold text-white border-4"
-            :style="{ background: festival.accentColor, borderColor: 'var(--wd-cream)', boxShadow: '4px 5px 0 -1px ' + festival.accentColor }"
+            class="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold text-white border-4 border-background"
+            :style="{ background: festival.accentColor, boxShadow: '4px 5px 0 -1px ' + festival.accentColor }"
           >
             {{ festival.name.charAt(0) }}
           </div>
@@ -102,47 +117,44 @@ const daysUntil = computed(() => formatDaysUntil(props.festival.startDate))
         <div class="flex-1 min-w-0">
           <!-- Eyebrow: days-until in Caveat, colored -->
           <div
-            class="text-lg leading-none mb-2"
-            :style="{ fontFamily: 'var(--wd-font-display)', fontStyle: 'italic', color: festival.accentColor }"
+            class="text-lg leading-none mb-2 font-display italic"
+            :style="{ color: festival.accentColor }"
           >
             — {{ daysUntil }}
           </div>
 
           <!-- Festival name in Playfair -->
           <h1
-            class="text-3xl sm:text-5xl leading-[0.98] tracking-tight"
-            style="font-family:var(--wd-font-display); color:var(--wd-brown-900);"
+            class="text-3xl sm:text-5xl leading-[0.98] tracking-tight font-display text-foreground"
           >
             {{ festival.name }}
           </h1>
 
           <!-- Date + venue -->
           <p
-            class="mt-2 text-sm sm:text-base italic"
-            style="color:var(--wd-brown-700); font-family:var(--wd-font-display);"
+            class="mt-2 text-sm sm:text-base italic font-display text-muted-foreground"
           >
-            {{ dateRange }} <span style="color:var(--wd-amber-600);">·</span> {{ festival.venue.name }}
+            {{ dateRange }} <span class="text-secondary">·</span> {{ festival.venue.name }}
           </p>
 
           <!-- Meta: attendees + socials -->
           <div class="mt-3 flex flex-wrap items-center gap-3 text-xs">
             <span
-              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold"
-              :style="{ background: festival.accentColor + '18', color: festival.accentColor, fontFamily: 'var(--wd-font-sans)' }"
+              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold font-sans"
+              :style="{ background: festival.accentColor + '18', color: chipText }"
             >
-              <Users class="w-3 h-3" />
+              <Users class="w-3 h-3" aria-hidden="true" />
               {{ festival.attendeeCount }} planning
             </span>
             <!-- Review rating (appears once loaded), links to the reviews section -->
             <a
               v-if="rating && rating.count"
               href="#reviews"
-              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold"
-              style="background:color-mix(in srgb, var(--wd-amber-500) 12.2%, transparent); color:var(--wd-amber-700); font-family:var(--wd-font-sans);"
+              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold font-sans bg-wd-amber-500/12 text-wd-amber-700"
             >
-              <Star class="w-3 h-3" style="fill:var(--wd-amber-500); color:var(--wd-amber-500);" />
+              <Star class="w-3 h-3 fill-wd-amber-500 text-wd-amber-500" aria-hidden="true" />
               {{ rating.average.toFixed(1) }}
-              <span style="opacity:0.65;">· {{ rating.count }}</span>
+              <span class="opacity-65">· {{ rating.count }}</span>
             </a>
             <div v-if="festival.socialLinks.length" class="flex items-center gap-2">
               <a
@@ -151,11 +163,9 @@ const daysUntil = computed(() => formatDaysUntil(props.festival.startDate))
                 :href="link.url"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="transition-colors"
+                class="transition-colors text-secondary hover:text-primary"
                 :title="link.platform"
-                style="color:var(--wd-amber-600);"
-                @mouseover="(e) => (e.currentTarget as HTMLElement).style.color = 'var(--wd-red-600)'"
-                @mouseleave="(e) => (e.currentTarget as HTMLElement).style.color = 'var(--wd-amber-600)'"
+                :aria-label="link.platform"
               >
                 <component
                   :is="platformIcon[link.platform]"
@@ -169,27 +179,26 @@ const daysUntil = computed(() => formatDaysUntil(props.festival.startDate))
 
           <!-- CTAs: Get tickets (external, if any) + Pick (add to plan). Both. -->
           <div class="mt-4 flex flex-wrap gap-2">
-            <a
-              v-if="hasTickets"
-              :href="festival.ticketUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white"
-              :style="{ background: 'linear-gradient(135deg, ' + festival.accentColor + ', var(--wd-orange-500))', boxShadow: '0 3px 0 -1px ' + festival.accentColor }"
-              @click="useTrack().track('ticket_cta_click', { entity: reviewTargetType, slug: festival.slug })"
-            >
-              <Ticket class="w-4 h-4" /> Get tickets
-            </a>
-            <button
+            <Button v-if="hasTickets" as-child variant="cta" :accent="buttonAccent" class="px-5">
+              <a
+                :href="festival.ticketUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                @click="useTrack().track('ticket_cta_click', { entity: reviewTargetType, slug: festival.slug })"
+              >
+                <Ticket aria-hidden="true" /> Get tickets
+              </a>
+            </Button>
+            <Button
               type="button"
-              class="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold uppercase tracking-wider transition-all"
-              :style="picked
-                ? { background: festival.accentColor, color: 'white', boxShadow: '0 3px 0 -1px ' + festival.accentColor }
-                : { background: 'white', color: festival.accentColor, border: '1.5px solid ' + festival.accentColor + '66' }"
+              :variant="picked ? 'pill' : 'outline-pill'"
+              :accent="buttonAccent"
+              class="px-5"
+              :aria-pressed="picked"
               @click="$emit('pick')"
             >
-              <component :is="picked ? Check : Plus" class="w-4 h-4" /> {{ picked ? 'Going!' : 'Going?' }}
-            </button>
+              <component :is="picked ? Check : Plus" aria-hidden="true" /> {{ picked ? 'Going!' : 'Going?' }}
+            </Button>
           </div>
         </div>
       </div>

@@ -41,43 +41,43 @@ function describe(l: LevelCounts) {
 </script>
 
 <template>
-  <div class="grid gap-5" style="font-family:var(--wd-font-sans); color:var(--wd-brown-900);">
+  <div class="grid gap-5 font-sans text-foreground">
     <!-- Base: who the percentages are out of -->
     <dl class="grid grid-cols-3 gap-3">
-      <div class="rounded-2xl bg-white border p-4" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
-        <dt class="text-xs uppercase tracking-wider" style="color:var(--wd-amber-600);">Attendees</dt>
+      <div class="rounded-2xl bg-card border p-4 border-border">
+        <dt class="text-xs uppercase tracking-wider text-secondary">Attendees</dt>
         <dd class="mt-1 text-2xl font-bold">{{ mix.attendees }}</dd>
       </div>
-      <div class="rounded-2xl bg-white border p-4" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
-        <dt class="text-xs uppercase tracking-wider" style="color:var(--wd-amber-600);">Listed styles</dt>
+      <div class="rounded-2xl bg-card border p-4 border-border">
+        <dt class="text-xs uppercase tracking-wider text-secondary">Listed styles</dt>
         <dd class="mt-1 text-2xl font-bold">{{ mix.withStyles }}</dd>
       </div>
-      <div class="rounded-2xl bg-white border p-4" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
-        <dt class="text-xs uppercase tracking-wider" style="color:var(--wd-amber-600);">Set a level</dt>
+      <div class="rounded-2xl bg-card border p-4 border-border">
+        <dt class="text-xs uppercase tracking-wider text-secondary">Set a level</dt>
         <dd class="mt-1 text-2xl font-bold">{{ ratedCount }}</dd>
       </div>
     </dl>
 
-    <p v-if="mix.attendees === 0" class="text-sm rounded-2xl bg-white border p-5" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); color:var(--wd-brown-700);">
+    <p v-if="mix.attendees === 0" class="text-sm rounded-2xl bg-card border p-5 border-border text-muted-foreground">
       Nobody has signed up yet. The mix fills in as dancers join on WeDance.
     </p>
 
     <template v-else>
-      <p v-if="mix.attendees > mix.withProfile" class="text-xs" style="color:var(--wd-brown-700);">
+      <p v-if="mix.attendees > mix.withProfile" class="text-xs text-muted-foreground">
         {{ mix.attendees - mix.withProfile }} ticket{{ mix.attendees - mix.withProfile === 1 ? '' : 's' }}
         not yet connected to a WeDance profile — not in the mix until claimed.
       </p>
 
       <!-- Styles -->
-      <section class="rounded-2xl bg-white border p-5" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);" aria-labelledby="mix-styles-title">
-        <h3 id="mix-styles-title" class="text-lg font-bold" style="font-family:var(--wd-font-display);">Dance styles</h3>
-        <p class="text-xs mt-0.5" style="color:var(--wd-brown-700);">Share of the {{ mix.withStyles }} attendees who listed styles. Dancers often list several.</p>
+      <section class="rounded-2xl bg-card border p-5 border-border" aria-labelledby="mix-styles-title">
+        <h3 id="mix-styles-title" class="text-lg font-bold font-display">Dance styles</h3>
+        <p class="text-xs mt-0.5 text-muted-foreground">Share of the {{ mix.withStyles }} attendees who listed styles. Dancers often list several.</p>
 
-        <p v-if="!shownStyles.length" class="mt-4 text-sm" style="color:var(--wd-brown-700);">No attendee has listed a dance style yet.</p>
+        <p v-if="!shownStyles.length" class="mt-4 text-sm text-muted-foreground">No attendee has listed a dance style yet.</p>
         <ul v-else class="mt-4 grid gap-2.5">
           <li v-for="s in shownStyles" :key="s.style" class="grid grid-cols-[5.5rem_1fr_4.5rem] sm:grid-cols-[7rem_1fr_5.5rem] items-center gap-2 sm:gap-3 text-sm">
             <span class="truncate font-semibold" :title="s.style">
-              {{ s.style }}<span v-if="s.isFestivalStyle" class="ml-1 text-[10px] uppercase tracking-wider" style="color:var(--wd-amber-600);">· yours</span>
+              {{ s.style }}<span v-if="s.isFestivalStyle" class="ml-1 text-eyebrow uppercase tracking-wider text-secondary">· yours</span>
             </span>
             <span class="h-3 rounded-r" style="background:color-mix(in srgb, var(--wd-brown-900) 5.1%, transparent);">
               <span
@@ -86,16 +86,16 @@ function describe(l: LevelCounts) {
                 :title="`${s.style}: ${s.count} of ${mix.withStyles} (${pct(s.count, mix.withStyles)}%)`"
               />
             </span>
-            <span class="text-right tabular-nums" style="color:var(--wd-brown-700);">{{ s.count }} · {{ pct(s.count, mix.withStyles) }}%</span>
+            <span class="text-right tabular-nums text-muted-foreground">{{ s.count }} · {{ pct(s.count, mix.withStyles) }}%</span>
           </li>
         </ul>
-        <p v-if="hiddenStyles > 0" class="mt-2 text-xs" style="color:var(--wd-brown-700);">+ {{ hiddenStyles }} more style{{ hiddenStyles === 1 ? '' : 's' }} with fewer dancers</p>
+        <p v-if="hiddenStyles > 0" class="mt-2 text-xs text-muted-foreground">+ {{ hiddenStyles }} more style{{ hiddenStyles === 1 ? '' : 's' }} with fewer dancers</p>
       </section>
 
       <!-- Levels -->
-      <section class="rounded-2xl bg-white border p-5" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);" aria-labelledby="mix-levels-title">
-        <h3 id="mix-levels-title" class="text-lg font-bold" style="font-family:var(--wd-font-display);">Skill levels</h3>
-        <p class="text-xs mt-0.5" style="color:var(--wd-brown-700);">
+      <section class="rounded-2xl bg-card border p-5 border-border" aria-labelledby="mix-levels-title">
+        <h3 id="mix-levels-title" class="text-lg font-bold font-display">Skill levels</h3>
+        <p class="text-xs mt-0.5 text-muted-foreground">
           Each dancer counted once, at their highest self-declared level in your festival's styles.
         </p>
 
@@ -104,7 +104,7 @@ function describe(l: LevelCounts) {
             <span class="inline-block w-3 h-3 rounded-sm" :style="{ background: LEVEL_FILL[k] }" aria-hidden="true" />
             <span>{{ k === 'unknown' ? 'Not set' : `${chilis(k)} ${k}` }}</span>
             <span class="tabular-nums font-semibold">{{ mix.levels[k] }}</span>
-            <span class="tabular-nums" style="color:var(--wd-brown-700);">({{ pct(mix.levels[k], mix.withProfile) }}%)</span>
+            <span class="tabular-nums text-muted-foreground">({{ pct(mix.levels[k], mix.withProfile) }}%)</span>
           </li>
         </ul>
 
@@ -118,12 +118,12 @@ function describe(l: LevelCounts) {
           />
         </div>
 
-        <p v-if="ratedCount === 0" class="mt-3 text-xs" style="color:var(--wd-brown-700);">
+        <p v-if="ratedCount === 0" class="mt-3 text-xs text-muted-foreground">
           No attendee has set a level yet — dancers add theirs per style in their WeDance settings.
         </p>
 
         <template v-if="shownStyles.length">
-          <h4 class="mt-6 text-xs font-bold uppercase tracking-wider" style="color:var(--wd-amber-600);">By style</h4>
+          <h4 class="mt-6 text-xs font-bold uppercase tracking-wider text-secondary">By style</h4>
           <ul class="mt-2 grid gap-2.5">
             <li v-for="s in shownStyles" :key="s.style" class="grid grid-cols-[5.5rem_1fr] sm:grid-cols-[7rem_1fr] items-center gap-2 sm:gap-3 text-sm">
               <span class="truncate font-semibold" :title="s.style">{{ s.style }}</span>
