@@ -128,7 +128,7 @@ const attendees = [
               Every dance. Every teacher. Every city.
               Every face — <strong style="color:var(--wd-red-600);">real</strong>.
             </p>
-            <div class="mt-8 flex items-center justify-center md:justify-start gap-5">
+            <div class="mt-8 text-center md:text-left">
               <NuxtLink
                 to="/festivals"
                 class="wd-cta group inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
@@ -136,9 +136,9 @@ const attendees = [
                 <span class="relative z-10">Find your next festival</span>
                 <ArrowRight class="w-4 h-4 relative z-10 transition-transform duration-200 ease-out group-hover:translate-x-1 group-active:translate-x-0" />
               </NuxtLink>
-              <span class="text-xs italic" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);font-style:italic; font-size:18px;">
+              <p class="mt-3 text-sm sm:text-base italic" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);font-style:italic;">
                 — see who's going before you book
-              </span>
+              </p>
             </div>
           </div>
           <!-- Photo with decorative frame -->
