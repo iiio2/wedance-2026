@@ -74,6 +74,13 @@ const stages = [
   },
 ]
 
+// Sun-ray endpoints, rounded: Math.cos/sin differ in the last decimals between
+// the server (Node) and the browser, which caused a hydration mismatch.
+function ray(i: number) {
+  const a = (2 * Math.PI * i) / 24
+  return { x: Math.round((50 + 48 * Math.cos(a)) * 100) / 100, y: Math.round((50 + 48 * Math.sin(a)) * 100) / 100 }
+}
+
 // Proof section: real attendees from the DB (fallback to static samples).
 const { $trpc } = useNuxtApp()
 const proofData = ref<{
@@ -114,16 +121,12 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
 
 <template>
   <div
-    class="min-h-screen relative overflow-x-hidden"
-    style="
-      background:
+    class="min-h-screen relative overflow-x-hidden text-foreground font-sans"
+    style="background:
         radial-gradient(ellipse at 20% 0%, rgba(251, 146, 60, 0.18), transparent 50%),
         radial-gradient(ellipse at 90% 30%, rgba(220, 38, 38, 0.10), transparent 50%),
         radial-gradient(ellipse at 50% 100%, rgba(22, 163, 74, 0.08), transparent 50%),
-        var(--wd-cream);
-      color:var(--wd-brown-900);
-      font-family:var(--wd-font-sans);
-    "
+        var(--wd-cream);"
   >
     <!-- Subtle paper texture overlay -->
     <div
@@ -134,39 +137,39 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
     <div class="relative z-10">
       <!-- Header — old-fashioned travel poster strip -->
       <SiteHeader />
+      <main>
 
       <!-- HERO -->
       <section class="relative">
         <div class="max-w-6xl mx-auto px-4 pt-14 pb-20 grid md:grid-cols-12 gap-10 items-center">
           <div class="md:col-span-7 text-center md:text-left">
-            <div class="text-sm tracking-widest uppercase mb-3" style="color:var(--wd-amber-600);">
+            <div class="text-sm tracking-widest uppercase mb-3 text-secondary">
               Welcome to the dance
             </div>
-            <h1 class="text-5xl sm:text-7xl leading-[0.95]" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+            <h1 class="text-5xl sm:text-7xl leading-[0.95] font-display text-foreground">
               From your<br>
-              first <em class="italic" style="color:var(--wd-red-600);">night</em><br>
+              first <em class="italic text-primary">night</em><br>
               to your
               <span class="inline-block relative">
-                <span style="color:var(--wd-red-600);">best</span>
+                <span class="text-primary">best</span>
                 <svg class="absolute left-0 right-0 -bottom-2 w-full h-3" viewBox="0 0 100 10" preserveAspectRatio="none">
                   <path d="M0,8 Q25,2 50,7 T100,4" fill="none" :stroke="WD.red600" stroke-width="2" stroke-linecap="round"/>
                 </svg>
               </span>
-              <span class="italic" style="font-family:var(--wd-font-display);font-style:italic; color:var(--wd-green-600);"> year.</span>
+              <span class="italic font-display text-wd-green-600"> year.</span>
             </h1>
-            <p class="mt-6 text-base sm:text-lg leading-relaxed max-w-md mx-auto md:mx-0" style="color:var(--wd-brown-700);">
+            <p class="mt-6 text-base sm:text-lg leading-relaxed max-w-md mx-auto md:mx-0 text-muted-foreground">
               Every dance. Every teacher. Every city.
-              Every face — <strong style="color:var(--wd-red-600);">real</strong>.
+              Every face — <strong class="text-primary">real</strong>.
             </p>
             <div class="mt-8 text-center md:text-left">
-              <NuxtLink
-                to="/festivals"
-                class="wd-cta group inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-              >
-                <span class="relative z-10">Find your next festival</span>
-                <ArrowRight class="w-4 h-4 relative z-10 transition-transform duration-200 ease-out group-hover:translate-x-1 group-active:translate-x-0" />
-              </NuxtLink>
-              <p class="mt-3 text-sm sm:text-base italic" style="color:var(--wd-amber-600); font-family:var(--wd-font-display);font-style:italic;">
+              <Button as-child variant="cta" size="lg" class="group h-auto min-h-11 whitespace-normal px-6 py-3">
+                <NuxtLink to="/festivals">
+                  <span class="relative z-10">Find your next festival</span>
+                  <ArrowRight class="relative z-10 transition-transform duration-200 ease-out group-hover:translate-x-1 group-active:translate-x-0" aria-hidden="true" />
+                </NuxtLink>
+              </Button>
+              <p class="mt-3 text-sm sm:text-base italic text-secondary font-display">
                 — see who's going before you book
               </p>
             </div>
@@ -177,37 +180,34 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
             <svg class="absolute -top-8 -right-8 w-40 h-40 opacity-30" viewBox="0 0 100 100">
               <g :stroke="WD.orange500" stroke-width="1.5" fill="none">
                 <line v-for="i in 24" :key="i" x1="50" y1="50"
-                  :x2="50 + 48 * Math.cos(2 * Math.PI * i / 24)"
-                  :y2="50 + 48 * Math.sin(2 * Math.PI * i / 24)" />
+                  :x2="ray(i).x"
+                  :y2="ray(i).y" />
               </g>
             </svg>
             <div class="relative rounded-2xl overflow-hidden shadow-2xl border-4" style="border-color:var(--wd-cream); box-shadow: 12px 14px 0 -2px var(--wd-red-600);">
               <img src="/alosha-charanga.jpg" alt="Alösha on stage at the end of the Charanga Habanera Munich concert he hosted" class="w-full aspect-[4/5] object-cover" style="object-position: center 30%;">
               <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
-                <div class="text-[10px] uppercase tracking-[0.3em] opacity-90">Your host · the night he brought the band</div>
-                <div class="text-xl mt-1" style="font-family:var(--wd-font-display);font-style:italic;">— Alösha · Charanga Habanera, München</div>
+                <div class="text-eyebrow uppercase tracking-[0.3em] opacity-90">Your host · the night he brought the band</div>
+                <div class="text-xl mt-1 font-display italic">— Alösha · Charanga Habanera, München</div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Wave divider -->
-        <svg class="block w-full h-12" viewBox="0 0 1440 60" preserveAspectRatio="none">
-          <path d="M0,40 Q360,0 720,30 T1440,20 V60 H0 Z" :fill="WD.brown900" opacity="0.1"/>
-        </svg>
+        <WaveDivider class="h-12" />
       </section>
 
       <!-- JOURNEY — a hand-drawn travel map with 5 stops along a winding path -->
-      <section class="border-y overflow-hidden" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(251, 245, 234, 0.5);">
+      <section class="border-y overflow-hidden border-border" style="background:rgba(251, 245, 234, 0.5);">
         <div class="max-w-6xl mx-auto px-4 py-16">
           <div class="text-center mb-12">
-            <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">The journey · 5 stops</div>
-            <h2 class="mt-3 text-3xl sm:text-5xl leading-tight" style="font-family:var(--wd-font-display);">
-              From your first move to <em class="italic" style="color:var(--wd-red-600);">your own stage.</em>
+            <div class="text-xs uppercase tracking-[0.3em] text-secondary">The journey · 5 stops</div>
+            <h2 class="mt-3 text-3xl sm:text-5xl leading-tight font-display">
+              From your first move to <em class="italic text-primary">your own stage.</em>
             </h2>
-            <p class="mt-4 text-sm sm:text-base max-w-xl mx-auto leading-relaxed" style="color:var(--wd-brown-700);">
+            <p class="mt-4 text-sm sm:text-base max-w-xl mx-auto leading-relaxed text-muted-foreground">
               Whatever the dance.
-              <span style="font-family:var(--wd-font-display);font-style:italic; color:var(--wd-green-600); font-size:20px;">Whichever step you're on.</span>
+              <span class="font-display italic text-wd-green-600" style="font-size:20px;">Whichever step you're on.</span>
             </p>
           </div>
 
@@ -225,24 +225,24 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                 }"
               >
                 <!-- Starting point badge (for Seeker stage) -->
-                <div v-if="s.isStartingPoint" class="absolute -top-3 left-4 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest" style="background:var(--wd-red-600); color:#fff;">
+                <div v-if="s.isStartingPoint" class="absolute -top-3 left-4 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-primary text-white">
                   <span>You are here</span>
                 </div>
                 <!-- Step number + monochrome line icon at top -->
                 <div class="flex items-center justify-between mb-4">
-                  <span class="text-2xl leading-none" style="font-family:var(--wd-font-display); color:var(--wd-amber-600);">{{ String(i + 1).padStart(2, '0') }}</span>
+                  <span class="text-2xl leading-none font-display text-secondary">{{ String(i + 1).padStart(2, '0') }}</span>
                   <component :is="s.icon" class="w-6 h-6" :style="{color: [WD.red600, WD.cyan600, WD.green600, WD.amber500, WD.purple500][i], 'stroke-width': 1.5}" />
                 </div>
                 <div
                   class="h-[3px] w-10 rounded-full mb-3"
                   :style="{ background: [WD.red600, WD.cyan600, WD.green600, WD.amber500, WD.purple500][i] }"
                 />
-                <div class="text-[10px] uppercase tracking-[0.2em] font-bold" :style="{color: [WD.red600, WD.cyan600, WD.green600, WD.amber500, WD.purple500][i]}">
+                <div class="text-eyebrow uppercase tracking-[0.2em] font-bold" :style="{color: [WD.red600, WD.cyan600, WD.green600, WD.amber500, WD.purple500][i]}">
                   {{ s.label }}
                 </div>
-                <div class="mt-1 text-lg font-bold leading-tight" style="font-family:var(--wd-font-display);">{{ s.title }}</div>
-                <div class="mt-2 text-xs leading-relaxed" style="color:var(--wd-brown-700);">{{ s.detail }}</div>
-                <div class="mt-auto pt-4 text-lg leading-none" style="font-family:var(--wd-font-display);font-style:italic; color:var(--wd-amber-600);">
+                <div class="mt-1 text-lg font-bold leading-tight font-display">{{ s.title }}</div>
+                <div class="mt-2 text-xs leading-relaxed text-muted-foreground">{{ s.detail }}</div>
+                <div class="mt-auto pt-4 text-lg leading-none font-display italic text-secondary">
                   {{ s.horizon }}
                 </div>
               </NuxtLink>
@@ -265,7 +265,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                 <!-- Arrow tip -->
                 <div class="absolute top-1/2 right-0 w-0 h-0" style="transform: translate(4px, -50%); border-left: 8px solid var(--wd-purple-500); border-top: 5px solid transparent; border-bottom: 5px solid transparent; opacity: 0.7;"/>
               </div>
-              <div class="flex justify-between mt-3 text-[10px] uppercase tracking-[0.2em]" style="color:var(--wd-amber-600);">
+              <div class="flex justify-between mt-3 text-eyebrow uppercase tracking-[0.2em] text-secondary">
                 <span>Night one</span>
                 <span class="hidden xl:inline">The whole life ahead</span>
                 <span class="xl:hidden">The rest of your life →</span>
@@ -277,7 +277,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
           <div class="lg:hidden relative">
             <!-- Vertical dashed line -->
             <div class="absolute left-6 top-6 bottom-6 w-px" style="background-image: linear-gradient(to bottom, var(--wd-amber-600) 0, var(--wd-amber-600) 4px, transparent 4px, transparent 10px); background-size: 100% 10px; opacity: 0.5;"/>
-            <div class="text-[10px] uppercase tracking-widest ml-12 mb-4" style="font-family:var(--wd-font-display);font-style:italic; font-size: 15px; color:var(--wd-amber-600);">
+            <div class="text-eyebrow uppercase tracking-widest ml-12 mb-4 font-display italic text-secondary" style="font-size: 15px;">
               you are here ↓
             </div>
             <div class="space-y-4">
@@ -305,15 +305,15 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                 />
                 <component :is="s.icon" class="w-6 h-6 shrink-0" :style="{color: [WD.red600, WD.cyan600, WD.green600, WD.amber500, WD.purple500][i], 'stroke-width': 1.5}" />
                 <div class="flex-1 min-w-0">
-                  <div class="text-[10px] uppercase tracking-widest font-bold" :style="{color: [WD.red600, WD.cyan600, WD.green600, WD.amber500, WD.purple500][i]}">
-                    {{ s.label }} · <span style="font-family:var(--wd-font-display);font-style:italic; font-size:14px; color:var(--wd-amber-600); text-transform:none; letter-spacing:normal;">{{ s.horizon }}</span>
+                  <div class="text-eyebrow uppercase tracking-widest font-bold" :style="{color: [WD.red600, WD.cyan600, WD.green600, WD.amber500, WD.purple500][i]}">
+                    {{ s.label }} · <span class="font-display italic text-secondary" style="font-size:14px; text-transform:none; letter-spacing:normal;">{{ s.horizon }}</span>
                   </div>
-                  <div class="mt-0.5 text-base font-bold leading-tight" style="font-family:var(--wd-font-display);">{{ s.title }}</div>
-                  <div class="mt-1 text-xs leading-snug" style="color:var(--wd-brown-700);">{{ s.detail }}</div>
+                  <div class="mt-0.5 text-base font-bold leading-tight font-display">{{ s.title }}</div>
+                  <div class="mt-1 text-xs leading-snug text-muted-foreground">{{ s.detail }}</div>
                 </div>
               </NuxtLink>
             </div>
-            <div class="text-[10px] uppercase tracking-widest ml-12 mt-4" style="font-family:var(--wd-font-display);font-style:italic; font-size: 15px; color:var(--wd-amber-600);">
+            <div class="text-eyebrow uppercase tracking-widest ml-12 mt-4 font-display italic text-secondary" style="font-size: 15px;">
               → the rest of your life
             </div>
           </div>
@@ -323,12 +323,12 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
       <!-- PROOF -->
       <section class="py-16">
         <div class="max-w-3xl mx-auto px-4 text-center">
-          <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">This is the product</div>
-          <h2 class="mt-3 text-4xl sm:text-5xl" style="font-family:var(--wd-font-display);">
-            <em class="italic">See who else is</em> <span style="color:var(--wd-red-600);">going</span>.
+          <div class="text-xs uppercase tracking-[0.3em] text-secondary">This is the product</div>
+          <h2 class="mt-3 text-4xl sm:text-5xl font-display">
+            <em class="italic">See who else is</em> <span class="text-primary">going</span>.
           </h2>
-          <p class="mt-4 text-sm sm:text-base leading-relaxed max-w-xl mx-auto" style="color:var(--wd-brown-700);">
-            Every ticket sold turns into a face on the event page. <span class="italic" style="font-family:var(--wd-font-display);font-style:italic; font-size:20px;">No fake friends.</span>
+          <p class="mt-4 text-sm sm:text-base leading-relaxed max-w-xl mx-auto text-muted-foreground">
+            Every ticket sold turns into a face on the event page. <span class="italic font-display" style="font-size:20px;">No fake friends.</span>
           </p>
 
           <!-- Event card as concert poster — real data when available, sample fallback -->
@@ -337,11 +337,11 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
             <div class="absolute -top-3 left-6 w-20 h-4 bg-yellow-200/80 rotate-[-4deg] shadow"/>
             <div class="absolute -top-3 right-6 w-20 h-4 bg-yellow-200/80 rotate-[3deg] shadow"/>
 
-            <div class="rounded-lg overflow-hidden shadow-2xl bg-white border" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
+            <div class="rounded-lg overflow-hidden shadow-2xl bg-white border border-border">
               <div class="p-6" style="background:linear-gradient(135deg,var(--wd-violet-600) 0%, #c026d3 50%, var(--wd-rose-500) 100%);">
                 <template v-if="hasRealProof">
-                  <div class="text-[10px] uppercase tracking-[0.3em] text-white/90 font-bold">{{ proofEvent!.city }}</div>
-                  <h3 class="mt-2 text-3xl text-white leading-tight" style="font-family:var(--wd-font-display);">
+                  <div class="text-eyebrow uppercase tracking-[0.3em] text-white/90 font-bold">{{ proofEvent!.city }}</div>
+                  <h3 class="mt-2 text-3xl text-white leading-tight font-display">
                     {{ proofEvent!.title }}
                   </h3>
                   <div class="mt-2 text-xs text-white/80 flex flex-wrap gap-3">
@@ -350,8 +350,8 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                   </div>
                 </template>
                 <template v-else>
-                  <div class="text-[10px] uppercase tracking-[0.3em] text-white/90 font-bold">In 3 days · Barcelona</div>
-                  <h3 class="mt-2 text-3xl text-white leading-tight" style="font-family:var(--wd-font-display);">
+                  <div class="text-eyebrow uppercase tracking-[0.3em] text-white/90 font-bold">In 3 days · Barcelona</div>
+                  <h3 class="mt-2 text-3xl text-white leading-tight font-display">
                     Bachata Stars<br>Barcelona
                   </h3>
                   <div class="mt-2 text-xs text-white/80 flex flex-wrap gap-3">
@@ -361,9 +361,9 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                 </template>
               </div>
               <div class="p-5">
-                <div class="text-[10px] uppercase tracking-[0.25em] font-bold mb-3 flex items-center justify-between" style="color:var(--wd-amber-600);">
+                <div class="text-eyebrow uppercase tracking-[0.25em] font-bold mb-3 flex items-center justify-between text-secondary">
                   <span>Who's coming</span>
-                  <span v-if="!hasRealProof" class="px-1.5 py-0.5 rounded text-[9px]" style="background:var(--wd-amber-100); color:var(--wd-amber-800);">Sample</span>
+                  <span v-if="!hasRealProof" class="px-1.5 py-0.5 rounded text-tag bg-wd-amber-100 text-wd-amber-800">Sample</span>
                 </div>
                 <ul class="grid grid-cols-2 gap-2">
                   <template v-if="hasRealProof">
@@ -372,7 +372,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                       <div v-else class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow" :style="{background: avatarColor(i)}">{{ avatarInitial(a.name) }}</div>
                       <div class="min-w-0">
                         <div class="text-sm font-bold truncate">{{ a.name }}</div>
-                        <div v-if="a.city" class="text-[10px]" style="color:var(--wd-amber-600);">{{ a.city }}</div>
+                        <div v-if="a.city" class="text-eyebrow text-secondary">{{ a.city }}</div>
                       </div>
                     </li>
                   </template>
@@ -381,18 +381,16 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                       <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow" :style="{background: a.col}">{{ a.n.charAt(0) }}</div>
                       <div class="min-w-0">
                         <div class="text-sm font-bold truncate">{{ a.n }}</div>
-                        <div class="text-[10px]" style="color:var(--wd-amber-600);">{{ a.c }}</div>
+                        <div class="text-eyebrow text-secondary">{{ a.c }}</div>
                       </div>
                     </li>
                   </template>
                 </ul>
-                <NuxtLink
-                  :to="hasRealProof ? proofData!.link : '/festivals/bachata-stars-barcelona-2026'"
-                  class="mt-4 block text-center w-full py-3 rounded-full text-white text-xs font-bold uppercase tracking-widest"
-                  style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-                >
-                  {{ hasRealProof ? 'See all attendees' : 'Get tickets ✨' }}
-                </NuxtLink>
+                <Button as-child variant="pill" class="mt-4 w-full text-xs tracking-widest">
+                  <NuxtLink :to="hasRealProof ? proofData!.link : '/festivals/bachata-stars-barcelona-2026'">
+                    {{ hasRealProof ? 'See all attendees' : 'Get tickets ✨' }}
+                  </NuxtLink>
+                </Button>
               </div>
             </div>
           </div>
@@ -403,12 +401,12 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
            Mid-page routing signal for the wrong-audience visitor
            (bride, corporate planner, festival org) who scrolled this far.
            NOT hero-level — dancer funnel stays primary. -->
-      <section class="py-16 border-y" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:color-mix(in srgb, var(--wd-brown-900) 3.1%, transparent);">
+      <section class="py-16 border-y border-border" style="background:color-mix(in srgb, var(--wd-brown-900) 3.1%, transparent);">
         <div class="max-w-5xl mx-auto px-4">
           <div class="text-center mb-10">
-            <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">Hosting the night, not dancing at it?</div>
-            <h2 class="mt-3 text-3xl sm:text-4xl leading-tight" style="font-family:var(--wd-font-display);">
-              We help you <em class="italic" style="color:var(--wd-red-600);">throw it</em> too.
+            <div class="text-xs uppercase tracking-[0.3em] text-secondary">Hosting the night, not dancing at it?</div>
+            <h2 class="mt-3 text-3xl sm:text-4xl leading-tight font-display">
+              We help you <em class="italic text-primary">throw it</em> too.
             </h2>
           </div>
 
@@ -417,13 +415,13 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
             <NuxtLink to="/for-events" class="group rounded-2xl bg-white p-6 sm:p-7 border transition-all hover:-translate-y-1"
               :style="{ borderColor: 'color-mix(in srgb, var(--wd-amber-500) 33.3%, transparent)', boxShadow: '0 1px 0 color-mix(in srgb, var(--wd-amber-500) 13.3%, transparent), 0 12px 28px rgba(59, 31, 18, 0.06)' }">
               <div class="flex items-center justify-between mb-3">
-                <div class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-amber-500);">Private events</div>
-                <PartyPopper class="w-5 h-5" style="color:var(--wd-amber-500); stroke-width:1.5;" />
+                <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-wd-amber-500">Private events</div>
+                <PartyPopper class="w-5 h-5 text-wd-amber-500" style="stroke-width:1.5;" />
               </div>
-              <div class="text-xl sm:text-2xl font-bold leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+              <div class="text-xl sm:text-2xl font-bold leading-tight font-display text-foreground">
                 Weddings, birthdays, corporate.
               </div>
-              <div class="mt-3 text-sm leading-relaxed" style="color:var(--wd-brown-700);">
+              <div class="mt-3 text-sm leading-relaxed text-muted-foreground">
                 We supply the whole night — venue, MC, DJ, dancers, show.
               </div>
               <div class="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-bold uppercase tracking-wider" style="background:linear-gradient(135deg,var(--wd-amber-500),var(--wd-orange-500)); box-shadow: 0 4px 0 -1px #d97706;">
@@ -435,16 +433,16 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
             <NuxtLink to="/organizers/create" class="group rounded-2xl bg-white p-6 sm:p-7 border transition-all hover:-translate-y-1"
               :style="{ borderColor: 'color-mix(in srgb, var(--wd-cyan-600) 33.3%, transparent)', boxShadow: '0 1px 0 color-mix(in srgb, var(--wd-cyan-600) 13.3%, transparent), 0 12px 28px rgba(59, 31, 18, 0.06)' }">
               <div class="flex items-center justify-between mb-3">
-                <div class="text-[10px] uppercase tracking-[0.3em] font-bold" style="color:var(--wd-cyan-600);">Festival organizers</div>
-                <Ticket class="w-5 h-5" style="color:var(--wd-cyan-600); stroke-width:1.5;" />
+                <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-wd-cyan-600">Festival organizers</div>
+                <Ticket class="w-5 h-5 text-wd-cyan-600" style="stroke-width:1.5;" />
               </div>
-              <div class="text-xl sm:text-2xl font-bold leading-tight" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">
+              <div class="text-xl sm:text-2xl font-bold leading-tight font-display text-foreground">
                 Ticket your festival on us.
               </div>
-              <div class="mt-3 text-sm leading-relaxed" style="color:var(--wd-brown-700);">
+              <div class="mt-3 text-sm leading-relaxed text-muted-foreground">
                 Ticketing + promo + real faces on your event page.
               </div>
-              <div class="mt-5 inline-flex items-center gap-2 text-sm font-bold" style="color:var(--wd-cyan-600);">
+              <div class="mt-5 inline-flex items-center gap-2 text-sm font-bold text-wd-cyan-600">
                 Ticket with us <ArrowRight class="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </div>
             </NuxtLink>
@@ -456,8 +454,8 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
       <section class="py-16" style="background:rgba(251, 245, 234, 0.5);">
         <div class="max-w-3xl mx-auto px-4">
           <div class="text-center mb-12">
-            <div class="text-xs uppercase tracking-[0.3em]" style="color:var(--wd-amber-600);">How it works</div>
-            <h2 class="mt-3 text-3xl sm:text-4xl" style="font-family:var(--wd-font-display);">
+            <div class="text-xs uppercase tracking-[0.3em] text-secondary">How it works</div>
+            <h2 class="mt-3 text-3xl sm:text-4xl font-display">
               <em class="italic">Five steps.</em> No surprises.
             </h2>
           </div>
@@ -468,14 +466,14 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
               { t: 'See who else is going',      b: 'Opt-in only. No strangers, no fake friends.' },
               { t: 'Plan the trip together',     b: 'Dinners, ride-shares, first-night partner.' },
               { t: 'Arrive with friends',        b: 'Skip the wall. The floor is waiting.' },
-            ]" :key="s.t" class="flex items-start gap-4 bg-white/70 rounded-xl p-4 border" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
+            ]" :key="s.t" class="flex items-start gap-4 bg-white/70 rounded-xl p-4 border border-border">
               <div
                 class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0 shadow"
                 :style="{ background: [WD.red600, WD.orange500, WD.green600, WD.cyan600, WD.purple500][i] }"
               >{{ i + 1 }}</div>
               <div>
-                <div class="text-base font-bold" style="font-family:var(--wd-font-display);">{{ s.t }}</div>
-                <div class="text-sm mt-0.5" style="color:var(--wd-brown-700);">{{ s.b }}</div>
+                <div class="text-base font-bold font-display">{{ s.t }}</div>
+                <div class="text-sm mt-0.5 text-muted-foreground">{{ s.b }}</div>
               </div>
             </li>
           </ol>
@@ -486,17 +484,17 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
       <section class="py-16">
         <div class="max-w-2xl mx-auto px-4">
           <div class="bg-white/80 rounded-2xl p-8 shadow-xl border-2 border-dashed" style="border-color:color-mix(in srgb, var(--wd-red-600) 26.7%, transparent);">
-            <div class="text-[10px] uppercase tracking-[0.3em] mb-4" style="color:var(--wd-amber-600);">A letter from the founder</div>
-            <p class="text-2xl leading-relaxed" style="font-family:var(--wd-font-display);font-style:italic; color:var(--wd-brown-900);">
+            <div class="text-eyebrow uppercase tracking-[0.3em] mb-4 text-secondary">A letter from the founder</div>
+            <p class="text-2xl leading-relaxed font-display italic text-foreground">
               Dear dancer —<br><br>
               The first time I flew to a festival alone, I spent half the first night by the wall. I built WeDance so the next dancer does not have to.<br><br>
               See you on the floor.
             </p>
-            <div class="mt-6 flex items-center gap-3 border-t pt-4" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
+            <div class="mt-6 flex items-center gap-3 border-t pt-4 border-border">
               <img src="/alosha-dj.jpg" alt="Alösha" class="w-12 h-12 rounded-full object-cover">
               <div>
-                <div class="text-lg" style="font-family:var(--wd-font-display);font-style:italic;">— Alösha</div>
-                <div class="text-[11px]" style="color:var(--wd-amber-600);">Munich · 2026</div>
+                <div class="text-lg font-display italic">— Alösha</div>
+                <div class="text-meta text-secondary">Munich · 2026</div>
               </div>
             </div>
           </div>
@@ -510,19 +508,19 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
       <!-- FINAL -->
       <section class="py-20">
         <div class="max-w-2xl mx-auto px-4 text-center">
-          <h2 class="text-4xl sm:text-5xl" style="font-family:var(--wd-font-display);">
+          <h2 class="text-4xl sm:text-5xl font-display">
             <em class="italic">Your next dance</em><br>
-            is closer than you <span style="color:var(--wd-red-600);">think.</span>
+            is closer than you <span class="text-primary">think.</span>
           </h2>
-          <NuxtLink
-            to="/festivals"
-            class="mt-8 inline-flex items-center gap-2 px-8 py-4 rounded-full text-white text-base font-bold uppercase tracking-wider shadow-lg"
-            style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500)); box-shadow: 0 6px 0 -2px var(--wd-red-800), 0 10px 22px rgba(220, 38, 38, 0.35);"
-          >
-            Find your festival <ArrowRight class="w-4 h-4" />
-          </NuxtLink>
+          <Button as-child variant="cta" size="lg" class="mt-8 h-auto min-h-14 whitespace-normal px-8 py-4 text-base">
+            <NuxtLink to="/festivals">
+              Find your festival <ArrowRight aria-hidden="true" />
+            </NuxtLink>
+          </Button>
         </div>
       </section>
+
+      </main>
 
       <SiteFooter />
     </div>

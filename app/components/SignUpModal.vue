@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * Email + password auth modal, styled in the 2026 V3 tropical aesthetic
- * (Playfair Display / Caveat, #fbf5ea / #3b1f0d / #dc2626). Modes: Login
+ * (design-system Field / Input / Button on the cream background). Modes: Login
  * (email + password), Register (name + email + password only), and Recovery
  * (magic-link "forgot password").
  *
@@ -70,9 +70,10 @@ const recoverySent = ref(false)
 // Track whether the name was pre-filled from onboarding — hide it in the form.
 const hasPrefillName = ref(false)
 
-// Refs for focus management (accessibility).
-const emailInput = ref<HTMLInputElement | null>(null)
-const recoveryEmailInput = ref<HTMLInputElement | null>(null)
+// Focus management (accessibility): Input is a component, so focus by id.
+function focusById(id: string) {
+  nextTick(() => document.getElementById(id)?.focus())
+}
 
 // Login and register share the inputs above; `authForm` is whichever is showing.
 // A prefilled name has no visible input, so register falls back to it.
@@ -126,12 +127,12 @@ function switchMode(next: Mode) {
 function openRecovery() {
   switchMode('recovery')
   // Move focus to the recovery email input once it renders.
-  nextTick(() => recoveryEmailInput.value?.focus())
+  focusById('recovery-email')
 }
 
 function backToLogin() {
   switchMode('login')
-  nextTick(() => emailInput.value?.focus())
+  focusById('auth-email')
 }
 
 async function handleSubmit() {
@@ -194,9 +195,6 @@ async function handleRecovery() {
     loading.value = false
   }
 }
-
-// Shared input styling — matches the rounded, warm inputs on /cities.
-const inputClass = 'w-full h-11 rounded-full px-4 text-sm outline-none transition-all bg-white border border-border text-foreground font-sans'
 </script>
 
 <template>
@@ -211,7 +209,7 @@ const inputClass = 'w-full h-11 rounded-full px-4 text-sm outline-none transitio
         <!-- ============================ RECOVERY ============================ -->
         <template v-if="isRecovery">
           <DialogHeader class="text-left space-y-1">
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold text-secondary">
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">
               Account recovery
             </div>
             <DialogTitle class="text-2xl leading-tight text-foreground font-display">
@@ -226,38 +224,29 @@ const inputClass = 'w-full h-11 rounded-full px-4 text-sm outline-none transitio
 
           <!-- Recovery form -->
           <form v-if="!recoverySent" class="space-y-4 pt-4" novalidate @submit.prevent="handleRecovery">
-            <div class="space-y-1.5">
-              <label for="recovery-email" class="text-sm font-bold text-foreground">Email</label>
-              <input
-                id="recovery-email"
-                ref="recoveryEmailInput"
+            <Field id="recovery-email" label="Email" :error="recoveryForm.errors.email">
+              <Input
                 v-model="form.email"
                 type="email"
                 placeholder="you@example.com"
                 autocomplete="email"
                 required
-                :class="inputClass"
                 v-bind="recoveryForm.fieldAttrs('email', 'recovery-email-error')"
-              >
-              <FieldError id="recovery-email-error" :message="recoveryForm.errors.email" />
-            </div>
+              />
+            </Field>
 
-            <p v-if="error" class="text-sm font-bold text-primary font-sans">
+            <p v-if="error" class="text-sm font-bold text-destructive font-sans">
               {{ error }}
             </p>
 
-            <button
-              type="submit"
-              :disabled="loading"
-              class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60 bg-primary shadow-[0_3px_0_-1px_var(--wd-red-800)] font-sans"
-            >
+            <Button type="submit" variant="pill" size="lg" class="w-full px-5 font-sans" :loading="loading">
               {{ loading ? 'Sending…' : 'Send me a reset link' }}
-            </button>
+            </Button>
 
             <p class="text-center text-sm pt-1 text-muted-foreground font-sans">
-              <button type="button" class="font-bold underline text-primary" @click="backToLogin">
+              <Button type="button" variant="link" class="h-auto p-0 font-bold underline" @click="backToLogin">
                 Back to login
-              </button>
+              </Button>
             </p>
           </form>
 
@@ -270,9 +259,9 @@ const inputClass = 'w-full h-11 rounded-full px-4 text-sm outline-none transitio
               The link expires in 15 minutes.
             </div>
             <p class="text-center text-sm text-muted-foreground font-sans">
-              <button type="button" class="font-bold underline text-primary" @click="backToLogin">
+              <Button type="button" variant="link" class="h-auto p-0 font-bold underline" @click="backToLogin">
                 Back to login
-              </button>
+              </Button>
             </p>
           </div>
         </template>
@@ -280,7 +269,7 @@ const inputClass = 'w-full h-11 rounded-full px-4 text-sm outline-none transitio
         <!-- ======================= LOGIN / REGISTER ======================= -->
         <template v-else>
           <DialogHeader class="text-left space-y-1">
-            <div class="text-[10px] uppercase tracking-[0.3em] font-bold text-secondary">
+            <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">
               {{ isRegister ? 'Join the floor' : 'Welcome back' }}
             </div>
             <DialogTitle class="text-2xl leading-tight text-foreground font-display">
@@ -293,99 +282,88 @@ const inputClass = 'w-full h-11 rounded-full px-4 text-sm outline-none transitio
 
           <form class="space-y-4 pt-4" novalidate @submit.prevent="handleSubmit">
             <!-- Name (register only, unless prefilled) -->
-            <div v-if="isRegister && !hasPrefillName" class="space-y-1.5">
-              <label for="auth-name" class="text-sm font-bold text-foreground">Name</label>
-              <input
-                id="auth-name"
+            <Field v-if="isRegister && !hasPrefillName" id="auth-name" label="Name" :error="authForm.errors.name">
+              <Input
                 v-model="form.name"
-                type="text"
                 placeholder="Your name"
                 autocomplete="name"
-                :class="inputClass"
                 v-bind="authForm.fieldAttrs('name', 'auth-name-error')"
-              >
-              <FieldError id="auth-name-error" :message="authForm.errors.name" />
-            </div>
+              />
+            </Field>
 
             <!-- Email -->
-            <div class="space-y-1.5">
-              <label for="auth-email" class="text-sm font-bold text-foreground">Email</label>
-              <input
-                id="auth-email"
-                ref="emailInput"
+            <Field id="auth-email" label="Email" :error="authForm.errors.email">
+              <Input
                 v-model="form.email"
                 type="email"
                 placeholder="you@example.com"
                 autocomplete="email"
                 required
-                :class="inputClass"
                 v-bind="authForm.fieldAttrs('email', 'auth-email-error')"
-              >
-              <FieldError id="auth-email-error" :message="authForm.errors.email" />
-            </div>
+              />
+            </Field>
 
             <!-- Password -->
-            <div class="space-y-1.5">
+            <Field id="auth-password" :error="authForm.errors.password">
               <div class="flex items-center justify-between">
-                <label for="auth-password" class="text-sm font-bold text-foreground">Password</label>
-                <button
+                <Label for="auth-password">Password</Label>
+                <Button
                   v-if="!isRegister"
                   type="button"
-                  class="text-xs font-bold underline text-primary font-sans"
+                  variant="link"
+                  class="h-auto p-0 text-xs font-bold underline font-sans"
                   @click="openRecovery"
                 >
                   Forgot password?
-                </button>
+                </Button>
               </div>
               <div class="relative">
-                <input
-                  id="auth-password"
+                <Input
                   v-model="form.password"
                   :type="showPassword ? 'text' : 'password'"
                   :placeholder="isRegister ? 'At least 8 characters' : 'Your password'"
                   :autocomplete="isRegister ? 'new-password' : 'current-password'"
                   required
-                  :class="inputClass + ' pr-16'"
+                  class="pr-16"
                   v-bind="authForm.fieldAttrs('password', 'auth-password-error')"
-                >
-                <button
+                />
+                <Button
                   type="button"
-                  class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold uppercase tracking-wider text-secondary font-sans"
+                  variant="ghost"
+                  size="sm"
+                  class="absolute right-1 top-1/2 -translate-y-1/2 px-3 text-xs font-bold uppercase tracking-wider text-secondary font-sans"
+                  :aria-pressed="showPassword"
+                  aria-controls="auth-password"
                   @click="showPassword = !showPassword"
                 >
                   {{ showPassword ? 'Hide' : 'Show' }}
-                </button>
+                </Button>
               </div>
-              <FieldError id="auth-password-error" :message="authForm.errors.password" />
-            </div>
+            </Field>
 
-            <p v-if="error" class="text-sm font-bold text-primary font-sans">
+            <p v-if="error" class="text-sm font-bold text-destructive font-sans">
               {{ error }}
             </p>
 
-            <button
-              type="submit"
-              :disabled="loading"
-              class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider disabled:opacity-60 bg-primary shadow-[0_3px_0_-1px_var(--wd-red-800)] font-sans"
-            >
+            <Button type="submit" variant="pill" size="lg" class="w-full px-5 font-sans" :loading="loading">
               {{ loading
                 ? (isRegister ? 'Creating account…' : 'Signing in…')
                 : (isRegister ? 'Create account' : 'Sign in') }}
-            </button>
+            </Button>
 
             <!-- Mode toggle -->
             <p class="text-center text-sm pt-1 text-muted-foreground font-sans">
               <template v-if="isRegister">
                 Already have an account?
-                <button type="button" class="font-bold underline text-primary" @click="switchMode('login')">
+                <Button type="button" variant="link" class="h-auto p-0 font-bold underline" @click="switchMode('login')">
                   Sign in
-                </button>
+                </Button>
               </template>
               <template v-else>
                 New to WeDance?
-                <button type="button" class="font-bold underline text-primary" @click="switchMode('register')">
+                <Button type="button" variant="link" class="h-auto p-0 font-bold underline" @click="switchMode('register')">
                   Create an account
-                </button>
+                </Button>
               </template>
             </p>
           </form>

@@ -51,7 +51,7 @@ const sections = [
     items: [
       'By sending a booking request you consent to WeDance sharing your <b>name, email address, and request details</b> (event type, preferred date, number of guests, and any message you include) with the venue so they can respond.',
       'WeDance will not share your data with any party other than the venue you are enquiring with, unless required by law.',
-      'For full details on how we handle personal data, see our <a href="/privacy-policy" class="underline font-bold" style="color:#dc2626;">Privacy Policy</a>.',
+      'For full details on how we handle personal data, see our <a href="/privacy-policy" class="underline font-bold text-primary">Privacy Policy</a>.',
     ],
   },
   {
@@ -77,13 +77,14 @@ const sections = [
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
+    <main>
 
     <section class="max-w-2xl mx-auto px-4 pt-12 pb-4">
-      <div class="text-sm tracking-widest uppercase mb-3" style="color:var(--wd-amber-600);">Legal</div>
-      <h1 class="text-4xl sm:text-5xl leading-tight" style="color:var(--wd-brown-900);">Booking Terms</h1>
-      <p class="mt-4 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <div class="text-sm tracking-widest uppercase mb-3 text-secondary">Legal</div>
+      <h1 class="text-4xl sm:text-5xl leading-tight text-foreground">Booking Terms</h1>
+      <p class="mt-4 text-sm leading-relaxed text-muted-foreground font-sans">
         These terms apply when you use WeDance to send a venue booking request.
         Please read them before submitting a request.
       </p>
@@ -91,21 +92,23 @@ const sections = [
 
     <section class="max-w-2xl mx-auto px-4 pb-16">
       <div v-for="s in sections" :key="s.heading" class="mt-8">
-        <h2 class="text-lg font-bold" style="color:var(--wd-brown-900); font-family:var(--wd-font-sans);">{{ s.heading }}</h2>
+        <h2 class="text-lg font-bold text-foreground font-sans">{{ s.heading }}</h2>
         <ul class="mt-3 space-y-2">
           <!-- eslint-disable-next-line vue/no-v-html -->
-          <li v-for="(item, i) in s.items" :key="i" class="flex items-start gap-2 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-            <span class="mt-0.5 shrink-0" style="color:var(--wd-red-600);">·</span>
+          <li v-for="(item, i) in s.items" :key="i" class="flex items-start gap-2 text-sm leading-relaxed text-muted-foreground font-sans">
+            <span class="mt-0.5 shrink-0 text-primary">·</span>
             <span v-html="item" />
           </li>
         </ul>
       </div>
 
-      <div class="mt-10 rounded-xl p-4 text-sm" style="background:color-mix(in srgb, var(--wd-red-600) 6.3%, transparent); border:1px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent); color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <div class="mt-10 rounded-xl p-4 text-sm text-muted-foreground font-sans" style="background:color-mix(in srgb, var(--wd-red-600) 6.3%, transparent); border:1px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent);">
         These terms are under legal review and may change before the booking feature is promoted publicly.
-        Questions? Contact <a href="mailto:hello@wedance.vip" class="underline font-bold" style="color:var(--wd-red-600);">hello@wedance.vip</a>.
+        Questions? Contact <a href="mailto:hello@wedance.vip" class="underline font-bold text-primary">hello@wedance.vip</a>.
       </div>
     </section>
+
+    </main>
 
     <SiteFooter />
   </div>

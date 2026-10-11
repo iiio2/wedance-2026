@@ -31,17 +31,18 @@ const props_ = [
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
+    <main>
 
     <!-- HERO -->
     <section class="max-w-5xl mx-auto px-4 pt-14 pb-10">
-      <div class="text-sm tracking-widest uppercase mb-3" style="color:var(--wd-amber-600);">For organizers, venues & schools</div>
-      <h1 class="text-5xl sm:text-6xl leading-[0.95]" style="color:var(--wd-brown-900);">
+      <div class="text-sm tracking-widest uppercase mb-3 text-secondary">For organizers, venues & schools</div>
+      <h1 class="text-5xl sm:text-6xl leading-[0.95] text-foreground">
         Run it yourself.<br>
-        Reach <em class="italic" style="color:var(--wd-red-600);">more dancers.</em>
+        Reach <em class="italic text-primary">more dancers.</em>
       </h1>
-      <p class="mt-6 text-base sm:text-lg leading-relaxed max-w-xl" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <p class="mt-6 text-base sm:text-lg leading-relaxed max-w-xl text-muted-foreground font-sans">
         You already know how to throw the night. Publish it where the dancers are, sell the tickets, and get the audience data back — all in one place.
       </p>
     </section>
@@ -55,30 +56,30 @@ const props_ = [
           :style="{ borderColor: [WD.red600, WD.cyan600, WD.amber500, WD.green600, WD.purple500][i % 5] + '55' }"
         >
           <component :is="p.icon" class="w-6 h-6 mb-3" :style="{ color: [WD.red600, WD.cyan600, WD.amber500, WD.green600, WD.purple500][i % 5], 'stroke-width': 1.5 }" />
-          <div class="text-lg font-bold" style="color:var(--wd-brown-900);">{{ p.title }}</div>
-          <div class="mt-2 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">{{ p.detail }}</div>
+          <div class="text-lg font-bold text-foreground">{{ p.title }}</div>
+          <div class="mt-2 text-sm leading-relaxed text-muted-foreground font-sans">{{ p.detail }}</div>
         </div>
       </div>
     </section>
 
     <!-- CTA -->
     <section class="max-w-3xl mx-auto px-4 pt-6 pb-10 text-center">
-      <PartyPopper class="w-8 h-8 mx-auto mb-4" style="color:var(--wd-red-600); stroke-width:1.5;" />
+      <PartyPopper class="w-8 h-8 mx-auto mb-4 text-primary" style="stroke-width:1.5;" />
       <h2 class="text-3xl sm:text-4xl leading-tight">
-        Put your event <em class="italic" style="color:var(--wd-red-600);">on the map.</em>
+        Put your event <em class="italic text-primary">on the map.</em>
       </h2>
-      <p class="mt-4 text-sm sm:text-base" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <p class="mt-4 text-sm sm:text-base text-muted-foreground font-sans">
         Tell us about your event and we'll get you listed where the dancers are looking.
       </p>
-      <a
-        href="mailto:hello@wedance.vip?subject=Publish%20my%20event%20on%20WeDance&body=Event%2Fvenue%2Fschool%3A%0ACity%3A%0AWhat%20you%20run%3A%0AHow%20often%3A%0AWhat%20you%20need%3A%20"
-        class="mt-8 inline-flex items-center gap-2 px-7 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider"
-        style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-        @click="useTrack().track('organizer_cta_click', { surface: 'for-organizers' })"
-      >
-        Publish your event <ArrowRight class="w-4 h-4" />
-      </a>
-      <div class="mt-3 text-sm" style="font-family:var(--wd-font-display);font-style:italic; color:var(--wd-amber-600);">
+      <Button as-child variant="cta" size="lg" class="mt-8 h-auto min-h-11 whitespace-normal px-7 py-3">
+        <a
+          href="mailto:hello@wedance.vip?subject=Publish%20my%20event%20on%20WeDance&body=Event%2Fvenue%2Fschool%3A%0ACity%3A%0AWhat%20you%20run%3A%0AHow%20often%3A%0AWhat%20you%20need%3A%20"
+          @click="useTrack().track('organizer_cta_click', { surface: 'for-organizers' })"
+        >
+          Publish your event <ArrowRight aria-hidden="true" />
+        </a>
+      </Button>
+      <div class="mt-3 text-sm font-display italic text-secondary">
         — we usually respond same day
       </div>
     </section>
@@ -87,35 +88,37 @@ const props_ = [
     <section class="max-w-3xl mx-auto px-4 pb-16 space-y-3">
       <NuxtLink
         to="/for-events"
-        class="rounded-2xl bg-white p-6 border flex items-center justify-between gap-4 transition-all hover:-translate-y-0.5"
-        style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);"
+        class="rounded-2xl bg-white p-6 border flex items-center justify-between gap-4 transition-all hover:-translate-y-0.5 border-border"
+       
       >
         <div>
-          <div class="text-lg font-bold" style="color:var(--wd-brown-900);">Want us to run the whole night instead?</div>
-          <div class="mt-1 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <div class="text-lg font-bold text-foreground">Want us to run the whole night instead?</div>
+          <div class="mt-1 text-sm leading-relaxed text-muted-foreground font-sans">
             Venue, MC, DJ, show dancers, ticketing — done for you, end to end.
           </div>
         </div>
-        <span class="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider whitespace-nowrap" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);">
+        <span class="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider whitespace-nowrap text-primary font-sans">
           For events <ArrowRight class="w-3.5 h-3.5" />
         </span>
       </NuxtLink>
       <NuxtLink
         to="/for-venues"
-        class="rounded-2xl bg-white p-6 border flex items-center justify-between gap-4 transition-all hover:-translate-y-0.5"
-        style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);"
+        class="rounded-2xl bg-white p-6 border flex items-center justify-between gap-4 transition-all hover:-translate-y-0.5 border-border"
+       
       >
         <div>
-          <div class="text-lg font-bold" style="color:var(--wd-brown-900);">Have a venue? List it on WeDance.</div>
-          <div class="mt-1 text-sm leading-relaxed" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+          <div class="text-lg font-bold text-foreground">Have a venue? List it on WeDance.</div>
+          <div class="mt-1 text-sm leading-relaxed text-muted-foreground font-sans">
             Get booking requests from dance organizers looking for a space.
           </div>
         </div>
-        <span class="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider whitespace-nowrap" style="color:var(--wd-red-600); font-family:var(--wd-font-sans);">
+        <span class="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider whitespace-nowrap text-primary font-sans">
           For venues <ArrowRight class="w-3.5 h-3.5" />
         </span>
       </NuxtLink>
     </section>
+
+    </main>
 
     <SiteFooter />
   </div>

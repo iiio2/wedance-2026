@@ -25,23 +25,26 @@ const rows = [
 </script>
 
 <template>
-  <div class="min-h-screen" style="background:var(--wd-cream); color:var(--wd-brown-900); font-family:var(--wd-font-display);">
+  <div class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
+    <main>
     <section class="max-w-3xl mx-auto px-4 py-12">
-      <div class="text-sm tracking-widest uppercase mb-3" style="color:var(--wd-amber-600);">Legal</div>
-      <h1 class="text-4xl sm:text-5xl leading-tight" style="color:var(--wd-brown-900);">Imprint</h1>
+      <div class="text-sm tracking-widest uppercase mb-3 text-secondary">Legal</div>
+      <h1 class="text-4xl sm:text-5xl leading-tight text-foreground">Imprint</h1>
 
-      <div class="mt-6 rounded-xl p-4 text-sm" style="background:color-mix(in srgb, var(--wd-red-600) 6.3%, transparent); border:1px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent); color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+      <div class="mt-6 rounded-xl p-4 text-sm text-muted-foreground font-sans" style="background:color-mix(in srgb, var(--wd-red-600) 6.3%, transparent); border:1px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent);">
         ⚠️ Draft. Replace the placeholders below with the real operator details before launch — an incomplete imprint is an Abmahnung risk under §5 DDG.
       </div>
 
-      <dl class="mt-6 grid sm:grid-cols-[200px_1fr] gap-x-6 gap-y-3 text-sm" style="color:var(--wd-brown-900); font-family:var(--wd-font-sans);">
+      <dl class="mt-6 grid sm:grid-cols-[200px_1fr] gap-x-6 gap-y-3 text-sm text-foreground font-sans">
         <template v-for="[k, v] in rows" :key="k">
-          <dt class="font-bold" style="color:var(--wd-amber-600);">{{ k }}</dt>
+          <dt class="font-bold text-secondary">{{ k }}</dt>
           <dd>{{ v }}</dd>
         </template>
       </dl>
     </section>
+    </main>
+
     <SiteFooter />
   </div>
 </template>
