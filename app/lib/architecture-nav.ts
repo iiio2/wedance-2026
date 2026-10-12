@@ -22,7 +22,7 @@ export const architectureNav: DocSection[] = [
   {
     title: 'Decisions',
     items: [
-      { title: 'ADRs', to: '/architecture/decisions', status: 'stable', summary: 'Architecture decision records.' },
+      { title: 'Review & ADRs', to: '/architecture/decisions', status: 'stable', summary: 'Architecture review, target design and decision records.' },
     ],
   },
 ]

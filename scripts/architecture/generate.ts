@@ -18,7 +18,7 @@ import { DOMAINS } from './domains'
 import { extractDataModel, type TableDoc } from './data-model'
 import { extractRest, extractTrpc, type ProcedureDoc, type RestDoc, type RouterDoc } from './api'
 import { TableReach } from './source'
-import { parseFrontmatter, renderMarkdown } from './markdown'
+import { parseFrontmatter, renderMarkdownParts, type DocPart } from './markdown'
 
 export const PUBLIC_OUT = 'app/generated/architecture'
 export const ADMIN_OUT = 'server/assets/architecture'
@@ -55,7 +55,12 @@ export interface StoriesDoc {
   unknownProcedures: string[]
 }
 
-export interface AdrDoc { id: string, slug: string, file: string, title: string, status: string, date: string | null, html: string }
+/**
+ * A rendered doc under docs/architecture: an ADR (`adr/`), an architecture review
+ * (`review/`) or a target-design doc (`target/`). All render on /architecture/decisions.
+ */
+export type DocKind = 'review' | 'target' | 'adr'
+export interface AdrDoc { id: string, kind: DocKind, slug: string, file: string, title: string, status: string, date: string | null, summary: string | null, parts: DocPart[] }
 
 export interface UsedBy { procedures: string[], rest: string[] }
 
@@ -167,26 +172,40 @@ function readStories(rootDir: string, storiesPath: string, ctx: { procedures: Pr
   }
 }
 
-function readAdrs(rootDir: string): AdrDoc[] {
-  const dir = join(rootDir, 'docs/architecture/adr')
-  if (!existsSync(dir)) return []
-  return readdirSync(dir)
-    .filter(f => f.endsWith('.md'))
-    .sort()
-    .map((f) => {
-      const { data, body } = parseFrontmatter(readFileSync(join(dir, f), 'utf8'))
-      const slug = f.replace(/\.md$/, '')
-      const num = slug.match(/^(\d+)/)?.[1]
-      return {
-        id: num ? `ADR-${num.padStart(3, '0')}` : slug,
-        slug,
-        file: `docs/architecture/adr/${f}`,
-        title: data.title ?? slug,
-        status: data.status ?? 'proposed',
-        date: data.date ?? null,
-        html: renderMarkdown(body),
-      }
-    })
+const DOC_DIRS: { kind: DocKind, dir: string, prefix: string }[] = [
+  { kind: 'review', dir: 'docs/architecture/review', prefix: 'REVIEW' },
+  { kind: 'target', dir: 'docs/architecture/target', prefix: 'TARGET' },
+  { kind: 'adr', dir: 'docs/architecture/adr', prefix: 'ADR' },
+]
+
+/**
+ * Reads every doc under docs/architecture/{review,target,adr}. `scrub` replaces
+ * admin-level procedure names (they must never reach the public bundle, ADR-000).
+ */
+function readDocs(rootDir: string, scrub: (t: string | null) => string | null = t => t): AdrDoc[] {
+  return DOC_DIRS.flatMap(({ kind, dir, prefix }) => {
+    const abs = join(rootDir, dir)
+    if (!existsSync(abs)) return []
+    return readdirSync(abs)
+      .filter(f => f.endsWith('.md'))
+      .sort()
+      .map((f): AdrDoc => {
+        const { data, body } = parseFrontmatter(scrub(readFileSync(join(abs, f), 'utf8'))!)
+        const slug = f.replace(/\.md$/, '')
+        const num = slug.match(/^(\d+)-/)?.[1]
+        return {
+          id: data.id ?? (kind === 'adr' && num ? `ADR-${num.padStart(3, '0')}` : `${prefix}`),
+          kind,
+          slug,
+          file: `${dir}/${f}`,
+          title: data.title ?? slug,
+          status: data.status ?? 'proposed',
+          date: data.date ?? null,
+          summary: data.summary ?? null,
+          parts: renderMarkdownParts(body),
+        }
+      })
+  })
 }
 
 export interface BuildOptions { rootDir?: string, storiesPath?: string }
@@ -232,7 +251,7 @@ export async function buildArchitecture(opts: BuildOptions = {}): Promise<Archit
   const sqlNames = new Set(tables.map(t => t.name))
   const tableName = (t: string) => (sqlNames.has(t) ? t : sqlNameOf.get(t) ?? null)
   const { doc: stories, adminRefs } = readStories(rootDir, storiesPath, { procedures, tableName, routes, scrub: adminNameScrubber(procedures, new Set(sqlNameOf.keys())) })
-  const decisions = readAdrs(rootDir)
+  const decisions = readDocs(rootDir, adminNameScrubber(procedures, new Set(sqlNameOf.keys())))
 
   const publicRouters = routers
     .map(r => ({ ...r, procedures: publicProcs.filter(p => p.router === r.name).length }))
@@ -249,7 +268,7 @@ export async function buildArchitecture(opts: BuildOptions = {}): Promise<Archit
         routers: routers.length,
         rest: rest.length,
         stories: stories.stories.length,
-        adrs: decisions.length,
+        adrs: decisions.filter(d => d.kind === 'adr').length,
       },
     },
     data: {

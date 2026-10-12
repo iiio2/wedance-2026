@@ -12,7 +12,7 @@ import * as schema from '../../server/database/schema'
 import { appRouter } from '../../server/trpc'
 import { buildArchitecture, type Architecture } from './generate'
 import { DOMAINS } from './domains'
-import { renderMarkdown } from './markdown'
+import { renderMarkdown, renderMarkdownParts } from './markdown'
 
 const FIXTURE = fileURLToPath(new URL('./__fixtures__/stories.json', import.meta.url))
 const tableKeys = Object.entries(schema).filter(([, v]) => is(v, PgTable)).map(([k]) => k)
@@ -116,7 +116,7 @@ describe('stories cross-check', () => {
 describe('ADR markdown', () => {
   it('escapes HTML and renders basics', () => {
     const html = renderMarkdown('## Title\n\nSome **bold** `code` <script>x</script>\n\n- a\n- b')
-    expect(html).toContain('<h3>Title</h3>')
+    expect(html).toContain('<h3 id="title">Title</h3>')
     expect(html).toContain('<strong>bold</strong>')
     expect(html).toContain('&lt;script&gt;')
     expect(html).toContain('<ul><li>a</li><li>b</li></ul>')
@@ -124,5 +124,26 @@ describe('ADR markdown', () => {
 
   it('renders the seeded ADR-000', () => {
     expect(arch.decisions.find(d => d.id === 'ADR-000')?.status).toBe('accepted')
+  })
+
+  it('renders GitHub-style tables, escaping cells and keeping escaped pipes', () => {
+    const html = renderMarkdown('| A | B |\n|---|---|\n| `x` | a \\| b <i> |\n\nAfter')
+    expect(html).toContain('<table><thead><tr><th>A</th><th>B</th></tr></thead>')
+    expect(html).toContain('<td><code>x</code></td><td>a | b &lt;i&gt;</td>')
+    expect(html).toContain('<p>After</p>')
+  })
+
+  it('splits mermaid fences into their own parts', () => {
+    const parts = renderMarkdownParts('Intro\n\n```mermaid\nerDiagram\n  a ||--o{ b : has\n```\n\nOutro')
+    expect(parts.map(p => p.type)).toEqual(['html', 'mermaid', 'html'])
+    expect(parts[1]).toEqual({ type: 'mermaid', code: 'erDiagram\n  a ||--o{ b : has' })
+  })
+
+  it('reads review and target docs next to the ADRs, ADRs counted separately', () => {
+    const kinds = new Set(arch.decisions.map(d => d.kind))
+    expect(kinds.has('adr')).toBe(true)
+    expect(arch.meta.counts.adrs).toBe(arch.decisions.filter(d => d.kind === 'adr').length)
+    for (const d of arch.decisions) expect(d.parts.length, d.slug).toBeGreaterThan(0)
+    expect(new Set(arch.decisions.map(d => d.slug)).size).toBe(arch.decisions.length)
   })
 })
