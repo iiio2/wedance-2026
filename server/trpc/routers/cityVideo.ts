@@ -5,6 +5,7 @@ import { router, publicProcedure, adminProcedure } from '../trpc'
 import { cityVideos, videoVotes, cityBattleVotes, profiles } from '../../database/schema'
 import { updateElo, INITIAL_ELO } from '../lib/elo'
 import { pairKey, selectNextPair } from '../lib/pairSelect'
+import { pickChampions } from '../lib/battleChampions'
 
 /** Current competition month key, e.g. '2026-07' (UTC). */
 export function currentMonth(now: Date = new Date()): string {
@@ -47,21 +48,21 @@ type Champion = {
   videoUrl: string; thumbnailUrl: string | null; danceStyle: string | null; eloScore: number
 }
 
-// Each city's champion for a month = its highest-ELO approved video. Names come
-// from the profiles table (no country/name column on city_videos).
+// Each city's champion = its highest-ELO approved video this month, or — when
+// fewer than two cities have a current-month video — its best from any month
+// (see lib/battleChampions). Names come from the profiles table (no
+// country/name column on city_videos).
 async function getChampions(db: any, month: string): Promise<Champion[]> {
   const vids = await db
     .select({
       id: cityVideos.id, citySlug: cityVideos.citySlug, title: cityVideos.title,
       videoUrl: cityVideos.videoUrl, thumbnailUrl: cityVideos.thumbnailUrl,
       danceStyle: cityVideos.danceStyle, eloScore: cityVideos.eloScore,
+      competitionMonth: cityVideos.competitionMonth,
     })
     .from(cityVideos)
-    .where(and(eq(cityVideos.status, 'approved'), eq(cityVideos.competitionMonth, month)))
-    .orderBy(desc(cityVideos.eloScore))
-  const champ = new Map<string, typeof vids[number]>()
-  for (const v of vids) if (!champ.has(v.citySlug)) champ.set(v.citySlug, v)
-  const list = [...champ.values()]
+    .where(eq(cityVideos.status, 'approved'))
+  const { champions: list } = pickChampions(vids as Array<typeof vids[number]>, month)
   const slugs = list.map(c => c.citySlug)
   const names = slugs.length
     ? await db.select({ city: profiles.city, citySlug: profiles.citySlug }).from(profiles).where(inArray(profiles.citySlug, slugs))
@@ -342,9 +343,9 @@ export const cityVideoRouter = router({
 
   // --- Cross-city battle (the tier above per-city voting) -------------------
 
-  // Next city-vs-city matchup for this session: two cities' champion videos,
-  // skipping pairs this session already voted this month. matchup: null when
-  // fewer than two cities have a champion, the session is capped, or every
+  // Next city-vs-city matchup for this session: two cities' champion videos
+  // (current month, else best-ever), skipping pairs this session already voted
+  // this month. matchup: null when fewer than two cities have any approved video, the session is capped, or every
   // pairing has been voted.
   battleMatchup: publicProcedure.query(async ({ ctx }) => {
     const month = currentMonth()

@@ -3,7 +3,8 @@
  * City-vs-city video battle — the tier above per-city voting.
  *
  * Shows two cities' champion clips (each the current month's highest-ELO
- * approved video) head to head; you vote for a CITY, not a video. Votes tally
+ * approved video, or its best-ever when the month is too thin) head to head;
+ * you vote for a CITY, not a video. Votes tally
  * into the "Top dance cities" leaderboard below. Client-only (the tRPC client
  * uses a relative URL that throws under SSR), and guarded: when fewer than two
  * cities have a champion the whole widget collapses to nothing.
