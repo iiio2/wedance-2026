@@ -49,7 +49,9 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'vercel',
   },
-  modules: ['shadcn-nuxt', '@sentry/nuxt/module'],
+  // The architecture module regenerates the /architecture docs data from code
+  // (schema, tRPC routers, API handlers) before every dev/build — ADR-000.
+  modules: ['shadcn-nuxt', '@sentry/nuxt/module', './scripts/architecture/nuxt-module'],
   shadcn: {
     prefix: '',
     componentDir: './app/components/ui',

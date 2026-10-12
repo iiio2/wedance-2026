@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import type { DocStatus } from '~/lib/design-nav'
 
-/** Page header for every /design doc: eyebrow, title, lead, status. */
+/** Page header for every /design and /architecture doc: eyebrow, title, lead, status. */
 const props = defineProps<{
   eyebrow: string
   title: string
   lead?: string
   status?: DocStatus
+  /** Title suffix — the docs section this page belongs to. */
+  site?: string
 }>()
 
-useHead({ title: `${props.title} — WeDance Design` })
+useHead({ title: `${props.title} — ${props.site ?? 'WeDance Design'}` })
 </script>
 
 <template>

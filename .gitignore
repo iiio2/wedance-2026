@@ -39,3 +39,8 @@ wedance-2026-raz-158/
 # Scratch + generated city backfill artefacts
 .scratch/
 scripts/cities/.cache/
+
+# Generated from code by scripts/architecture/generate.ts on every
+# prepare/dev/build (ADR-000) — never edit or commit.
+app/generated/
+server/assets/architecture/

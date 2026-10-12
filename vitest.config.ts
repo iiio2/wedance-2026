@@ -7,7 +7,7 @@ export default defineConfig({
     alias: { '#shared': fileURLToPath(new URL('./shared', import.meta.url)) },
   },
   test: {
-    include: ['server/**/*.test.ts', 'shared/**/*.test.ts', 'app/composables/**/*.test.ts', 'app/lib/**/*.test.ts', 'scripts/design-guardrails/**/*.test.ts'],
+    include: ['server/**/*.test.ts', 'shared/**/*.test.ts', 'app/composables/**/*.test.ts', 'app/lib/**/*.test.ts', 'scripts/design-guardrails/**/*.test.ts', 'scripts/architecture/**/*.test.ts'],
     setupFiles: ['server/test-setup.ts'],
     env: loadEnv('', process.cwd(), ''),
     fileParallelism: false,

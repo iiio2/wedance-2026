@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-10-12T00:00:00Z",
+  "sources": ["fixture"],
+  "stories": [
+    {
+      "id": "fixture:list-events",
+      "title": "See upcoming events in my city",
+      "url": null,
+      "journey": "C1",
+      "actor": "dancer",
+      "story": "As a dancer I want to see this week's events so that I can pick where to dance.",
+      "status": "built",
+      "tables": ["events", "not_a_table"],
+      "procedures": ["events.byProfile", "events.doesNotExist", "admin.listFestivals"],
+      "routes": ["/cities/[city]", "/no-such-page"],
+      "evidence": "server/trpc/routers/events.ts:1",
+      "notes": "Grouping is computed by assignGroups; organisers check admin.listFestivals."
+    }
+  ]
+}

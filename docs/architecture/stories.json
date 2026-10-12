@@ -1,0 +1,3694 @@
+{
+  "generatedAt": "2026-10-12T10:30:16+00:00",
+  "sources": [
+    "linear:WeDance (208 issues -> 151 stories; RAZ-59 merged into RAZ-23 and RAZ-205 into RAZ-110 (same story text); 53 bugs/chores/QA/follow-ups folded into notes or skipped; 2 Canceled skipped)",
+    "linear:no project (4 WeDance-app issues used as stories: RAZ-241, RAZ-251, RAZ-253, RAZ-272; other user-reports referenced in notes; template/other-repo issues ignored)",
+    "docs/issues (216 files; all 132 P/G promise files map 1:1 to Linear issues, RAZ-/WED- files are Linear archives — 0 new stories)",
+    "map:wedance-org 01_Domains/Festival_Experience/Product/meetup-planner/backlog.md + story-map.md (36 stories -> 24 entries; 12 merged into Linear entries or sibling map entries)",
+    "map:wedance-org 01_Domains/Festival_Experience/Product/festival-schedule/user-journey.md (1 entry; radar, check-in, rating, stats, loyalty merged into meetup entries)",
+    "map:wedance-org 01_Domains/Festival_Experience/Operations/Stories/*.yml (10 files; all merged into meetup-planner entries)",
+    "e2e/features/*.feature (3 files; merged into map:meetup-2.1-sign-up, RAZ-241, RAZ-136)",
+    "code: app/pages, server/trpc/routers (26 routers, 141 procedures), server/api, server/database/schema.ts (37 tables) at worktree HEAD"
+  ],
+  "stories": [
+    {
+      "id": "RAZ-25",
+      "title": "Salsa Quick Pick",
+      "url": "https://linear.app/alosha/issue/RAZ-25/salsa-quick-pick",
+      "journey": "C1",
+      "actor": "beginner",
+      "story": "As a beginner, I want a quick pick for Salsa described in plain words, so that I can tell at a glance whether it suits me.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/find-your-dance",
+        "/cities",
+        "/cities/[city]"
+      ],
+      "evidence": "app/pages/find-your-dance.vue:138; app/pages/cities/[city]/index.vue:229",
+      "notes": "Linear state: Done. Quick pick links to /cities?style=Salsa; the city page preselects the style filter. City content comes from /api/cities/[slug] + events, not a style-specific catalogue."
+    },
+    {
+      "id": "RAZ-26",
+      "title": "Bachata Quick Pick",
+      "url": "https://linear.app/alosha/issue/RAZ-26/bachata-quick-pick",
+      "journey": "C1",
+      "actor": "beginner",
+      "story": "As a beginner, I want a quick pick for Bachata described in plain words, so that I can tell at a glance whether it suits me.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/find-your-dance",
+        "/cities"
+      ],
+      "evidence": "app/pages/find-your-dance.vue:139",
+      "notes": "Linear state: In Review. Same mechanism as RAZ-25."
+    },
+    {
+      "id": "RAZ-27",
+      "title": "Kizomba Quick Pick",
+      "url": "https://linear.app/alosha/issue/RAZ-27/kizomba-quick-pick",
+      "journey": "C1",
+      "actor": "beginner",
+      "story": "As a beginner, I want a quick pick for Kizomba described in plain words, so that I can tell at a glance whether it suits me.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/find-your-dance",
+        "/cities"
+      ],
+      "evidence": "app/pages/find-your-dance.vue:140",
+      "notes": "Linear state: In Review. Same mechanism as RAZ-25."
+    },
+    {
+      "id": "RAZ-28",
+      "title": "Free Taster Class",
+      "url": "https://linear.app/alosha/issue/RAZ-28/free-taster-class",
+      "journey": "C1",
+      "actor": "beginner",
+      "story": "As a beginner, I want to just try a free taster class, so that I can experience a dance in person before committing to a style.",
+      "status": "built",
+      "tables": [
+        "bookingRequests",
+        "events"
+      ],
+      "procedures": [
+        "events.byCity",
+        "booking.upcomingByCity"
+      ],
+      "routes": [
+        "/find-your-dance",
+        "/cities",
+        "/cities/[city]"
+      ],
+      "evidence": "app/pages/find-your-dance.vue:288; app/pages/cities/[city]/index.vue:362",
+      "notes": "Linear state: Done. \"Taster\" is derived client-side (shared/utils/taster isTasterCandidate/isFreePrice) from synced events; there is no taster flag in the data model."
+    },
+    {
+      "id": "RAZ-30",
+      "title": "Free Tasters",
+      "url": "https://linear.app/alosha/issue/RAZ-30/free-tasters",
+      "journey": "C1",
+      "actor": "beginner",
+      "story": "As a Seeker, I want to try free taster classes and choose a dance by how it feels, so that I can pick a style I love instead of guessing from a name.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/",
+        "/find-your-dance"
+      ],
+      "evidence": "app/pages/index.vue:36",
+      "notes": "Linear state: Done. Home journey stage 1 links to /find-your-dance (quiz is live, no longer \"coming soon\")."
+    },
+    {
+      "id": "RAZ-44",
+      "title": "Where To Start",
+      "url": "https://linear.app/alosha/issue/RAZ-44/where-to-start",
+      "journey": "C1",
+      "actor": "beginner",
+      "story": "As a beginner, I want reassurance and a starting point when I don't know which dance is for me, so that I feel welcome instead of overwhelmed.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/find-your-dance"
+      ],
+      "evidence": "app/pages/find-your-dance.vue:151",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-46",
+      "title": "Dance-Match Quiz",
+      "url": "https://linear.app/alosha/issue/RAZ-46/dance-match-quiz",
+      "journey": "C1",
+      "actor": "beginner",
+      "story": "As a beginner, I want a short quiz that matches me to a dance by how it feels, so that I can pick a style without knowing any dance terms.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/find-your-dance"
+      ],
+      "evidence": "app/pages/find-your-dance.vue:160",
+      "notes": "Linear state: Done. Linear label status:not-built is stale: a client-side feeling-based quiz with a result + \"find classes\" link exists. No quiz answers are stored."
+    },
+    {
+      "id": "RAZ-50",
+      "title": "Floor Movers",
+      "url": "https://linear.app/alosha/issue/RAZ-50/floor-movers",
+      "journey": "C2",
+      "actor": "dancer",
+      "story": "As a dancer, I want to discover the artists who move the floor, so that I can find teachers, DJs, and performers I want to follow.",
+      "status": "built",
+      "tables": [
+        "cities",
+        "profiles"
+      ],
+      "procedures": [
+        "entity.listArtists"
+      ],
+      "routes": [
+        "/artists",
+        "/@[handle]"
+      ],
+      "evidence": "app/pages/artists/index.vue:36",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-55",
+      "title": "Follow Artists",
+      "url": "https://linear.app/alosha/issue/RAZ-55/follow-artists",
+      "journey": "C2",
+      "actor": "dancer",
+      "story": "As a dancer, I want to follow teachers, DJs, and performers, so that I can keep track of them across festivals and cities.",
+      "status": "built",
+      "tables": [
+        "artistFollows",
+        "events",
+        "profiles"
+      ],
+      "procedures": [
+        "follow.toggle",
+        "follow.isFollowing",
+        "follow.count",
+        "follow.myFollows",
+        "events.byProfile"
+      ],
+      "routes": [
+        "/artists",
+        "/@[handle]"
+      ],
+      "evidence": "app/pages/@[handle].vue:78; server/database/schema.ts:705",
+      "notes": "Linear state: Done. Follow targets profiles(type=artist). \"Track across festivals\" relies on events.byProfile matching the artist name/handle in events.artists; festival lineups (app/data mock teachers) are not linked to profiles."
+    },
+    {
+      "id": "RAZ-58",
+      "title": "Artist Search",
+      "url": "https://linear.app/alosha/issue/RAZ-58/artist-search",
+      "journey": "C2",
+      "actor": "dancer",
+      "story": "As a dancer, I want to search artists by name or style, so that I can quickly find the ones I'm looking for.",
+      "status": "built",
+      "tables": [
+        "profiles"
+      ],
+      "procedures": [
+        "entity.listArtists"
+      ],
+      "routes": [
+        "/artists"
+      ],
+      "evidence": "app/pages/artists/index.vue:49",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-64",
+      "title": "Artists by City",
+      "url": "https://linear.app/alosha/issue/RAZ-64/artists-by-city",
+      "journey": "C2",
+      "actor": "dancer",
+      "story": "As a dancer, I want to filter the artists directory by my city, so that I can find teachers and performers who are actually near me.",
+      "status": "built",
+      "tables": [
+        "profiles"
+      ],
+      "procedures": [
+        "entity.listArtists"
+      ],
+      "routes": [
+        "/artists"
+      ],
+      "evidence": "app/pages/artists/index.vue:67",
+      "notes": "Linear state: Done. City filter compares free-text profiles.city strings, not cities.id."
+    },
+    {
+      "id": "RAZ-66",
+      "title": "Find Your Teacher",
+      "url": "https://linear.app/alosha/issue/RAZ-66/find-your-teacher",
+      "journey": "C2",
+      "actor": "student",
+      "story": "As a Student, I want to browse real teacher profiles showing their styles, languages and schools, so that I can choose a teacher who fits how I want to learn.",
+      "status": "built",
+      "tables": [
+        "profiles"
+      ],
+      "procedures": [
+        "entity.listArtists",
+        "entity.getByHandle"
+      ],
+      "routes": [
+        "/",
+        "/artists",
+        "/@[handle]"
+      ],
+      "evidence": "app/pages/index.vue:45",
+      "notes": "Linear state: Done. profiles has styles + languages; there is no \"school\" field, so the \"schools\" part of the promise has no data behind it. A second artist model exists in app/data/artists.ts (used by /artists/[id] and festival lineups)."
+    },
+    {
+      "id": "RAZ-303",
+      "title": "Artist profiles: one consistent layout, artist type, filterable properties",
+      "url": "https://linear.app/alosha/issue/RAZ-303/artist-profiles-one-consistent-layout-artist-type-filterable",
+      "journey": "C2",
+      "actor": "organiser",
+      "story": "As an organiser or dancer, I want artist profiles to share one layout and say what kind of artist they are (dancer, DJ, …) with filterable properties, so that I can understand at a glance why to choose this artist and find artists by type.",
+      "status": "missing",
+      "tables": [
+        "profiles"
+      ],
+      "procedures": [
+        "entity.getByHandle",
+        "entity.listArtists"
+      ],
+      "routes": [
+        "/@[handle]",
+        "/artists"
+      ],
+      "evidence": "server/database/schema.ts:307",
+      "notes": "Linear state: Triage. Journey inferred (no cuj label). profiles.type only distinguishes venue/artist/organizer; there is no artist sub-type or service column. /artists/[id] (static app/data/artists.ts) and /@[handle] (DB profiles) are two different artist page implementations."
+    },
+    {
+      "id": "RAZ-45",
+      "title": "City Community",
+      "url": "https://linear.app/alosha/issue/RAZ-45/city-community",
+      "journey": "C3",
+      "actor": "dancer",
+      "story": "As a dancer, I want to find the venues, artists, and organizers in my city, so that I can connect with my local Cuban dance community.",
+      "status": "built",
+      "tables": [
+        "profiles"
+      ],
+      "procedures": [
+        "entity.listByCity"
+      ],
+      "routes": [
+        "/cities",
+        "/cities/[city]",
+        "/cities/[city]/venues",
+        "/cities/[city]/organisers",
+        "/cities/[city]/artists"
+      ],
+      "evidence": "server/api/cities.get.ts:23; app/pages/cities/[city]/venues.vue:7",
+      "notes": "Linear state: Done. Directory data comes from Nitro routes server/api/cities.get.ts and server/api/cities/[slug].get.ts (not tRPC)."
+    },
+    {
+      "id": "RAZ-47",
+      "title": "Real Numbers",
+      "url": "https://linear.app/alosha/issue/RAZ-47/real-numbers",
+      "journey": "C3",
+      "actor": "dancer",
+      "story": "As a dancer, I want to see how many people are in each city's community, so that I can gauge how active a scene is.",
+      "status": "built",
+      "tables": [
+        "profiles"
+      ],
+      "procedures": [],
+      "routes": [
+        "/cities"
+      ],
+      "evidence": "server/api/cities.get.ts:34",
+      "notes": "Linear state: Done. \"Community size\" = count of venue+artist+organizer profiles per citySlug, not people/dancers."
+    },
+    {
+      "id": "RAZ-71",
+      "title": "Weekly Floor",
+      "url": "https://linear.app/alosha/issue/RAZ-71/weekly-floor",
+      "journey": "C3",
+      "actor": "dancer",
+      "story": "As a Regular, I want to find weekly socials and practicas I can attend with friends, so that I have a reliable place to dance every week with people I know.",
+      "status": "built",
+      "tables": [
+        "bookingRequests",
+        "events",
+        "planItems"
+      ],
+      "procedures": [
+        "events.byCity",
+        "booking.upcomingByCity",
+        "plan.add",
+        "plan.countBatch"
+      ],
+      "routes": [
+        "/",
+        "/cities/[city]"
+      ],
+      "evidence": "app/pages/index.vue:53; app/pages/cities/[city]/index.vue:95",
+      "notes": "Linear state: Done. Stage links to /cities/munich (hardcoded city)."
+    },
+    {
+      "id": "RAZ-139",
+      "title": "Every City",
+      "url": "https://linear.app/alosha/issue/RAZ-139/every-city",
+      "journey": "C3",
+      "actor": "dancer",
+      "story": "As a dancer, I want to browse dance scenes across every city, so that I can explore communities wherever I am.",
+      "status": "built",
+      "tables": [
+        "profiles"
+      ],
+      "procedures": [],
+      "routes": [
+        "/cities",
+        "/cities/[city]"
+      ],
+      "evidence": "app/pages/cities/index.vue:92",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-162",
+      "title": "One Events Feed",
+      "url": "https://linear.app/alosha/issue/RAZ-162/one-events-feed",
+      "journey": "C3",
+      "actor": "dancer",
+      "story": "As a regular, I want one city events feed that merges booked venue events with the weekly socials, so that I see everything happening without duplicate sections.",
+      "status": "built",
+      "tables": [
+        "bookingRequests",
+        "events",
+        "profiles"
+      ],
+      "procedures": [
+        "booking.upcomingByCity",
+        "events.byCity"
+      ],
+      "routes": [
+        "/cities/[city]",
+        "/events/[id]"
+      ],
+      "evidence": "app/pages/cities/[city]/index.vue:83; app/pages/cities/[city]/index.vue:84",
+      "notes": "Linear state: Done. Follow-ups RAZ-223 (beyond-this-week bookings) and RAZ-224 (link to venue) are Done. The feed merges two event sources at read time: booking_requests (\"a booking IS a scheduled event\") and events (v3-synced)."
+    },
+    {
+      "id": "RAZ-168",
+      "title": "City this-week relevance filter + directory tabs",
+      "url": "https://linear.app/alosha/issue/RAZ-168/city-this-week-relevance-filter-directory-tabs",
+      "journey": "C3",
+      "actor": "dancer",
+      "story": "As a regular, I want a city's venues/organisers/artists to surface who's active this week first, so the city page reflects the living local floor instead of a static roster.",
+      "status": "built",
+      "tables": [
+        "bookingRequests",
+        "events",
+        "profiles"
+      ],
+      "procedures": [],
+      "routes": [
+        "/cities/[city]"
+      ],
+      "evidence": "app/pages/cities/[city]/index.vue:542",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-169",
+      "title": "SEO city directory pages (venues / organisers / artists)",
+      "url": "https://linear.app/alosha/issue/RAZ-169/seo-city-directory-pages-venues-organisers-artists",
+      "journey": "C3",
+      "actor": "dancer",
+      "story": "As a dancer searching Google, I want dedicated, SEO-friendly directory pages for a city's venues/organisers/artists, so the local scene is discoverable and indexable outside the app shell.",
+      "status": "built",
+      "tables": [
+        "profiles"
+      ],
+      "procedures": [],
+      "routes": [
+        "/cities/[city]/venues",
+        "/cities/[city]/organisers",
+        "/cities/[city]/artists"
+      ],
+      "evidence": "server/api/cities/[slug].get.ts:30; app/pages/cities/[city]/artists.vue:7",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-251",
+      "title": "Real upcoming events mirrored from wedance.vip",
+      "url": "https://linear.app/alosha/issue/RAZ-251/razbakovwedance-2026-pr-136-feat-sync-wedancevip-events-into-2026-and",
+      "journey": "C3",
+      "actor": "dancer",
+      "story": "As a dancer, I want the city pages to show the real upcoming events already listed on wedance.vip, so that the calendar is not empty.",
+      "status": "built",
+      "tables": [
+        "events"
+      ],
+      "procedures": [
+        "events.byCity",
+        "events.get",
+        "events.byProfile"
+      ],
+      "routes": [
+        "/cities/[city]",
+        "/events/[id]"
+      ],
+      "evidence": "scripts/sync-v3-events.ts:1; server/database/schema.ts:624",
+      "notes": "Linear state: Done. No Linear project (PR tracking issue, chore that reveals a capability); journey inferred. Daily sync; events rows carry source=wedance-v3."
+    },
+    {
+      "id": "RAZ-253",
+      "title": "Venue/organiser/artist profiles synced from wedance.vip",
+      "url": "https://linear.app/alosha/issue/RAZ-253/razbakovwedance-2026-pr-142-feat-sync-v3-venues-organisers-and-artists",
+      "journey": "C3",
+      "actor": "dancer",
+      "story": "As a dancer, I want the venues, organisers and artists behind synced events to have profiles linked from those events, so that I can explore who runs the scene.",
+      "status": "built",
+      "tables": [
+        "events",
+        "profiles"
+      ],
+      "procedures": [
+        "entity.getByHandle",
+        "events.byProfile"
+      ],
+      "routes": [
+        "/@[handle]",
+        "/cities/[city]/venues"
+      ],
+      "evidence": "server/utils/v3ProfileSync.ts:1",
+      "notes": "Linear state: Done. No Linear project (PR tracking issue); journey inferred. Events link to profiles by username text (events.venue_username/organizer_username), not FK. Follow-up RAZ-254 Done."
+    },
+    {
+      "id": "RAZ-23",
+      "title": "Ticketing referral discounts",
+      "url": "https://linear.app/alosha/issue/RAZ-23/ticketing-referral-discounts",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveling dancer viewing a friend's year, I want to buy a festival ticket through their link, so that we both get a discount.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "festivalSignups",
+        "festivals",
+        "referrals"
+      ],
+      "procedures": [
+        "referral.validate",
+        "festivalSignup.ticketCheckout",
+        "plan.sharedPlan"
+      ],
+      "routes": [
+        "/my-year",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/components/SharedYearPlan.vue:216; server/trpc/routers/festivalSignup.ts:281; server/api/stripe/webhook.lib.ts:5",
+      "notes": "Linear state: Todo. Merged with RAZ-59 (Done, same story text, promise P319). Follow-ups RAZ-266 (webhook completes referral) and RAZ-267 (referrer credit) Done. Journey taken from RAZ-59 labels. Discount % per festival is hardcoded in server/utils/ticket-prices.ts. referral.myReferrals exists but no UI calls it. Drift: Linear Todo while code is built."
+    },
+    {
+      "id": "RAZ-29",
+      "title": "Auto-Fill Plan",
+      "url": "https://linear.app/alosha/issue/RAZ-29/auto-fill-plan",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want to tell WeDance what I'm into and have my plan filled for me, so that I start with the right festivals, classes and socials instead of a blank page.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "events",
+        "planItems"
+      ],
+      "procedures": [
+        "auth.completeOnboarding",
+        "plan.add",
+        "events.byCity"
+      ],
+      "routes": [
+        "/onboarding",
+        "/my-plan"
+      ],
+      "evidence": "app/pages/my-plan.vue:276; app/pages/my-plan.vue:1727",
+      "notes": "Linear state: Done. Follow-up RAZ-231 Done. Festival auto-fill picks from the hardcoded my-plan catalogue by matching a style name inside the festival name (not festivals.styles); courses/socials prefer DB events with a mock fallback."
+    },
+    {
+      "id": "RAZ-32",
+      "title": "Festivals Mapped",
+      "url": "https://linear.app/alosha/issue/RAZ-32/festivals-mapped",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a Traveler, I want every festival mapped with the people who are going shown, so that I can plan trips around events where I'll know or meet other dancers.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "festivals",
+        "planItems"
+      ],
+      "procedures": [],
+      "routes": [
+        "/",
+        "/festivals"
+      ],
+      "evidence": "app/pages/index.vue:61; server/api/festivals.get.ts:12",
+      "notes": "Linear state: Done. \"Mapped\" = listed with city/country; there is no map view."
+    },
+    {
+      "id": "RAZ-48",
+      "title": "Be Their Partner",
+      "url": "https://linear.app/alosha/issue/RAZ-48/be-their-partner",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer viewing a friend's year, I want to offer to be their partner at a festival, so that we can attend together.",
+      "status": "partial",
+      "tables": [
+        "planItems"
+      ],
+      "procedures": [
+        "plan.sharedPlan"
+      ],
+      "routes": [
+        "/my-year"
+      ],
+      "evidence": "app/components/SharedYearPlan.vue:228",
+      "notes": "Linear state: Backlog. Button exists but only emits open-festival; no partner offer is stored or delivered to the friend. No partner-request table."
+    },
+    {
+      "id": "RAZ-51",
+      "title": "Plan Your Year",
+      "url": "https://linear.app/alosha/issue/RAZ-51/plan-your-year",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer viewing someone else's year, I want to start planning my own, so that I can browse festivals, pick workshops, find partners, and share with friends.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/my-year"
+      ],
+      "evidence": "app/components/SharedYearPlan.vue:240",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-52",
+      "title": "Festival Overlap",
+      "url": "https://linear.app/alosha/issue/RAZ-52/festival-overlap",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveling dancer viewing a friend's year, I want to see which festivals we both plan to attend, so that I know where we'll cross paths.",
+      "status": "built",
+      "tables": [
+        "festivals",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.sharedPlan",
+        "plan.myPlan"
+      ],
+      "routes": [
+        "/my-year"
+      ],
+      "evidence": "app/components/SharedYearPlan.vue:42",
+      "notes": "Linear state: In Review."
+    },
+    {
+      "id": "RAZ-56",
+      "title": "Next Festival",
+      "url": "https://linear.app/alosha/issue/RAZ-56/next-festival",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a Traveler, I want a clear button in the hero that takes me to festivals, so that I can start discovering events to attend right away.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/",
+        "/festivals"
+      ],
+      "evidence": "app/pages/index.vue:171",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-62",
+      "title": "Who's Going",
+      "url": "https://linear.app/alosha/issue/RAZ-62/whos-going",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a Traveler, I want to know I can see who is attending a festival before I buy, so that I feel confident I won't show up somewhere alone.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.goingList"
+      ],
+      "routes": [
+        "/",
+        "/festivals",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/index.vue:176",
+      "notes": "Linear state: Done. Linear label status:not-built is stale; attendee lists exist (GoingSection)."
+    },
+    {
+      "id": "RAZ-67",
+      "title": "Plan Together",
+      "url": "https://linear.app/alosha/issue/RAZ-67/plan-together",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveler, I want to coordinate the trip with other attendees, so that I can arrange dinners, share rides, and line up a first-night partner before I arrive.",
+      "status": "partial",
+      "tables": [
+        "dinnerSignups",
+        "dinners",
+        "festivalRideShares",
+        "festivalWaves"
+      ],
+      "procedures": [
+        "rideShare.list",
+        "rideShare.create",
+        "dinner.list",
+        "dinner.join",
+        "wave.send",
+        "wave.friends",
+        "wave.discoverPool"
+      ],
+      "routes": [
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/festivals/[slug].vue:587; app/pages/festivals/[slug].vue:518",
+      "notes": "Linear state: Backlog. Rides, dinners and waves are DB-backed; \"first-night partner\" has no dedicated flow (waves = mutual interest only). Extra activities are a hardcoded ref in the page. Linear Backlog but mostly built (reverse drift)."
+    },
+    {
+      "id": "RAZ-70",
+      "title": "One Place",
+      "url": "https://linear.app/alosha/issue/RAZ-70/one-place",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want every festival I picked gathered in one place with a clear next action, so that I know what to do this week without hunting through pages.",
+      "status": "built",
+      "tables": [
+        "festivalSignups",
+        "festivals",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.myPlan"
+      ],
+      "routes": [
+        "/my-plan"
+      ],
+      "evidence": "app/pages/my-plan.vue:1764",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-75",
+      "title": "One Dashboard",
+      "url": "https://linear.app/alosha/issue/RAZ-75/one-dashboard",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want my picks, partners and tickets on one dashboard, so that I can follow one next step at a time instead of juggling everything.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/my-plan"
+      ],
+      "evidence": "app/pages/my-plan.vue:1769",
+      "notes": "Linear state: Done. Signed-out preview copy. \"My partners\" content is driven by localStorage progress (partnerFound), not DB."
+    },
+    {
+      "id": "RAZ-80",
+      "title": "Do These First",
+      "url": "https://linear.app/alosha/issue/RAZ-80/do-these-first",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want the three most important things across my plan surfaced for this week, so that I always know what to do first.",
+      "status": "built",
+      "tables": [
+        "planItems"
+      ],
+      "procedures": [
+        "plan.myPlan",
+        "plan.listDetailed"
+      ],
+      "routes": [
+        "/my-plan"
+      ],
+      "evidence": "app/pages/my-plan.vue:1844",
+      "notes": "Linear state: Done. Priorities computed client-side from plan + localStorage track toggles."
+    },
+    {
+      "id": "RAZ-82",
+      "title": "Arrive With Friends",
+      "url": "https://linear.app/alosha/issue/RAZ-82/arrive-with-friends",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveler, I want to already know a few people before I arrive at a festival, so that I can walk straight onto the floor instead of standing alone against the wall.",
+      "status": "partial",
+      "tables": [
+        "dancers",
+        "festivalWaves",
+        "planItems"
+      ],
+      "procedures": [
+        "wave.discoverPool",
+        "wave.send",
+        "wave.friends",
+        "wave.wavesForMe",
+        "plan.goingList"
+      ],
+      "routes": [
+        "/festivals/[slug]"
+      ],
+      "evidence": "server/database/schema.ts:716; app/pages/festivals/[slug].vue:1185",
+      "notes": "Linear state: Backlog. Waves (mutual = festival friends) let you connect with opted-in attendees; no meet-up planning. Linear Backlog while partially built (reverse drift). MySpace still receives mockFriends/mockPartnerMatches from the page."
+    },
+    {
+      "id": "RAZ-88",
+      "title": "This Year's Festivals",
+      "url": "https://linear.app/alosha/issue/RAZ-88/this-years-festivals",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveler, I want to see the festivals I'm going to this year on My Plan, so that I have a clear picture of where I'm headed.",
+      "status": "built",
+      "tables": [
+        "festivals",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.myPlan"
+      ],
+      "routes": [
+        "/my-plan"
+      ],
+      "evidence": "app/pages/my-plan.vue:2001",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-91",
+      "title": "Your Compass",
+      "url": "https://linear.app/alosha/issue/RAZ-91/your-compass",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want to set dance goals on My Plan, so that I have a compass for where I'm headed.",
+      "status": "built",
+      "tables": [
+        "planItems"
+      ],
+      "procedures": [
+        "plan.listDetailed",
+        "plan.add",
+        "plan.updateMetadata",
+        "plan.remove"
+      ],
+      "routes": [
+        "/my-plan"
+      ],
+      "evidence": "app/pages/my-plan.vue:1872; app/composables/useGoals.ts:16",
+      "notes": "Linear state: In Review. Goals are stored as plan_items rows with item_type='goal' (a goal is not a plannable item; overloaded table). RAZ-265/235/255 user reports on goals are Done."
+    },
+    {
+      "id": "RAZ-94",
+      "title": "Year At A Glance",
+      "url": "https://linear.app/alosha/issue/RAZ-94/year-at-a-glance",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveler, I want a year-at-a-glance strip of chips on My Plan, so that I can jump straight to any part of my year.",
+      "status": "built",
+      "tables": [
+        "planItems"
+      ],
+      "procedures": [
+        "plan.myPlan"
+      ],
+      "routes": [
+        "/my-plan"
+      ],
+      "evidence": "app/pages/my-plan.vue:2053",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-97",
+      "title": "Pick Workshops",
+      "url": "https://linear.app/alosha/issue/RAZ-97/pick-workshops",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want to pick workshops from a festival's schedule, so that I can plan which classes I'll attend.",
+      "status": "partial",
+      "tables": [
+        "planItems"
+      ],
+      "procedures": [
+        "plan.add",
+        "plan.remove",
+        "plan.list"
+      ],
+      "routes": [
+        "/festivals/[slug]",
+        "/my-plan"
+      ],
+      "evidence": "app/pages/festivals/[slug].vue:288; app/pages/my-plan.vue:466",
+      "notes": "Linear state: Done. Two stores for the same picks: the festival page writes plan_items(item_type=workshop), My Plan's workshop picker reads/writes localStorage. Workshops, teachers and ticket tiers exist only for the hardcoded festivals in app/data/mock-*.ts (plus server/utils/ticket-prices.ts); there is no workshops or tickets table, so DB-only festivals get no schedule. Follow-up RAZ-283 Done."
+    },
+    {
+      "id": "RAZ-99",
+      "title": "Ticket On Page",
+      "url": "https://linear.app/alosha/issue/RAZ-99/ticket-on-page",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveler, I want each festival track in my plan to point me to where I buy the ticket, so that I can complete my booking on the festival page.",
+      "status": "built",
+      "tables": [
+        "festivalSignups",
+        "festivals"
+      ],
+      "procedures": [
+        "festivalSignup.myTickets"
+      ],
+      "routes": [
+        "/my-plan",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/my-plan.vue:693",
+      "notes": "Linear state: Done. Ticket status syncs from festivalSignup.myTickets; other track toggles stay in localStorage."
+    },
+    {
+      "id": "RAZ-102",
+      "title": "Find a Partner",
+      "url": "https://linear.app/alosha/issue/RAZ-102/find-a-partner",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want to find a dance partner for a festival, so that I don't have to go alone and have someone to dance with.",
+      "status": "partial",
+      "tables": [
+        "dancers",
+        "festivalWaves"
+      ],
+      "procedures": [
+        "wave.discoverPool",
+        "wave.send"
+      ],
+      "routes": [
+        "/my-plan",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/my-plan.vue:749",
+      "notes": "Linear state: Backlog. \"Find one\" links to the festival #discover deck (shows name, role, styles). No \"looking for a partner\" flag per festival; \"partner found\" is a localStorage toggle."
+    },
+    {
+      "id": "RAZ-104",
+      "title": "Book Vacation",
+      "url": "https://linear.app/alosha/issue/RAZ-104/book-vacation",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveling dancer, I want to add a festival's dates to my calendar, so that I can book time off work and protect the trip.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/my-plan"
+      ],
+      "evidence": "app/pages/my-plan.vue:632",
+      "notes": "Linear state: Done. Google Calendar template URL only; no .ics export for other calendar apps."
+    },
+    {
+      "id": "RAZ-108",
+      "title": "Where You Show Up",
+      "url": "https://linear.app/alosha/issue/RAZ-108/where-you-show-up",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want to see the courses I attend this month, so that I know where I regularly show up to practice.",
+      "status": "built",
+      "tables": [
+        "events",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.add",
+        "plan.remove",
+        "plan.listDetailed",
+        "events.byCity"
+      ],
+      "routes": [
+        "/my-plan"
+      ],
+      "evidence": "app/pages/my-plan.vue:2450",
+      "notes": "Linear state: Done. Courses are plan_items(item_type='event', metadata.type='class'); course fields are copied into metadata at enrol time. RAZ-294 (past classes shown) Done."
+    },
+    {
+      "id": "RAZ-113",
+      "title": "Where You Dance",
+      "url": "https://linear.app/alosha/issue/RAZ-113/where-you-dance",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want to see the socials I'm attending this week, so that I know where I'm dancing and can plan my week.",
+      "status": "built",
+      "tables": [
+        "events",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.add",
+        "plan.listDetailed",
+        "events.byCity"
+      ],
+      "routes": [
+        "/my-plan"
+      ],
+      "evidence": "app/pages/my-plan.vue:2595",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-116",
+      "title": "Find A Ride",
+      "url": "https://linear.app/alosha/issue/RAZ-116/find-a-ride",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveling dancer, I want to find a ride to a festival I'm going to, so that I can get there cheaply and meet other dancers on the way.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "festivalRideShares",
+        "festivals"
+      ],
+      "procedures": [
+        "rideShare.list",
+        "rideShare.create",
+        "rideShare.delete"
+      ],
+      "routes": [
+        "/my-plan",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/my-plan.vue:717; server/database/schema.ts:650",
+      "notes": "Linear state: Done. Covers map stories 3.1 (post a ride) and 3.2 (browse rides). No seat request/accept flow: one row per dancer per festival, offering|looking. RAZ-191 (ride without login) Done."
+    },
+    {
+      "id": "RAZ-118",
+      "title": "Who's Out Tonight",
+      "url": "https://linear.app/alosha/issue/RAZ-118/whos-out-tonight",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want to see who's out dancing tonight, so that I can join friends and not miss the fun.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "hangoutRsvps",
+        "hangouts"
+      ],
+      "procedures": [
+        "hangouts.listTonight",
+        "hangouts.create",
+        "hangouts.toggleRsvp",
+        "hangouts.close"
+      ],
+      "routes": [
+        "/my-plan"
+      ],
+      "evidence": "app/pages/my-plan.vue:2664",
+      "notes": "Linear state: Done. hangouts.peopleCount is a stored counter next to hangout_rsvps (denormalised). RAZ-270 (creation failed) Done."
+    },
+    {
+      "id": "RAZ-121",
+      "title": "Share A Room",
+      "url": "https://linear.app/alosha/issue/RAZ-121/share-a-room",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveling dancer, I want to share a room with another dancer at a festival, so that I can save on accommodation and travel with company.",
+      "status": "partial",
+      "tables": [
+        "dancers",
+        "festivalRoommateLookups",
+        "festivals"
+      ],
+      "procedures": [
+        "roommate.list",
+        "roommate.toggle"
+      ],
+      "routes": [
+        "/my-plan",
+        "/festivals/[slug]"
+      ],
+      "evidence": "server/database/schema.ts:663; app/pages/festivals/[slug].vue:602",
+      "notes": "Linear state: Done. A roommate \"lookup\" is only (festival, dancer): no dates, budget or preferences, so listings cannot show \"what they are looking for\" (AC3) and map stories 4.1/4.2 (room listing with preferences, request to join) are not covered. Hotel fallback exists. Follow-ups RAZ-295/296 in Triage."
+    },
+    {
+      "id": "RAZ-123",
+      "title": "Styles Breakdown",
+      "url": "https://linear.app/alosha/issue/RAZ-123/styles-breakdown",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want to see a breakdown of the dance styles in my year, so that I can understand where I spend my dancing time.",
+      "status": "built",
+      "tables": [
+        "festivals",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.myPlan"
+      ],
+      "routes": [
+        "/my-year"
+      ],
+      "evidence": "app/pages/my-year.vue:217",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-125",
+      "title": "Plan the Year",
+      "url": "https://linear.app/alosha/issue/RAZ-125/plan-the-year",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want to pick my next festival and plan my year, so that I know which events I'm heading to.",
+      "status": "built",
+      "tables": [
+        "planItems"
+      ],
+      "procedures": [
+        "plan.add",
+        "plan.remove"
+      ],
+      "routes": [
+        "/festivals",
+        "/my-year"
+      ],
+      "evidence": "app/pages/festivals/index.vue:67",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-127",
+      "title": "Widen Your Year",
+      "url": "https://linear.app/alosha/issue/RAZ-127/widen-your-year",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveling dancer, I want to discover new people and places, so that my year can grow beyond what I already know and pull me somewhere new.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "events",
+        "festivals",
+        "planItems",
+        "profiles"
+      ],
+      "procedures": [
+        "plan.discover",
+        "plan.add"
+      ],
+      "routes": [
+        "/my-plan"
+      ],
+      "evidence": "app/pages/my-plan.vue:1389; server/trpc/routers/plan.ts:470",
+      "notes": "Linear state: Done. Needs dancer city + styles; RAZ-284 (empty deck) Done."
+    },
+    {
+      "id": "RAZ-128",
+      "title": "Match Rate",
+      "url": "https://linear.app/alosha/issue/RAZ-128/match-rate",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want to see my partner match rate, so that I know how often I found a partner for the festivals I planned.",
+      "status": "partial",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/my-year"
+      ],
+      "evidence": "app/pages/my-year.vue:16",
+      "notes": "Linear state: Done. Match rate = festivals with a manual \"partner found\" toggle / planned festivals. State kept in browser localStorage, not the DB. Not linked to waves or any partner data."
+    },
+    {
+      "id": "RAZ-131",
+      "title": "Festival Search",
+      "url": "https://linear.app/alosha/issue/RAZ-131/festival-search",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want to search festivals by city, style, or festival name, so that I can quickly find the ones that fit me.",
+      "status": "built",
+      "tables": [
+        "festivals"
+      ],
+      "procedures": [],
+      "routes": [
+        "/festivals"
+      ],
+      "evidence": "app/pages/festivals/index.vue:129",
+      "notes": "Linear state: Done. Client-side text filter over /api/festivals rows (name, city, styles)."
+    },
+    {
+      "id": "RAZ-133",
+      "title": "My 2026 Year",
+      "url": "https://linear.app/alosha/issue/RAZ-133/my-2026-year",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveling dancer, I want a page that shows my 2026 dance year, so that I can see everything I have planned in one place.",
+      "status": "built",
+      "tables": [
+        "festivals",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.myPlan",
+        "plan.goingBatch"
+      ],
+      "routes": [
+        "/my-year"
+      ],
+      "evidence": "app/pages/my-year.vue:279",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-134",
+      "title": "Track Your Year",
+      "url": "https://linear.app/alosha/issue/RAZ-134/track-your-year",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer who isn't signed in, I want to understand what My Year offers, so that I can decide to sign up and start tracking my dance year.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/my-year"
+      ],
+      "evidence": "app/components/YearPlan.vue:94",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-136",
+      "title": "Tap Going",
+      "url": "https://linear.app/alosha/issue/RAZ-136/tap-going",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer, I want to mark a festival as Going, so that it is added to my year plan.",
+      "status": "built",
+      "tables": [
+        "planItems"
+      ],
+      "procedures": [
+        "plan.add",
+        "plan.remove",
+        "plan.list"
+      ],
+      "routes": [
+        "/festivals",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/composables/useYearPlan.ts:31; e2e/features/auth-going-gate.feature:2",
+      "notes": "Linear state: Done. Also covered by e2e/features/auth-going-gate.feature. RAZ-230/RAZ-252/RAZ-256 (going without sign-in, not persisting, hardcoded count) Done."
+    },
+    {
+      "id": "RAZ-140",
+      "title": "Year Snapshot",
+      "url": "https://linear.app/alosha/issue/RAZ-140/year-snapshot",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveling dancer, I want a headline summary of my year, so that I can see how many festivals, workshops, and countries I have planned at a glance.",
+      "status": "built",
+      "tables": [
+        "festivals",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.myPlan"
+      ],
+      "routes": [
+        "/my-year"
+      ],
+      "evidence": "app/pages/my-year.vue:209",
+      "notes": "Linear state: Done. Workshop count comes from plan_items(item_type=workshop) grouped by festival (server/trpc/routers/plan.ts)."
+    },
+    {
+      "id": "RAZ-144",
+      "title": "Early Bird Alert",
+      "url": "https://linear.app/alosha/issue/RAZ-144/early-bird-alert",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveling dancer, I want to see when a festival's early-bird ticket is about to expire, so that I can buy before the price goes up.",
+      "status": "built",
+      "tables": [
+        "festivals",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.myPlan"
+      ],
+      "routes": [
+        "/my-year"
+      ],
+      "evidence": "app/components/YearPlan.vue:119; server/database/schema.ts:70",
+      "notes": "Linear state: In Review. Early-bird deadline/offer are columns on festivals; ticket tiers themselves are not in the DB."
+    },
+    {
+      "id": "RAZ-147",
+      "title": "Year In Numbers",
+      "url": "https://linear.app/alosha/issue/RAZ-147/year-in-numbers",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveling dancer, I want a \"My Year in Numbers\" summary, so that I can look back on how much dancing I packed into the year.",
+      "status": "built",
+      "tables": [
+        "festivals",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.myPlan"
+      ],
+      "routes": [
+        "/my-year"
+      ],
+      "evidence": "app/components/YearPlan.vue:345",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-154",
+      "title": "Year, Saved",
+      "url": "https://linear.app/alosha/issue/RAZ-154/year-saved",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a traveling dancer, I want my year plan saved on the server and my upcoming festivals shown on my profile with real friends going, so that my plan survives devices and others can see where I am headed.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "festivals",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.add",
+        "plan.remove",
+        "plan.list",
+        "plan.myPlan",
+        "plan.sharedPlan",
+        "plan.goingList",
+        "profile.getByUsername"
+      ],
+      "routes": [
+        "/my-year",
+        "/u/[username]"
+      ],
+      "evidence": "app/composables/useYearPlan.ts:7; app/pages/u/[username].vue:26",
+      "notes": "Linear state: In Review. Implemented as generic plan_items(item_type=festival) instead of the dancer_festivals table the issue proposed. RAZ-300/RAZ-299 (my-year sync/stale stats, In Review) indicate client-cache issues."
+    },
+    {
+      "id": "RAZ-287",
+      "title": "🐞 I want the 'pay due' sign to be a clickable button that redirects me t…",
+      "url": "https://linear.app/alosha/issue/RAZ-287/i-want-the-pay-due-sign-to-be-a-clickable-button-that-redirects-me-t",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a dancer enrolled in a course, I want the \"Pay due\" sign to be a button that takes me to pay for that course, so that I can settle what I owe.",
+      "status": "partial",
+      "tables": [
+        "planItems"
+      ],
+      "procedures": [],
+      "routes": [
+        "/my-plan",
+        "/events/[id]"
+      ],
+      "evidence": "app/pages/my-plan.vue:2550",
+      "notes": "Linear state: Done. Journey inferred (courses live in My Plan, C4). \"Pay due\" links to /events/[id]; there is no course payment flow or payment record."
+    },
+    {
+      "id": "map:meetup-1.2-activity-cards",
+      "title": "Activity cards with participant counts",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:23",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want to see activity cards with participant counts and availability, so that I can tell at a glance what is happening and how popular it is.",
+      "status": "partial",
+      "tables": [
+        "dinnerSignups",
+        "dinners",
+        "festivalRideShares",
+        "festivalRoommateLookups"
+      ],
+      "procedures": [
+        "dinner.list",
+        "rideShare.list",
+        "roommate.list"
+      ],
+      "routes": [
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/components/ActivitiesTab.vue:3; app/pages/festivals/[slug].vue:569",
+      "notes": "Source: meetup-planner backlog 1.2 + Operations/Stories/1.2-activity-cards.yml. Dinner/ride/room counts are real; \"extra activities\" cards are a hardcoded array in the page."
+    },
+    {
+      "id": "map:meetup-1.4-plan-ready-message",
+      "title": "\"Your festival plan is ready\" message",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:25",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want to receive a \"Your festival plan is ready\" message summarising my matches, so that I can see everything in one place and get excited.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [],
+      "evidence": "server/utils/email.ts:88",
+      "notes": "Only magic-link, password-reset and ticket-confirmation emails exist in server/utils/email.ts."
+    },
+    {
+      "id": "map:meetup-1.7-activity-check-in",
+      "title": "Check in to an activity / workshop",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:28",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want to check in to an activity or workshop to confirm I am attending, so that my group and the organiser know I am there.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [],
+      "evidence": "",
+      "notes": "Also festival-schedule user-journey step 5 (\"Check-in to workshops\"). No check-in field or procedure found."
+    },
+    {
+      "id": "map:meetup-1.9-live-feed",
+      "title": "Live feed / live radar at the festival",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:30",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want a live feed of what is happening now (and an opt-in radar of where friends are), so that I can join spontaneous plans during breaks.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [],
+      "evidence": "",
+      "notes": "Merged with festival-schedule user-journey \"Live radar\" (user-journey.md:49). Closest code is city-level \"Tonight · hangouts\" (RAZ-118), which is not festival-scoped."
+    },
+    {
+      "id": "map:meetup-2.2-free-spot-counter",
+      "title": "Free-spot counter",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:43",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want to see how many free spots are left, so that I feel urgency to claim mine before they are gone.",
+      "status": "built",
+      "tables": [
+        "festivalSignups",
+        "festivals"
+      ],
+      "procedures": [
+        "festivalSignup.status",
+        "festivalSignup.join"
+      ],
+      "routes": [
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/festivals/[slug].vue:629; server/database/schema.ts:60",
+      "notes": "Source: backlog 2.2 + Operations/Stories/2.2-free-spot-counter.yml. A free \"join\" writes festival_signups, a different table from \"Going\" (plan_items)."
+    },
+    {
+      "id": "map:meetup-2.3-social-paywall",
+      "title": "€1 social unlock via Stripe",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:44",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want to pay €1 via Stripe when the free spots are full, so that I can still join the social activities.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "festivalSignups",
+        "festivals"
+      ],
+      "procedures": [
+        "festivalSignup.createCheckoutSession",
+        "festivalSignup.join"
+      ],
+      "routes": [
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/festivals/[slug].vue:680; server/trpc/routers/festivalSignup.ts:117",
+      "notes": "Source: backlog 2.3 + Operations/Stories/2.3-stripe-payment-link.yml. festivals.stripePaymentLink column also exists for the older payment-link approach."
+    },
+    {
+      "id": "map:meetup-3.3-ride-group-chat",
+      "title": "Ride group chat link",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:59",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want a WhatsApp/Telegram group link with my ride group after matching, so that I can coordinate pickup.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [],
+      "evidence": "server/database/schema.ts:650",
+      "notes": "festival_ride_shares has no group/chat link; only dinner groups have chatLink. Same gap for rooms (backlog 4.3)."
+    },
+    {
+      "id": "map:meetup-3.4-auto-ride-matching",
+      "title": "Automatic carpool matching",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:60",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want to be matched to a carpool automatically by origin city and dates, so that I get a ride within hours.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [],
+      "evidence": "",
+      "notes": "Ride shares are listed, not matched."
+    },
+    {
+      "id": "map:meetup-5.1-dinner-sign-up",
+      "title": "Sign up for a group dinner",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:86",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want to sign up for a group dinner on a specific evening, so that I can meet new people instead of eating alone.",
+      "status": "built",
+      "tables": [
+        "dinnerGroupMembers",
+        "dinnerGroups",
+        "dinnerSignups",
+        "dinners"
+      ],
+      "procedures": [
+        "dinner.list",
+        "dinner.join",
+        "dinner.leave"
+      ],
+      "routes": [
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/composables/useDinners.ts:44; server/trpc/routers/dinner.ts:95",
+      "notes": "Source: backlog 5.1 + Operations/Stories/5.1-dinner-sign-up.yml. No Linear issue tracks the dinner feature."
+    },
+    {
+      "id": "map:meetup-5.2-dinner-group-assignment",
+      "title": "Assign dinner groups of 4–6",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:87",
+      "journey": "C4",
+      "actor": "admin",
+      "story": "As a festival dancer, I want to be assigned to a dinner group of 4–6 people, so that I have a concrete dinner plan without organising it myself.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "dinnerGroupMembers",
+        "dinnerGroups",
+        "dinnerSignups",
+        "dinners"
+      ],
+      "procedures": [
+        "admin.listDinners",
+        "admin.dinnerSignups",
+        "admin.assignGroups",
+        "admin.dinnerGroups"
+      ],
+      "routes": [
+        "/admin/festivals/[slug]"
+      ],
+      "evidence": "server/trpc/routers/admin.ts:26",
+      "notes": "Source: backlog 5.2 (+5.5 auto-assign) and Operations/Stories/5.2. Grouping is computed by assignGroups but triggered by an admin; no diversity logic was verified."
+    },
+    {
+      "id": "map:meetup-5.3-dinner-chat-link",
+      "title": "Dinner group chat link",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:88",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want a WhatsApp/Telegram link for my dinner group, so that I can start chatting before we meet.",
+      "status": "built",
+      "tables": [
+        "dinnerGroups"
+      ],
+      "procedures": [
+        "admin.setGroupChatLink",
+        "dinner.list"
+      ],
+      "routes": [
+        "/admin/festivals/[slug]",
+        "/festivals/[slug]"
+      ],
+      "evidence": "server/trpc/routers/admin.ts:110; app/components/ActivitiesTab.vue:294",
+      "notes": "Source: backlog 5.3 + Operations/Stories/5.3-dinner-chat-link.yml."
+    },
+    {
+      "id": "map:meetup-5.4-restaurant-reveal",
+      "title": "Restaurant reveal on the day",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:89",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want to receive the restaurant name and address on the day of the dinner, so that I show up at the right place with the surprise intact.",
+      "status": "built",
+      "tables": [
+        "dinners"
+      ],
+      "procedures": [
+        "admin.revealRestaurant",
+        "dinner.list"
+      ],
+      "routes": [
+        "/admin/festivals/[slug]",
+        "/festivals/[slug]"
+      ],
+      "evidence": "server/trpc/routers/admin.ts:124; app/components/ActivitiesTab.vue:274",
+      "notes": "Source: backlog 5.4 + Operations/Stories/5.4-restaurant-reveal.yml."
+    },
+    {
+      "id": "map:meetup-6.4-taxi-dancer",
+      "title": "Book a taxi dancer",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:105",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want to book a taxi dancer for specific time slots and styles, so that I am guaranteed good dances even if I know nobody.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [],
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "map:meetup-7.1-extra-activities",
+      "title": "Join community-proposed activities",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:117",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want to browse and join community-proposed activities (beach social, city tour, after-party), so that I can fill gaps between workshops.",
+      "status": "partial",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/festivals/[slug].vue:569; app/pages/festivals/[slug].vue:576",
+      "notes": "UI only: four hardcoded activities in a page-local ref; joining is not persisted. No activities table."
+    },
+    {
+      "id": "map:meetup-7.2-propose-activity",
+      "title": "Propose a festival activity",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:118",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a festival regular, I want to propose a new activity with description, time and max participants, so that I can organise something without WhatsApp chaos.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [],
+      "evidence": "",
+      "notes": "Also covers backlog 9.2 (create and manage activities) and 9.3 (activity dashboard)."
+    },
+    {
+      "id": "map:meetup-8.1-rate-festival",
+      "title": "Rate the festival afterwards",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:130",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want to rate my experience and leave feedback after the festival, so that I help improve future events.",
+      "status": "built",
+      "tables": [
+        "reviews"
+      ],
+      "procedures": [
+        "review.list",
+        "review.create"
+      ],
+      "routes": [
+        "/festivals/[slug]",
+        "/@[handle]"
+      ],
+      "evidence": "app/pages/festivals/[slug].vue:1909",
+      "notes": "Reviews are polymorphic (target_type, target_slug) with no FK. Rating per workshop/teacher (festival-schedule journey step 5) is not supported; teachers in lineups are mock data, not profiles."
+    },
+    {
+      "id": "map:meetup-8.2-festival-recap",
+      "title": "Post-festival recap and stats",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:131",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want a recap of my festival (workshops attended, rides shared, dinners, partners met), so that I can relive it and share it.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [],
+      "evidence": "",
+      "notes": "Merged with festival-schedule journey step 6 \"festival stats\" (user-journey.md:58)."
+    },
+    {
+      "id": "map:meetup-8.3-next-festival-invite",
+      "title": "Invite to festivals where people I met are going",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:132",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want to be invited to upcoming festivals where dancers I met are already signed up, so that I can plan the next one with my crew.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [],
+      "evidence": "",
+      "notes": "plan.suggestions recommends festivals but not based on people met (waves)."
+    },
+    {
+      "id": "map:meetup-8.4-persistent-crew",
+      "title": "Persistent crew groups across festivals",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:133",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want to keep a persistent group with people I connected with across festivals, so that friendships outlast a single event.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [],
+      "evidence": "server/database/schema.ts:721",
+      "notes": "Waves are scoped per festival_slug; there is no cross-festival friend/crew entity."
+    },
+    {
+      "id": "map:meetup-9.1-local-tips",
+      "title": "Share local tips with festival visitors",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:145",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a festival regular, I want to share local tips (restaurants, transport, hidden gems) visible to all attendees, so that I help visitors without answering the same DM ten times.",
+      "status": "partial",
+      "tables": [
+        "recommendationRequests",
+        "reviews"
+      ],
+      "procedures": [
+        "askLocals.listByCity",
+        "askLocals.ask",
+        "askLocals.recommend"
+      ],
+      "routes": [
+        "/cities/[city]"
+      ],
+      "evidence": "app/pages/cities/[city]/index.vue:935",
+      "notes": "Ask-locals exists per city, not per festival, and recommendations are limited to organisers/venues (written as reviews)."
+    },
+    {
+      "id": "map:meetup-9.4-ambassador",
+      "title": "Ambassador status / loyalty",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:148",
+      "journey": "C4",
+      "actor": "dancer",
+      "story": "As a festival regular, I want to earn ambassador status (and loyalty points toward free passes), so that I feel valued for organising and returning.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [],
+      "evidence": "",
+      "notes": "Merged with festival-schedule journey \"Loyalty points\" (user-journey.md:61)."
+    },
+    {
+      "id": "map:schedule-compare-with-friends",
+      "title": "Compare workshop plans with friends",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/festival-schedule/user-journey.md:33",
+      "journey": "C4",
+      "actor": "traveler",
+      "story": "As a festival dancer, I want to see which workshops my friends attend and compare schedules side by side, so that we can plan the festival together.",
+      "status": "partial",
+      "tables": [
+        "planItems"
+      ],
+      "procedures": [
+        "plan.list"
+      ],
+      "routes": [
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/composables/useSharePlan.ts:50; app/pages/festivals/[slug].vue:1092",
+      "notes": "A shared plan is encoded into the URL (useSharePlan) and rendered read-only; friends' DB plans are not compared. MySpace receives mockFriends."
+    },
+    {
+      "id": "RAZ-40",
+      "title": "Roles & Services",
+      "url": "https://linear.app/alosha/issue/RAZ-40/roles-and-services",
+      "journey": "C5",
+      "actor": "member",
+      "story": "As a member of the dance community, I want to see both open roles at events and services artists offer, so that I can either find work or find the right person for my event.",
+      "status": "built",
+      "tables": [
+        "gigs"
+      ],
+      "procedures": [
+        "gigs.list"
+      ],
+      "routes": [
+        "/gigs"
+      ],
+      "evidence": "app/pages/gigs/index.vue:45",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-41",
+      "title": "Apply Or Contact",
+      "url": "https://linear.app/alosha/issue/RAZ-41/apply-or-contact",
+      "journey": "C5",
+      "actor": "member",
+      "story": "As a member of the dance community, I want to apply to or contact the poster of a gig, so that I can take the next step on a listing that fits me.",
+      "status": "built",
+      "tables": [
+        "gigs"
+      ],
+      "procedures": [
+        "gigs.list"
+      ],
+      "routes": [
+        "/gigs"
+      ],
+      "evidence": "app/pages/gigs/index.vue:174",
+      "notes": "Linear state: Done. Apply/Contact opens a mailto: to gigs.contactEmail; nothing is stored, so \"confirmation sent\" is client-side only. Follow-ups RAZ-232/RAZ-260 Done."
+    },
+    {
+      "id": "RAZ-42",
+      "title": "Post a Gig",
+      "url": "https://linear.app/alosha/issue/RAZ-42/post-a-gig",
+      "journey": "C5",
+      "actor": "organiser",
+      "story": "As an organizer, I want to post a gig from the Gigs page, so that artists can find and apply to my open role.",
+      "status": "built",
+      "tables": [
+        "gigs"
+      ],
+      "procedures": [
+        "gigs.create",
+        "gigs.list"
+      ],
+      "routes": [
+        "/gigs"
+      ],
+      "evidence": "app/pages/gigs/index.vue:128",
+      "notes": "Linear state: Done. gigs.close and gigs.getById exist but have no UI caller, so a poster cannot close their gig."
+    },
+    {
+      "id": "RAZ-43",
+      "title": "Help Wanted",
+      "url": "https://linear.app/alosha/issue/RAZ-43/help-wanted",
+      "journey": "C5",
+      "actor": "organiser",
+      "story": "As an organizer, I want to post an open role marked \"Wanted\", so that artists know I am looking to hire for my event.",
+      "status": "built",
+      "tables": [
+        "gigs"
+      ],
+      "procedures": [
+        "gigs.create",
+        "gigs.list"
+      ],
+      "routes": [
+        "/gigs"
+      ],
+      "evidence": "server/database/schema.ts:520",
+      "notes": "Linear state: Done. \"Wanted\" = kind role."
+    },
+    {
+      "id": "RAZ-145",
+      "title": "Get Booked",
+      "url": "https://linear.app/alosha/issue/RAZ-145/get-booked",
+      "journey": "C5",
+      "actor": "artist",
+      "story": "As an artist, I want a place where getting booked and booking others both happen, so that I can grow my dance work from one board.",
+      "status": "built",
+      "tables": [
+        "gigs"
+      ],
+      "procedures": [
+        "gigs.list",
+        "gigs.create"
+      ],
+      "routes": [
+        "/gigs"
+      ],
+      "evidence": "app/pages/gigs/index.vue:273",
+      "notes": "Linear state: Done. Gig poster identity is free text (posterName/posterType) plus optional dancerId; not linked to profiles."
+    },
+    {
+      "id": "RAZ-148",
+      "title": "Offer a Service",
+      "url": "https://linear.app/alosha/issue/RAZ-148/offer-a-service",
+      "journey": "C5",
+      "actor": "artist",
+      "story": "As an artist, I want to post a service marked \"Offering\", so that organizers know what I do and can hire me.",
+      "status": "built",
+      "tables": [
+        "gigs"
+      ],
+      "procedures": [
+        "gigs.create",
+        "gigs.list"
+      ],
+      "routes": [
+        "/gigs"
+      ],
+      "evidence": "app/pages/gigs/index.vue:273",
+      "notes": "Linear state: Done. \"Offering\" = kind offer."
+    },
+    {
+      "id": "RAZ-161",
+      "title": "Artist's Events",
+      "url": "https://linear.app/alosha/issue/RAZ-161/artists-events",
+      "journey": "C5",
+      "actor": "artist",
+      "story": "As an artist, I want the events I perform at to appear on my /@handle profile, so that dancers can see where to find me.",
+      "status": "built",
+      "tables": [
+        "bookingRequests",
+        "events"
+      ],
+      "procedures": [
+        "events.byProfile",
+        "booking.scheduleForProfile"
+      ],
+      "routes": [
+        "/@[handle]"
+      ],
+      "evidence": "app/pages/@[handle].vue:47",
+      "notes": "Linear state: In Review. Matching is by handle in events.artists with a name fallback (string matching, no FK)."
+    },
+    {
+      "id": "RAZ-57",
+      "title": "Any Occasion",
+      "url": "https://linear.app/alosha/issue/RAZ-57/any-occasion",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As a client, I want to see that the service fits my type of occasion, so that I feel confident it works for my wedding, birthday, corporate, or private event.",
+      "status": "built",
+      "tables": [],
+      "procedures": [
+        "feedback.inquiry"
+      ],
+      "routes": [
+        "/for-events"
+      ],
+      "evidence": "app/pages/for-events.vue:25",
+      "notes": "Linear state: Done. Event inquiries are not stored in the DB: feedback.inquiry files a Linear issue (see RAZ-276 for an example inquiry)."
+    },
+    {
+      "id": "RAZ-63",
+      "title": "Pick a Venue",
+      "url": "https://linear.app/alosha/issue/RAZ-63/pick-a-venue",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As a client, I want the team to arrange a venue for my event, so that I do not have to find and book a space myself.",
+      "status": "built",
+      "tables": [],
+      "procedures": [
+        "feedback.inquiry"
+      ],
+      "routes": [
+        "/for-events",
+        "/venues"
+      ],
+      "evidence": "app/pages/for-events.vue:15",
+      "notes": "Linear state: Done. Venue service links to /venues. Event inquiries are not stored in the DB: feedback.inquiry files a Linear issue (see RAZ-276 for an example inquiry)."
+    },
+    {
+      "id": "RAZ-68",
+      "title": "Mojito Bar",
+      "url": "https://linear.app/alosha/issue/RAZ-68/mojito-bar",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As a client, I want catering arranged for my event, so that guests have food and drinks that match the vibe.",
+      "status": "built",
+      "tables": [],
+      "procedures": [
+        "feedback.inquiry"
+      ],
+      "routes": [
+        "/for-events"
+      ],
+      "evidence": "app/pages/for-events.vue:16",
+      "notes": "Linear state: Done. Event inquiries are not stored in the DB: feedback.inquiry files a Linear issue (see RAZ-276 for an example inquiry)."
+    },
+    {
+      "id": "RAZ-73",
+      "title": "Bilingual MC",
+      "url": "https://linear.app/alosha/issue/RAZ-73/bilingual-mc",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As a client, I want a host to run my event, so that the energy stays up and guests are guided through the night in their language.",
+      "status": "built",
+      "tables": [],
+      "procedures": [
+        "feedback.inquiry"
+      ],
+      "routes": [
+        "/for-events"
+      ],
+      "evidence": "app/pages/for-events.vue:17",
+      "notes": "Linear state: Done. Event inquiries are not stored in the DB: feedback.inquiry files a Linear issue (see RAZ-276 for an example inquiry)."
+    },
+    {
+      "id": "RAZ-78",
+      "title": "Your BPM",
+      "url": "https://linear.app/alosha/issue/RAZ-78/your-bpm",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As a client, I want a DJ who plays the styles my guests dance to, so that the music fits the crowd all night.",
+      "status": "built",
+      "tables": [],
+      "procedures": [
+        "feedback.inquiry"
+      ],
+      "routes": [
+        "/for-events"
+      ],
+      "evidence": "app/pages/for-events.vue:18",
+      "notes": "Linear state: Done. Event inquiries are not stored in the DB: feedback.inquiry files a Linear issue (see RAZ-276 for an example inquiry)."
+    },
+    {
+      "id": "RAZ-81",
+      "title": "Show Dancers",
+      "url": "https://linear.app/alosha/issue/RAZ-81/show-dancers",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As a client, I want professional dancers at my event, so that guests enjoy a showcase or I have choreography for my first dance.",
+      "status": "built",
+      "tables": [],
+      "procedures": [
+        "feedback.inquiry"
+      ],
+      "routes": [
+        "/for-events"
+      ],
+      "evidence": "app/pages/for-events.vue:19",
+      "notes": "Linear state: Done. Event inquiries are not stored in the DB: feedback.inquiry files a Linear issue (see RAZ-276 for an example inquiry)."
+    },
+    {
+      "id": "RAZ-90",
+      "title": "Highlight Reel",
+      "url": "https://linear.app/alosha/issue/RAZ-90/highlight-reel",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As a client, I want photo and video coverage of my event, so that I get a highlight reel I can share afterwards.",
+      "status": "built",
+      "tables": [],
+      "procedures": [
+        "feedback.inquiry"
+      ],
+      "routes": [
+        "/for-events"
+      ],
+      "evidence": "app/pages/for-events.vue:20",
+      "notes": "Linear state: Done. Event inquiries are not stored in the DB: feedback.inquiry files a Linear issue (see RAZ-276 for an example inquiry)."
+    },
+    {
+      "id": "RAZ-96",
+      "title": "Run the Door",
+      "url": "https://linear.app/alosha/issue/RAZ-96/run-the-door",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As a client, I want the team to handle ticketing and the door, so that paid entry, guest lists, and check-in run smoothly without my staff.",
+      "status": "built",
+      "tables": [],
+      "procedures": [
+        "feedback.inquiry"
+      ],
+      "routes": [
+        "/for-events"
+      ],
+      "evidence": "app/pages/for-events.vue:21",
+      "notes": "Linear state: Done. Promise is a done-for-you service; no door/guest-list/check-in tooling exists in code. Event inquiries are not stored in the DB: feedback.inquiry files a Linear issue (see RAZ-276 for an example inquiry)."
+    },
+    {
+      "id": "RAZ-101",
+      "title": "End-to-End Night",
+      "url": "https://linear.app/alosha/issue/RAZ-101/end-to-end-night",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As a client, I want to book the whole night end to end, so that the team handles everything and I simply enjoy my event.",
+      "status": "built",
+      "tables": [],
+      "procedures": [
+        "feedback.inquiry"
+      ],
+      "routes": [
+        "/for-events"
+      ],
+      "evidence": "app/pages/for-events.vue:22",
+      "notes": "Linear state: Done. Event inquiries are not stored in the DB: feedback.inquiry files a Linear issue (see RAZ-276 for an example inquiry)."
+    },
+    {
+      "id": "RAZ-107",
+      "title": "Plan, No Forms",
+      "url": "https://linear.app/alosha/issue/RAZ-107/plan-no-forms",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As a client, I want to describe my event in one message and get a plan back, so that I can forward a ready proposal to my partner or CFO without filling out long forms.",
+      "status": "built",
+      "tables": [],
+      "procedures": [
+        "feedback.inquiry"
+      ],
+      "routes": [
+        "/for-events"
+      ],
+      "evidence": "server/trpc/routers/feedback.ts:119",
+      "notes": "Linear state: Done. One free-text message; the \"plan back\" is a human reply off-platform. Event inquiries are not stored in the DB: feedback.inquiry files a Linear issue (see RAZ-276 for an example inquiry)."
+    },
+    {
+      "id": "RAZ-111",
+      "title": "Same-Day Reply",
+      "url": "https://linear.app/alosha/issue/RAZ-111/same-day-reply",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As a client, I want to know how fast the team replies, so that I can expect a same-day response after I send my event request.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/for-events"
+      ],
+      "evidence": "app/pages/for-events.vue:244",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-114",
+      "title": "Tell Us More",
+      "url": "https://linear.app/alosha/issue/RAZ-114/tell-us-more",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As a client, I want a clear button to start describing my event, so that I can send my request to the team.",
+      "status": "built",
+      "tables": [],
+      "procedures": [
+        "feedback.inquiry"
+      ],
+      "routes": [
+        "/for-events"
+      ],
+      "evidence": "app/pages/for-events.vue:257",
+      "notes": "Linear state: Done. Event inquiries are not stored in the DB: feedback.inquiry files a Linear issue (see RAZ-276 for an example inquiry)."
+    },
+    {
+      "id": "RAZ-129",
+      "title": "Book a Space",
+      "url": "https://linear.app/alosha/issue/RAZ-129/book-a-space",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As someone planning a dance event, I want to book a space, so that I have a place to host it.",
+      "status": "partial",
+      "tables": [
+        "bookableSpaces",
+        "bookingRequests",
+        "profiles"
+      ],
+      "procedures": [
+        "entity.listVenues",
+        "entity.listByCity",
+        "booking.request"
+      ],
+      "routes": [
+        "/venues",
+        "/@[handle]"
+      ],
+      "evidence": "app/pages/venues.vue:37; app/pages/@[handle].vue:159",
+      "notes": "Linear state: Done. Booking requests are stored (booking_requests, status pending) but commercial venues are never notified and have no UI or procedure to accept/decline; profiles have no owner, so no one can manage a venue. Only free/OpenAir spaces get decisions via election.moderateBooking."
+    },
+    {
+      "id": "RAZ-135",
+      "title": "Request a Date",
+      "url": "https://linear.app/alosha/issue/RAZ-135/request-a-date",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As someone planning a dance event, I want to pick a dance-ready venue and request a date directly, so that I can secure a suitable space quickly.",
+      "status": "partial",
+      "tables": [
+        "availabilitySlots",
+        "bookableSpaces",
+        "bookingRequests",
+        "profiles"
+      ],
+      "procedures": [
+        "entity.getByHandle",
+        "booking.availabilityForProfile",
+        "booking.request"
+      ],
+      "routes": [
+        "/venues",
+        "/@[handle]"
+      ],
+      "evidence": "app/pages/@[handle].vue:152",
+      "notes": "Linear state: Done. Confirmation shown to the requester, but nothing is sent to the venue. Booking requests are stored (booking_requests, status pending) but commercial venues are never notified and have no UI or procedure to accept/decline; profiles have no owner, so no one can manage a venue. Only free/OpenAir spaces get decisions via election.moderateBooking."
+    },
+    {
+      "id": "RAZ-138",
+      "title": "Host, Don't Dance",
+      "url": "https://linear.app/alosha/issue/RAZ-138/host-dont-dance",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As a client hosting an event, I want a team that produces the dance night for me, so that I can host my guests instead of running the floor myself.",
+      "status": "built",
+      "tables": [],
+      "procedures": [
+        "feedback.inquiry"
+      ],
+      "routes": [
+        "/for-events"
+      ],
+      "evidence": "app/pages/for-events.vue:108",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-142",
+      "title": "Social, Class, Private",
+      "url": "https://linear.app/alosha/issue/RAZ-142/social-class-private",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As someone planning a dance event, I want to book a space for my social, class, or private event, so that I can find a venue that fits my event type.",
+      "status": "partial",
+      "tables": [
+        "bookingRequests"
+      ],
+      "procedures": [
+        "booking.request"
+      ],
+      "routes": [
+        "/venues",
+        "/@[handle]"
+      ],
+      "evidence": "server/database/schema.ts:372",
+      "notes": "Linear state: Done. Booking requests are stored (booking_requests, status pending) but commercial venues are never notified and have no UI or procedure to accept/decline; profiles have no owner, so no one can manage a venue. Only free/OpenAir spaces get decisions via election.moderateBooking."
+    },
+    {
+      "id": "RAZ-143",
+      "title": "Whole Floor",
+      "url": "https://linear.app/alosha/issue/RAZ-143/whole-floor",
+      "journey": "C6",
+      "actor": "client",
+      "story": "As a client, I want one team to handle every part of the night, so that a single dance or a five-hour party comes together without me piecing it out to many vendors.",
+      "status": "built",
+      "tables": [],
+      "procedures": [
+        "feedback.inquiry"
+      ],
+      "routes": [
+        "/for-events"
+      ],
+      "evidence": "app/pages/for-events.vue:108",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-158",
+      "title": "Booking Engine",
+      "url": "https://linear.app/alosha/issue/RAZ-158/booking-engine",
+      "journey": "C6",
+      "actor": "organiser",
+      "story": "As an organiser, I want to find a venue's bookable spaces, see availability and request a date, so that I can secure space for my event without going off-platform.",
+      "status": "partial",
+      "tables": [
+        "availabilitySlots",
+        "bookableSpaces",
+        "bookingRequests",
+        "profiles"
+      ],
+      "procedures": [
+        "booking.request",
+        "booking.availabilityForProfile",
+        "booking.setAvailability",
+        "booking.scheduleForProfile",
+        "booking.getEvent",
+        "booking.upcomingByCity"
+      ],
+      "routes": [
+        "/@[handle]",
+        "/events/[id]"
+      ],
+      "evidence": "server/database/schema.ts:343; server/trpc/routers/booking.ts:278",
+      "notes": "Linear state: Done. booking.setAvailability has no UI caller. Booking requests are stored (booking_requests, status pending) but commercial venues are never notified and have no UI or procedure to accept/decline; profiles have no owner, so no one can manage a venue. Only free/OpenAir spaces get decisions via election.moderateBooking. Follow-up RAZ-257 Done. Drift: Linear Done, code partial."
+    },
+    {
+      "id": "RAZ-159",
+      "title": "Pinakothek Showcase",
+      "url": "https://linear.app/alosha/issue/RAZ-159/pinakothek-showcase",
+      "journey": "C6",
+      "actor": "organiser",
+      "story": "As a Munich organiser, I want to browse the Pinakothek der Moderne Open Air areas and request a date, so that I can use a flagship free space for social dancing.",
+      "status": "partial",
+      "tables": [
+        "bookableSpaces",
+        "profiles"
+      ],
+      "procedures": [
+        "entity.getByHandle",
+        "booking.request"
+      ],
+      "routes": [
+        "/@[handle]",
+        "/for-events"
+      ],
+      "evidence": "scripts/seed-pinakothek.ts:1; app/pages/for-events.vue:137",
+      "notes": "Linear state: Backlog. Seed script exists; RAZ-301 (Triage) says the production seed has not been run, so the profile may not exist in prod."
+    },
+    {
+      "id": "RAZ-302",
+      "title": "Venue browse: event-relevant filter attributes + filter flow",
+      "url": "https://linear.app/alosha/issue/RAZ-302/venue-browse-event-relevant-filter-attributes-filter-flow",
+      "journey": "C6",
+      "actor": "organiser",
+      "story": "As an event organiser looking for a wedding, birthday or party space, I want to filter venues by event-relevant attributes (dance floor, mirrors, Wi-Fi, capacity), so that I can find a fitting space among thousands.",
+      "status": "missing",
+      "tables": [
+        "bookableSpaces",
+        "profiles"
+      ],
+      "procedures": [
+        "entity.listVenues"
+      ],
+      "routes": [
+        "/venues"
+      ],
+      "evidence": "server/trpc/routers/entity.ts:14",
+      "notes": "Linear state: Triage. Journey inferred. profiles has floorType/venueType only; bookable_spaces has capacity/floorType. No amenities model and no filters on /venues."
+    },
+    {
+      "id": "RAZ-33",
+      "title": "Ticket Your Festival",
+      "url": "https://linear.app/alosha/issue/RAZ-33/ticket-your-festival",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an Organizer, I want to ticket my festival through the platform and get promotion plus real attendee faces on my event page, so that I can sell tickets and build trust in one place.",
+      "status": "partial",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/",
+        "/organizers/create"
+      ],
+      "evidence": "app/pages/index.vue:446",
+      "notes": "Linear state: Done. Card and CTA exist. An organiser cannot set up ticketing themselves: ticket tiers/prices live in server/utils/ticket-prices.ts and need a code change."
+    },
+    {
+      "id": "RAZ-34",
+      "title": "Real Faces",
+      "url": "https://linear.app/alosha/issue/RAZ-34/real-faces",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want my festival page to show the real dancers who are going, so that potential attendees see a genuine community and feel confident buying a ticket.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.goingList",
+        "plan.setShareGoing"
+      ],
+      "routes": [
+        "/organizers",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/festivals/[slug].vue:1186",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-35",
+      "title": "Already Planning",
+      "url": "https://linear.app/alosha/issue/RAZ-35/already-planning",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want tools to reach dancers who are already planning their trips, so that I can connect with attendees and promote my event where they are looking.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/organizers"
+      ],
+      "evidence": "app/pages/organizers/index.vue:42",
+      "notes": "Linear state: In Review."
+    },
+    {
+      "id": "RAZ-36",
+      "title": "Workshop Planner",
+      "url": "https://linear.app/alosha/issue/RAZ-36/workshop-planner",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want my festival to include a workshop planner for dancers, so that attendees can build a personal schedule and I can see which sessions draw the most interest.",
+      "status": "partial",
+      "tables": [
+        "planItems"
+      ],
+      "procedures": [
+        "plan.add",
+        "plan.remove",
+        "plan.list"
+      ],
+      "routes": [
+        "/organizers",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/festivals/[slug].vue:27; app/components/ScheduleTab.vue:48",
+      "notes": "Linear state: Done. Workshops, teachers and ticket tiers exist only for the hardcoded festivals in app/data/mock-*.ts (plus server/utils/ticket-prices.ts); there is no workshops or tickets table, so DB-only festivals get no schedule. Organisers cannot see interest per session (see RAZ-74)."
+    },
+    {
+      "id": "RAZ-37",
+      "title": "Share as Invite",
+      "url": "https://linear.app/alosha/issue/RAZ-37/share-as-invite",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want dancers to share their festival plans, so that each share becomes a personal invitation that brings their friends to my event.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/organizers",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/components/SharePlanModal.vue:43; app/pages/festivals/[slug].vue:1092",
+      "notes": "Linear state: Done. Shared plan is encoded in the URL, not stored."
+    },
+    {
+      "id": "RAZ-38",
+      "title": "Year Planning",
+      "url": "https://linear.app/alosha/issue/RAZ-38/year-planning",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want my festival to appear when dancers plan their year, so that I reach people early while they are choosing which festivals to attend.",
+      "status": "built",
+      "tables": [
+        "festivals",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.suggestions",
+        "plan.myPlan",
+        "plan.add"
+      ],
+      "routes": [
+        "/organizers",
+        "/my-year",
+        "/festivals"
+      ],
+      "evidence": "app/pages/my-year.vue:81",
+      "notes": "Linear state: In Review."
+    },
+    {
+      "id": "RAZ-39",
+      "title": "Plan CTAs",
+      "url": "https://linear.app/alosha/issue/RAZ-39/plan-ctas",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an event organizer, I want a clear next step on each pricing plan, so that I can move forward with the plan that fits me.",
+      "status": "partial",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/organizers",
+        "/organizers/create"
+      ],
+      "evidence": "app/pages/organizers/index.vue:100; app/pages/organizers/index.vue:126",
+      "notes": "Linear state: Done. Starter and Pro both lead to the /organizers/create wizard with a plan param; no trial exists. Network is a mailto."
+    },
+    {
+      "id": "RAZ-54",
+      "title": "Interactive Schedule",
+      "url": "https://linear.app/alosha/issue/RAZ-54/interactive-schedule",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want dancers to browse my schedule interactively, so that they can find the workshops that fit them and commit to attending.",
+      "status": "partial",
+      "tables": [
+        "planItems"
+      ],
+      "procedures": [
+        "plan.add"
+      ],
+      "routes": [
+        "/organizers",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/components/ScheduleTab.vue:50",
+      "notes": "Linear state: Done. Style/level filters and add-to-plan work. Workshops, teachers and ticket tiers exist only for the hardcoded festivals in app/data/mock-*.ts (plus server/utils/ticket-prices.ts); there is no workshops or tickets table, so DB-only festivals get no schedule."
+    },
+    {
+      "id": "RAZ-61",
+      "title": "Partner Matching",
+      "url": "https://linear.app/alosha/issue/RAZ-61/partner-matching",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want leads and follows to find each other before my festival, so that solo dancers arrive with a connection and are more likely to attend.",
+      "status": "partial",
+      "tables": [
+        "dancers",
+        "festivalWaves",
+        "planItems"
+      ],
+      "procedures": [
+        "wave.discoverPool",
+        "wave.send",
+        "wave.friends"
+      ],
+      "routes": [
+        "/festivals/[slug]"
+      ],
+      "evidence": "server/trpc/routers/wave.ts:182",
+      "notes": "Linear state: Backlog. dancers.role (lead/follow) is shown in the discover deck but there is no lead↔follow matching or filter. Covers map story 6.3 (auto partner matching). Linear Backlog, partially built."
+    },
+    {
+      "id": "RAZ-65",
+      "title": "Swipe to Match",
+      "url": "https://linear.app/alosha/issue/RAZ-65/swipe-to-match",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want my attendees to discover partners by swiping, so that finding people to dance with feels easy and playful and draws more dancers to the event.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "festivalWaves",
+        "planItems",
+        "profiles"
+      ],
+      "procedures": [
+        "wave.discoverPool",
+        "wave.send",
+        "wave.retract",
+        "wave.friends",
+        "wave.incomingCount",
+        "wave.myWaves",
+        "wave.wavesForMe"
+      ],
+      "routes": [
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/components/DiscoverDancers.vue:48",
+      "notes": "Linear state: Done. Covers map stories 6.1 (browse dancers) and 6.2 (send a dance request). festival_waves keys festivals by slug text, unlike other festival tables (festival_id FK)."
+    },
+    {
+      "id": "RAZ-69",
+      "title": "Smart Ticket Picks",
+      "url": "https://linear.app/alosha/issue/RAZ-69/smart-ticket-picks",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want dancers to be shown the best-value ticket as they plan, so that they buy the right pass with less hesitation and fewer support questions.",
+      "status": "partial",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/organizers",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/festivals/[slug].vue:953",
+      "notes": "Linear state: Done. Recommendation is client-side over the hardcoded ticket list. Workshops, teachers and ticket tiers exist only for the hardcoded festivals in app/data/mock-*.ts (plus server/utils/ticket-prices.ts); there is no workshops or tickets table, so DB-only festivals get no schedule."
+    },
+    {
+      "id": "RAZ-74",
+      "title": "Workshop Demand",
+      "url": "https://linear.app/alosha/issue/RAZ-74/workshop-demand",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want to see which workshops are trending before I finalize my schedule, so that I can shape the program around real demand.",
+      "status": "missing",
+      "tables": [
+        "planItems"
+      ],
+      "procedures": [
+        "festivalInsights.styleLevelMix"
+      ],
+      "routes": [
+        "/organizers",
+        "/organizers/insights"
+      ],
+      "evidence": "server/trpc/routers/festivalInsights.ts:42",
+      "notes": "Linear state: Backlog. Data exists (plan_items item_type=workshop) but no insights procedure aggregates workshop demand."
+    },
+    {
+      "id": "RAZ-76",
+      "title": "Take the Stage",
+      "url": "https://linear.app/alosha/issue/RAZ-76/take-the-stage",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an Organizer, I want the final journey stage to invite me to teach, DJ, host events or open a venue, so that I see the site supports me when I move from dancing to running the scene.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/",
+        "/organizers"
+      ],
+      "evidence": "app/pages/index.vue:69",
+      "notes": "Linear state: In Review."
+    },
+    {
+      "id": "RAZ-79",
+      "title": "Style & Level Mix",
+      "url": "https://linear.app/alosha/issue/RAZ-79/style-and-level-mix",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want to understand the style and level mix of my attendees, so that I can plan a program that fits the dancers actually coming.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "festivalSignups",
+        "festivalSubmissions",
+        "festivals"
+      ],
+      "procedures": [
+        "festivalInsights.myFestivals",
+        "festivalInsights.styleLevelMix"
+      ],
+      "routes": [
+        "/organizers/insights"
+      ],
+      "evidence": "app/pages/organizers/insights.vue:53",
+      "notes": "Linear state: Done. Attendees for insights = festival_signups, while \"Going\" everywhere else = plan_items. Festival ownership is inferred from an onboarded festival_submissions row with the same slug (no owner column). Linear label status:not-built stale."
+    },
+    {
+      "id": "RAZ-85",
+      "title": "Audience Geography",
+      "url": "https://linear.app/alosha/issue/RAZ-85/audience-geography",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want to know where my dancers are travelling from, so that I can focus promotion and plan logistics like travel and accommodation.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/organizers"
+      ],
+      "evidence": "app/pages/organizers/index.vue:62",
+      "notes": "Linear state: Backlog. Only promised in copy. dancers.city is free text, so aggregation would need city canonicalisation (cities table)."
+    },
+    {
+      "id": "RAZ-87",
+      "title": "Host the Night",
+      "url": "https://linear.app/alosha/issue/RAZ-87/host-the-night",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an Organizer, I want the home page to recognise that some visitors host events rather than attend them, so that I know the site can help me run my night too.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/"
+      ],
+      "evidence": "app/pages/index.vue:431",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-89",
+      "title": "Post-Festival Signal",
+      "url": "https://linear.app/alosha/issue/RAZ-89/post-festival-signal",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want honest feedback after my festival, so that I can learn what worked and improve the next edition.",
+      "status": "partial",
+      "tables": [
+        "reviews"
+      ],
+      "procedures": [
+        "review.list",
+        "review.create"
+      ],
+      "routes": [
+        "/organizers",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/organizers/index.vue:63",
+      "notes": "Linear state: Backlog. Festival reviews are collected on the festival page but not shown in organiser insights; mutual endorsements do not exist."
+    },
+    {
+      "id": "RAZ-93",
+      "title": "Whole Night Supplied",
+      "url": "https://linear.app/alosha/issue/RAZ-93/whole-night-supplied",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As a Client, I want to see that the team can supply a whole night for a private event, so that I can hire one provider for my wedding, birthday or corporate party instead of piecing it together.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/",
+        "/for-events"
+      ],
+      "evidence": "app/pages/index.vue:418",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-95",
+      "title": "Starter Free",
+      "url": "https://linear.app/alosha/issue/RAZ-95/starter-free",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an event organizer, I want to list my event for free on the Starter plan, so that dancers can find me without paying anything to get started.",
+      "status": "partial",
+      "tables": [
+        "festivalSubmissions"
+      ],
+      "procedures": [
+        "festival.submitDraft"
+      ],
+      "routes": [
+        "/organizers",
+        "/organizers/create"
+      ],
+      "evidence": "server/database/schema.ts:411; app/pages/organizers/create.vue:380",
+      "notes": "Linear state: Done. The wizard stores a JSON draft for team review; the listing does not appear in directories until the team creates a festivals row by hand."
+    },
+    {
+      "id": "RAZ-98",
+      "title": "Book Us",
+      "url": "https://linear.app/alosha/issue/RAZ-98/book-us",
+      "journey": "C7",
+      "actor": "client",
+      "story": "As a Client, I want a button to book the team for my event, so that I can start a booking request without hunting for contact details.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/",
+        "/for-events"
+      ],
+      "evidence": "app/pages/index.vue:431",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-100",
+      "title": "Pro Toolkit",
+      "url": "https://linear.app/alosha/issue/RAZ-100/pro-toolkit",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an event organizer, I want to upgrade to the Pro plan for a single event, so that I get the full set of tools to engage dancers around that event.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/organizers",
+        "/organizers/create"
+      ],
+      "evidence": "app/pages/organizers/index.vue:87",
+      "notes": "Linear state: Done. Pricing card only; no billing, subscription or plan entitlement in the data model. Drift: Linear Done."
+    },
+    {
+      "id": "RAZ-103",
+      "title": "Ticket With Us",
+      "url": "https://linear.app/alosha/issue/RAZ-103/ticket-with-us",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an Organizer, I want a button to start ticketing my festival with the platform, so that I can begin listing my event without searching for how.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/",
+        "/organizers/create"
+      ],
+      "evidence": "app/pages/index.vue:449",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-106",
+      "title": "Network Plan",
+      "url": "https://linear.app/alosha/issue/RAZ-106/network-plan",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an event organizer running several events, I want an annual Network plan, so that I can cover all my events under one yearly price instead of paying per event.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/organizers"
+      ],
+      "evidence": "app/pages/organizers/index.vue:108",
+      "notes": "Linear state: In Review. Pricing card + mailto only; no plan entity."
+    },
+    {
+      "id": "RAZ-109",
+      "title": "Where Dancers Are",
+      "url": "https://linear.app/alosha/issue/RAZ-109/where-dancers-are",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want to see how WeDance ticketing puts my festival in front of active dancers, so that I understand why I should list here instead of a generic ticketing site.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/organizers"
+      ],
+      "evidence": "app/pages/organizers/index.vue:36",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-112",
+      "title": "List in Minutes",
+      "url": "https://linear.app/alosha/issue/RAZ-112/list-in-minutes",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an event organizer, I want to list my festival quickly, so that I can start filling my dance floor without a long setup.",
+      "status": "partial",
+      "tables": [
+        "festivalSubmissions"
+      ],
+      "procedures": [
+        "festival.submitDraft"
+      ],
+      "routes": [
+        "/organizers",
+        "/organizers/create"
+      ],
+      "evidence": "app/pages/organizers/create.vue:380",
+      "notes": "Linear state: Done. AC4 (appears in directory after submit) not met: drafts await manual onboarding."
+    },
+    {
+      "id": "RAZ-117",
+      "title": "Free to List",
+      "url": "https://linear.app/alosha/issue/RAZ-117/free-to-list",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an event organizer, I want listing and browsing to be free, so that I can join without upfront cost.",
+      "status": "built",
+      "tables": [
+        "festivalSubmissions"
+      ],
+      "procedures": [
+        "festival.submitDraft"
+      ],
+      "routes": [
+        "/organizers",
+        "/organizers/create"
+      ],
+      "evidence": "app/pages/organizers/index.vue:70",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-119",
+      "title": "List Your Festival",
+      "url": "https://linear.app/alosha/issue/RAZ-119/list-your-festival",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want a clear button to start listing my festival, so that I can begin publishing my event without hunting for where to start.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/organizers",
+        "/organizers/create"
+      ],
+      "evidence": "app/pages/organizers/index.vue:170",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-122",
+      "title": "Ticketing On Us",
+      "url": "https://linear.app/alosha/issue/RAZ-122/ticketing-on-us",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As a festival organizer, I want to list my festival for free with ticketing covered, so that I can promote and sell without upfront cost.",
+      "status": "built",
+      "tables": [
+        "festivalSubmissions"
+      ],
+      "procedures": [
+        "festival.submitDraft"
+      ],
+      "routes": [
+        "/festivals",
+        "/organizers/create"
+      ],
+      "evidence": "app/pages/festivals/index.vue:195",
+      "notes": "Linear state: Done. CTA built; listing itself is review-gated (see RAZ-95). Follow-ups RAZ-236/237 Done."
+    },
+    {
+      "id": "RAZ-124",
+      "title": "Partner Matching",
+      "url": "https://linear.app/alosha/issue/RAZ-124/partner-matching",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want my festival to offer partner matching, so that dancers can find someone to attend and dance with, which makes solo dancers more likely to buy a ticket.",
+      "status": "partial",
+      "tables": [
+        "dancers",
+        "festivalWaves"
+      ],
+      "procedures": [
+        "wave.discoverPool"
+      ],
+      "routes": [
+        "/organizers",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/organizers/index.vue:51",
+      "notes": "Linear state: Backlog. Same capability as RAZ-61."
+    },
+    {
+      "id": "RAZ-126",
+      "title": "List Your Social",
+      "url": "https://linear.app/alosha/issue/RAZ-126/list-your-social",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer of a class or weekly social, I want to list my event for free, so that local dancers can find me.",
+      "status": "partial",
+      "tables": [
+        "festivalSubmissions"
+      ],
+      "procedures": [
+        "festival.submitDraft"
+      ],
+      "routes": [
+        "/cities",
+        "/organizers/create"
+      ],
+      "evidence": "app/pages/cities/index.vue:217",
+      "notes": "Linear state: Done. CTA leads to the festival wizard; there is no flow to list a weekly class or social. events rows come only from the v3 sync, and booking_requests only via venue booking."
+    },
+    {
+      "id": "RAZ-130",
+      "title": "One-Tap Checkout",
+      "url": "https://linear.app/alosha/issue/RAZ-130/one-tap-checkout",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want dancers to buy tickets in a single quick step, so that fewer people abandon the purchase and more plans turn into paid tickets.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "festivalSignups",
+        "festivals",
+        "referrals"
+      ],
+      "procedures": [
+        "festivalSignup.ticketCheckout"
+      ],
+      "routes": [
+        "/organizers",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/festivals/[slug].vue:893; server/utils/ticket-prices.ts:32",
+      "notes": "Linear state: Done. Stripe in test mode. Prices resolved server-side from a hardcoded registry (RAZ-228). RAZ-229 Done."
+    },
+    {
+      "id": "RAZ-137",
+      "title": "Listing to Insights",
+      "url": "https://linear.app/alosha/issue/RAZ-137/listing-to-insights",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want a simple overview of how WeDance works, so that I can quickly understand the path from listing my event to getting attendance insights.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/organizers"
+      ],
+      "evidence": "app/pages/organizers/index.vue:129",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-141",
+      "title": "List Your Event",
+      "url": "https://linear.app/alosha/issue/RAZ-141/list-your-event",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want to add my festival, schedule, teachers, and venue quickly, so that I can publish my event without a long setup process.",
+      "status": "partial",
+      "tables": [
+        "festivalSubmissions"
+      ],
+      "procedures": [
+        "festival.submitDraft"
+      ],
+      "routes": [
+        "/organizers",
+        "/organizers/create"
+      ],
+      "evidence": "server/database/schema.ts:422",
+      "notes": "Linear state: Done. Schedule and teachers are captured inside the JSON payload only; nothing turns them into workshops/teachers."
+    },
+    {
+      "id": "RAZ-146",
+      "title": "Dancers Plan",
+      "url": "https://linear.app/alosha/issue/RAZ-146/dancers-plan",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want dancers to find my event and engage with it before buying, so that interest builds into commitment and ticket sales.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/organizers"
+      ],
+      "evidence": "app/pages/organizers/index.vue:131",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-149",
+      "title": "Plans Drive Tickets",
+      "url": "https://linear.app/alosha/issue/RAZ-149/plans-drive-tickets",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want dancers to be guided from their plan to the right ticket, so that more of the plans they build turn into purchases.",
+      "status": "partial",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/organizers",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/organizers/index.vue:136",
+      "notes": "Linear state: Done. Same capability as RAZ-69."
+    },
+    {
+      "id": "RAZ-150",
+      "title": "You Get Insights",
+      "url": "https://linear.app/alosha/issue/RAZ-150/you-get-insights",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organizer, I want real data about demand, audience, and post-event feedback, so that I can plan future editions with evidence instead of guesswork.",
+      "status": "partial",
+      "tables": [
+        "dancers",
+        "festivalSignups",
+        "festivalSubmissions",
+        "festivals"
+      ],
+      "procedures": [
+        "festivalInsights.myFestivals",
+        "festivalInsights.styleLevelMix"
+      ],
+      "routes": [
+        "/organizers/insights"
+      ],
+      "evidence": "app/pages/organizers/insights.vue:37",
+      "notes": "Linear state: Backlog. Only style & level mix is delivered; demand, geography and post-event signal missing (RAZ-74, RAZ-85, RAZ-89)."
+    },
+    {
+      "id": "RAZ-160",
+      "title": "Booking Terms",
+      "url": "https://linear.app/alosha/issue/RAZ-160/booking-terms",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As an organiser, I want booking terms that I accept with each request and explainer pages for venues and organisers, so that everyone knows WeDance acts as a connector.",
+      "status": "built",
+      "tables": [
+        "bookingRequests"
+      ],
+      "procedures": [
+        "booking.request"
+      ],
+      "routes": [
+        "/booking-terms",
+        "/for-venues",
+        "/@[handle]"
+      ],
+      "evidence": "server/database/schema.ts:384; app/pages/booking-terms.vue:1",
+      "notes": "Linear state: Done. Linear label status:not-built stale."
+    },
+    {
+      "id": "RAZ-170",
+      "title": "Admin CMS — community groups / giveaways / videos / festivals",
+      "url": "https://linear.app/alosha/issue/RAZ-170/admin-cms-community-groups-giveaways-videos-festivals",
+      "journey": "C7",
+      "actor": "admin",
+      "story": "As an operator, I want an admin section to manage community groups, giveaways, videos and festivals, so that I can curate content without direct DB edits.",
+      "status": "built",
+      "tables": [
+        "cities",
+        "cityVideos",
+        "communityGroups",
+        "festivals",
+        "giveaways"
+      ],
+      "procedures": [
+        "communityGroup.listAll",
+        "communityGroup.create",
+        "giveaway.listAll",
+        "giveaway.create",
+        "cityVideo.pendingList",
+        "cityVideo.setStatus",
+        "admin.listFestivals"
+      ],
+      "routes": [
+        "/admin",
+        "/admin/community-groups",
+        "/admin/giveaways",
+        "/admin/videos",
+        "/admin/festivals"
+      ],
+      "evidence": "app/layouts/admin.vue:1",
+      "notes": "Linear state: Backlog. Admin festivals page lists festivals and dinners; it cannot create/edit festivals or onboard festival_submissions. Linear Backlog while built (reverse drift)."
+    },
+    {
+      "id": "map:meetup-1.8-organizer-embed-widget",
+      "title": "Embed an activity widget on the festival website",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:29",
+      "journey": "C7",
+      "actor": "organiser",
+      "story": "As a festival organiser, I want to embed a WeDance activity widget on my festival website, so that I can offer social activities without building anything.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [],
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "RAZ-31",
+      "title": "Every Face Real",
+      "url": "https://linear.app/alosha/issue/RAZ-31/every-face-real",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a Dancer, I want the home page to promise that the dances, teachers, cities and people shown are real, so that I trust what I find here more than fake or padded listings elsewhere.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/"
+      ],
+      "evidence": "app/pages/index.vue:166",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-49",
+      "title": "Welcome In",
+      "url": "https://linear.app/alosha/issue/RAZ-49/welcome-in",
+      "journey": "C8",
+      "actor": "visitor",
+      "story": "As a visitor, I want the home page to greet me and instantly signal this is a place for dancers, so that I feel I've arrived somewhere made for me.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/"
+      ],
+      "evidence": "app/pages/index.vue:150",
+      "notes": "Linear state: Done. RAZ-189 (Datenschutz wording) Done."
+    },
+    {
+      "id": "RAZ-53",
+      "title": "First Night, Best Year",
+      "url": "https://linear.app/alosha/issue/RAZ-53/first-night-best-year",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a Dancer, I want the home page to promise it supports me from my very first class through my most active year, so that I trust it will grow with me instead of only serving beginners or only pros.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/"
+      ],
+      "evidence": "app/pages/index.vue:154",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-60",
+      "title": "First Move To Stage",
+      "url": "https://linear.app/alosha/issue/RAZ-60/first-move-to-stage",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a Dancer, I want the journey section to show the path from my first move to performing or hosting my own night, so that I can see where the site can take me over time.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/"
+      ],
+      "evidence": "app/pages/index.vue:208",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-72",
+      "title": "Any Dance, Any Step",
+      "url": "https://linear.app/alosha/issue/RAZ-72/any-dance-any-step",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a Dancer, I want the journey subhead to reassure me the site fits any dance style and any experience level, so that I don't worry my style or stage isn't covered.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/"
+      ],
+      "evidence": "app/pages/index.vue:213",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-77",
+      "title": "Who's Going",
+      "url": "https://linear.app/alosha/issue/RAZ-77/whos-going",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a Dancer, I want the proof section to promise I can see who else is attending an event, so that I feel reassured I won't be walking in alone.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "events",
+        "festivals",
+        "planItems",
+        "profiles"
+      ],
+      "procedures": [
+        "plan.proofShowcase"
+      ],
+      "routes": [
+        "/"
+      ],
+      "evidence": "app/pages/index.vue:331",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-83",
+      "title": "No Fake Friends",
+      "url": "https://linear.app/alosha/issue/RAZ-83/no-fake-friends",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a Dancer, I want each ticket sold to appear as a real person on the event page, so that the attendee list I see is genuine and not padded with fake accounts.",
+      "status": "partial",
+      "tables": [
+        "dancers",
+        "festivalSignups",
+        "festivals",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.proofShowcase",
+        "festivalSignup.publicRoster",
+        "festivalSignup.setMyVisibility",
+        "festivalSignup.getMyVisibility",
+        "claim.claimMyTicketHolderRows",
+        "claim.getClaimStatus",
+        "festival.bySlug"
+      ],
+      "routes": [
+        "/",
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/index.vue:334; server/database/schema.ts:84",
+      "notes": "Linear state: Todo. Faces on most event pages come from \"Going\" clicks (plan_items.shareGoing), not ticket purchases. The ticket-holder roster (festival_signups.verified_ticket_holder + roster_visibility, AttendeeRoster) is used only on /festivals/charanga-habanera-munich-2026, fed by the TicketTailor webhook (server/api/webhooks/tickettailor.post.ts) and the /charanga/claim flow that links ticket rows to dancers."
+    },
+    {
+      "id": "RAZ-86",
+      "title": "Per-Event Attendees",
+      "url": "https://linear.app/alosha/issue/RAZ-86/per-event-attendees",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a Dancer, I want each event to show a \"Who's coming\" list of real attendees, so that I can check the crowd before I decide to go.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.goingList",
+        "plan.count"
+      ],
+      "routes": [
+        "/",
+        "/events/[id]"
+      ],
+      "evidence": "app/pages/events/[id].vue:209",
+      "notes": "Linear state: Done. Linear label status:not-built stale."
+    },
+    {
+      "id": "RAZ-92",
+      "title": "Five Steps",
+      "url": "https://linear.app/alosha/issue/RAZ-92/five-steps",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a Dancer, I want the home page to explain how it works in five clear steps, so that I know what to expect before I sign up.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/"
+      ],
+      "evidence": "app/pages/index.vue:462",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-105",
+      "title": "Europe-Wide Map",
+      "url": "https://linear.app/alosha/issue/RAZ-105/europe-wide-map",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a dancer, I want to browse dance festivals from across Europe in one place, so that I can pick the next event I want to attend without hunting across many sites.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "festivals",
+        "planItems"
+      ],
+      "procedures": [],
+      "routes": [
+        "/festivals",
+        "/festivals/[slug]"
+      ],
+      "evidence": "server/api/festivals.get.ts:36; app/pages/festivals/[slug].vue:39",
+      "notes": "Linear state: Done. Covers map stories 1.1 (festival hero), 1.5 (festival listing) and 1.6 (shareable URLs). Detail page prefers hardcoded app/data mocks and falls back to /api/festivals/[slug]. Festivals also exist as events rows (is_festival). Follow-ups RAZ-233/234 Done; RAZ-175 (past festivals as upcoming) Done, RAZ-285 (removed past festival comes back) Backlog."
+    },
+    {
+      "id": "RAZ-110",
+      "title": "One-Tap Ticket",
+      "url": "https://linear.app/alosha/issue/RAZ-110/one-tap-ticket",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a dancer, I want to buy a festival ticket quickly and securely, so that I get an instant confirmation and know my spot is locked in.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "festivalSignups",
+        "festivals",
+        "referrals"
+      ],
+      "procedures": [
+        "festivalSignup.ticketCheckout",
+        "festivalSignup.myTickets",
+        "festivalSignup.status"
+      ],
+      "routes": [
+        "/",
+        "/festivals/[slug]",
+        "/my-plan"
+      ],
+      "evidence": "app/pages/festivals/[slug].vue:893; server/api/stripe/webhook.post.ts:5",
+      "notes": "Linear state: Done. Merged with RAZ-205 (Done, same story, promise P210). Follow-ups RAZ-238/245/250 Done. Stripe test mode. Ticket tiers hardcoded (no tickets table). Linear label status:not-built stale."
+    },
+    {
+      "id": "RAZ-115",
+      "title": "Opt-In Attendees",
+      "url": "https://linear.app/alosha/issue/RAZ-115/opt-in-attendees",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a dancer, I want to see who else is going to a festival when they choose to share, so that I know familiar faces will be there before I commit.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.goingList",
+        "plan.setShareGoing",
+        "plan.getShareGoing"
+      ],
+      "routes": [
+        "/",
+        "/festivals/[slug]"
+      ],
+      "evidence": "server/database/schema.ts:571",
+      "notes": "Linear state: In Review. Covers map story 1.3 (social proof). A second, independent opt-in exists for ticket holders (festival_signups.roster_visibility via festivalSignup.setMyVisibility/getMyVisibility)."
+    },
+    {
+      "id": "RAZ-120",
+      "title": "Closer Than You Think",
+      "url": "https://linear.app/alosha/issue/RAZ-120/closer-than-you-think",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a dancer, I want an easy prompt to start finding my next event, so that I can move from the homepage into browsing festivals right away.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/"
+      ],
+      "evidence": "app/pages/index.vue:514",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-152",
+      "title": "Pinakothek Moderator Election (epic)",
+      "url": "https://linear.app/alosha/issue/RAZ-152/pinakothek-moderator-election-epic",
+      "journey": "C8",
+      "actor": "member",
+      "story": "As a community using a free/OpenAir space, we want to elect a moderator whose guidelines become the rules for free bookings, so that the community, not a platform admin, stewards the space.",
+      "status": "built",
+      "tables": [
+        "bookingRequests",
+        "electionCandidates",
+        "electionVoteHistory",
+        "electionVotes",
+        "guidelineVersions",
+        "moderatorElections",
+        "profiles"
+      ],
+      "procedures": [
+        "election.forProfile",
+        "election.open",
+        "election.nominate",
+        "election.advanceToVoting",
+        "election.castVote",
+        "election.myVote",
+        "election.close",
+        "election.pendingBookings",
+        "election.moderateBooking"
+      ],
+      "routes": [
+        "/elections/[handle]",
+        "/@[handle]"
+      ],
+      "evidence": "app/pages/elections/[handle].vue:103",
+      "notes": "Linear state: Backlog. Epic (G800) over RAZ-163..166. Linear Backlog / status:not-built, but the full flow is implemented (reverse drift). election.guidelineHistory has no UI caller; profiles still keeps flat moderatorName/Handle/Since next to the election tables."
+    },
+    {
+      "id": "RAZ-153",
+      "title": "Bring v4 Users",
+      "url": "https://linear.app/alosha/issue/RAZ-153/bring-v4-users",
+      "journey": "C8",
+      "actor": "member",
+      "story": "As an existing WeDance v4 user, I want my account (email and password) migrated into WeDance 2026, so that I can log in with my existing password.",
+      "status": "built",
+      "tables": [
+        "dancers"
+      ],
+      "procedures": [],
+      "routes": [],
+      "evidence": "scripts/migrate/02-users.mjs:1",
+      "notes": "Linear state: Backlog. Migration script, not a runtime capability. Linear Backlog with status:built label."
+    },
+    {
+      "id": "RAZ-155",
+      "title": "Erase My Account",
+      "url": "https://linear.app/alosha/issue/RAZ-155/erase-my-account",
+      "journey": "C8",
+      "actor": "member",
+      "story": "As a dancer, I want to delete my account from settings, so that my personal data is erased (GDPR).",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "festivalSignups",
+        "giveawayEntries",
+        "planItems",
+        "profiles",
+        "reviews",
+        "sessions"
+      ],
+      "procedures": [
+        "auth.deleteAccount"
+      ],
+      "routes": [
+        "/settings"
+      ],
+      "evidence": "server/trpc/routers/auth.ts:458; app/pages/settings.vue:48",
+      "notes": "Linear state: Done. Touches ~27 tables in FK order. Follow-up RAZ-286 Done."
+    },
+    {
+      "id": "RAZ-156",
+      "title": "Group Directory",
+      "url": "https://linear.app/alosha/issue/RAZ-156/group-directory",
+      "journey": "C8",
+      "actor": "member",
+      "story": "As a dancer in a city without WeDance events, I want to see the local WhatsApp/Telegram dance groups, so that the scene does not look dead and I can join it.",
+      "status": "built",
+      "tables": [
+        "communityGroupReports",
+        "communityGroups"
+      ],
+      "procedures": [
+        "communityGroup.listByCity",
+        "communityGroup.report"
+      ],
+      "routes": [
+        "/cities/[city]"
+      ],
+      "evidence": "app/pages/cities/[city]/index.vue:669",
+      "notes": "Linear state: In Review. Import via scripts/import-community-groups.ts. Follow-up RAZ-215 Done."
+    },
+    {
+      "id": "RAZ-157",
+      "title": "Locals Recommend",
+      "url": "https://linear.app/alosha/issue/RAZ-157/locals-recommend",
+      "journey": "C8",
+      "actor": "member",
+      "story": "As a newcomer to a city, I want to ask locals who is good here and get recommendations, so that I find trusted organisers and venues.",
+      "status": "built",
+      "tables": [
+        "recommendationRequests",
+        "reviews"
+      ],
+      "procedures": [
+        "askLocals.listByCity",
+        "askLocals.ask",
+        "askLocals.recommend",
+        "review.list"
+      ],
+      "routes": [
+        "/cities/[city]"
+      ],
+      "evidence": "app/components/AskLocalsSection.vue:54",
+      "notes": "Linear state: Backlog. A recommendation becomes a 5-star review (source=recommendation) on a slug-addressed target, auto-stubbed if unknown; it does not create a profiles row. Linear Backlog while built (reverse drift)."
+    },
+    {
+      "id": "RAZ-163",
+      "title": "Elect the Steward",
+      "url": "https://linear.app/alosha/issue/RAZ-163/elect-the-steward",
+      "journey": "C8",
+      "actor": "member",
+      "story": "As a community using a free/OpenAir commons (e.g. the Pinakothek Open Air space), we want to elect a moderator each year, so that the community — not a platform admin — chooses who stewards the space.",
+      "status": "built",
+      "tables": [
+        "electionCandidates",
+        "moderatorElections"
+      ],
+      "procedures": [
+        "election.open",
+        "election.nominate",
+        "election.advanceToVoting",
+        "election.close"
+      ],
+      "routes": [
+        "/elections/[handle]"
+      ],
+      "evidence": "server/trpc/routers/election.ts:176",
+      "notes": "Linear state: Backlog. Reverse drift: Backlog in Linear, implemented in code."
+    },
+    {
+      "id": "RAZ-164",
+      "title": "Run on Rules",
+      "url": "https://linear.app/alosha/issue/RAZ-164/run-on-rules",
+      "journey": "C8",
+      "actor": "member",
+      "story": "As a moderator candidate, I want to propose the guidelines the space would run by, so that the community elects me on the basis of the rules I stand for.",
+      "status": "built",
+      "tables": [
+        "electionCandidates"
+      ],
+      "procedures": [
+        "election.nominate",
+        "election.forProfile"
+      ],
+      "routes": [
+        "/elections/[handle]"
+      ],
+      "evidence": "server/database/schema.ts:462",
+      "notes": "Linear state: Backlog. Reverse drift: Backlog in Linear, implemented in code."
+    },
+    {
+      "id": "RAZ-165",
+      "title": "The Floor Votes",
+      "url": "https://linear.app/alosha/issue/RAZ-165/the-floor-votes",
+      "journey": "C8",
+      "actor": "member",
+      "story": "As a community member, I want to vote for the candidate whose guidelines I support, so that the winning proposal becomes the space's active rules — and I want the ballot to be openly verifiable, so the community trusts the result.",
+      "status": "built",
+      "tables": [
+        "electionVoteHistory",
+        "electionVotes",
+        "guidelineVersions"
+      ],
+      "procedures": [
+        "election.castVote",
+        "election.myVote",
+        "election.forProfile",
+        "election.close"
+      ],
+      "routes": [
+        "/elections/[handle]"
+      ],
+      "evidence": "server/trpc/routers/election.ts:254",
+      "notes": "Linear state: Backlog. Reverse drift: Backlog in Linear, implemented in code."
+    },
+    {
+      "id": "RAZ-166",
+      "title": "Steward the Queue",
+      "url": "https://linear.app/alosha/issue/RAZ-166/steward-the-queue",
+      "journey": "C8",
+      "actor": "member",
+      "story": "As the elected moderator, I want to approve or decline free-booking requests against the active guidelines, so that confirmed slots follow the community's rules; and I want each term's guidelines versioned, so that history is preserved across elections.",
+      "status": "built",
+      "tables": [
+        "bookingRequests",
+        "guidelineVersions"
+      ],
+      "procedures": [
+        "election.pendingBookings",
+        "election.moderateBooking",
+        "election.guidelineHistory"
+      ],
+      "routes": [
+        "/elections/[handle]"
+      ],
+      "evidence": "server/trpc/routers/election.ts:385",
+      "notes": "Linear state: Backlog. Approve/decline built; past-term guideline view (election.guidelineHistory) has no UI caller. Reverse drift: Backlog in Linear."
+    },
+    {
+      "id": "RAZ-241",
+      "title": "🐞 Forgot password doesn't reset the password As a user who forgot my pa…",
+      "url": "https://linear.app/alosha/issue/RAZ-241/forgot-password-doesnt-reset-the-password-as-a-user-who-forgot-my-pa",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a user who forgot my password, I want to set a new password from an emailed link, so that I can get back into my account.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "sessions"
+      ],
+      "procedures": [
+        "auth.requestMagicLink",
+        "auth.verifyMagicLink",
+        "auth.resetPassword"
+      ],
+      "routes": [
+        "/auth/verify"
+      ],
+      "evidence": "server/trpc/routers/auth.ts:161; e2e/features/auth-password-reset.feature:2",
+      "notes": "Linear state: Done. No Linear project (user-report); journey inferred. Covered by e2e/features/auth-password-reset.feature. Follow-up RAZ-242 Done."
+    },
+    {
+      "id": "RAZ-246",
+      "title": "Show success confirmation after ticket purchase",
+      "url": "https://linear.app/alosha/issue/RAZ-246/show-success-confirmation-after-ticket-purchase",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a dancer who just paid for a ticket, I want a clear success confirmation with festival, ticket and amount, so that I know my payment went through.",
+      "status": "built",
+      "tables": [],
+      "procedures": [],
+      "routes": [
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/festivals/[slug].vue:474",
+      "notes": "Linear state: Done. Confirmation data is read back from sessionStorage set before the Stripe redirect, not from the server."
+    },
+    {
+      "id": "RAZ-247",
+      "title": "Send purchase confirmation email after ticket checkout",
+      "url": "https://linear.app/alosha/issue/RAZ-247/send-purchase-confirmation-email-after-ticket-checkout",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a dancer who bought a ticket, I want a confirmation email with the festival, date, ticket and amount, so that I have a receipt.",
+      "status": "built",
+      "tables": [
+        "festivalSignups"
+      ],
+      "procedures": [],
+      "routes": [],
+      "evidence": "server/utils/email.ts:88",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-248",
+      "title": "Show 'already purchased' state on festival page after buying a ticket",
+      "url": "https://linear.app/alosha/issue/RAZ-248/show-already-purchased-state-on-festival-page-after-buying-a-ticket",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a dancer who already has a ticket, I want the festival page to show \"You have a ticket\" instead of \"Get this pass\", so that I do not buy twice.",
+      "status": "built",
+      "tables": [
+        "festivalSignups"
+      ],
+      "procedures": [
+        "festivalSignup.status"
+      ],
+      "routes": [
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/festivals/[slug].vue:883",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-249",
+      "title": "Nudge profile completion after ticket purchase",
+      "url": "https://linear.app/alosha/issue/RAZ-249/nudge-profile-completion-after-ticket-purchase",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a dancer who just bought a ticket with an incomplete profile, I want to be prompted to add my styles, role and city, so that matching, rides and socials work for me.",
+      "status": "built",
+      "tables": [
+        "dancers"
+      ],
+      "procedures": [
+        "profile.update"
+      ],
+      "routes": [
+        "/festivals/[slug]"
+      ],
+      "evidence": "app/pages/festivals/[slug].vue:479",
+      "notes": "Linear state: Done."
+    },
+    {
+      "id": "RAZ-272",
+      "title": "🐞 Report a problem Report a problem popup: No screenshot captured? It s…",
+      "url": "https://linear.app/alosha/issue/RAZ-272/report-a-problem-report-a-problem-popup-no-screenshot-captured-it-s",
+      "journey": "C8",
+      "actor": "member",
+      "story": "As any visitor, I want to report a problem with a screenshot from any page, so that the team can fix what I ran into.",
+      "status": "built",
+      "tables": [
+        "dancers"
+      ],
+      "procedures": [
+        "feedback.report"
+      ],
+      "routes": [],
+      "evidence": "app/components/ReportProblem.vue:7; server/trpc/routers/feedback.ts:162",
+      "notes": "Linear state: In Review. No Linear project (user-report, In Review: screenshot not captured); journey inferred. Reports become Linear issues, not DB rows; the bug reports in this inventory came through this pipeline."
+    },
+    {
+      "id": "RAZ-275",
+      "title": "🐞 Photo URL This is not user friendly. See in v4 we already have a good…",
+      "url": "https://linear.app/alosha/issue/RAZ-275/photo-url-this-is-not-user-friendly-see-in-v4-we-already-have-a-good",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a dancer, I want to upload a profile photo instead of pasting a photo URL, so that setting my picture is easy.",
+      "status": "partial",
+      "tables": [
+        "dancers"
+      ],
+      "procedures": [
+        "profile.update"
+      ],
+      "routes": [
+        "/settings"
+      ],
+      "evidence": "server/api/media/image.post.ts:1; app/pages/settings.vue:224",
+      "notes": "Linear state: In Review. Journey inferred. Upload to Cloudinary via /api/media/image; RAZ-288 (Triage) reports the endpoint accepts unauthenticated uploads, RAZ-289 UX hardening open."
+    },
+    {
+      "id": "map:meetup-2.1-sign-up",
+      "title": "Sign up / sign in / sign out",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:42",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a dancer, I want to sign up with name, email, dance styles, role and city in under a minute, sign out with confirmation and sign back in, so that I can start planning immediately and keep my account.",
+      "status": "built",
+      "tables": [
+        "dancers",
+        "sessions"
+      ],
+      "procedures": [
+        "auth.register",
+        "auth.login",
+        "auth.requestMagicLink",
+        "auth.verifyMagicLink",
+        "auth.me",
+        "auth.completeOnboarding"
+      ],
+      "routes": [
+        "/onboarding",
+        "/auth/verify"
+      ],
+      "evidence": "server/trpc/routers/auth.ts:248; e2e/features/auth-signup-signin.feature:2; app/components/SiteHeader.vue:80",
+      "notes": "Merges meetup-planner 2.1 (+ Operations/Stories/2.1-sign-up-form.yml), e2e/features/auth-signup-signin.feature, and bug reports RAZ-239 (sign-out confirm, Done), RAZ-240 (redirect after sign-out, Done), RAZ-273 (session lost on refresh, In Review)."
+    },
+    {
+      "id": "map:meetup-2.4-social-login",
+      "title": "Sign up with Google or Facebook",
+      "url": "wedance-org:01_Domains/Festival_Experience/Product/meetup-planner/backlog.md:45",
+      "journey": "C8",
+      "actor": "dancer",
+      "story": "As a dancer, I want to sign up with Google or Facebook, so that I can join in one tap without typing.",
+      "status": "missing",
+      "tables": [],
+      "procedures": [],
+      "routes": [],
+      "evidence": "server/trpc/routers/auth.ts:60",
+      "notes": "Auth is email+password and magic link only; dancers.neonAuthId column exists but no OAuth flow found."
+    },
+    {
+      "id": "RAZ-304",
+      "title": "Event page: clear visitor journey + fix attendee section showing live data",
+      "url": "https://linear.app/alosha/issue/RAZ-304/event-page-clear-visitor-journey-fix-attendee-section-showing-live",
+      "journey": null,
+      "actor": "visitor",
+      "story": "As a visitor on a festival or event page, I want a clear next step for going and an attendee section that shows the right content, so that I know what I can do here.",
+      "status": "unknown",
+      "tables": [
+        "bookingRequests",
+        "events",
+        "planItems"
+      ],
+      "procedures": [
+        "plan.goingList",
+        "events.get",
+        "booking.getEvent"
+      ],
+      "routes": [
+        "/festivals/[slug]",
+        "/events/[id]"
+      ],
+      "evidence": "app/pages/events/[id].vue:209",
+      "notes": "Linear state: Triage. Triage. The issue does not name which section shows live data instead of placeholder content, so status cannot be determined from code."
+    }
+  ]
+}

@@ -107,6 +107,10 @@ const accent = [WD.red600, WD.cyan600][i]   // accent + '55' still works
           </div>
         </div>
       </div>
+      <p class="text-sm text-muted-foreground mt-8">
+        Looking for how the app itself is built — data model, API, story map?
+        <NuxtLink to="/architecture" class="font-bold text-primary hover:underline">See the architecture docs →</NuxtLink>
+      </p>
     </DesignSection>
   </DesignPage>
 </template>
