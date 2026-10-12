@@ -248,9 +248,10 @@ useHead(() => ({
             <NuxtLink v-if="isFree" :to="`/elections/${handle}`" class="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-primary font-sans">
               <ShieldCheck class="w-3.5 h-3.5" /> {{ profile.moderatorName ? 'Moderator election' : 'Elect a moderator' }} →
             </NuxtLink>
-            <div v-if="canManage || !managed" class="mt-5 pt-4 border-t text-xs font-sans">
+            <div class="mt-5 pt-4 border-t text-xs font-sans">
               <NuxtLink v-if="canManage" :to="`/business/profiles/${profile.username}`" class="font-bold text-wd-red-800 hover:underline">Edit this page →</NuxtLink>
-              <NuxtLink v-else :to="`/business/claim?profile=${profile.username}`" class="text-muted-foreground hover:text-foreground hover:underline">Is this you? Claim this page →</NuxtLink>
+              <NuxtLink v-else-if="!managed" :to="`/business/claim?profile=${profile.username}`" class="text-muted-foreground hover:text-foreground hover:underline">Is this you? Claim this page →</NuxtLink>
+              <NuxtLink v-else :to="`/business/claim?profile=${profile.username}`" class="text-muted-foreground hover:text-foreground hover:underline">Work with them? Join the team →</NuxtLink>
             </div>
           </div>
         </div>

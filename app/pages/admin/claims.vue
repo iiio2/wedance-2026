@@ -28,11 +28,14 @@ async function load() {
 }
 onMounted(load)
 
+// Reclaim: also take the current managers off (the admin decides each time).
+const removeOthers = reactive<Record<string, boolean>>({})
+
 async function decide(c: Claim, approve: boolean) {
   busyId.value = c.id
   error.value = null
   try {
-    await $trpc.business.decideClaim.mutate({ claimId: c.id, approve })
+    await $trpc.business.decideClaim.mutate({ claimId: c.id, approve, removeOthers: !!removeOthers[c.id] })
     items.value = items.value.filter(x => x.id !== c.id)
   } catch (e: any) {
     error.value = e?.message || 'Could not update that claim.'
@@ -47,7 +50,7 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
 
 <template>
   <div>
-    <AdminPageHeader title="Profile claims" description="People asking to manage an artist, venue or organizer page. Check the proof they give before approving.">
+    <AdminPageHeader title="Profile claims" description="Claims for unmanaged pages and reclaims (“it’s mine, someone else has it”). Check the proof before approving. Join requests go to each profile’s owners.">
       <Button variant="ghost" size="sm" class="text-secondary" :disabled="loading" @click="load">
         <RotateCcw /> Refresh
       </Button>
@@ -60,8 +63,8 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
     <div v-else class="mt-6 grid gap-3">
       <div v-for="c in items" :key="c.id" class="rounded-2xl border bg-card p-4 shadow-wd-card">
         <div class="flex flex-wrap items-center gap-2">
+          <AdminStatus :tone="c.kind === 'reclaim' ? 'danger' : 'neutral'">{{ c.kind === 'reclaim' ? 'Reclaim' : 'Claim' }}</AdminStatus>
           <AdminStatus>{{ typeLabel[c.profileType] || c.profileType }}</AdminStatus>
-          <AdminStatus v-if="c.profileManaged" tone="danger">Already managed</AdminStatus>
           <span class="text-xs text-muted-foreground">{{ fmt(c.createdAt) }}</span>
         </div>
         <NuxtLink :to="`/@${c.profileUsername}`" target="_blank" class="mt-2 inline-flex items-center gap-1 text-base font-bold hover:underline">
@@ -71,6 +74,14 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
           Requested by {{ c.dancerName }} · {{ c.dancerEmail }}<template v-if="c.dancerInstagram"> · {{ c.dancerInstagram }}</template>
         </p>
         <p class="mt-2 rounded-xl bg-muted p-3 text-sm whitespace-pre-line">{{ c.message }}</p>
+        <div v-if="c.managers.length" class="mt-2 text-sm">
+          <p class="text-muted-foreground">Managed today by:
+            <span v-for="(m, i) in c.managers" :key="m.email" class="text-foreground">{{ i ? ', ' : '' }}{{ m.name }} ({{ m.role }}, {{ m.email }})</span>
+          </p>
+          <label v-if="c.kind === 'reclaim'" class="mt-1 inline-flex items-center gap-2">
+            <Checkbox :model-value="!!removeOthers[c.id]" @update:model-value="v => (removeOthers[c.id] = !!v)" /> On approve, remove them from the profile
+          </label>
+        </div>
         <div class="mt-3 flex gap-2">
           <Button variant="pill" size="pill-sm" :loading="busyId === c.id" @click="decide(c, true)">
             <Check /> Approve

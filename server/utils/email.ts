@@ -150,3 +150,37 @@ function formatDateRange(start: string | null, end: string | null): string | nul
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
+
+/**
+ * Business mode: tell someone their claim / join / reclaim request was decided.
+ * Logged instead of sent when Resend isn't configured (local dev).
+ */
+export async function sendAccessDecisionEmail(params: {
+  to: string
+  name: string
+  profileName: string
+  approved: boolean
+  role: 'owner' | 'editor'
+  link: string
+}) {
+  const config = useRuntimeConfig()
+  const subject = params.approved
+    ? `You now manage ${params.profileName} on WeDance`
+    : `Your request for ${params.profileName} wasn’t approved`
+  if (!config.resendApiKey) {
+    console.log(`\n✉️  ${params.to}: ${subject} → ${params.link}\n`)
+    return
+  }
+  const body = params.approved
+    ? `<p>You were added to <strong>${escapeHtml(params.profileName)}</strong> as ${params.role === 'owner' ? 'an owner' : 'an editor'}.</p>
+       <a href="${params.link}" style="display: inline-block; background: #000; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Open your business page</a>`
+    : `<p>Your request to manage <strong>${escapeHtml(params.profileName)}</strong> wasn’t approved.</p>
+       <p>If it really is yours, send a new request with something we can check, e.g. a message from the profile’s Instagram account.</p>`
+  await getResend().emails.send({
+    from: config.resendFromEmail || 'WeDance <noreply@wedance.vip>',
+    to: params.to,
+    subject,
+    html: `<div style="font-family: sans-serif; max-width: 420px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #333;">Hey ${escapeHtml(params.name)}!</h2>${body}</div>`,
+  })
+}

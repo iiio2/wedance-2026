@@ -349,6 +349,9 @@ export const profileMembers = pgTable('profile_members', {
   profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
   dancerId: uuid('dancer_id').notNull().references(() => dancers.id, { onDelete: 'cascade' }),
   role: text('role').notNull().default('owner').$type<'owner' | 'editor'>(),
+  // Public title on the team list ("Promoter", "Resident DJ") — not a permission (0027).
+  title: text('title'),
+  addedBy: uuid('added_by').references(() => dancers.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => [
   unique('profile_members_profile_dancer').on(t.profileId, t.dancerId),
@@ -364,11 +367,32 @@ export const profileClaims = pgTable('profile_claims', {
   // How the admin can verify it's really them (e.g. "DM me from @handle").
   message: text('message').notNull().default(''),
   status: text('status').notNull().default('pending').$type<'pending' | 'approved' | 'rejected'>(),
+  // 0027: claim = nobody manages it (admin decides) · join = ask the owners for a
+  // role · reclaim = "it's mine, someone else has it" (admin decides, never the owners).
+  kind: text('kind').notNull().default('claim').$type<'claim' | 'join' | 'reclaim'>(),
+  requestedRole: text('requested_role').notNull().default('owner').$type<'owner' | 'editor'>(),
+  title: text('title'),
+  decidedBy: uuid('decided_by').references(() => dancers.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow(),
   decidedAt: timestamp('decided_at'),
 }, (t) => [
   unique('profile_claims_profile_dancer').on(t.profileId, t.dancerId),
   index('profile_claims_status_idx').on(t.status),
+])
+
+// Who got, lost or changed access to a profile, and who did it (0027) — the
+// facts an admin needs to judge a reclaim dispute.
+export const profileAccessLog = pgTable('profile_access_log', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  actorId: uuid('actor_id').references(() => dancers.id, { onDelete: 'set null' }),
+  subjectId: uuid('subject_id').references(() => dancers.id, { onDelete: 'set null' }),
+  action: text('action').notNull().$type<'created' | 'requested' | 'approved' | 'rejected' | 'role_changed' | 'removed' | 'left'>(),
+  role: text('role'),
+  note: text('note'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  index('profile_access_log_profile_idx').on(t.profileId, t.createdAt),
 ])
 
 // A profile (venue) can offer N bookable areas — e.g. Pinakothek's 5 spaces.

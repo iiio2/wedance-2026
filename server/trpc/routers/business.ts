@@ -4,6 +4,8 @@ import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure, adminProcedure } from '../trpc'
 import { profiles, profileMembers, profileClaims, dancers, cities } from '../../database/schema'
 import { slugify, randomSuffix } from '../../utils/slug'
+import { grant, logAccess } from '../../utils/profileAccess'
+import { notifyDecision } from './businessTeam'
 
 /**
  * Business mode — artists, venues and organizers managing their own profile.
@@ -104,6 +106,7 @@ export const businessRouter = router({
       .select({
         id: profileClaims.id,
         status: profileClaims.status,
+        kind: profileClaims.kind,
         createdAt: profileClaims.createdAt,
         username: profiles.username,
         name: profiles.name,
@@ -149,11 +152,12 @@ export const businessRouter = router({
       // One request per person per profile; a rejected one can be re-sent.
       await ctx.db
         .insert(profileClaims)
-        .values({ profileId: p.id, dancerId: ctx.dancerId, message: input.message })
+        .values({ profileId: p.id, dancerId: ctx.dancerId, message: input.message, kind: 'claim', requestedRole: 'owner' })
         .onConflictDoUpdate({
           target: [profileClaims.profileId, profileClaims.dancerId],
-          set: { message: input.message, status: 'pending', createdAt: new Date(), decidedAt: null },
+          set: { message: input.message, kind: 'claim', requestedRole: 'owner', status: 'pending', createdAt: new Date(), decidedAt: null, decidedBy: null },
         })
+      await logAccess(ctx.db, { profileId: p.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'requested', role: 'owner', note: 'claim' })
       return { requested: true }
     }),
 
@@ -176,6 +180,7 @@ export const businessRouter = router({
         .values({ type: input.type, name: input.name, username: handle, city, citySlug: await citySlugFor(ctx.db, city), claimed: true })
         .returning({ id: profiles.id, username: profiles.username })
       await ctx.db.insert(profileMembers).values({ profileId: p!.id, dancerId: ctx.dancerId, role: 'owner' })
+      await logAccess(ctx.db, { profileId: p!.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'created', role: 'owner' })
       return { username: p!.username }
     }),
 
@@ -219,14 +224,16 @@ export const businessRouter = router({
       return { saved: true }
     }),
 
-  // --- Admin: claim review ---
+  // --- Admin: claim + reclaim review (join requests go to the owners) ---
   listClaims: adminProcedure.query(async ({ ctx }) => {
-    return ctx.db
+    const rows = await ctx.db
       .select({
         id: profileClaims.id,
+        kind: profileClaims.kind,
         message: profileClaims.message,
         status: profileClaims.status,
         createdAt: profileClaims.createdAt,
+        profileId: profiles.id,
         profileUsername: profiles.username,
         profileName: profiles.name,
         profileType: profiles.type,
@@ -238,29 +245,49 @@ export const businessRouter = router({
       .from(profileClaims)
       .innerJoin(profiles, eq(profiles.id, profileClaims.profileId))
       .innerJoin(dancers, eq(dancers.id, profileClaims.dancerId))
-      .where(eq(profileClaims.status, 'pending'))
+      .where(and(eq(profileClaims.status, 'pending'), inArray(profileClaims.kind, ['claim', 'reclaim'])))
       .orderBy(profileClaims.createdAt)
+    // Who manages it today — what a reclaim decision is about.
+    const ids = [...new Set(rows.map((r: any) => r.profileId))]
+    const team = ids.length
+      ? await ctx.db.select({ profileId: profileMembers.profileId, role: profileMembers.role, name: dancers.name, email: dancers.email })
+        .from(profileMembers).innerJoin(dancers, eq(dancers.id, profileMembers.dancerId))
+        .where(inArray(profileMembers.profileId, ids))
+      : []
+    return rows.map((r: any) => ({ ...r, managers: team.filter((t: any) => t.profileId === r.profileId) }))
   }),
 
   decideClaim: adminProcedure
-    .input(z.object({ claimId: z.string().uuid(), approve: z.boolean() }))
+    .input(z.object({
+      claimId: z.string().uuid(),
+      approve: z.boolean(),
+      // Reclaim only: also take the current managers off the profile.
+      removeOthers: z.boolean().default(false),
+    }))
     .mutation(async ({ ctx, input }) => {
       const [c] = await ctx.db.select().from(profileClaims).where(eq(profileClaims.id, input.claimId))
       if (!c) throw new TRPCError({ code: 'NOT_FOUND', message: 'Claim not found.' })
       if (c.status !== 'pending') throw new TRPCError({ code: 'CONFLICT', message: 'This claim was already decided.' })
+      const [p] = await ctx.db.select({ id: profiles.id, name: profiles.name, username: profiles.username }).from(profiles).where(eq(profiles.id, c.profileId))
+      const role = c.kind === 'join' ? c.requestedRole : 'owner'
 
       await ctx.db
         .update(profileClaims)
-        .set({ status: input.approve ? 'approved' : 'rejected', decidedAt: new Date() })
+        .set({ status: input.approve ? 'approved' : 'rejected', decidedAt: new Date(), decidedBy: ctx.dancerId ?? null })
         .where(eq(profileClaims.id, c.id))
 
       if (input.approve) {
-        await ctx.db
-          .insert(profileMembers)
-          .values({ profileId: c.profileId, dancerId: c.dancerId, role: 'owner' })
-          .onConflictDoNothing()
-        await ctx.db.update(profiles).set({ claimed: true }).where(eq(profiles.id, c.profileId))
+        await grant(ctx.db, c.profileId, c.dancerId, role, { title: c.title, by: ctx.dancerId ?? null })
+        if (c.kind === 'reclaim' && input.removeOthers) {
+          const others = await ctx.db.select().from(profileMembers).where(eq(profileMembers.profileId, c.profileId))
+          for (const o of others.filter((o: any) => o.dancerId !== c.dancerId)) {
+            await ctx.db.delete(profileMembers).where(eq(profileMembers.id, o.id))
+            await logAccess(ctx.db, { profileId: c.profileId, actorId: ctx.dancerId ?? null, subjectId: o.dancerId, action: 'removed', role: o.role, note: 'reclaim approved' })
+          }
+        }
       }
+      await logAccess(ctx.db, { profileId: c.profileId, actorId: ctx.dancerId ?? null, subjectId: c.dancerId, action: input.approve ? 'approved' : 'rejected', role, note: c.kind })
+      await notifyDecision(ctx.db, c.dancerId, p, input.approve, role)
       return { status: input.approve ? 'approved' : 'rejected' }
     }),
 })

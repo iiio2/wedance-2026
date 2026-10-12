@@ -7,6 +7,7 @@ import { slugify, randomSuffix } from '../../utils/slug'
 import { resolveTimezone } from '../../utils/v3EventSync'
 import { zonedToUtc, eventLocalDate, eventLocalTime, eventLocalWeekday } from '../../../shared/utils/eventTime'
 import { requireMember } from './business'
+import { joinRequestsForOwner } from './businessTeam'
 
 /**
  * Business mode — events a profile runs, and the /business home inbox.
@@ -326,6 +327,10 @@ export const businessEventsRouter = router({
       needs.push(c.status === 'pending'
         ? { kind: 'claim', tone: 'neutral', title: `Claim for ${c.name} is waiting for review`, detail: 'We check every claim by hand.', to: '/business/profiles' }
         : { kind: 'claim', tone: 'danger', title: `Claim for ${c.name} wasn’t approved`, detail: 'Send a new request with proof we can check.', to: `/business/claim?profile=${c.username}` })
+    }
+
+    for (const j of await joinRequestsForOwner(ctx.db, ctx.dancerId)) {
+      needs.push({ kind: 'join', tone: 'info', title: `${j.dancerName} wants to join ${j.profileName}`, detail: `As ${j.requestedRole}${j.title ? ` · ${j.title}` : ''}. Approve or decline.`, to: `/business/profiles/${j.profileUsername}/team` })
     }
 
     const hosted = mine.length

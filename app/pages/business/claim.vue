@@ -37,29 +37,44 @@ watch(q, () => { clearTimeout(timer); timer = setTimeout(runSearch, 250) })
 onMounted(() => { if (q.value) runSearch() })
 
 const openFor = ref<string | null>(null)
+const mode = ref<'claim' | 'join' | 'reclaim'>('claim')
 const message = ref('')
+const role = ref<'editor' | 'owner'>('editor')
+const title = ref('')
 const messageError = ref<string | undefined>()
 const sending = ref(false)
-const sent = ref<Set<string>>(new Set())
+// Handle → what was sent, for the confirmation badge.
+const sent = ref(new Map<string, 'owners' | 'wedance'>())
 
-function startClaim(username: string) {
+function start(username: string, m: 'claim' | 'join' | 'reclaim') {
   openFor.value = username
+  mode.value = m
   message.value = ''
+  title.value = ''
+  role.value = 'editor'
   messageError.value = undefined
 }
-async function sendClaim(username: string) {
-  if (message.value.trim().length < 3) { messageError.value = 'Tell us how we can confirm it’s you.'; return }
+async function send(username: string) {
+  if (message.value.trim().length < 3) { messageError.value = 'Tell us who you are and how we can check it.'; return }
   sending.value = true
   error.value = null
   try {
-    await $trpc.business.requestClaim.mutate({ username, message: message.value })
-    sent.value = new Set([...sent.value, username])
+    const res = await $trpc.businessTeam.requestAccess.mutate({
+      username, kind: mode.value, role: role.value, title: title.value.trim() || null, message: message.value,
+    })
+    sent.value = new Map(sent.value).set(username, res.reviewer)
     openFor.value = null
   } catch (e: any) {
     error.value = e?.message || 'Could not send your request.'
   } finally {
     sending.value = false
   }
+}
+
+const formCopy = {
+  claim: { label: 'How can we confirm it’s you?', hint: 'For example: “I’ll DM you from @myhandle on Instagram” or “email me at the address on our website”.' },
+  join: { label: 'Who are you to them?', hint: 'The owners see this. For example: “Alösha, I do the promotion for the Thursday party.”' },
+  reclaim: { label: 'Why is this page yours?', hint: 'WeDance checks this, not the people who manage it now. Give us something we can verify, e.g. a DM from the profile’s Instagram account.' },
 }
 
 const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', organizer: 'Organizer' }
@@ -92,22 +107,30 @@ const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', or
             </div>
             <p class="text-xs text-muted-foreground truncate">@{{ r.username }}<template v-if="r.city"> · {{ r.city }}</template></p>
           </div>
-          <AdminStatus v-if="sent.has(r.username)" tone="success"><Check class="size-3" aria-hidden="true" /> Request sent</AdminStatus>
-          <span v-else-if="r.managed" class="text-xs text-muted-foreground">Already managed</span>
-          <Button v-else-if="openFor !== r.username" variant="outline-pill" size="pill-sm" @click="startClaim(r.username)">This is me</Button>
+          <AdminStatus v-if="sent.has(r.username)" tone="success"><Check class="size-3" aria-hidden="true" /> {{ sent.get(r.username) === 'owners' ? 'Sent to the owners' : 'Sent to WeDance' }}</AdminStatus>
+          <template v-else-if="openFor !== r.username">
+            <Button v-if="!r.managed" variant="outline-pill" size="pill-sm" @click="start(r.username, 'claim')">This is me</Button>
+            <Button v-else variant="outline-pill" size="pill-sm" @click="start(r.username, 'join')">Join the team</Button>
+          </template>
         </div>
+        <p v-if="r.managed && !sent.has(r.username) && openFor !== r.username" class="mt-2 text-right text-xs">
+          <button type="button" class="text-muted-foreground hover:text-foreground hover:underline" @click="start(r.username, 'reclaim')">This is my page, someone else has it</button>
+        </p>
 
-        <form v-if="openFor === r.username" class="mt-4 border-t pt-4" novalidate @submit.prevent="sendClaim(r.username)">
-          <Field
-            :id="`claim-${r.username}`"
-            label="How can we confirm it’s you?"
-            hint="For example: “I’ll DM you from @myhandle on Instagram” or “email me at the address on our website”."
-            :error="messageError"
-          >
+        <form v-if="openFor === r.username" class="mt-4 border-t pt-4" novalidate @submit.prevent="send(r.username)">
+          <div v-if="mode === 'join'" class="mb-3 grid gap-3 sm:grid-cols-2">
+            <Field :id="`role-${r.username}`" label="Role">
+              <Select v-model="role" :options="[{ label: 'Editor — edit the profile and events', value: 'editor' }, { label: 'Owner — also manage the team', value: 'owner' }]" />
+            </Field>
+            <Field :id="`title-${r.username}`" label="Your title" optional hint="Shown on the team, e.g. Promoter, Resident DJ.">
+              <Input v-model="title" />
+            </Field>
+          </div>
+          <Field :id="`claim-${r.username}`" :label="formCopy[mode].label" :hint="formCopy[mode].hint" :error="messageError">
             <Textarea v-model="message" :rows="3" />
           </Field>
           <div class="mt-3 flex gap-2">
-            <Button type="submit" variant="pill" :loading="sending">Send request</Button>
+            <Button type="submit" variant="pill" :loading="sending">{{ mode === 'join' ? 'Ask to join' : 'Send request' }}</Button>
             <Button type="button" variant="outline-pill" @click="openFor = null">Cancel</Button>
           </div>
         </form>
