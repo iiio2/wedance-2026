@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCityOptions, matchRange, normalizeCity, searchCities, type CityOption } from './citySearch'
+import { buildCityOptions, citySlug, matchRange, normalizeCity, searchCities, type CityOption } from './citySearch'
 
 const opt = (name: string, communities = 0, extra: Partial<CityOption> = {}): CityOption =>
   ({ name, slug: name.toLowerCase().replace(/\s+/g, '-'), country: null, altNames: [], communities, ...extra })
@@ -71,3 +71,13 @@ describe('buildCityOptions', () => {
     expect(o!.altNames).toEqual(['Оэйраш'])
   })
 })
+
+describe('normalizeCity / citySlug: letters NFKD cannot fold', () => {
+  it('folds ł ø æ ß so slugs and search stay ASCII', () => {
+    expect(citySlug('Wrocław')).toBe('wroclaw')
+    expect(citySlug('Łódź')).toBe('lodz')
+    expect(citySlug('Tromsø')).toBe('tromso')
+    expect(normalizeCity('Straße')).toBe('strasse')
+  })
+})
+

@@ -89,9 +89,14 @@ export function mergeCityResults(lists: CityOption[][], limit = 8): CityOption[]
 }
 
 /** Lowercase, strip accents, collapse punctuation — "São Paulo" and "sao paulo" compare equal. */
+// Letters NFKD can't decompose to ASCII. Without this "Wrocław" slugged to
+// "wroc-aw" and "lodz" never matched "Łódź".
+const FOLD: Record<string, string> = { ł: 'l', đ: 'd', ð: 'd', ø: 'o', æ: 'ae', œ: 'oe', ß: 'ss', þ: 'th', ı: 'i', ħ: 'h', ŧ: 't' }
+
 export function normalizeCity(s: string): string {
   return s
     .toLowerCase()
+    .replace(/[łđðøæœßþıħŧ]/g, ch => FOLD[ch]!)
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^\p{L}\p{N}]+/gu, ' ')

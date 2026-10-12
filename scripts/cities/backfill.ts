@@ -39,7 +39,9 @@ import { normalizeCity, titleFromSlug } from '../../shared/utils/citySearch'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const args = Object.fromEntries(process.argv.slice(2).map((a) => {
-  const [k, v] = a.replace(/^--/, '').split('=')
+  // Split on the FIRST '=' only — database URLs carry '=' in their query string.
+  const [k, ...rest] = a.replace(/^--/, '').split('=')
+  const v = rest.length ? rest.join('=') : undefined
   return [k, v ?? 'true']
 })) as Record<string, string>
 

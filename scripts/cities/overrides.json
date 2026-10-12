@@ -1,0 +1,21 @@
+{
+  "$comment": "Manual value → city-slug mappings for the city_id column migration (docs/research/2026-10-12-city-canonicalisation.md). null = no city (junk / region / ambiguous) — leave the row's city empty and let the person re-pick. Reviewed 2026-10-12 after the Places backfill.",
+  "München-Flughafen": "munich",
+  "Munich, Germany": "munich",
+  "Minsk": "minsk",
+  "Mons": "mons",
+  "Saint Petersburg": "saint-petersburg",
+  "Bürglen": "burglen",
+  "Jaco": "jaco",
+  "Wrocaw": "wroclaw",
+  "Parede": "cascais",
+  "German": null,
+  "Qta": null,
+  "Turkey Point": null,
+  "Vlaams-Brabant": null,
+  "Florida": null,
+  "San Juan": null,
+  "Santiago": null,
+  "Espanya la Vella": null,
+  "Brusciana": null
+}
