@@ -2,11 +2,12 @@
 import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
 import { readableOn } from '~/lib/contrast'
+import { displayDanceStyle, sameDanceStyle, sortDanceStyles } from '#shared/dance-styles'
 /**
- * StyleFilter — the dance-style chip row used on every filter surface.
- * Leads with the big three (Salsa, Bachata, Kizomba), collapses the rest
- * behind "More", and offers a "Don't know?" escape hatch to the
- * dance-finder (a v4 game to be integrated later — placeholder for now).
+ * StyleFilter — the single-select dance-style chip row used on filter surfaces.
+ * Orders the given styles by the taxonomy's popularity (shared/dance-styles.ts),
+ * de-duplicating aliases, leads with the top three and collapses the rest behind
+ * "+N more". Emits the style value as passed in, so callers keep their stored values.
  */
 const props = withDefaults(defineProps<{
   styles: string[]
@@ -18,16 +19,16 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
-const PRIMARY = ['Salsa', 'Bachata', 'Kizomba']
+const LEAD = 3
 const expanded = ref(false)
 
-// Primary styles present in the data lead; the rest follow.
-const ordered = computed(() => {
-  const primary = PRIMARY.filter((s) => props.styles.includes(s))
-  const rest = props.styles.filter((s) => !PRIMARY.includes(s))
-  return [...primary, ...rest]
+// Most popular first (taxonomy rank); unknown values last.
+const ordered = computed(() => sortDanceStyles(props.styles))
+const leadCount = computed(() => {
+  // Keep the active style visible while collapsed.
+  const i = ordered.value.findIndex(s => props.modelValue && sameDanceStyle(s, props.modelValue))
+  return Math.max(LEAD, i + 1)
 })
-const leadCount = computed(() => Math.max(PRIMARY.filter((s) => props.styles.includes(s)).length, 3))
 const visible = computed(() => (expanded.value ? ordered.value : ordered.value.slice(0, leadCount.value)))
 const hiddenCount = computed(() => Math.max(0, ordered.value.length - leadCount.value))
 
@@ -54,7 +55,7 @@ function select(s: string) {
           : { background: 'white', color: ink(i), border: '1px solid ' + accents[i % accents.length] + '55' }"
         @click="select(style)"
       >
-        {{ style }}
+        {{ displayDanceStyle(style) }}
       </Button>
 
       <Button

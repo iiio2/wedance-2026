@@ -13,6 +13,7 @@
  * /find-your-dance "free taster class" pick) shows a "Your first class"
  * section of upcoming classes, free-priced ones first (P1006).
  */
+import { sameDanceStyle, sortDanceStyles } from '#shared/dance-styles'
 import { MapPin, Calendar, ArrowRight, Sparkles } from 'lucide-vue-next'
 import type { Teacher } from '~/types/festival'
 import { eventLocalDate, eventLocalTime, eventLocalWeekday, formatEventWhen } from '#shared/utils/eventTime'
@@ -144,14 +145,14 @@ const syncedLater = computed(() => {
   const weekEnd = [...thisWeekDates.value].sort().at(-1) ?? ''
   return syncedNonFestival.value
     .filter(e => eventLocalDate(e.startDate, e.timezone) > weekEnd)
-    .filter(e => !selectedStyle.value || (e.styles || []).includes(selectedStyle.value))
+    .filter(e => !selectedStyle.value || (e.styles || []).some((s: string) => sameDanceStyle(s, selectedStyle.value)))
 })
 // Booked events beyond this week (same shape as toCityEvent output).
 const bookedLater = computed(() => {
   const weekEnd = [...thisWeekDates.value].sort().at(-1) ?? ''
   return bookedEvents.value
     .filter(b => b.eventDate && String(b.eventDate).slice(0, 10) > weekEnd)
-    .filter(b => !selectedStyle.value || (b.styles || []).includes(selectedStyle.value))
+    .filter(b => !selectedStyle.value || (b.styles || []).some((s: string) => sameDanceStyle(s, selectedStyle.value)))
     .map(b => {
       const date = String(b.eventDate).slice(0, 10)
       return {
@@ -194,10 +195,11 @@ const city = computed(() => ({
   name: cityName.value,
   country: dir.value?.country || '',
   eventCount: bookedThisWeek.value.length + syncedThisWeek.value.length,
-  styles: Array.from(new Set([
+  // Most popular first (taxonomy), aliases de-duplicated, before the cap.
+  styles: sortDanceStyles([
     ...teachers.value.flatMap((t: any) => t.styles || []),
     ...syncedEvents.value.flatMap((e: any) => e.styles || []),
-  ])).slice(0, 12),
+  ]).slice(0, 12),
 }))
 
 // Intent-first, data-driven SEO. Dancers search by style ("salsa munich"), so
@@ -325,7 +327,7 @@ const seeAllHref = computed(() => `/cities/${slug}/${roleSlugFor(activeTab.value
 const filteredEvents = computed(() => {
   let result: any[] = [...events, ...bookedThisWeek.value, ...syncedThisWeek.value]
   if (selectedStyle.value) {
-    result = result.filter(e => e.style === selectedStyle.value || (e.styles || []).includes(selectedStyle.value))
+    result = result.filter(e => e.style === selectedStyle.value || (e.styles || []).some((s: string) => sameDanceStyle(s, selectedStyle.value)))
   }
   if (selectedPersonId.value) {
     const id = selectedPersonId.value
@@ -371,7 +373,7 @@ const tasterClasses = computed(() => {
     free: false, price: '',
   }))
   const sorted = [...synced, ...booked]
-    .filter(e => !selectedStyle.value || e.styles.includes(selectedStyle.value))
+    .filter(e => !selectedStyle.value || e.styles.some((s: string) => sameDanceStyle(s, selectedStyle.value)))
     .sort((a, b) => Number(b.free) - Number(a.free) || a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
   // A weekly course repeats every week — show only its next session so the
   // list offers different classes to try, not one course eight times.

@@ -476,7 +476,6 @@ const paymentSuccessInfo = ref<{ festivalName: string; ticketName: string; amoun
 let paymentSuccessTimer: ReturnType<typeof setTimeout> | undefined
 
 // Profile nudge after ticket purchase
-const NUDGE_DANCE_STYLES = ['Salsa', 'Bachata', 'Kizomba', 'Zouk', 'Timba', 'Semba', 'Afro-Cuban', 'Reggaeton', 'Cha-Cha']
 const profileIncomplete = computed(() =>
   isSignedIn.value && (!myDanceStyles.value?.length || !myRole.value),
 )
@@ -486,12 +485,6 @@ const nudgeForm = reactive({
   role: '' as '' | 'lead' | 'follow' | 'both',
 })
 const nudgeSaving = ref(false)
-
-function toggleNudgeStyle(style: string) {
-  const i = nudgeForm.danceStyles.indexOf(style)
-  if (i >= 0) nudgeForm.danceStyles.splice(i, 1)
-  else nudgeForm.danceStyles.push(style)
-}
 
 async function submitNudge() {
   if (!nudgeForm.danceStyles.length || !nudgeForm.role) return
@@ -1815,22 +1808,8 @@ useHead({
             <div class="p-5 sm:p-6">
               <!-- Dance styles -->
               <div class="mb-5">
-                <span class="text-sm font-bold block mb-2 text-foreground">Which dances?</span>
-                <div class="flex flex-wrap gap-2">
-                  <Button
-                    v-for="style in NUDGE_DANCE_STYLES"
-                    :key="style"
-                    type="button"
-                    :variant="nudgeForm.danceStyles.includes(style) ? 'pill' : 'outline-pill'"
-                    size="pill-sm"
-                    class="gap-1 px-3.5"
-                    :aria-pressed="nudgeForm.danceStyles.includes(style)"
-                    @click="toggleNudgeStyle(style)"
-                  >
-                    <Check v-if="nudgeForm.danceStyles.includes(style)" class="w-3 h-3" aria-hidden="true" />
-                    {{ style }}
-                  </Button>
-                </div>
+                <label for="nudge-styles" class="text-sm font-bold block mb-2 text-foreground">Which dances?</label>
+                <DanceStylePicker id="nudge-styles" v-model="nudgeForm.danceStyles" label="Which dances?" :popular-count="6" />
               </div>
 
               <!-- Role -->

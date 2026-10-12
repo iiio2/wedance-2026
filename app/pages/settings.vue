@@ -23,7 +23,6 @@ const {
   updateProfile, changePassword, deleteAccount,
 } = useAuth()
 
-const DANCE_STYLES = ['Salsa', 'Bachata', 'Kizomba', 'Zouk', 'Timba', 'Semba', 'Afro-Cuban', 'Reggaeton', 'Cha-Cha']
 
 const form = reactive({
   name: '', city: '', photo: '', bio: '',
@@ -73,13 +72,10 @@ function hydrate() {
 onMounted(hydrate)
 watch([dancerName, meCity, meStyles, meLevels, meRole, meBio, mePhoto, meIg, meYt, meSite, mePublic], hydrate)
 
-function toggleStyle(style: string) {
-  const i = form.danceStyles.indexOf(style)
-  if (i >= 0) {
-    form.danceStyles.splice(i, 1)
-    delete form.danceLevels[style]
-  } else form.danceStyles.push(style)
-}
+// Removing a style in the picker drops its level too.
+watch(() => [...form.danceStyles], (styles) => {
+  for (const s of Object.keys(form.danceLevels)) if (!styles.includes(s)) delete form.danceLevels[s]
+})
 
 // Tapping the active level clears it — a level is optional.
 function setLevel(style: string, level: DanceLevel) {
@@ -184,17 +180,8 @@ async function submitDelete() {
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <span id="settings-dances-label" class="text-sm font-bold text-foreground leading-snug">Dances <span class="font-normal text-muted-foreground">(optional)</span></span>
-          <div role="group" aria-labelledby="settings-dances-label" class="flex flex-wrap gap-1.5">
-            <ToggleChip
-              v-for="s in DANCE_STYLES"
-              :key="s"
-              variant="soft"
-              :pressed="form.danceStyles.includes(s)"
-              class="px-3 py-1.5 text-xs uppercase tracking-wider"
-              @click="toggleStyle(s)"
-            >{{ s }}</ToggleChip>
-          </div>
+          <label for="settings-dances" class="text-sm font-bold text-foreground leading-snug">Dances <span class="font-normal text-muted-foreground">(optional)</span></label>
+          <DanceStylePicker id="settings-dances" v-model="form.danceStyles" label="Dances" />
           <div v-if="form.danceStyles.length" class="mt-3 grid gap-2">
             <p class="text-xs text-muted-foreground font-sans">
               Your level in each — organizers see it only as an anonymous mix of who's coming.
