@@ -1,6 +1,6 @@
 /**
  * One full-page Argos screenshot per route × viewport. Routes come from the
- * release-snapshot list so both stay in sync (scripts/release-snapshots/routes.ts).
+ * shared route list (scripts/release-snapshots/routes.ts).
  * Volatile bits (relative dates, live counts) are hidden via [data-visual-mask]
  * so day-to-day data doesn't show up as a design change.
  */

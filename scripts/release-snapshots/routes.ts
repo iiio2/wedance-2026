@@ -1,7 +1,8 @@
 /**
- * Pages captured after every production deploy (see capture.ts and
- * .github/workflows/release-snapshots.yml). Add a route here to start
- * archiving it; `festival` resolves to the first upcoming festival at capture time.
+ * Pages recorded in the visual history after every production deploy
+ * (e2e/argos/pages.spec.ts, .github/workflows/visual-history.yml, docs/visual-history.md).
+ * Add a route here to start recording it; `festival` resolves to the first
+ * upcoming festival at capture time.
  */
 export const SNAPSHOT_ROUTES: { path: string, name: string }[] = [
   { path: '/', name: 'home' },

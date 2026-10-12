@@ -28,6 +28,11 @@ jobs:
 
       - run: bun run test -- --coverage
 
+      - name: Design-system drift report (recorded, never blocks)
+        if: always()
+        continue-on-error: true
+        run: bun scripts/design-guardrails/report.ts
+
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
@@ -197,9 +202,11 @@ jobs:
       # Design-system guardrails (docs/design-system.md → Guardrails): component
       # contract on every page + a11y on the static /docs/design pages. Product-route
       # a11y and visual regression stay local — they depend on DB content / OS fonts.
-      - name: Design-system contract + a11y
-        # Block scalar: the ": " inside the grep pattern made the whole workflow
-        # invalid YAML when written inline (CI silently didn't run 2026-10-10..12).
+      - name: Design-system contract + a11y (recorded, never blocks)
+        # A record, not a gate: results land in this run and the E2E report;
+        # a finding never fails the job. Block scalar because the ": " in the
+        # grep pattern made the workflow invalid YAML when inline (2026-10-10..12).
+        continue-on-error: true
         run: |
           bunx playwright test -c playwright.design.config.ts contract a11y --grep "component contract|: /docs/design"
 

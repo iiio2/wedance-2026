@@ -1,0 +1,55 @@
+# Visual history in Argos (docs/visual-review.md) — a record, never a gate.
+# After every successful PRODUCTION deploy, full-page screenshots of the live
+# site are uploaded to Argos on branch main. Each build = what shipped, when,
+# from which commit; Argos lets you browse any build and compare any two
+# (side by side / slider / diff). No PR builds, no checks that block merging.
+name: Visual history
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-history
+  cancel-in-progress: false
+
+jobs:
+  argos:
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.deployment.sha }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lockb') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
+
+      - run: bun install --frozen-lockfile
+
+      - run: bunx playwright install --with-deps chromium
+
+      - name: Let the production alias settle
+        run: sleep 20
+
+      - name: Screenshot the live site and upload to Argos
+        continue-on-error: true
+        run: bunx playwright test -c playwright.argos.config.ts
+        env:
+          CI: 'true'
+          ARGOS_TOKEN: ${{ secrets.ARGOS_TOKEN }}
+          ARGOS_BASE_URL: https://2026.wedance.vip
+          ARGOS_COMMIT: ${{ github.event.deployment.sha }}
+          ARGOS_BRANCH: main
+          ARGOS_REFERENCE_BRANCH: main

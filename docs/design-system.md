@@ -199,17 +199,19 @@ What still holds a literal hex (by design or below the token threshold):
 
 Automated checks so the system can't drift or break silently. Each failure message points back here.
 
-| Check | Command | Runs in CI | What fails it |
+**Records, not gates.** These checks trace design drift per commit; none of them blocks a merge or a deploy. In CI they run as `continue-on-error` steps and write their findings to the run (summary / report). Drift is fixed forward.
+
+| Check | Command | Recorded in CI | What it flags |
 |---|---|---|---|
-| Token drift | `bun run test:tokens` (also part of `bun run test`) | yes (`unit`) | a file gains a literal 6/8-digit hex; an inline `font-family` that isn't `var(--wd-font-*)`; a Google Fonts URL loading anything but Playfair Display; a quoted comma list in a font token (`'Caveat, cursive'` = one bogus family); a Tailwind class name built at runtime (`` `bg-wd-${key}` ``, `'text-' + c` — Tailwind never generates it) |
-| Component contract | `bun run test:design` | yes (`e2e-smoke`) | a `<Button>` that isn't a `<button>`/`<a href>`; a disabled Button without the `disabled` attribute or `cursor: not-allowed`; an enabled one without `cursor: pointer`; Button/Badge text contrast < 4.5:1 |
+| Token drift | `bun run test:tokens` | `unit` job → run summary | a file gains a literal 6/8-digit hex; an inline `font-family` that isn't `var(--wd-font-*)`; a Google Fonts URL loading anything but Playfair Display; a quoted comma list in a font token (`'Caveat, cursive'` = one bogus family); a Tailwind class name built at runtime (`` `bg-wd-${key}` ``, `'text-' + c` — Tailwind never generates it) |
+| Component contract | `bun run test:design` | `e2e-smoke` job (non-blocking) | a `<Button>` that isn't a `<button>`/`<a href>`; a disabled Button without the `disabled` attribute or `cursor: not-allowed`; an enabled one without `cursor: pointer`; Button/Badge text contrast < 4.5:1 |
 | Accessibility | `bun run test:design` | `/docs/design` pages only | built-in: `<html lang>`, `<main>`, one `<h1>`, img alt, names on buttons/links/inputs; plus axe-core WCAG 2.1 A/AA when `@axe-core/playwright` is installed (skipped otherwise) |
 | Visual regression | `bun run test:visual` | no (local) | the first viewport of a `/docs/design` page or key product route (data masked) at 1280 and 375 differs from its baseline |
 
-**Ratchets, not walls.** Existing debt is frozen, new debt fails:
+**Baselines** — known debt is recorded, so reports show only what's new:
 
-- `scripts/design-guardrails/baseline.json` — hex/font literal counts per file. Removed some? `bun scripts/design-guardrails/update-baseline.ts` (it refuses to raise a number unless `--allow-increase`, which needs a reason in the PR).
-- `e2e/design/a11y-baseline.json` — known violations. `/docs/design` pages: per-rule counts. Product routes: per-rule `"*"` (counts move with DB content; a *new* rule still fails). Fixed one? Delete or lower the entry.
+- `scripts/design-guardrails/baseline.json` — hex/font literal counts per file. Removed some? `bun scripts/design-guardrails/update-baseline.ts` (raising a number needs `--allow-increase`).
+- `e2e/design/a11y-baseline.json` — known violations. `/docs/design` pages: per-rule counts. Product routes: per-rule `"*"` (counts move with DB content). Fixed one? Delete or lower the entry.
 - `CONTRAST_DEBT` in `e2e/design/contract.spec.ts` — colour pairs below 4.5:1 that are tolerated but may not get worse. Delete the entry when the token is fixed.
 
 **Coverage is automatic.** `/docs/design` pages come from `app/lib/design-nav.ts` (every non-planned item whose page exists). Product routes are one line each in `PRODUCT_ROUTES` (`e2e/design/pages.ts`). Mark a data-driven region `data-visual-mask` to exclude it from screenshots.
