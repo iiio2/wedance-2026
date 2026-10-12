@@ -152,7 +152,19 @@ export function createCityService(deps: CityServiceDeps) {
 
   async function localOptions(): Promise<{ options: CityOption[], canonical: boolean }> {
     const list = await rows()
-    if (list && list.length) return { options: list.map(r => rowToOption(r)), canonical: true }
+    if (list && list.length) {
+      // Rows carry no popularity, so rank them by the catalogue's community
+      // counts (dancer/profile cities) — otherwise "Мюнх" listed Münchberg
+      // above Munich. Matched by slug, then by any folded spelling.
+      const counts = new Map<string, number>()
+      for (const c of await deps.fallback().catch(() => [] as CityOption[])) {
+        for (const key of [c.slug, normalizeCity(c.name), ...c.altNames.map(normalizeCity)])
+          if (key) counts.set(key, Math.max(counts.get(key) ?? 0, c.communities))
+      }
+      const communitiesFor = (r: CityRow) => Math.max(0, ...[r.slug, r.name, r.localName ?? '', ...(r.altNames ?? [])]
+        .map(k => counts.get(k === r.slug ? k : normalizeCity(k)) ?? 0))
+      return { options: list.map(r => rowToOption(r, communitiesFor(r))), canonical: true }
+    }
     return { options: await deps.fallback(), canonical: !!list }
   }
 

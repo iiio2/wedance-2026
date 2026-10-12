@@ -147,6 +147,19 @@ describe('city search', () => {
     expect(places.calls).toBe(3)
   })
 
+  it('ranks table rows by community size, not alphabetically', async () => {
+    const places = fakePlaces()
+    const munchberg: CityRow = { id: 'mb', googlePlaceId: 'mb-id', slug: 'munchberg', name: 'Münchberg', localName: 'Münchberg', country: 'Germany', countryCode: 'DE', region: 'Bavaria', lat: 50.2, lng: 11.8, altNames: ['Мюнхберг'] }
+    const catalogue: CityOption[] = [
+      { name: 'Munich', slug: 'munich', country: 'Germany', altNames: ['München'], communities: 975, source: 'catalogue' },
+      { name: 'Münchberg', slug: 'munchberg', country: 'Germany', altNames: [], communities: 0, source: 'catalogue' },
+    ]
+    const svc = createCityService({ store: memoryStore([munchberg, munichRow(['München', 'Мюнхен'])]), places, fallback: async () => catalogue, log: quiet })
+    const r = await svc.search('Мюнх')
+    expect(r.results.map(c => c.name)).toEqual(['Munich', 'Münchberg'])
+    expect(r.results[0]!.communities).toBe(975)
+  })
+
   it('falls back to the catalogue while the table is missing', async () => {
     const places = fakePlaces()
     const catalogue: CityOption[] = [{ name: 'Munich', slug: 'munich', country: 'Germany', altNames: ['München'], communities: 9, source: 'catalogue' }]
