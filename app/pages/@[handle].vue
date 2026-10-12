@@ -32,6 +32,7 @@ const syncedEvents = ref<any[]>([])
 const isStub = ref(false)
 // Business: managers get an Edit link; unmanaged profiles get a Claim link.
 const canManage = ref(false)
+const managed = ref(true)
 
 async function resolve() {
   pending.value = true
@@ -52,7 +53,9 @@ async function resolve() {
       schedule.value = sched as any[]
       availability.value = avail as any[]
       syncedEvents.value = synced as any[]
-      canManage.value = (await $trpc.business.canManage.query({ username: pro.profile.username }).catch(() => ({ canManage: false }))).canManage
+      const access = await $trpc.business.canManage.query({ username: pro.profile.username }).catch(() => ({ canManage: false, managed: true }))
+      canManage.value = access.canManage
+      managed.value = access.managed
       return
     }
     try {
@@ -245,7 +248,7 @@ useHead(() => ({
             <NuxtLink v-if="isFree" :to="`/elections/${handle}`" class="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-primary font-sans">
               <ShieldCheck class="w-3.5 h-3.5" /> {{ profile.moderatorName ? 'Moderator election' : 'Elect a moderator' }} →
             </NuxtLink>
-            <div v-if="canManage || !profile.claimed" class="mt-5 pt-4 border-t text-xs font-sans">
+            <div v-if="canManage || !managed" class="mt-5 pt-4 border-t text-xs font-sans">
               <NuxtLink v-if="canManage" :to="`/business/profiles/${profile.username}`" class="font-bold text-wd-red-800 hover:underline">Edit this page →</NuxtLink>
               <NuxtLink v-else :to="`/business/claim?profile=${profile.username}`" class="text-muted-foreground hover:text-foreground hover:underline">Is this you? Claim this page →</NuxtLink>
             </div>

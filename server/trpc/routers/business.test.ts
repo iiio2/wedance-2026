@@ -89,6 +89,25 @@ describe.skipIf(!DATABASE_URL)('business router', () => {
     expect(row.citySlug).toBe('munich')
   })
 
+  it('treats a v4-claimed profile without 2026 managers as claimable', async () => {
+    // Like MontunoClub: claimed=true came over from v4, nobody manages it here.
+    const username = `${tag}-v4org`
+    await db.insert(schema.profiles).values({ username, type: 'organizer', name: `${tag} V4 Org`, claimed: true })
+    createdProfiles.push(username)
+
+    const [hit] = (await caller(other).business.search({ q: `${tag} V4` })).filter(r => r.username === username)
+    expect(hit?.managed).toBe(false)
+    expect(await caller(null).business.canManage({ username })).toEqual({ canManage: false, managed: false })
+    await expect(caller(other).business.requestClaim({ username, message: 'I run it' })).resolves.toEqual({ requested: true })
+
+    // Once someone manages it, it reads as managed and new claims are refused.
+    const [claim] = (await caller(null, true).business.listClaims()).filter(c => c.profileUsername === username)
+    expect(claim?.profileManaged).toBe(false)
+    await caller(null, true).business.decideClaim({ claimId: claim!.id, approve: true })
+    expect((await caller(null).business.canManage({ username })).managed).toBe(true)
+    await expect(caller(owner).business.requestClaim({ username, message: 'me too' })).rejects.toThrow('already manages')
+  })
+
   it('picks a free handle when the name is taken', async () => {
     const a = await caller(owner).business.create({ type: 'organizer', name: `${tag} Org` })
     const b = await caller(owner).business.create({ type: 'organizer', name: `${tag} Org` })

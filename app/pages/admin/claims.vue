@@ -61,7 +61,7 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
       <div v-for="c in items" :key="c.id" class="rounded-2xl border bg-card p-4 shadow-wd-card">
         <div class="flex flex-wrap items-center gap-2">
           <AdminStatus>{{ typeLabel[c.profileType] || c.profileType }}</AdminStatus>
-          <AdminStatus v-if="c.profileClaimed" tone="danger">Already managed</AdminStatus>
+          <AdminStatus v-if="c.profileManaged" tone="danger">Already managed</AdminStatus>
           <span class="text-xs text-muted-foreground">{{ fmt(c.createdAt) }}</span>
         </div>
         <NuxtLink :to="`/@${c.profileUsername}`" target="_blank" class="mt-2 inline-flex items-center gap-1 text-base font-bold hover:underline">

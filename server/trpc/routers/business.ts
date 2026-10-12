@@ -13,6 +13,9 @@ import { slugify, randomSuffix } from '../../utils/slug'
  * approves the claim). Every edit is checked against profile_members, so there
  * is no way to edit a profile you don't manage. Approving sets
  * profiles.claimed, which also stops the v3 sync from overwriting the profile.
+ *
+ * "Managed" = has at least one profile_members row. `claimed` alone is NOT
+ * "managed": 226 v4 imports carry claimed=true from v4 with no 2026 manager.
  */
 
 const PROFILE_TYPES = ['artist', 'venue', 'organizer'] as const
@@ -60,19 +63,25 @@ export async function citySlugFor(db: any, name: string | null) {
   return c?.slug ?? slugify(name)
 }
 
+// SQL: does anyone manage this profile in 2026?
+// Spelled out: drizzle drops the table name on single-table selects, and a bare
+// "id" inside the subquery would bind to m.id.
+const isManaged = sql<boolean>`exists (select 1 from "profile_members" m where m.profile_id = "profiles"."id")`
+
 export const businessRouter = router({
   // For the public /@handle page: show "Edit" to managers, "Claim" when unmanaged.
   canManage: publicProcedure
     .input(z.object({ username: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      if (!ctx.dancerId) return { canManage: false }
-      if (ctx.isAdmin) return { canManage: true }
+      const [p] = await ctx.db.select({ id: profiles.id, managed: isManaged }).from(profiles).where(eq(profiles.username, input.username))
+      if (!p) return { canManage: false, managed: false }
+      if (!ctx.dancerId) return { canManage: false, managed: !!p.managed }
+      if (ctx.isAdmin) return { canManage: true, managed: !!p.managed }
       const [m] = await ctx.db
         .select({ id: profileMembers.id })
         .from(profileMembers)
-        .innerJoin(profiles, eq(profiles.id, profileMembers.profileId))
-        .where(and(eq(profiles.username, input.username), eq(profileMembers.dancerId, ctx.dancerId)))
-      return { canManage: !!m }
+        .where(and(eq(profileMembers.profileId, p.id), eq(profileMembers.dancerId, ctx.dancerId)))
+      return { canManage: !!m, managed: !!p.managed }
     }),
 
   // Profiles I manage + my claim requests that are still open or were rejected.
@@ -120,7 +129,7 @@ export const businessRouter = router({
           type: profiles.type,
           city: profiles.city,
           photo: profiles.photo,
-          claimed: profiles.claimed,
+          managed: isManaged,
         })
         .from(profiles)
         .where(and(eq(profiles.status, 'visible'), or(ilike(profiles.name, like), ilike(profiles.username, like))))
@@ -133,7 +142,8 @@ export const businessRouter = router({
     .mutation(async ({ ctx, input }) => {
       const [p] = await ctx.db.select().from(profiles).where(eq(profiles.username, input.username))
       if (!p) throw new TRPCError({ code: 'NOT_FOUND', message: 'Profile not found.' })
-      if (p.claimed) {
+      const [m] = await ctx.db.select({ id: profileMembers.id }).from(profileMembers).where(eq(profileMembers.profileId, p.id)).limit(1)
+      if (m) {
         throw new TRPCError({ code: 'CONFLICT', message: 'Someone already manages this profile. Contact us if that’s wrong.' })
       }
       // One request per person per profile; a rejected one can be re-sent.
@@ -220,7 +230,7 @@ export const businessRouter = router({
         profileUsername: profiles.username,
         profileName: profiles.name,
         profileType: profiles.type,
-        profileClaimed: profiles.claimed,
+        profileManaged: isManaged,
         dancerName: dancers.name,
         dancerEmail: dancers.email,
         dancerInstagram: dancers.instagram,

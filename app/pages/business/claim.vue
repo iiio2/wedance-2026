@@ -93,7 +93,7 @@ const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', or
             <p class="text-xs text-muted-foreground truncate">@{{ r.username }}<template v-if="r.city"> · {{ r.city }}</template></p>
           </div>
           <AdminStatus v-if="sent.has(r.username)" tone="success"><Check class="size-3" aria-hidden="true" /> Request sent</AdminStatus>
-          <span v-else-if="r.claimed" class="text-xs text-muted-foreground">Already managed</span>
+          <span v-else-if="r.managed" class="text-xs text-muted-foreground">Already managed</span>
           <Button v-else-if="openFor !== r.username" variant="outline-pill" size="pill-sm" @click="startClaim(r.username)">This is me</Button>
         </div>
 
