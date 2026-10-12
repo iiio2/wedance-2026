@@ -1,0 +1,70 @@
+# Release snapshots: after every successful production deploy, take full-page
+# screenshots of key routes (scripts/release-snapshots/routes.ts) and attach
+# them to a GitHub Release tagged snapshots/<date>-<sha>. Archive only — real
+# data, never overwritten. Old Vercel deployments render today's database, so
+# these are the true record of what shipped.
+name: Release snapshots
+
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Site to capture
+        default: https://2026.wedance.vip
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-snapshots
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    # Vercel reports deployments to GitHub; only production successes count.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment.environment == 'Production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SITE_URL: ${{ github.event.inputs.url || 'https://2026.wedance.vip' }}
+      SHA: ${{ github.event.deployment.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lockb') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
+
+      - run: bun install --frozen-lockfile
+
+      - run: bunx playwright install --with-deps chromium
+
+      - name: Let the production alias settle
+        run: sleep 20
+
+      - name: Capture
+        run: bun scripts/release-snapshots/capture.ts --url="$SITE_URL" --out=snapshots
+
+      - name: Publish as a GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          files=(snapshots/*.jpg snapshots/*.png snapshots/manifest.json)
+          TAG="snapshots/$(date -u +%Y-%m-%d-%H%M)-${SHA::7}"
+          gh release create "$TAG" "${files[@]}" \
+            --target "$SHA" \
+            --title "Snapshots $(date -u '+%Y-%m-%d %H:%M') UTC · ${SHA::7}" \
+            --notes-file snapshots/NOTES.md \
+            --prerelease
