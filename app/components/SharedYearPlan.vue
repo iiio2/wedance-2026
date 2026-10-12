@@ -70,11 +70,19 @@ function formatDateRange(start: string, end: string): string {
     <!-- Sharer profile card -->
     <div class="rounded-xl border-2 border-dashed p-6 text-center space-y-4" style="border-color:color-mix(in srgb, var(--wd-red-600) 26.7%, transparent); background:rgba(255,255,255,0.8);">
       <img
+        v-if="sharer.photo"
         :src="sharer.photo"
         :alt="sharer.name"
         class="w-16 h-16 rounded-full object-cover mx-auto border-2"
         style="border-color:color-mix(in srgb, var(--wd-red-600) 26.7%, transparent);"
       />
+      <div
+        v-else
+        class="w-16 h-16 rounded-full flex items-center justify-center text-lg font-bold text-white mx-auto border-2"
+        style="border-color:color-mix(in srgb, var(--wd-red-600) 26.7%, transparent); background:var(--wd-red-600);"
+      >
+        {{ sharer.name.split(' ').map(w => w.charAt(0)).join('').toUpperCase().slice(0, 2) }}
+      </div>
       <div>
         <h1 class="text-xl font-bold font-display text-foreground">{{ sharer.name }}'s 2026 Dance Year</h1>
         <div class="flex items-center justify-center gap-2 mt-2 flex-wrap">
@@ -242,7 +250,7 @@ function formatDateRange(start: string, end: string): string {
         Browse festivals, pick workshops, find partners, and share your year with friends.
       </p>
       <Button variant="cta" size="lg" class="px-6" @click="emit('create-year-plan')">
-        Create my year plan
+        {{ viewerFestivalSlugs.length > 0 ? 'Go to my year plan' : 'Create my year plan' }}
         <ArrowRight aria-hidden="true" />
       </Button>
     </div>
