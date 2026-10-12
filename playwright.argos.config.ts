@@ -9,6 +9,9 @@ import { defineConfig, devices } from '@playwright/test'
  *
  * Read-only: nothing is clicked or submitted.
  */
+// Argos-recommended: consistent font rendering between runs.
+const STABLE_FONTS = ['--disable-lcd-text', '--font-render-hinting=none']
+
 const baseURL = process.env.ARGOS_BASE_URL || 'https://2026.wedance.vip'
 
 export default defineConfig({
@@ -29,7 +32,7 @@ export default defineConfig({
     timezoneId: 'Europe/Berlin',
   },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
-    { name: 'mobile', use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 } },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, launchOptions: { args: STABLE_FONTS } } },
+    { name: 'mobile', use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, launchOptions: { args: STABLE_FONTS } } },
   ],
 })
