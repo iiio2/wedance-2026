@@ -34,7 +34,11 @@
   "axe desktop /design/components/checkbox": {
     "color-contrast": 1
   },
+<<<<<<< HEAD
   "axe desktop /design/components/dance-style-picker": {
+=======
+  "axe desktop /design/components/city-combobox": {
+>>>>>>> w2b-city
     "color-contrast": 1
   },
   "axe desktop /design/components/dialog": {

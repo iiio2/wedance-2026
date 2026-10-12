@@ -198,7 +198,7 @@ async function submit() {
 
           <div class="grid sm:grid-cols-2 gap-4">
             <Field id="inquiry-city" label="City" optional :error="errors.city">
-              <Input v-model="city" placeholder="e.g. Munich" v-bind="fieldAttrs('city', 'inquiry-city-error')" />
+              <CityCombobox v-model="city" placeholder="e.g. Munich" v-bind="fieldAttrs('city', 'inquiry-city-error')" />
             </Field>
             <Field id="inquiry-guests" label="Guests" optional :error="errors.guests">
               <Input v-model="guests" placeholder="e.g. 50, 100–150" v-bind="fieldAttrs('guests', 'inquiry-guests-error')" />

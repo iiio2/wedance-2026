@@ -765,7 +765,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
             <Input v-model="profileName" size="sm" autocomplete="name" />
           </Field>
           <Field id="discover-profile-city" label="City">
-            <Input v-model="profileCity" size="sm" autocomplete="address-level2" />
+            <CityCombobox v-model="profileCity" size="sm" placeholder="e.g. Munich" />
           </Field>
         </div>
 

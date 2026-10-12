@@ -159,7 +159,7 @@ async function submitDelete() {
         </Field>
 
         <Field id="settings-city" label="City" optional>
-          <Input v-model="form.city" placeholder="e.g. Munich" autocomplete="address-level2" />
+          <CityCombobox v-model="form.city" placeholder="e.g. Munich" />
         </Field>
 
         <Field id="settings-bio" label="Bio" optional :error="profileForm.errors.bio">

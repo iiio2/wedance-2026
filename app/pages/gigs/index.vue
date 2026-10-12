@@ -10,6 +10,7 @@ import { GigSchema } from '#shared/validation'
 import { Button } from '~/components/ui/button'
 import { Field } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
+import { CityCombobox } from '~/components/ui/city-combobox'
 import { Select } from '~/components/ui/select'
 import { WD } from '~/lib/brand'
 import { mixHex, readableOn } from '~/lib/contrast'
@@ -370,12 +371,11 @@ const chipInk = (c: string, alpha = 0.094) => readableOn(c, mixHex(c, '#fff', al
 
         <!-- Location -->
         <Field id="gig-location" label="Location or base" :error="errors.location">
-          <Input
+          <CityCombobox
             v-model="formData.location"
             v-bind="fieldAttrs('location', 'gig-location-error')"
-            type="text"
             required
-            placeholder="e.g., Munich, Germany"
+            placeholder="e.g., Munich"
           />
         </Field>
 

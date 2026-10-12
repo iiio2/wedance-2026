@@ -225,10 +225,9 @@ async function skip() {
         <form class="space-y-6" novalidate @submit.prevent="finish">
           <!-- City -->
           <Field v-if="chosen?.collects.city" id="onb-city" label="Your city" :error="errors.city">
-            <Input
+            <CityCombobox
               v-model="form.city"
               placeholder="Munich, Berlin…"
-              autocomplete="address-level2"
               v-bind="fieldAttrs('city', 'onb-city-error')"
             />
           </Field>
