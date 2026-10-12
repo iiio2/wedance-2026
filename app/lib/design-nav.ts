@@ -57,6 +57,7 @@ export const designNav: DocSection[] = [
       { title: 'Separator', to: '/design/components/separator', status: 'beta', summary: 'Visual divider between content.' },
       { title: 'Input', to: '/design/components/input', status: 'beta', summary: 'Single-line text field.' },
       { title: 'Select', to: '/design/components/select', status: 'beta', summary: 'Pick one option from a list.' },
+      { title: 'City combobox', to: '/design/components/city-combobox', status: 'beta', summary: 'Type-ahead city field with suggestions.' },
       { title: 'Textarea', to: '/design/components/textarea', status: 'beta', summary: 'Multi-line text field.' },
       { title: 'Checkbox', to: '/design/components/checkbox', status: 'beta', summary: 'Toggle an option on or off.' },
       { title: 'Field', to: '/design/components/field', status: 'beta', summary: 'Label + control + hint + error wrapper (includes Label).' },

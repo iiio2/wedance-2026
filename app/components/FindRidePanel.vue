@@ -13,6 +13,7 @@ import { WD } from '~/lib/brand'
 import { Button } from '~/components/ui/button'
 import { Field } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
+import { CityCombobox } from '~/components/ui/city-combobox'
 
 const props = defineProps<{
   festivalSlug: string
@@ -202,7 +203,7 @@ function onPhotoError(rideId: string) {
 
           <div v-if="rideMode" class="grid gap-3">
             <Field id="plan-ride-origin" label="From city" :error="rideForm.errors.originCity">
-              <Input v-model="rideOriginCity" type="text" placeholder="e.g. Munich" v-bind="rideForm.fieldAttrs('originCity', 'plan-ride-origin-error')" />
+              <CityCombobox v-model="rideOriginCity" placeholder="e.g. Munich" v-bind="rideForm.fieldAttrs('originCity', 'plan-ride-origin-error')" />
             </Field>
             <Field id="plan-ride-date" :label="rideMode === 'offering' ? 'Departure date' : 'Preferred date'" :error="rideForm.errors.date">
               <Input v-model="rideDate" type="date" v-bind="rideForm.fieldAttrs('date', 'plan-ride-date-error')" />

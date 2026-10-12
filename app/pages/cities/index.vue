@@ -9,7 +9,8 @@
 import { Search, MapPin, ArrowRight, Users } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Field } from '~/components/ui/field'
-import { Input } from '~/components/ui/input'
+import { CityCombobox, type CityOption } from '~/components/ui/city-combobox'
+import { usefulAlts } from '#shared/utils/citySearch'
 import { WD } from '~/lib/brand'
 import { mixHex, readableOn } from '~/lib/contrast'
 
@@ -44,6 +45,15 @@ const cities = computed(() => data.value ?? [])
 const loading = computed(() => pending.value)
 
 const searchQuery = ref('')
+// The search box doubles as a typeahead: typing filters the grid below, picking a
+// suggestion jumps straight to that city (intent carried through). Only cities
+// with a directory page are suggested, so every pick lands somewhere real.
+const cityOptions = computed<CityOption[]>(() => cities.value.map(c => ({
+  name: c.city, slug: c.citySlug, country: c.country, altNames: usefulAlts(c.altNames ?? [], c.citySlug), communities: c.total,
+})))
+function goToCity(c: CityOption) {
+  navigateTo({ path: `/cities/${c.slug}`, query: intentQuery.value })
+}
 const filteredCities = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
   if (!q) return cities.value
@@ -95,11 +105,15 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
 
         <div class="mt-8 max-w-lg mx-auto">
           <Field id="city-search" label="Search cities" hide-label class="relative">
-            <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" aria-hidden="true" />
-            <Input
+            <Search class="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-4 h-4 text-secondary pointer-events-none" aria-hidden="true" />
+            <CityCombobox
               v-model="searchQuery"
-              type="text"
+              :options="cityOptions"
+              :show-popular="false"
+              :free-text-note="false"
+              :limit="6"
               placeholder="Search by city or country"
+              @select="goToCity"
               class="h-12 rounded-full pl-11 pr-4 bg-white shadow-[0_1px_0_color-mix(in_srgb,var(--wd-brown-900)_3.9%,transparent),0_6px_16px_rgba(59,31,18,0.04)] focus:shadow-wd-focus"
             />
           </Field>

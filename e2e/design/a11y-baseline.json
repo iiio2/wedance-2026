@@ -34,6 +34,9 @@
   "axe desktop /design/components/checkbox": {
     "color-contrast": 1
   },
+  "axe desktop /design/components/city-combobox": {
+    "color-contrast": 1
+  },
   "axe desktop /design/components/dialog": {
     "color-contrast": 1
   },

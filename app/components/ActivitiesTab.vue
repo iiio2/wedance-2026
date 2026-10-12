@@ -12,6 +12,7 @@ import { accentText, readableAccent } from '~/lib/accent'
 import { Button } from '~/components/ui/button'
 import { Field } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
+import { CityCombobox } from '~/components/ui/city-combobox'
 
 const props = defineProps<{
   rideShares: RideShare[]
@@ -152,7 +153,7 @@ function badgeFor(key: string): string | null {
 
           <div v-if="rideMode" class="grid gap-3">
             <Field id="ride-origin" label="From city" :error="rideForm.errors.originCity">
-              <Input v-model="rideOriginCity" type="text" placeholder="e.g. Munich" v-bind="rideForm.fieldAttrs('originCity', 'ride-origin-error')" />
+              <CityCombobox v-model="rideOriginCity" placeholder="e.g. Munich" v-bind="rideForm.fieldAttrs('originCity', 'ride-origin-error')" />
             </Field>
             <Field id="ride-date" :label="rideMode === 'offering' ? 'Departure date' : 'Preferred date'" :error="rideForm.errors.date">
               <Input v-model="rideDate" type="date" v-bind="rideForm.fieldAttrs('date', 'ride-date-error')" />
