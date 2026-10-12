@@ -15,7 +15,7 @@
  *
  * Usage:
  *   bun run sync:v3-events              # dry-run (default): fetch + map + diff, no DB writes
- *   bun run sync:v3-events --write      # apply migrations 0021+0022 (idempotent), upsert profiles, then events
+ *   bun run sync:v3-events --write      # upsert profiles, then events (schema ships in migration 0018)
  *   bun run sync:v3-events --json       # machine-readable summary
  *
  * Env:
@@ -30,7 +30,7 @@ import { join } from 'node:path'
 import { neon, neonConfig } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
 import * as schema from '../server/database/schema'
-import { ensureEventsSchema, fetchUpcomingV3Posts, syncV3Events, type ServiceAccount } from '../server/utils/v3EventSync'
+import { fetchUpcomingV3Posts, syncV3Events, type ServiceAccount } from '../server/utils/v3EventSync'
 import { fetchV3Profiles, syncV3Profiles } from '../server/utils/v3ProfileSync'
 
 const args = new Set(process.argv.slice(2))
@@ -61,12 +61,9 @@ log(`  fetched ${docs.length} upcoming posts from Firestore project ${sa.project
 const v3Profiles = await fetchV3Profiles(sa)
 log(`  fetched ${v3Profiles.length} v3 profiles (Venue / Organiser / FanPage / Artist / City)`)
 
-if (WRITE) {
-  for (const m of ['0021_events_v3_sync.sql', '0022_v3_profile_sync.sql']) {
-    await ensureEventsSchema(db, readFileSync(join(import.meta.dir, '..', 'server', 'database', 'migrations', m), 'utf8'))
-  }
-  log('  schema: migrations 0021 + 0022 applied (idempotent)')
-}
+// The sync columns (events.source/source_id/synced_at…, profiles.source_ref) ship in
+// migration 0018 — the script no longer applies schema itself (its old 0021/0022
+// files were folded into 0018 by #202, which broke every write run from 2026-10-10).
 
 const { plan, summary: profiles } = await syncV3Profiles({ db, docs, v3Profiles, write: WRITE, log })
 const summary = await syncV3Events({ db, docs, write: WRITE, log, links: plan.links, extraProfiles: plan.newProfiles })
