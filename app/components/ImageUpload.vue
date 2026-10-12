@@ -2,6 +2,8 @@
 import { Upload, X, Loader2 } from 'lucide-vue-next'
 
 const model = defineModel<string>({ default: '' })
+// Cloudinary sub-folder; the server only accepts known values.
+const props = withDefaults(defineProps<{ folder?: 'avatars' | 'profiles' | 'events' }>(), { folder: 'avatars' })
 
 const uploading = ref(false)
 const dragOver = ref(false)
@@ -23,7 +25,7 @@ async function uploadFile(file: File) {
   try {
     const formData = new FormData()
     formData.append('file', file)
-    const res = await fetch('/api/media/image', { method: 'POST', body: formData })
+    const res = await fetch(`/api/media/image?folder=${props.folder}`, { method: 'POST', body: formData })
     if (!res.ok) {
       const body = await res.json().catch(() => null)
       throw new Error(body?.statusMessage || 'Upload failed.')
@@ -64,6 +66,7 @@ function remove() {
         class="w-28 h-28 rounded-xl object-cover"
       >
       <Button
+        type="button"
         variant="pill"
         size="icon-sm"
         class="absolute -top-2 -right-2 size-6 p-0 shadow-none [&_svg]:size-3.5"

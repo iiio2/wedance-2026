@@ -7,7 +7,7 @@
  */
 import {
   LayoutDashboard, Video, Gift, Users, UtensilsCrossed,
-  ShieldAlert, ArrowLeft,
+  ShieldAlert, ArrowLeft, BadgeCheck,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -16,6 +16,7 @@ const { $trpc } = useNuxtApp()
 const state = ref<'checking' | 'ok' | 'denied'>('checking')
 const showSignIn = ref(false)
 const pendingVideos = ref<number | null>(null)
+const pendingClaims = ref<number | null>(null)
 
 async function check() {
   try {
@@ -28,10 +29,15 @@ async function check() {
 }
 async function loadBadges() {
   try {
-    const rows = await $trpc.cityVideo.pendingList.query({})
-    pendingVideos.value = rows.length
+    const [videos, claims] = await Promise.all([
+      $trpc.cityVideo.pendingList.query({}),
+      $trpc.business.listClaims.query(),
+    ])
+    pendingVideos.value = videos.length
+    pendingClaims.value = claims.length
   } catch {
     pendingVideos.value = null
+    pendingClaims.value = null
   }
 }
 
@@ -41,6 +47,7 @@ watch(showSignIn, (open) => { if (!open) check() })
 const nav = computed(() => [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true, badge: null as number | null },
   { to: '/admin/videos', label: 'Videos', icon: Video, exact: false, badge: pendingVideos.value || null },
+  { to: '/admin/claims', label: 'Claims', icon: BadgeCheck, exact: false, badge: pendingClaims.value || null },
   { to: '/admin/giveaways', label: 'Giveaways', icon: Gift, exact: false, badge: null },
   { to: '/admin/community-groups', label: 'Community', icon: Users, exact: false, badge: null },
   { to: '/admin/festivals', label: 'Festivals', icon: UtensilsCrossed, exact: false, badge: null },

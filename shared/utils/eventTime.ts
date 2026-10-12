@@ -52,3 +52,23 @@ export function formatEventWhen(startIso: string | Date, endIso: string | Date |
   }
   return `${day(start, { month: 'short', day: 'numeric' })} – ${day(end, { month: 'short', day: 'numeric', year: 'numeric' })}`
 }
+
+/**
+ * The UTC instant for a wall-clock date + time in `tz` — the inverse of
+ * eventLocalDate/eventLocalTime. Used when an organizer types "16 Oct, 20:00"
+ * for a Munich event. DST-safe: corrects by the zone's offset at that moment.
+ */
+export function zonedToUtc(date: string, time: string, tz = DEFAULT_TZ): Date {
+  const [y, m, d] = date.split('-').map(Number) as [number, number, number]
+  const [hh, mm] = time.split(':').map(Number) as [number, number]
+  const asUtc = Date.UTC(y, m - 1, d, hh, mm)
+  // Offset of `tz` at a given instant, in ms (wall clock minus UTC).
+  const offsetAt = (ms: number) => {
+    const p = parts(new Date(ms), tz)
+    return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute) - ms
+  }
+  let guess = asUtc - offsetAt(asUtc)
+  // Second pass lands correctly when the first guess crossed a DST switch.
+  guess = asUtc - offsetAt(guess)
+  return new Date(guess)
+}

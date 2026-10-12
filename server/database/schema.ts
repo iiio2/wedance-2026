@@ -331,6 +331,8 @@ export const profiles = pgTable('profiles', {
   moderatorHandle: text('moderator_handle'),
   moderatorSince: integer('moderator_since'),
   socials: json('socials').$type<{ platform: string; url: string }[]>().default([]),
+  // Gallery for artists/venues; `photo` stays the hero (the one flyers and cards use).
+  photos: jsonb('photos').$type<{ url: string }[]>().notNull().default([]),
   claimed: boolean('claimed').default(false),
   status: text('status').notNull().default('visible').$type<'visible' | 'hidden'>(),
   createdAt: timestamp('created_at').defaultNow(),
@@ -338,6 +340,36 @@ export const profiles = pgTable('profiles', {
   // v4 imports: { v4ProfileId, firebaseId, v4Type }. v3 sync: { source: 'wedance-v3', sourceId, … }.
   sourceRef: jsonb('source_ref').$type<Record<string, unknown>>(),
 })
+
+// Who manages a profile (hosting mode). Created when an admin approves a claim
+// or when a dancer creates a new profile. `claimed` on the profile mirrors
+// "has at least one owner" so the v3 sync never overwrites it.
+export const profileMembers = pgTable('profile_members', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  dancerId: uuid('dancer_id').notNull().references(() => dancers.id, { onDelete: 'cascade' }),
+  role: text('role').notNull().default('owner').$type<'owner' | 'editor'>(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  unique('profile_members_profile_dancer').on(t.profileId, t.dancerId),
+  index('profile_members_dancer_idx').on(t.dancerId),
+])
+
+// "This is me / my venue" requests for existing profiles. An admin approves
+// (→ profile_members owner row + profiles.claimed) or rejects.
+export const profileClaims = pgTable('profile_claims', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  dancerId: uuid('dancer_id').notNull().references(() => dancers.id, { onDelete: 'cascade' }),
+  // How the admin can verify it's really them (e.g. "DM me from @handle").
+  message: text('message').notNull().default(''),
+  status: text('status').notNull().default('pending').$type<'pending' | 'approved' | 'rejected'>(),
+  createdAt: timestamp('created_at').defaultNow(),
+  decidedAt: timestamp('decided_at'),
+}, (t) => [
+  unique('profile_claims_profile_dancer').on(t.profileId, t.dancerId),
+  index('profile_claims_status_idx').on(t.status),
+])
 
 // A profile (venue) can offer N bookable areas — e.g. Pinakothek's 5 spaces.
 export const bookableSpaces = pgTable('bookable_spaces', {
@@ -638,7 +670,11 @@ export const events = pgTable('events', {
   artists: jsonb('artists').$type<string[]>().default([]),
   syncedAt: timestamp('synced_at'),
   updatedAt: timestamp('updated_at').defaultNow(),
+  // Hosting mode (migration 0026): the profile that runs this event. Its
+  // managers (profile_members) can edit it. Null for synced/imported events.
+  hostProfileId: uuid('host_profile_id').references(() => profiles.id, { onDelete: 'set null' }),
 }, (t) => [
+  index('events_host_profile_idx').on(t.hostProfileId),
   uniqueIndex('events_slug_uidx').on(t.slug).where(sql`${t.slug} IS NOT NULL`),
   index('events_archived_idx').on(t.archived),
   uniqueIndex('events_source_uidx').on(t.source, t.sourceId).where(sql`${t.sourceId} IS NOT NULL`),

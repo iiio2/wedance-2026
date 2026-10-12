@@ -1,5 +1,8 @@
-import { defineEventHandler, readMultipartFormData, createError } from 'h3'
+import { defineEventHandler, readMultipartFormData, getQuery, createError } from 'h3'
 import cloudinary from 'cloudinary'
+
+// Allowed Cloudinary sub-folders (?folder=…); anything else falls back to avatars.
+const FOLDERS = new Set(['avatars', 'profiles', 'events'])
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
@@ -24,9 +27,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'No file uploaded.' })
   }
 
+  const requested = String(getQuery(event).folder ?? '')
+  const folder = FOLDERS.has(requested) ? requested : 'avatars'
+
   const uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
     const stream = cloudinary.v2.uploader.upload_stream(
-      { folder: 'wedance-2026/avatars' },
+      { folder: `wedance-2026/${folder}` },
       (error, result) => {
         if (error) reject(error)
         else resolve(result as { secure_url: string })

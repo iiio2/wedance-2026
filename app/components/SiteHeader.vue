@@ -55,6 +55,10 @@ const links = [
             class="hidden sm:inline font-bold hover:underline text-foreground font-display"
           >{{ displayName }}</NuxtLink>
           <NuxtLink
+            to="/business"
+            class="hidden sm:inline italic hover:underline"
+          >Business</NuxtLink>
+          <NuxtLink
             to="/settings"
             class="hidden sm:inline italic hover:underline text-secondary"
           >Settings</NuxtLink>

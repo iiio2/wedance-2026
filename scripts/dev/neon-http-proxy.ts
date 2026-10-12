@@ -30,6 +30,11 @@ const PG_URL = process.env.LOCAL_PG_URL ?? 'postgresql://dev:dev@localhost:5441/
 // Return every value as the raw text Postgres sent — the Neon driver parses it.
 const rawText = { getTypeParser: () => (v: string) => v } as any
 const pool = new pg.Pool({ connectionString: PG_URL, max: 10 })
+// An idle client losing its connection (Postgres restarted, Docker hiccup) emits
+// 'error' on the pool; unhandled, that kills the whole proxy and every query
+// after it fails. The pool already drops the dead client, so just log it — the
+// next query opens a fresh connection.
+pool.on('error', (err) => console.warn(`neon-http-proxy: idle connection lost (${err.message}) — will reconnect`))
 
 type Q = { query: string; params?: unknown[] }
 
