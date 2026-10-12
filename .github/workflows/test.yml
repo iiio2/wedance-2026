@@ -95,7 +95,10 @@ jobs:
       - name: Run integration tests (all vitest, 0 skips expected)
         run: bun run test -- --reporter=verbose
 
+  # After merge only: ~5 min (DB + build + browser), so PRs don't wait on it.
+  # Each merged commit still gets an end-to-end result to trace breaks to.
   e2e-smoke:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
