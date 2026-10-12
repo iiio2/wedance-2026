@@ -157,9 +157,9 @@ test.describe('component contract', () => {
   }
 
   test('the showcase actually renders components (guards against an empty selector)', async ({ page }) => {
-    const probes = await probePage(page, '/design/components/button')
+    const probes = await probePage(page, '/docs/design/components/button')
     expect(probes.filter(p => p.kind === 'button').length).toBeGreaterThan(5)
-    const badges = await probePage(page, '/design/components/badge')
+    const badges = await probePage(page, '/docs/design/components/badge')
     expect(badges.filter(p => p.kind === 'badge').length).toBeGreaterThan(2)
     expect(probes.some(p => p.disabled), 'the Button docs show a disabled Button').toBe(true)
   })

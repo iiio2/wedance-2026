@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * The wavy section divider used under heroes (/design/patterns/heroes).
+ * The wavy section divider used under heroes (/docs/design/patterns/heroes).
  * Decorative only. Height comes from the class (default h-10).
  *
  *   <WaveDivider />                       brown at 8%, wave on top

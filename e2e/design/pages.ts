@@ -1,8 +1,8 @@
 /**
  * Which routes the design guardrails cover.
  *
- * /design pages come from app/lib/design-nav.ts automatically — every
- * non-planned nav item whose page file exists is covered. Add a /design page to
+ * /docs/design pages come from app/lib/design-nav.ts automatically — every
+ * non-planned nav item whose page file exists is covered. Add a /docs/design page to
  * the nav and it is snapshotted, contract-checked and axe-scanned with no edit
  * here. Product routes are listed by hand: add one line to PRODUCT_ROUTES.
  */

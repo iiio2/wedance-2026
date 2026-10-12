@@ -12,13 +12,14 @@ story map. Hand-written architecture documentation for a codebase moving at this
 speed is out of date within a week, and stale docs are worse than none — they are
 trusted and wrong.
 
-We want one place (`/architecture`, a sibling of `/design`) where a person or an
-agent can see the data model, the API surface and how stories map onto them, and
-be sure it matches the code that is deployed.
+We want one place (`/docs/architecture`, next to the design system at
+`/docs/design`) where a person or an agent can see the data model, the API
+surface and how stories map onto them, and be sure it matches the code that is
+deployed.
 
 ## Decision
 
-Everything under `/architecture` except the Overview narrative and these ADRs is
+Everything under `/docs/architecture` except the Overview narrative and these ADRs is
 **generated from the code** by `scripts/architecture/generate.ts`:
 
 - **Data model** — the Drizzle table objects exported by `server/database/schema.ts`
@@ -76,11 +77,26 @@ and served at runtime to `is_admin` dancers (same Bearer session check as the tR
 `adminProcedure`). The public JSON — and so the client bundle — carries only their
 count. Story references to admin procedures are reduced to a count publicly.
 
+Since the source is public (AGPL-3.0, see below), anyone can read the admin routers
+on GitHub. Keeping their names out of the public docs bundle is about not
+advertising the admin surface on an indexed page, not about secrecy: the security
+boundary is the `adminProcedure` check on every call, never obscurity.
+
+### Public and indexed (amended 2026-10-12)
+
+The docs started as internal, `noindex` pages. On 2026-10-12 the project became
+open source under **AGPL-3.0-only**, and the docs moved under one `/docs` umbrella
+(`/docs`, `/docs/getting-started`, `/docs/design/**`, `/docs/architecture/**`; the
+old `/design/**` and `/architecture/**` URLs 301 there). They are now **public and
+indexed**: every page carries a title, a meta description and a canonical URL on
+`https://2026.wedance.vip`. The one exception is `/docs/architecture/api/admin`,
+which stays `noindex` and admin-gated.
+
 ## Consequences
 
 - The docs cannot drift from the code they were built with; when they look wrong,
   the code is wrong (or the generator has a bug — fix it once).
 - New tables must be placed in a context in `domains.ts`, or the test suite fails.
-- The pages bundle the generated JSON (a few hundred KB, internal and `noindex`).
+- The pages bundle the generated JSON (a few hundred KB, public and indexed).
 - Mermaid diagrams load from a pinned CDN build (`mermaid@11.4.1`) only on
-  `/architecture` pages — no npm dependency added.
+  `/docs/architecture` pages — no npm dependency added.

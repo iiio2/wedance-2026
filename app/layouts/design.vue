@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { designNav } from '~/lib/design-nav'
-
-/** Layout for /design — the WeDance design system docs (see DocsShell). */
+/**
+ * Alias of the `docs` layout, kept so pages (and stacked branches) that still
+ * say `definePageMeta({ layout: 'design' })` render inside the shared /docs shell.
+ * New pages use `layout: 'docs'`.
+ */
 </script>
 
 <template>
-  <DocsShell :nav="designNav" home="/design" label="Design system">
+  <DocsShell>
     <slot />
   </DocsShell>
 </template>

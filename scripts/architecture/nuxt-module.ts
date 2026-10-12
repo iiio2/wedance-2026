@@ -1,5 +1,5 @@
 /**
- * Regenerates the /architecture data from code on every `nuxt prepare`,
+ * Regenerates the /docs/architecture data from code on every `nuxt prepare`,
  * `nuxt dev` and `nuxt build` (so the Vercel build is always current), and
  * again in dev when the schema, the tRPC routers, the API handlers, the stories
  * file or an ADR changes. See docs/architecture/adr/000-generated-architecture-docs.md.

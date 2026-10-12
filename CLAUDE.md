@@ -13,7 +13,11 @@ Dance community platform. Nuxt 4 + tRPC + Drizzle ORM + Neon (PostgreSQL).
 - **Live:** https://2026.wedance.vip
 - **Vercel project:** `wedance-2026` (team: `wedance`)
 - **Org governance:** `~/Orgs/WeDance/`
-- **GitHub:** `razbakov/wedance-2026`
+- **GitHub:** `razbakov/wedance-2026` — open source, **AGPL-3.0-only** (`LICENSE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`)
+- **Docs (public, indexed):** https://2026.wedance.vip/docs — hub + quick start (`app/pages/docs/`),
+  design system `/docs/design/**`, generated architecture `/docs/architecture/**` (ADR-000).
+  Old `/design/**`, `/architecture/**`, `/styleguide` 301 there (`nuxt.config.ts` routeRules).
+  Shell/nav: `app/components/docs/Shell.vue`, `app/lib/docs-nav.ts`; pages use `layout: 'docs'`.
 
 ## Structure
 

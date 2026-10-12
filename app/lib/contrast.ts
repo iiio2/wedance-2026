@@ -1,4 +1,4 @@
-/** WCAG 2.x contrast helpers for the /design colour docs. */
+/** WCAG 2.x contrast helpers for the /docs/design colour docs. */
 
 function channel(c: number) {
   const s = c / 255

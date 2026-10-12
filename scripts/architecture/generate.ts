@@ -1,5 +1,5 @@
 /**
- * Generates the data behind /architecture from the code itself, so the docs
+ * Generates the data behind /docs/architecture from the code itself, so the docs
  * cannot drift (see docs/architecture/adr/000-generated-architecture-docs.md).
  *
  *   bun scripts/architecture/generate.ts      # manual run
@@ -57,7 +57,7 @@ export interface StoriesDoc {
 
 /**
  * A rendered doc under docs/architecture: an ADR (`adr/`), an architecture review
- * (`review/`) or a target-design doc (`target/`). All render on /architecture/decisions.
+ * (`review/`) or a target-design doc (`target/`). All render on /docs/architecture/decisions.
  */
 export type DocKind = 'review' | 'target' | 'adr'
 export interface AdrDoc { id: string, kind: DocKind, slug: string, file: string, title: string, status: string, date: string | null, summary: string | null, parts: DocPart[] }

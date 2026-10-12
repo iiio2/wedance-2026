@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DocStatus } from '~/lib/design-nav'
 
-/** Page header for every /design and /architecture doc: eyebrow, title, lead, status. */
+/** Page header for every /docs page: eyebrow, title, lead, status. */
 const props = defineProps<{
   eyebrow: string
   title: string
@@ -9,9 +9,20 @@ const props = defineProps<{
   status?: DocStatus
   /** Title suffix — the docs section this page belongs to. */
   site?: string
+  /** Meta description; defaults to the lead. */
+  description?: string
 }>()
 
-useHead({ title: `${props.title} — ${props.site ?? 'WeDance Design'}` })
+// Every /docs page is public and indexed: title + description for search and
+// link previews. The lead doubles as the meta description.
+const metaDescription = () => props.description ?? props.lead ?? `${props.title} — from the WeDance open-source docs.`
+const fullTitle = () => `${props.title} — ${props.site ?? 'WeDance Design'}`
+useSeoMeta({
+  title: fullTitle,
+  ogTitle: fullTitle,
+  description: () => metaDescription(),
+  ogDescription: () => metaDescription(),
+})
 </script>
 
 <template>

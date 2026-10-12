@@ -1,5 +1,5 @@
 /**
- * Accessibility guardrail for /design pages and key product routes.
+ * Accessibility guardrail for /docs/design pages and key product routes.
  *
  * Two layers:
  *   1. Built-in checks (always run, no dependency): <html lang>, a <main>
@@ -9,7 +9,7 @@
  *      installed; otherwise the test is skipped with a note.
  *
  * Known violations are frozen in a11y-baseline.json (ratchet):
- *   - /design pages are static → per-rule COUNTS; a count may only go down.
+ *   - /docs/design pages are static → per-rule COUNTS; a count may only go down.
  *   - product routes read the database, so node counts move with content →
  *     per-rule "*": an already-known rule is tolerated, any NEW rule fails.
  * Fix a violation → delete or lower its entry. Never raise one silently.

@@ -12,6 +12,7 @@
 import { Bug, Check, ImageIcon } from 'lucide-vue-next'
 import { ReportProblemSchema } from '#shared/validation'
 import { WD } from '~/lib/brand'
+import { REPORT_PROBLEM_EVENT } from '~/lib/report-problem'
 
 /**
  * Literal values for the semantic tokens, injected into the cloned document
@@ -164,6 +165,12 @@ async function openReport() {
   open.value = true
   track('problem_report_opened')
 }
+
+// Other pages can open the widget without a second copy of it (e.g. the
+// "Report a problem" button on /docs): window.dispatchEvent(new Event(REPORT_PROBLEM_EVENT)).
+const onRequest = () => { if (!capturing.value && !open.value) openReport() }
+onMounted(() => window.addEventListener(REPORT_PROBLEM_EVENT, onRequest))
+onBeforeUnmount(() => window.removeEventListener(REPORT_PROBLEM_EVENT, onRequest))
 
 function reset() {
   description.value = ''

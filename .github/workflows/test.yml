@@ -195,10 +195,10 @@ jobs:
         run: bunx playwright test --grep @smoke
 
       # Design-system guardrails (docs/design-system.md → Guardrails): component
-      # contract on every page + a11y on the static /design pages. Product-route
+      # contract on every page + a11y on the static /docs/design pages. Product-route
       # a11y and visual regression stay local — they depend on DB content / OS fonts.
       - name: Design-system contract + a11y
-        run: bunx playwright test -c playwright.design.config.ts contract a11y --grep "component contract|: /design"
+        run: bunx playwright test -c playwright.design.config.ts contract a11y --grep "component contract|: /docs/design"
 
       - name: Upload E2E report
         if: always()

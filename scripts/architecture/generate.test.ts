@@ -1,5 +1,5 @@
 /**
- * Drift guard for the generated /architecture docs (ADR-000): fails when a
+ * Drift guard for the generated /docs/architecture docs (ADR-000): fails when a
  * table or tRPC procedure that exists in the code is missing from the generated
  * output, when a table has no bounded context, or when an admin-level procedure
  * leaks into the public (client-bundled) files.

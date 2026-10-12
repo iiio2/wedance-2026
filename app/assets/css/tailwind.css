@@ -23,7 +23,7 @@
  *   --wd-font-sans     system-ui, sans-serif      — body, UI
  *   --wd-font-hand     'Caveat', cursive          — handwritten asides, signatures
  *
- * Extended palette (--wd-purple-500 … --wd-blue-600) is listed on /design/foundations/colors.
+ * Extended palette (--wd-purple-500 … --wd-blue-600) is listed on /docs/design/foundations/colors.
  * JS mirror: app/lib/brand.ts (WD).
  */
 
@@ -236,7 +236,7 @@
 }
 
 /*
- * Elevation, motion and type-size tokens (added 2026-10-10, /design/foundations).
+ * Elevation, motion and type-size tokens (added 2026-10-10, /docs/design/foundations).
  * Values are the recipes pages already use, so adopting a token is a visual no-op.
  */
 @layer base {
@@ -296,7 +296,7 @@
   /* Brand CTA (.wd-cta) — warm gradient pill with breathing drift, shimmer sweep,
      hover lift, press feedback and a click ripple. Pair with layout utilities, e.g.
      class="wd-cta inline-flex items-center gap-2 px-6 py-3 rounded-full text-white
-     text-sm font-bold uppercase tracking-wider". Documented on /design/components/button. */
+     text-sm font-bold uppercase tracking-wider". Documented on /docs/design/components/button. */
   .wd-cta {
     background: linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500));
     background-size: 200% 200%;

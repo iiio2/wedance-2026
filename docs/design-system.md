@@ -2,7 +2,7 @@
 
 Design tokens, font families, and component conventions for the 2026 tropical aesthetic.
 
-Live reference: [`/design`](/design) — the design system docs (foundations, components, patterns; noindex, internal only). The old `/styleguide` page redirects there.
+Live reference: [`/docs/design`](https://2026.wedance.vip/docs/design) — the design system docs (foundations, components, patterns), part of the public, indexed `/docs` hub. The old `/styleguide` and `/design/**` URLs redirect there.
 
 ## Tokens
 
@@ -58,7 +58,7 @@ These drive all shared UI components (`app/components/ui/*`). Prefer these over 
 
 ### 4. Extended palette
 
-Accents and tints pages use beyond the core brand (purple, pink, violet, sky, rose, sand, extra amber/red/green/cyan steps …). Full list with swatches on [`/design/foundations/colors`](/design/foundations/colors); definitions in `tailwind.css` under "Extended palette". Same naming: `var(--wd-purple-500)`, `bg-wd-purple-500`.
+Accents and tints pages use beyond the core brand (purple, pink, violet, sky, rose, sand, extra amber/red/green/cyan steps …). Full list with swatches on [`/docs/design/foundations/colors`](/docs/design/foundations/colors); definitions in `tailwind.css` under "Extended palette". Same naming: `var(--wd-purple-500)`, `bg-wd-purple-500`.
 
 ### 5. JS mirror — `app/lib/brand.ts`
 
@@ -70,7 +70,7 @@ Alpha tints in CSS: `color-mix(in srgb, var(--wd-red-600) 13%, transparent)` (no
 
 ### 6. Shadows (`--wd-shadow-*` → `shadow-wd-*`)
 
-Five recipes, documented on `/design/foundations/elevation`. Values are copied from the recipes pages already use, so swapping an inline shadow for the token is a visual no-op.
+Five recipes, documented on `/docs/design/foundations/elevation`. Values are copied from the recipes pages already use, so swapping an inline shadow for the token is a visual no-op.
 
 | Token | Utility | Value | Use |
 |---|---|---|---|
@@ -100,7 +100,7 @@ Not tokens (yet): the 4px-deep lip on large CTAs (`0 4px 0 -1px …`, ~20 uses) 
 
 ### 8. Small type sizes (`text-eyebrow`, `text-meta`, `text-tag`)
 
-Below `text-xs` (12px) the Tailwind scale stops, so pages used arbitrary sizes. Survey 2026-10-10 (product pages; sketches and `/design` excluded): 292 `text-[Npx]`, of which `text-[10px]` ×216, `text-[11px]` ×46, `text-[9px]` ×29. Those three became `@theme` tokens:
+Below `text-xs` (12px) the Tailwind scale stops, so pages used arbitrary sizes. Survey 2026-10-10 (product pages; sketches and `/docs/design` excluded): 292 `text-[Npx]`, of which `text-[10px]` ×216, `text-[11px]` ×46, `text-[9px]` ×29. Those three became `@theme` tokens:
 
 | Utility | Size | Replaces | Use |
 |---|---|---|---|
@@ -112,7 +112,7 @@ They set font-size only (no line-height token), exactly like the arbitrary class
 
 ## Spacing & layout
 
-Documented on `/design/foundations/spacing`. No custom spacing tokens — Tailwind's 4px scale.
+Documented on `/docs/design/foundations/spacing`. No custom spacing tokens — Tailwind's 4px scale.
 
 - **Steps in use:** 0.5 · 1 · 1.5 · 2 · 3 · 4 · 6 · 8 · 12 · 16 · 20. Most common: `gap-2` (324), `px-4` (256), `gap-3` (197).
 - **Containers:** `max-w-xl` (forms) · `2xl` · `3xl` (reading) · `4xl` · `5xl` (default wide page) · `6xl` · `7xl` (headers/footers). Standard shell: `max-w-5xl mx-auto px-4`.
@@ -122,7 +122,7 @@ Documented on `/design/foundations/spacing`. No custom spacing tokens — Tailwi
 
 ## Icons
 
-Documented on `/design/foundations/icons`. `lucide-vue-next` only — 106 distinct icons across 72 files.
+Documented on `/docs/design/foundations/icons`. `lucide-vue-next` only — 106 distinct icons across 72 files.
 
 - **Stroke:** default 2px everywhere (476 uses, none override it). Don't pass `stroke-width`.
 - **Colour:** `currentColor` — colour the parent. Status colours only when the icon is the status.
@@ -203,15 +203,15 @@ Automated checks so the system can't drift or break silently. Each failure messa
 |---|---|---|---|
 | Token drift | `bun run test:tokens` (also part of `bun run test`) | yes (`unit`) | a file gains a literal 6/8-digit hex; an inline `font-family` that isn't `var(--wd-font-*)`; a Google Fonts URL loading anything but Playfair Display; a quoted comma list in a font token (`'Caveat, cursive'` = one bogus family); a Tailwind class name built at runtime (`` `bg-wd-${key}` ``, `'text-' + c` — Tailwind never generates it) |
 | Component contract | `bun run test:design` | yes (`e2e-smoke`) | a `<Button>` that isn't a `<button>`/`<a href>`; a disabled Button without the `disabled` attribute or `cursor: not-allowed`; an enabled one without `cursor: pointer`; Button/Badge text contrast < 4.5:1 |
-| Accessibility | `bun run test:design` | `/design` pages only | built-in: `<html lang>`, `<main>`, one `<h1>`, img alt, names on buttons/links/inputs; plus axe-core WCAG 2.1 A/AA when `@axe-core/playwright` is installed (skipped otherwise) |
-| Visual regression | `bun run test:visual` | no (local) | the first viewport of a `/design` page or key product route (data masked) at 1280 and 375 differs from its baseline |
+| Accessibility | `bun run test:design` | `/docs/design` pages only | built-in: `<html lang>`, `<main>`, one `<h1>`, img alt, names on buttons/links/inputs; plus axe-core WCAG 2.1 A/AA when `@axe-core/playwright` is installed (skipped otherwise) |
+| Visual regression | `bun run test:visual` | no (local) | the first viewport of a `/docs/design` page or key product route (data masked) at 1280 and 375 differs from its baseline |
 
 **Ratchets, not walls.** Existing debt is frozen, new debt fails:
 
 - `scripts/design-guardrails/baseline.json` — hex/font literal counts per file. Removed some? `bun scripts/design-guardrails/update-baseline.ts` (it refuses to raise a number unless `--allow-increase`, which needs a reason in the PR).
-- `e2e/design/a11y-baseline.json` — known violations. `/design` pages: per-rule counts. Product routes: per-rule `"*"` (counts move with DB content; a *new* rule still fails). Fixed one? Delete or lower the entry.
+- `e2e/design/a11y-baseline.json` — known violations. `/docs/design` pages: per-rule counts. Product routes: per-rule `"*"` (counts move with DB content; a *new* rule still fails). Fixed one? Delete or lower the entry.
 - `CONTRAST_DEBT` in `e2e/design/contract.spec.ts` — colour pairs below 4.5:1 that are tolerated but may not get worse. Delete the entry when the token is fixed.
 
-**Coverage is automatic.** `/design` pages come from `app/lib/design-nav.ts` (every non-planned item whose page exists). Product routes are one line each in `PRODUCT_ROUTES` (`e2e/design/pages.ts`). Mark a data-driven region `data-visual-mask` to exclude it from screenshots.
+**Coverage is automatic.** `/docs/design` pages come from `app/lib/design-nav.ts` (every non-planned item whose page exists). Product routes are one line each in `PRODUCT_ROUTES` (`e2e/design/pages.ts`). Mark a data-driven region `data-visual-mask` to exclude it from screenshots.
 
 **Running locally.** Start a dev server, then `DESIGN_BASE_URL=http://localhost:<port> bun run test:design` (without the variable Playwright starts `bun run dev` on :3000). Accept intended visual changes with `bun run test:visual:update` and commit the PNGs (`e2e/design/__screenshots__/<platform>/`; baselines are per-OS, generated on macOS). All specs are read-only — safe against the production DB in `.env`.

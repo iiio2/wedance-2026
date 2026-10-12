@@ -8,7 +8,7 @@ export { default as Button } from "./Button.vue"
  * cover the looks pages used to hand-roll on raw <button>s (survey 2026-10-10, 255
  * raw buttons in 55 product files): red→orange gradient pill ≈28, solid red pill with
  * a lip shadow ≈10, soft tinted pill 12, white outline pill 14, small uppercase pill 39,
- * round icon-only buttons. Docs + decision guide: /design/components/button.
+ * round icon-only buttons. Docs + decision guide: /docs/design/components/button.
  *
  * Brand pills share BRAND: rounded-full, bold, uppercase, tracked. Size classes carry
  * no rounding so a variant's rounded-full survives tailwind-merge.

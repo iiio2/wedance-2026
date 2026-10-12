@@ -1,19 +1,13 @@
 <script setup lang="ts">
-import { architectureNav } from '~/lib/architecture-nav'
-
 /**
- * Layout for /architecture — generated architecture docs. Same shell (and the
- * same noindex treatment) as /design; see DocsShell.
+ * Alias of the `docs` layout, kept so pages (and stacked branches) that still
+ * say `definePageMeta({ layout: 'architecture' })` render inside the shared /docs shell.
+ * New pages use `layout: 'docs'`.
  */
 </script>
 
 <template>
-  <DocsShell
-    :nav="architectureNav"
-    home="/architecture"
-    label="Architecture"
-    :cross-link="{ to: '/design', label: 'Design system' }"
-  >
+  <DocsShell>
     <slot />
   </DocsShell>
 </template>

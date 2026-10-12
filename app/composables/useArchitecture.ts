@@ -6,7 +6,7 @@ import stories from '~/generated/architecture/stories.json'
 import decisions from '~/generated/architecture/decisions.json'
 
 /**
- * The generated /architecture data (scripts/architecture/generate.ts). These
+ * The generated /docs/architecture data (scripts/architecture/generate.ts). These
  * JSON files are produced from the code on every prepare/dev/build and are
  * public — admin-level procedures are never in them (see /api/architecture/admin).
  */

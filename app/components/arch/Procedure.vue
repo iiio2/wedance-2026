@@ -25,7 +25,7 @@ const signature = computed(() => schemaSignature(props.proc.input))
       <div class="min-w-0">
         <div class="text-[11px] uppercase tracking-wider font-bold text-muted-foreground mb-1">Tables</div>
         <div v-if="proc.tables.length" class="flex flex-wrap gap-1">
-          <NuxtLink v-for="t in proc.tables" :key="t" :to="`/architecture/data/${t}`" class="rounded-md border border-border px-1.5 py-0.5 font-mono text-[11px] hover:border-primary/40 hover:text-primary">{{ t }}</NuxtLink>
+          <NuxtLink v-for="t in proc.tables" :key="t" :to="`/docs/architecture/data/${t}`" class="rounded-md border border-border px-1.5 py-0.5 font-mono text-[11px] hover:border-primary/40 hover:text-primary">{{ t }}</NuxtLink>
         </div>
         <p v-else class="text-sm text-muted-foreground">None (no database access).</p>
       </div>

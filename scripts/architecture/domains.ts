@@ -1,5 +1,5 @@
 /**
- * Bounded-context grouping for the data model index (/architecture/data).
+ * Bounded-context grouping for the data model index (/docs/architecture/data).
  *
  * This is the ONLY hand-maintained part of the generated data docs. It is
  * drift-checked: scripts/architecture/generate.test.ts fails when a table in

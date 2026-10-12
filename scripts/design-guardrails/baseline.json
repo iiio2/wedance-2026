@@ -6,7 +6,7 @@
       "app/components/AvailabilityCalendar.vue": 2,
       "app/components/CityFight.vue": 2,
       "app/components/StyleLevelMix.vue": 5,
-      "app/pages/design/foundations/colors.vue": 2,
+      "app/pages/docs/design/foundations/colors.vue": 2,
       "app/pages/festivals/[slug].vue": 6,
       "app/pages/index.vue": 2,
       "app/pages/organizers/index.vue": 1

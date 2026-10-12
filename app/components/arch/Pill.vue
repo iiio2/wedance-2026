@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** Small label for auth levels, kinds and story statuses on /architecture. */
+/** Small label for auth levels, kinds and story statuses on /docs/architecture. */
 const props = defineProps<{ tone?: 'neutral' | 'good' | 'warn' | 'bad' | 'info' }>()
 const styles = {
   neutral: 'bg-muted text-muted-foreground border-border',

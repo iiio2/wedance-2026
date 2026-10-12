@@ -10,85 +10,85 @@
     "color-contrast": "*",
     "link-in-text-block": "*"
   },
-  "axe desktop /design": {
-    "color-contrast": 11
+  "axe desktop /docs/design": {
+    "color-contrast": 10
   },
-  "axe desktop /design/brand": {
+  "axe desktop /docs/design/brand": {
     "color-contrast": 1
   },
-  "axe desktop /design/components": {
+  "axe desktop /docs/design/components": {
     "color-contrast": 2
   },
-  "axe desktop /design/components/avatar": {
+  "axe desktop /docs/design/components/avatar": {
     "color-contrast": 2
   },
-  "axe desktop /design/components/badge": {
+  "axe desktop /docs/design/components/badge": {
     "color-contrast": 1
   },
-  "axe desktop /design/components/button": {
+  "axe desktop /docs/design/components/button": {
     "color-contrast": 1
   },
-  "axe desktop /design/components/card": {
+  "axe desktop /docs/design/components/card": {
     "color-contrast": 1
   },
-  "axe desktop /design/components/checkbox": {
+  "axe desktop /docs/design/components/checkbox": {
     "color-contrast": 1
   },
-  "axe desktop /design/components/city-combobox": {
+  "axe desktop /docs/design/components/city-combobox": {
     "color-contrast": 1
   },
-  "axe desktop /design/components/dance-style-picker": {
+  "axe desktop /docs/design/components/dance-style-picker": {
     "color-contrast": 1
   },
-  "axe desktop /design/components/dialog": {
+  "axe desktop /docs/design/components/dialog": {
     "color-contrast": 1
   },
-  "axe desktop /design/components/field": {
+  "axe desktop /docs/design/components/field": {
     "color-contrast": 1
   },
-  "axe desktop /design/components/input": {
+  "axe desktop /docs/design/components/input": {
     "color-contrast": 1
   },
-  "axe desktop /design/components/select": {
+  "axe desktop /docs/design/components/select": {
     "color-contrast": 1
   },
-  "axe desktop /design/components/separator": {
+  "axe desktop /docs/design/components/separator": {
     "color-contrast": 1
   },
-  "axe desktop /design/components/tabs": {
+  "axe desktop /docs/design/components/tabs": {
     "color-contrast": 1
   },
-  "axe desktop /design/components/textarea": {
+  "axe desktop /docs/design/components/textarea": {
     "color-contrast": 1
   },
-  "axe desktop /design/foundations/colors": {
+  "axe desktop /docs/design/foundations/colors": {
     "color-contrast": 28
   },
-  "axe desktop /design/foundations/elevation": {
+  "axe desktop /docs/design/foundations/elevation": {
     "color-contrast": 1
   },
-  "axe desktop /design/foundations/icons": {
+  "axe desktop /docs/design/foundations/icons": {
     "color-contrast": 2
   },
-  "axe desktop /design/foundations/motion": {
+  "axe desktop /docs/design/foundations/motion": {
     "color-contrast": 1
   },
-  "axe desktop /design/foundations/spacing": {
+  "axe desktop /docs/design/foundations/spacing": {
     "color-contrast": 1
   },
-  "axe desktop /design/foundations/typography": {
+  "axe desktop /docs/design/foundations/typography": {
     "color-contrast": 1
   },
-  "axe desktop /design/patterns/cards": {
+  "axe desktop /docs/design/patterns/cards": {
     "color-contrast": 18
   },
-  "axe desktop /design/patterns/empty-states": {
+  "axe desktop /docs/design/patterns/empty-states": {
     "color-contrast": 4
   },
-  "axe desktop /design/patterns/forms": {
+  "axe desktop /docs/design/patterns/forms": {
     "color-contrast": 1
   },
-  "axe desktop /design/patterns/heroes": {
+  "axe desktop /docs/design/patterns/heroes": {
     "color-contrast": 4
   },
   "axe desktop /festivals": {
@@ -110,43 +110,43 @@
     "color-contrast": "*",
     "link-in-text-block": "*"
   },
-  "axe mobile /design": {
-    "color-contrast": 11
+  "axe mobile /docs/design": {
+    "color-contrast": 10
   },
-  "axe mobile /design/components": {
+  "axe mobile /docs/design/components": {
     "color-contrast": 2
   },
-  "axe mobile /design/components/avatar": {
+  "axe mobile /docs/design/components/avatar": {
     "color-contrast": 1
   },
-  "axe mobile /design/components/badge": {
+  "axe mobile /docs/design/components/badge": {
     "color-contrast": 1
   },
-  "axe mobile /design/components/button": {
+  "axe mobile /docs/design/components/button": {
     "color-contrast": 1
   },
-  "axe mobile /design/foundations/colors": {
+  "axe mobile /docs/design/foundations/colors": {
     "color-contrast": 28
   },
-  "axe mobile /design/foundations/elevation": {
+  "axe mobile /docs/design/foundations/elevation": {
     "color-contrast": 1
   },
-  "axe mobile /design/foundations/icons": {
+  "axe mobile /docs/design/foundations/icons": {
     "color-contrast": 2
   },
-  "axe mobile /design/foundations/motion": {
+  "axe mobile /docs/design/foundations/motion": {
     "color-contrast": 1
   },
-  "axe mobile /design/foundations/spacing": {
+  "axe mobile /docs/design/foundations/spacing": {
     "color-contrast": 1
   },
-  "axe mobile /design/foundations/typography": {
+  "axe mobile /docs/design/foundations/typography": {
     "color-contrast": 1
   },
-  "axe mobile /design/patterns/cards": {
+  "axe mobile /docs/design/patterns/cards": {
     "color-contrast": 17
   },
-  "axe mobile /design/patterns/empty-states": {
+  "axe mobile /docs/design/patterns/empty-states": {
     "color-contrast": 3
   },
   "axe mobile /festivals": {
@@ -157,10 +157,10 @@
     "color-contrast": "*",
     "link-in-text-block": "*"
   },
-  "basic desktop /design/patterns/heroes": {
+  "basic desktop /docs/design/patterns/heroes": {
     "single-h1": 1
   },
-  "basic mobile /design/patterns/heroes": {
+  "basic mobile /docs/design/patterns/heroes": {
     "single-h1": 1
   }
 }

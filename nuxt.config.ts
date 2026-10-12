@@ -36,8 +36,13 @@ export default defineNuxtConfig({
     '/datenschutz': { redirect: { to: '/privacy-policy', statusCode: 301 } },
     '/impressum': { redirect: { to: '/imprint', statusCode: 301 } },
     '/agb': { redirect: { to: '/terms', statusCode: 301 } },
-    // The old single-page styleguide was replaced by the /design docs.
-    '/styleguide': { redirect: { to: '/design', statusCode: 301 } },
+    // The old single-page styleguide was replaced by the /docs/design docs.
+    '/styleguide': { redirect: { to: '/docs/design', statusCode: 301 } },
+    // /design and /architecture moved under the /docs umbrella (RAZ-305).
+    '/design': { redirect: { to: '/docs/design', statusCode: 301 } },
+    '/design/**': { redirect: { to: '/docs/design/**', statusCode: 301 } },
+    '/architecture': { redirect: { to: '/docs/architecture', statusCode: 301 } },
+    '/architecture/**': { redirect: { to: '/docs/architecture/**', statusCode: 301 } },
     // Auth-gated pages: all data is client-only (localStorage + TRPC behind
     // session cookie). SSR renders empty stats → hydration mismatch → Vue
     // fails to reconcile the DOM, so the user sees stale/empty data until a
@@ -49,7 +54,7 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'vercel',
   },
-  // The architecture module regenerates the /architecture docs data from code
+  // The architecture module regenerates the /docs/architecture docs data from code
   // (schema, tRPC routers, API handlers) before every dev/build — ADR-000.
   modules: ['shadcn-nuxt', '@sentry/nuxt/module', './scripts/architecture/nuxt-module'],
   shadcn: {

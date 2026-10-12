@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Festival card — the /festivals listing row (anatomy: /design/patterns/cards).
+ * Festival card — the /festivals listing row (anatomy: /docs/design/patterns/cards).
  *
  *   <FestivalCard :festival="f" :picked="yearPlanIds.has(f.slug)" @pick="onPick(f.slug)" />
  *

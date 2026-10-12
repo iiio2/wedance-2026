@@ -10,7 +10,7 @@
  *      ('Caveat, cursive' is one font called "Caveat, cursive" — it never matches).
  *   5. No Tailwind class names assembled at runtime (`bg-wd-${key}`, 'text-' + c):
  *      Tailwind only generates classes it finds literally in source, so a built
- *      name silently renders nothing (the white swatches on /design/foundations/colors).
+ *      name silently renders nothing (the white swatches on /docs/design/foundations/colors).
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
