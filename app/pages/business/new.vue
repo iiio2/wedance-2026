@@ -2,7 +2,14 @@
 /**
  * /business/new — create a new artist / venue / organizer profile. The creator owns
  * it straight away and lands in the editor.
+ *
+ * Start from an Instagram link: it fills in the handle and a name to edit, and
+ * stores the link. While typing we look for an existing page (same Instagram
+ * account, handle or name) and offer Claim / Join instead of a duplicate.
  */
+import { Instagram, ArrowRight } from 'lucide-vue-next'
+import { parseInstagramHandle, handleFromInstagram, nameFromInstagram } from '#shared/utils/instagram'
+
 definePageMeta({ layout: 'business' })
 useHead({ title: 'Create a profile | WeDance' })
 
@@ -14,14 +21,41 @@ const types = [
   { value: 'venue', label: 'Venue', hint: 'Club, bar, studio, outdoor spot' },
   { value: 'organizer', label: 'Organizer', hint: 'Parties, festivals, workshops' },
 ] as const
-const form = reactive({ type: 'artist' as 'artist' | 'venue' | 'organizer', name: '', city: '', handle: '' })
+const form = reactive({ type: 'artist' as 'artist' | 'venue' | 'organizer', instagram: '', name: '', city: '', handle: '' })
 const nameError = ref<string | undefined>()
 const saving = ref(false)
 const error = ref<string | null>(null)
 
+const igHandle = computed(() => parseInstagramHandle(form.instagram))
+const igError = computed(() => (form.instagram.trim() && !igHandle.value ? 'Paste a link like instagram.com/name, or @name.' : undefined))
+
+// Fill empty fields from the Instagram handle; never overwrite what was typed.
+const filledFromIg = reactive({ name: '', handle: '' })
+watch(igHandle, (ig) => {
+  if (!ig) return
+  if (!form.name || form.name === filledFromIg.name) form.name = filledFromIg.name = nameFromInstagram(ig)
+  if (!form.handle || form.handle === filledFromIg.handle) form.handle = filledFromIg.handle = handleFromInstagram(ig)
+})
+
+type Existing = Awaited<ReturnType<typeof $trpc.business.findExisting.query>>
+const existing = ref<Existing>([])
+let timer: ReturnType<typeof setTimeout> | undefined
+watch(() => [igHandle.value, form.name.trim(), form.handle.trim()], () => {
+  clearTimeout(timer)
+  timer = setTimeout(async () => {
+    try {
+      existing.value = await $trpc.business.findExisting.query({
+        name: form.name.trim() || undefined,
+        handle: form.handle.trim() || undefined,
+        instagram: igHandle.value || undefined,
+      })
+    } catch { existing.value = [] }
+  }, 350)
+})
+
 async function submit() {
   nameError.value = form.name.trim() ? undefined : 'Add a name.'
-  if (nameError.value) return
+  if (nameError.value || igError.value) return
   saving.value = true
   error.value = null
   try {
@@ -29,6 +63,7 @@ async function submit() {
       type: form.type,
       name: form.name,
       city: form.city || undefined,
+      instagram: igHandle.value || undefined,
       handle: form.handle.trim() || undefined,
     })
     await navigateTo(`/business/profiles/${username}`)
@@ -38,6 +73,8 @@ async function submit() {
     saving.value = false
   }
 }
+
+const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', organizer: 'Organizer' }
 </script>
 
 <template>
@@ -62,6 +99,13 @@ async function submit() {
         </div>
       </fieldset>
 
+      <Field id="new-instagram" label="Instagram" optional :error="igError" hint="Paste the Instagram link to fill in the handle and a name. You can change both." class="mt-4">
+        <div class="relative">
+          <Instagram class="size-4 absolute left-3.5 top-3.5 text-muted-foreground" aria-hidden="true" />
+          <Input v-model="form.instagram" placeholder="https://www.instagram.com/…" class="pl-10" autocomplete="off" />
+        </div>
+      </Field>
+
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         <Field id="new-name" label="Name" :error="nameError">
           <Input v-model="form.name" placeholder="e.g. La Clave en Múnich" />
@@ -80,8 +124,26 @@ async function submit() {
         </Field>
       </div>
 
+      <div v-if="existing.length" class="mt-5 rounded-xl border border-warning/40 bg-warning/10 p-4" role="status">
+        <p class="text-sm font-bold">Already on WeDance?</p>
+        <p class="text-xs text-muted-foreground">If one of these is yours, take it over instead of creating a second page.</p>
+        <div class="mt-3 grid gap-2">
+          <div v-for="p in existing" :key="p.username" class="flex flex-wrap items-center gap-3 rounded-xl bg-card p-3">
+            <img v-if="p.photo" :src="p.photo" alt="" class="size-9 rounded-lg object-cover">
+            <span v-else class="size-9 rounded-lg bg-muted" />
+            <div class="min-w-[10rem] flex-1">
+              <NuxtLink :to="`/@${p.username}`" target="_blank" class="block truncate text-sm font-bold hover:underline">{{ p.name }}</NuxtLink>
+              <p class="truncate text-xs text-muted-foreground">{{ typeLabel[p.type] || p.type }} · @{{ p.username }}<template v-if="p.city"> · {{ p.city }}</template></p>
+            </div>
+            <Button variant="outline-pill" size="pill-sm" as-child>
+              <NuxtLink :to="`/business/claim?profile=${p.username}`">{{ p.managed ? 'Join the team' : 'Claim it' }} <ArrowRight /></NuxtLink>
+            </Button>
+          </div>
+        </div>
+      </div>
+
       <div class="mt-5">
-        <Button type="submit" variant="pill" :loading="saving">Create profile</Button>
+        <Button type="submit" variant="pill" :loading="saving">{{ existing.length ? 'No, create a new profile' : 'Create profile' }}</Button>
       </div>
     </form>
   </div>

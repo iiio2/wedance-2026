@@ -108,6 +108,25 @@ describe.skipIf(!DATABASE_URL)('business router', () => {
     await expect(caller(owner).business.requestClaim({ username, message: 'me too' })).rejects.toThrow('already manages')
   })
 
+  it('creates from an Instagram link and refuses a second page for the same account', async () => {
+    const ig = `${tag.replace(/-/g, '_')}_ritmo`.slice(0, 30)
+    const { username } = await caller(owner).business.create({ type: 'artist', name: `${tag} Ritmo`, instagram: `https://www.instagram.com/${ig}/?igsh=abc` })
+    createdProfiles.push(username)
+    const p = await caller(owner).business.get({ username })
+    expect(p.socials).toEqual([{ platform: 'instagram', url: `https://instagram.com/${ig}` }])
+
+    await expect(caller(other).business.create({ type: 'artist', name: 'Copy', instagram: `@${ig}` })).rejects.toThrow('already has a page')
+    await expect(caller(other).business.create({ type: 'artist', name: 'X', instagram: 'not a link at all' })).rejects.toThrow('Instagram link')
+
+    // The Create form's "Already on WeDance?" lookup: by Instagram, handle or exact name.
+    const byIg = await caller(other).business.findExisting({ instagram: `instagram.com/${ig}` })
+    expect(byIg.map(r => r.username)).toEqual([username])
+    expect(byIg[0]?.managed).toBe(true)
+    expect((await caller(other).business.findExisting({ handle: username })).map(r => r.username)).toEqual([username])
+    expect((await caller(other).business.findExisting({ name: `${tag} ritmo` })).map(r => r.username)).toEqual([username])
+    expect(await caller(other).business.findExisting({ name: 'zz' })).toEqual([])
+  })
+
   it('picks a free handle when the name is taken', async () => {
     const a = await caller(owner).business.create({ type: 'organizer', name: `${tag} Org` })
     const b = await caller(owner).business.create({ type: 'organizer', name: `${tag} Org` })

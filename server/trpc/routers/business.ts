@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure, adminProcedure } from '../trpc'
 import { profiles, profileMembers, profileClaims, dancers, cities } from '../../database/schema'
 import { slugify, randomSuffix } from '../../utils/slug'
+import { parseInstagramHandle, instagramUrl } from '../../../shared/utils/instagram'
 import { grant, logAccess } from '../../utils/profileAccess'
 import { notifyDecision } from './businessTeam'
 
@@ -69,6 +70,11 @@ export async function citySlugFor(db: any, name: string | null) {
 // Spelled out: drizzle drops the table name on single-table selects, and a bare
 // "id" inside the subquery would bind to m.id.
 const isManaged = sql<boolean>`exists (select 1 from "profile_members" m where m.profile_id = "profiles"."id")`
+
+// Profiles that link this Instagram account (www. / trailing slash / case vary in
+// imports). The one reliable "same account" signal we have.
+export const linksInstagram = (handle: string) =>
+  sql`${profiles.socials}::text ~* ${`instagram\\.com/${handle.replace(/\./g, '\\.')}/?"`}`
 
 export const businessRouter = router({
   // For the public /@handle page: show "Edit" to managers, "Claim" when unmanaged.
@@ -161,23 +167,57 @@ export const businessRouter = router({
       return { requested: true }
     }),
 
+  // "Is this already on WeDance?" while someone fills in Create — by handle,
+  // Instagram account or exact name. Lets the form say "claim it" instead of
+  // creating a duplicate.
+  findExisting: protectedProcedure
+    .input(z.object({
+      name: z.string().trim().max(120).optional(),
+      handle: z.string().trim().max(60).optional(),
+      instagram: z.string().trim().max(300).optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const ig = parseInstagramHandle(input.instagram)
+      const conds = [
+        input.handle ? eq(profiles.username, input.handle.toLowerCase()) : undefined,
+        ig ? linksInstagram(ig) : undefined,
+        input.name && input.name.length >= 3 ? sql`lower(${profiles.name}) = lower(${input.name})` : undefined,
+      ].filter(Boolean)
+      if (!conds.length) return []
+      return ctx.db
+        .select({ username: profiles.username, name: profiles.name, type: profiles.type, city: profiles.city, photo: profiles.photo, managed: isManaged })
+        .from(profiles)
+        .where(and(eq(profiles.status, 'visible'), or(...(conds as any[]))))
+        .limit(5)
+    }),
+
   create: protectedProcedure
     .input(z.object({
       type: z.enum(PROFILE_TYPES),
       name: editableFields.name,
       city: editableFields.city.optional(),
+      instagram: z.string().trim().max(300).optional(),
       handle: z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/, 'Use 3–40 letters, numbers or dashes.').optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const ig = input.instagram ? parseInstagramHandle(input.instagram) : null
+      if (input.instagram && !ig) throw new TRPCError({ code: 'BAD_REQUEST', message: 'That doesn’t look like an Instagram link or handle.' })
+      if (ig) {
+        const [dupe] = await ctx.db.select({ username: profiles.username, name: profiles.name }).from(profiles).where(linksInstagram(ig)).limit(1)
+        if (dupe) throw new TRPCError({ code: 'CONFLICT', message: `@${ig} already has a page on WeDance: ${dupe.name} (@${dupe.username}). Claim it or join its team instead.` })
+      }
       let handle = input.handle || slugify(input.name)
       if (await handleTaken(ctx.db, handle)) {
-        if (input.handle) throw new TRPCError({ code: 'CONFLICT', message: 'That handle is taken.' })
+        if (input.handle) throw new TRPCError({ code: 'CONFLICT', message: `@${handle} is taken — if that page is yours, claim it instead.` })
         handle = `${slugify(input.name)}-${randomSuffix(4)}`
       }
       const city = input.city?.trim() || null
       const [p] = await ctx.db
         .insert(profiles)
-        .values({ type: input.type, name: input.name, username: handle, city, citySlug: await citySlugFor(ctx.db, city), claimed: true })
+        .values({
+          type: input.type, name: input.name, username: handle, city, citySlug: await citySlugFor(ctx.db, city), claimed: true,
+          socials: ig ? [{ platform: 'instagram', url: instagramUrl(ig) }] : [],
+        })
         .returning({ id: profiles.id, username: profiles.username })
       await ctx.db.insert(profileMembers).values({ profileId: p!.id, dancerId: ctx.dancerId, role: 'owner' })
       await logAccess(ctx.db, { profileId: p!.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'created', role: 'owner' })

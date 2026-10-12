@@ -6,7 +6,8 @@ import { events, profiles, profileMembers, profileClaims, cities } from '../../d
 import { slugify, randomSuffix } from '../../utils/slug'
 import { resolveTimezone } from '../../utils/v3EventSync'
 import { zonedToUtc, eventLocalDate, eventLocalTime, eventLocalWeekday } from '../../../shared/utils/eventTime'
-import { requireMember } from './business'
+import { requireMember, linksInstagram } from './business'
+import { parseInstagramHandle, handleFromInstagram, instagramUrl } from '../../../shared/utils/instagram'
 import { joinRequestsForOwner } from './businessTeam'
 
 /**
@@ -287,21 +288,16 @@ export const businessEventsRouter = router({
       name: z.string().trim().max(120).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const handle = input.instagram
-        .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
-        .replace(/^@/, '')
-        .split(/[/?#]/)[0]!
-        .toLowerCase()
-      if (!/^[a-z0-9._]{1,30}$/.test(handle)) throw new TRPCError({ code: 'BAD_REQUEST', message: 'That doesn’t look like an Instagram handle.' })
-      const url = `https://instagram.com/${handle}`
+      const handle = parseInstagramHandle(input.instagram)
+      if (!handle) throw new TRPCError({ code: 'BAD_REQUEST', message: 'That doesn’t look like an Instagram handle.' })
+      const url = instagramUrl(handle)
+      // Same Instagram account only — a matching WeDance handle is not proof it's the same person.
       const [existing] = await ctx.db.select({ username: profiles.username, name: profiles.name, type: profiles.type, city: profiles.city, photo: profiles.photo })
         .from(profiles)
-        // Same Instagram account only (www. / trailing slash / case vary in imports).
-        // A matching WeDance handle is not proof it's the same person.
-        .where(sql`${profiles.socials}::text ~* ${`instagram\\.com/${handle.replace(/\./g, '\\.')}/?"`}`)
+        .where(linksInstagram(handle))
         .limit(1)
       if (existing) return existing
-      let username = handle.replace(/[._]+/g, '-').replace(/^-|-$/g, '')
+      let username = handleFromInstagram(handle)
       const [taken] = await ctx.db.select({ id: profiles.id }).from(profiles).where(eq(profiles.username, username))
       if (taken) username = `${username}-${randomSuffix(4)}`
       const [p] = await ctx.db.insert(profiles)
