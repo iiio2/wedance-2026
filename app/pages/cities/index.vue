@@ -110,7 +110,7 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
               v-model="searchQuery"
               :options="cityOptions"
               :show-popular="false"
-              :free-text-note="false"
+              free-text
               :limit="6"
               placeholder="Search by city or country"
               @select="goToCity"

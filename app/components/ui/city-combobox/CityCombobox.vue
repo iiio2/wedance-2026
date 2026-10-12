@@ -2,20 +2,26 @@
 import type { HTMLAttributes, PropType } from "vue"
 import type { ControlVariants } from "@/components/ui/input"
 import type { CityOption } from "#shared/utils/citySearch"
-import { MapPin } from "lucide-vue-next"
+import { MapPin, Plus } from "lucide-vue-next"
 import { cn } from "@/lib/utils"
 import { controlAria, FIELD_KEY } from "@/lib/field"
 import { controlVariants } from "@/components/ui/input"
-import { matchRange, searchCities } from "#shared/utils/citySearch"
+import { cityKey, matchRange, mergeCityResults, needsResolve, normalizeCity, searchCities } from "#shared/utils/citySearch"
 
 /**
  * City typeahead — ARIA 1.2 combobox (list autocomplete, no auto-select).
  *
- * The value is the city NAME as a plain string, the same shape dancers.city /
- * profiles.city store. Free text is allowed by default: suggestions help people
- * spell a known city, they never block someone in a city we don't list yet.
- * Suggestions come from /api/city-options (WeDance's own cities + the
- * illustrated-city catalogue), loaded once on first focus and filtered locally.
+ * The value is always a canonical city: one of our `cities` rows, or a Google
+ * Places city that is added to `cities` the moment it is picked. Typing alone
+ * never sets the value — "München", "Мюнхен", "Munique" and "munich" all save
+ * as "Munich". v-model is the canonical English NAME (the shape the free-text
+ * city columns still store); @select hands over the full city ({ id, slug,
+ * name, country, placeId, … }) for callers that store the id or slug.
+ *
+ * Known cities come from /api/city-options (fetched once on first focus,
+ * filtered locally — no request per keystroke). Only when that list has fewer
+ * than 3 matches does the field ask /api/city-search (→ Google Places, debounced,
+ * 2+ letters, one billed session per typing session).
  */
 // Runtime props on purpose — see ui/button/Button.vue.
 defineOptions({ inheritAttrs: false })
@@ -24,23 +30,24 @@ const props = defineProps({
   placeholder: { type: String, default: "Search a city" },
   size: { type: String as PropType<ControlVariants["size"]>, default: undefined },
   invalid: { type: Boolean, default: false },
-  /** Keep whatever is typed as the value (default). false = only a picked suggestion counts; typing something else reverts on blur. */
-  allowCustom: { type: Boolean, default: true },
-  /** Say "we'll save it as you typed it" when nothing matches. Turn off when free text filters rather than saves (search boxes). */
-  freeTextNote: { type: Boolean, default: true },
+  /**
+   * Search-box mode: the typed text IS the value (the /cities directory filter).
+   * Never use it for a field that is saved — saved cities must be canonical.
+   */
+  freeText: { type: Boolean, default: false },
   /** Show the biggest communities when the field is focused but empty. */
   showPopular: { type: Boolean, default: true },
   /** Max suggestions shown. */
   limit: { type: Number, default: 8 },
-  /** Debounce (ms) between typing and re-filtering. */
-  debounce: { type: Number, default: 120 },
-  /** Supply your own list instead of /api/city-options (docs, tests, scoped lists). */
+  /** Debounce (ms) before asking the server/Google. Never below 250. */
+  debounce: { type: Number, default: 300 },
+  /** Supply your own list instead of /api/city-options (docs, tests, scoped lists). Disables the Google search. */
   options: { type: Array as PropType<CityOption[]>, default: undefined },
   class: { type: [String, Array, Object] as PropType<HTMLAttributes["class"]>, default: undefined },
 })
 
 const emit = defineEmits<{
-  /** A suggestion was picked (click, Enter). Carries slug + country for navigation or extra fields. */
+  /** A city was picked (click, Enter) — already canonical (resolved through Google if it was new). */
   select: [city: CityOption]
 }>()
 
@@ -56,8 +63,10 @@ const listId = computed(() => `${inputId.value}-listbox`)
 const optionId = (i: number) => `${inputId.value}-opt-${i}`
 
 const remote = useCityOptions()
+const lookup = useCityLookup()
+const useRemote = computed(() => !props.options)
 const source = computed(() => props.options ?? (remote.options.value as CityOption[]))
-const loading = computed(() => !props.options && remote.status.value === "loading")
+const loading = computed(() => useRemote.value && remote.status.value === "loading")
 
 const text = ref(model.value ?? "")
 const query = ref("")
@@ -66,26 +75,56 @@ const active = ref(-1)
 const inputEl = ref<HTMLInputElement | null>(null)
 const listEl = ref<HTMLUListElement | null>(null)
 
+// Server/Google results for `remoteFor` (the folded query they answer).
+const remoteResults = ref<CityOption[]>([])
+const remoteFor = ref("")
+const searching = ref(false)
+const resolving = ref<string | null>(null)
+const error = ref("")
+
 watch(model, (v) => { if ((v ?? "") !== text.value) text.value = v ?? "" })
 
-let timer: ReturnType<typeof setTimeout> | undefined
-function setQuery(v: string, now = false) {
-  clearTimeout(timer)
-  if (now || !props.debounce) query.value = v
-  else timer = setTimeout(() => { query.value = v }, props.debounce)
-}
-onBeforeUnmount(() => clearTimeout(timer))
-
-const results = computed(() => {
+const local = computed(() => {
   if (!query.value.trim() && !props.showPopular) return []
   return searchCities(source.value, query.value, props.limit)
 })
+const results = computed(() => {
+  const q = normalizeCity(query.value)
+  if (q && remoteFor.value === q && remoteResults.value.length) return mergeCityResults([local.value, remoteResults.value], props.limit)
+  return local.value
+})
+const hasGoogle = computed(() => results.value.some(r => r.source === "google"))
 const popular = computed(() => !query.value.trim())
-const exact = computed(() => results.value.some(r => r.name.toLowerCase() === text.value.trim().toLowerCase()))
-const noMatch = computed(() => open.value && !loading.value && !!query.value.trim() && results.value.length === 0)
-// A search box (free text, no save note) has its own "no results" on the page — keep the popup closed.
-const showEmpty = computed(() => noMatch.value && !(props.allowCustom && !props.freeTextNote))
+const pending = computed(() => searching.value && !results.value.length)
+const noMatch = computed(() => open.value && !loading.value && !pending.value && !!query.value.trim() && results.value.length === 0)
+// A search box has its own "no results" on the page — keep the popup closed there.
+const showEmpty = computed(() => (noMatch.value || !!error.value) && !props.freeText)
 const showList = computed(() => open.value && results.value.length > 0)
+
+let timer: ReturnType<typeof setTimeout> | undefined
+let seq = 0
+function scheduleRemote() {
+  clearTimeout(timer)
+  const q = normalizeCity(query.value)
+  if (!useRemote.value || props.freeText || q.length < 2 || local.value.length >= 3 || remoteFor.value === q) {
+    searching.value = false
+    return
+  }
+  searching.value = true
+  const raw = query.value.trim()
+  const mine = ++seq
+  timer = setTimeout(async () => {
+    try {
+      const res = await lookup.search(raw, props.limit)
+      if (mine !== seq) return
+      remoteResults.value = res.results
+      remoteFor.value = q
+    }
+    catch { if (mine === seq) { remoteResults.value = []; remoteFor.value = q } }
+    finally { if (mine === seq) searching.value = false }
+  }, Math.max(250, props.debounce))
+}
+onBeforeUnmount(() => clearTimeout(timer))
 
 watch(results, () => { active.value = -1 })
 watch(active, (i) => {
@@ -95,7 +134,7 @@ watch(active, (i) => {
 
 function openList() {
   if (aria.value.disabled) return
-  if (!props.options) remote.load()
+  if (useRemote.value) remote.load()
   open.value = true
 }
 function close() {
@@ -106,18 +145,40 @@ function close() {
 function onInput(e: Event) {
   const v = (e.target as HTMLInputElement).value
   text.value = v
-  if (props.allowCustom) model.value = v
-  setQuery(v)
+  error.value = ""
+  if (props.freeText) model.value = v
+  else if (!v.trim()) model.value = ""
+  query.value = v
   openList()
+  scheduleRemote()
 }
 
-function pick(city: CityOption) {
+function commit(city: CityOption) {
   text.value = city.name
   model.value = city.name
-  setQuery(city.name, true)
+  query.value = city.name
   emit("select", city)
   close()
   inputEl.value?.focus()
+}
+
+async function pick(city: CityOption) {
+  if (resolving.value) return
+  if (!needsResolve(city)) { commit(city); lookup.endSession(); return }
+  resolving.value = cityKey(city)
+  error.value = ""
+  try {
+    const res = await lookup.resolve(city.placeId!, query.value.trim() || undefined)
+    remote.remember(res.city)
+    commit(res.city)
+  }
+  catch {
+    error.value = `Couldn't add ${city.name} right now. Please try again.`
+  }
+  finally {
+    resolving.value = null
+    lookup.endSession()
+  }
 }
 
 function move(step: number) {
@@ -152,7 +213,7 @@ function onKeydown(e: KeyboardEvent) {
         e.preventDefault()
         text.value = ""
         model.value = ""
-        setQuery("", true)
+        query.value = ""
       }
       break
     case "Home":
@@ -167,9 +228,11 @@ function onKeydown(e: KeyboardEvent) {
 
 function onBlur() {
   close()
-  if (!props.allowCustom && text.value !== (model.value ?? "")) {
+  // Typed-but-not-picked text is not a city: put the saved value back.
+  if (!props.freeText && !resolving.value && text.value !== (model.value ?? "")) {
     text.value = model.value ?? ""
-    setQuery(text.value, true)
+    query.value = text.value
+    error.value = ""
   }
 }
 
@@ -180,10 +243,17 @@ function parts(name: string): [string, string, string] {
   return [name.slice(0, r[0]), name.slice(r[0], r[1]), name.slice(r[1])]
 }
 
+/** Second line of an option: "Bavaria, Germany" for Google, else the country. */
+function detail(c: CityOption) {
+  return c.source === "google" ? (c.description || c.country) : c.country
+}
+
 const status = computed(() => {
   if (!open.value) return ""
-  if (loading.value) return "Loading cities…"
-  if (noMatch.value) return props.allowCustom && props.freeTextNote ? `No city found. “${text.value.trim()}” will be used as typed.` : "No city found."
+  if (resolving.value) return "Adding the city…"
+  if (error.value) return error.value
+  if (loading.value || pending.value) return "Searching cities…"
+  if (noMatch.value) return "No city found. Check the spelling or try the English name."
   const n = results.value.length
   return n ? `${n} cit${n === 1 ? "y" : "ies"} suggested. Use up and down arrows to choose.` : ""
 })
@@ -216,7 +286,7 @@ const status = computed(() => {
     >
 
     <div
-      v-show="showList || showEmpty || (open && loading)"
+      v-show="showList || showEmpty || (open && (loading || pending))"
       class="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-xl text-left border border-border bg-popover text-popover-foreground shadow-wd-float"
       data-slot="city-combobox-popup"
     >
@@ -233,30 +303,36 @@ const status = computed(() => {
         <li
           v-for="(c, i) in results"
           :id="optionId(i)"
-          :key="c.slug"
+          :key="cityKey(c)"
           role="option"
           :aria-selected="i === active ? 'true' : 'false'"
+          :aria-busy="resolving === cityKey(c) ? 'true' : undefined"
+          :data-source="c.source"
           :data-active="i === active ? '' : undefined"
           class="flex cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-sm font-sans text-foreground data-[active]:bg-accent data-[active]:text-accent-foreground hover:bg-muted"
           @mousedown.prevent
           @click="pick(c)"
           @mousemove="active = i"
         >
-          <MapPin class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <component :is="c.source === 'google' ? Plus : MapPin" class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <span class="min-w-0 flex-1 truncate">
             <template v-for="(p, j) in [parts(c.name)]" :key="j">{{ p[0] }}<mark class="bg-transparent font-bold text-inherit">{{ p[1] }}</mark>{{ p[2] }}</template>
           </span>
-          <span v-if="c.country" class="shrink-0 text-xs text-muted-foreground">{{ c.country }}</span>
+          <span v-if="resolving === cityKey(c)" class="shrink-0 text-xs text-muted-foreground">Adding…</span>
+          <span v-else-if="detail(c)" class="shrink-0 max-w-[45%] truncate text-xs text-muted-foreground">{{ detail(c) }}</span>
         </li>
       </ul>
-      <p v-if="open && loading && !results.length" class="px-3.5 py-3 text-sm text-muted-foreground font-sans">
-        Loading cities…
+      <p v-if="open && (loading || pending) && !results.length" class="px-3.5 py-3 text-sm text-muted-foreground font-sans">
+        Searching cities…
+      </p>
+      <p v-else-if="error" class="px-3.5 py-3 text-sm text-destructive font-sans" data-slot="city-combobox-error">
+        {{ error }}
       </p>
       <p v-else-if="showEmpty" class="px-3.5 py-3 text-sm text-muted-foreground font-sans" data-slot="city-combobox-empty">
-        No city found<template v-if="allowCustom && freeTextNote"> — we'll save <strong class="text-foreground">“{{ text.trim() }}”</strong> as you typed it</template>.
+        No city found. Check the spelling or try the English name.
       </p>
-      <p v-else-if="showList && allowCustom && freeTextNote && !popular && !exact && text.trim()" class="border-t border-border px-3.5 py-2 text-xs text-muted-foreground font-sans">
-        Not listed? Keep typing — we'll save it as written.
+      <p v-if="showList && hasGoogle" class="border-t border-border px-3.5 py-1.5 text-right text-meta text-muted-foreground font-sans" data-slot="city-combobox-attribution">
+        powered by Google
       </p>
     </div>
 

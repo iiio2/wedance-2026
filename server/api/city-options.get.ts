@@ -1,28 +1,29 @@
-import { eq } from 'drizzle-orm'
-import { useDb } from '../utils/db'
-import { profiles } from '../database/schema'
-import cityImages from '../data/city-images.json'
-import { buildCityOptions, type CityOption } from '#shared/utils/citySearch'
+import { catalogueOptions, profileCityRows, useCityService } from '../utils/cities/nitro'
+import { rowToOption } from '../utils/cities/service'
+import type { CityOption } from '#shared/utils/citySearch'
 
 /**
- * Suggestions for <CityCombobox>: every city someone has listed on WeDance
- * (ranked by community size) plus the illustrated-city catalogue, with country
- * and alternative spellings so "München" finds Munich. ~470 rows, ~25 KB
- * gzipped — fetched once per session and filtered on the client, so typing
- * never waits on the network and no geocoding API key is needed.
+ * The known-city list for <CityCombobox>: fetched once per session on first
+ * focus, filtered on the client with every keystroke (no request per letter),
+ * and its biggest communities are the "Popular on WeDance" empty state.
+ *
+ * Source: the canonical `cities` table, ranked by visible profiles per slug.
+ * Until migration 0024 is applied (or while the table is still empty) it falls
+ * back to today's list — profile cities + the illustrated-city catalogue — so
+ * the field keeps working before the migration.
  */
 export default defineEventHandler(async (event): Promise<CityOption[]> => {
-  let rows: { city: string | null, citySlug: string | null }[] = []
+  setResponseHeader(event, 'Cache-Control', 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400')
   try {
-    rows = await useDb()
-      .select({ city: profiles.city, citySlug: profiles.citySlug })
-      .from(profiles)
-      .where(eq(profiles.status, 'visible'))
+    const rows = await useCityService().rows()
+    if (rows && rows.length) {
+      const counts = new Map<string, number>()
+      for (const r of await profileCityRows()) if (r.citySlug) counts.set(r.citySlug, (counts.get(r.citySlug) ?? 0) + 1)
+      return rows.map(r => rowToOption(r, counts.get(r.slug) ?? 0))
+    }
   }
   catch (err) {
-    // The catalogue alone is still a useful list — never fail the field.
-    console.error('[city-options] profile query failed', err)
+    console.error('[city-options] cities table read failed', (err as Error).message)
   }
-  setResponseHeader(event, 'Cache-Control', 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400')
-  return buildCityOptions(rows, cityImages as Record<string, { country?: string | null, altNames?: string[] }>)
+  return catalogueOptions()
 })

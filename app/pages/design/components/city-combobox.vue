@@ -5,17 +5,17 @@ definePageMeta({ layout: 'design' })
 
 const city = ref('')
 const picked = ref<CityOption | null>(null)
-const strictCity = ref('Berlin')
 const filled = ref('Munich')
+const searchText = ref('')
 
 // A fixed list for the states demos, so the page is deterministic (no DB).
 const sample: CityOption[] = [
-  { name: 'Munich', slug: 'munich', country: 'Germany', altNames: ['München'], communities: 120 },
-  { name: 'Berlin', slug: 'berlin', country: 'Germany', altNames: [], communities: 90 },
-  { name: 'Hamburg', slug: 'hamburg', country: 'Germany', altNames: [], communities: 40 },
-  { name: 'Vienna', slug: 'vienna', country: 'Austria', altNames: ['Wien'], communities: 35 },
-  { name: 'Prague', slug: 'prague', country: 'Czechia', altNames: ['Praha'], communities: 20 },
-  { name: 'São Paulo', slug: 'sao-paulo', country: 'Brazil', altNames: [], communities: 8 },
+  { name: 'Munich', slug: 'munich', country: 'Germany', altNames: ['München', 'Мюнхен'], communities: 120, source: 'city' },
+  { name: 'Berlin', slug: 'berlin', country: 'Germany', altNames: [], communities: 90, source: 'city' },
+  { name: 'Hamburg', slug: 'hamburg', country: 'Germany', altNames: [], communities: 40, source: 'city' },
+  { name: 'Vienna', slug: 'vienna', country: 'Austria', altNames: ['Wien'], communities: 35, source: 'city' },
+  { name: 'Prague', slug: 'prague', country: 'Czechia', altNames: ['Praha'], communities: 20, source: 'city' },
+  { name: 'São Paulo', slug: 'sao-paulo', country: 'Brazil', altNames: [], communities: 8, source: 'city' },
 ]
 
 const codeBasic = `<Field label="Your city" :error="errors.city">
@@ -26,25 +26,29 @@ const codeBasic = `<Field label="Your city" :error="errors.city">
   />
 </Field>`
 
-const codeSelect = `<!-- Navigate on pick; typing still filters the page -->
+const codeSelect = `<!-- Store the id/slug, not just the name -->
+<CityCombobox
+  v-model="form.city"
+  @select="city => { form.cityId = city.id; form.citySlug = city.slug }"
+/>`
+
+const codeSearch = `<!-- Directory filter only (/cities): the typed text is the value.
+     Never on a field that is saved. -->
 <CityCombobox
   v-model="searchQuery"
-  :free-text-note="false"
+  free-text
+  :show-popular="false"
   @select="city => navigateTo(\`/cities/\${city.slug}\`)"
 />`
 
-const codeStrict = `<!-- Only a picked suggestion counts; free text reverts on blur -->
-<CityCombobox v-model="city" :allow-custom="false" />`
-
 const props = [
-  { name: 'v-model', type: 'string', default: "''", description: 'The city name — the same plain string dancers.city / profiles.city store. Typing updates it live unless allow-custom is false.' },
-  { name: '@select', type: '(city: CityOption) => void', description: 'Fires when a suggestion is picked. CityOption = { name, slug, country, altNames, communities } — use slug to navigate or fill a slug field.' },
-  { name: 'allow-custom', type: 'boolean', default: 'true', description: 'Keep free text as the value. false = only a picked suggestion counts; anything else reverts on blur.' },
-  { name: 'free-text-note', type: 'boolean', default: 'true', description: "Show “we'll save it as you typed it” on no match. Turn off where typing filters instead of saves (the /cities search)." },
+  { name: 'v-model', type: 'string', default: "''", description: 'The canonical English city name (“Munich”) — only ever set by picking a city, never by typing. Text that was not picked reverts on blur; clearing the field clears the value.' },
+  { name: '@select', type: '(city: CityOption) => void', description: 'Fires with the canonical city once it is picked (Google picks are resolved and saved first): { id, slug, name, localName, country, countryCode, region, lat, lng, placeId, altNames }. Store id or slug from here.' },
+  { name: 'free-text', type: 'boolean', default: 'false', description: 'Search-box mode — the typed text is the value and Google is never asked. Only for filters (the /cities directory search), never for a saved field.' },
   { name: 'show-popular', type: 'boolean', default: 'true', description: 'On focus with an empty field, list the biggest WeDance communities.' },
   { name: 'limit', type: 'number', default: '8', description: 'Max suggestions in the list.' },
-  { name: 'debounce', type: 'number', default: '120', description: 'ms between the last keystroke and re-filtering.' },
-  { name: 'options', type: 'CityOption[]', description: 'Your own list instead of /api/city-options (fetched once per session on first focus).' },
+  { name: 'debounce', type: 'number', default: '300', description: 'ms between the last keystroke and asking the server (→ Google). Clamped to ≥ 250. Known cities filter instantly.' },
+  { name: 'options', type: 'CityOption[]', description: 'Your own list instead of /api/city-options. Turns off the Google search (docs, tests, scoped lists).' },
   { name: 'placeholder', type: 'string', default: "'Search a city'", description: 'Hint inside the empty field. Keep the Field label.' },
   { name: 'size', type: "'default' | 'sm'", default: "'default'", description: 'Same heights as Input.' },
   { name: 'invalid', type: 'boolean', default: 'false', description: 'Red border + aria-invalid without a Field.' },
@@ -57,17 +61,17 @@ const props = [
     eyebrow="Components"
     title="City combobox"
     status="beta"
-    lead="Type a few letters, pick your city. Suggestions come from WeDance's own city list (with alternative spellings like München → Munich) — no maps API, no key. Any city can still be typed, so nobody is blocked because we don't list their town yet."
+    lead="Type a few letters in any language, pick your city. Known cities come from WeDance's own cities table and filter instantly; a city we don't have yet is found through Google Places and added the moment it's picked. The saved value is always the canonical city — München, Мюнхен and munich all save as Munich."
   >
     <DesignSection id="example" title="Example">
       <DesignExample :code="codeBasic">
         <div class="w-full max-w-sm">
-          <Field label="Your city" hint="Try “mün”, “sao” or “ber”.">
-            <CityCombobox v-model="city" placeholder="Munich, Berlin…" data-test="demo-city" @select="c => (picked = c)" />
+          <Field label="Your city" hint="Try “Мюнх”, “mün”, “sao” — or a town we don't list yet.">
+            <CityCombobox v-model="city" placeholder="Munich, Berlin…" data-test="demo-city" @select="(c: CityOption) => (picked = c)" />
           </Field>
           <p class="text-xs text-muted-foreground mt-3">
             Value: <code class="font-mono" data-test="demo-city-value">{{ city || '—' }}</code>
-            <template v-if="picked"> · picked slug: <code class="font-mono">{{ picked.slug }}</code></template>
+            <template v-if="picked"> · slug: <code class="font-mono" data-test="demo-city-slug">{{ picked.slug }}</code><template v-if="picked.country"> · {{ picked.country }}</template></template>
           </p>
         </div>
       </DesignExample>
@@ -85,21 +89,23 @@ const props = [
       </DesignExample>
     </DesignSection>
 
-    <DesignSection id="behaviour" title="Behaviour" lead="Free text by default; react to a pick with @select; lock to the list with allow-custom=false.">
+    <DesignSection id="behaviour" title="Behaviour" lead="No free text: the value is always a canonical city. Known cities first, Google Places only for the rest.">
       <div class="space-y-4">
         <DesignExample :code="codeSelect">
           <ul class="text-sm text-muted-foreground font-sans space-y-1.5 list-disc pl-5">
             <li>Focus an empty field → the biggest communities (“Popular on WeDance”).</li>
-            <li>Typing filters locally — accents and case don't matter, alternative names count, the matched letters are bold.</li>
-            <li>No match → “No city found — we'll save it as you typed it”. The value is kept.</li>
+            <li>Typing filters the known cities instantly — accents and case don't matter, other spellings count (Мюнхен, Munique), the matched letters are bold.</li>
+            <li>Fewer than 3 known matches and 2+ letters → after a 300 ms pause the server asks Google Places (cities only, English names). New cities show a <strong>+</strong> and the region; “powered by Google” appears under them.</li>
+            <li>Picking a Google city adds it to WeDance's cities (English + local name, coordinates, the spelling you typed) and then sets the value — the next person finds it instantly.</li>
+            <li>Typed text that wasn't picked reverts on blur. No match → “No city found. Check the spelling or try the English name.”</li>
           </ul>
         </DesignExample>
-        <DesignExample :code="codeStrict">
+        <DesignExample :code="codeSearch">
           <div class="w-full max-w-sm">
-            <Field label="Home city (from list only)">
-              <CityCombobox v-model="strictCity" :options="sample" :allow-custom="false" />
+            <Field label="Search cities (filter mode)">
+              <CityCombobox v-model="searchText" :options="sample" free-text :show-popular="false" />
             </Field>
-            <p class="text-xs text-muted-foreground mt-3">Value: <code class="font-mono">{{ strictCity || '—' }}</code></p>
+            <p class="text-xs text-muted-foreground mt-3">Value: <code class="font-mono">{{ searchText || '—' }}</code></p>
           </div>
         </DesignExample>
       </div>
@@ -110,7 +116,7 @@ const props = [
     </DesignSection>
 
     <DesignSection id="guidance" title="Do & don't">
-      <DesignDoDont do-text="Use it wherever someone types a city — profile, onboarding, ride origin, enquiry forms. Keep free text on: a dancer in a town we don't list must still be able to answer." dont-text="Use a Select with hundreds of cities. Scrolling an alphabetical list on a phone is slow and the right city is rarely near the top.">
+      <DesignDoDont do-text="Use it wherever someone gives a city — profile, onboarding, ride origin, enquiry forms. Store the id or slug from @select where you can; a town we don't list yet is one Google pick away." dont-text="Use a plain text Input for a city, or free-text on a saved field. “München”, “Munich ” and “munich” become three cities nobody can group, count or link.">
         <template #do>
           <Field label="City" class="w-full max-w-56"><CityCombobox :options="sample" model-value="Munich" /></Field>
         </template>
@@ -125,7 +131,7 @@ const props = [
         :notes="[
           'ARIA 1.2 editable combobox: <code>role=combobox</code> on the input, <code>aria-autocomplete=list</code>, <code>aria-expanded</code>, <code>aria-controls</code> → the listbox, <code>aria-activedescendant</code> → the highlighted option. Focus never leaves the text box.',
           'Keys: ↓/↑ move through suggestions (and open the list), Alt+↓ opens, Enter picks the highlighted city, Esc closes — a second Esc clears the field. Enter with nothing highlighted submits the form as usual.',
-          'A polite live region announces how many cities are suggested, “loading” and the no-match message.',
+          'A polite live region announces how many cities are suggested, “searching”, “adding the city” and the no-match / error message. A city being added carries <code>aria-busy</code>.',
           'Inside a Field it picks up id, label, aria-describedby and aria-invalid like Input. Options are 40px+ tall for touch.',
         ]"
       />

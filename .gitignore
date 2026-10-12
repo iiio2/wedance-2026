@@ -35,3 +35,7 @@ wedance-2026-raz-158/
 .claude/settings.local.json
 
 .vercel
+
+# Scratch + generated city backfill artefacts
+.scratch/
+scripts/cities/.cache/

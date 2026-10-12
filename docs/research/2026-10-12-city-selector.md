@@ -2,7 +2,15 @@
 title: City selector — v3 vs v4 prior art, and what 2026 ships
 date: 2026-10-12
 feeds: app/components/ui/city-combobox/CityCombobox.vue
+updated: 2026-10-12 11:00
 ---
+
+> **Update 2026-10-12 (later the same day):** the first version below shipped
+> free text + a local list and explicitly dropped Google Places. The Commander
+> overruled that — see [Why Places, not free text](#why-places-not-free-text).
+> The verdict on *component shape* (v4's one composable + one component, minus
+> the button-popover) stands; the data source is now Google Places behind our
+> own canonical `cities` table.
 
 # City selector — v3 vs v4 prior art
 
@@ -38,7 +46,7 @@ One component: `components/inputs/CityInput.vue` = shadcn `Popover` + `Searchabl
 2026 takes v4's shape (one composable + one ui component) but drops two things neither needed:
 
 1. **The popover-with-a-button.** The text field itself is the combobox (ARIA 1.2 editable combobox, list autocomplete): one tap, type, arrow, Enter. Same surface as `Input` (`controlVariants`), works inside `Field`.
-2. **Google Places.** 2026 has no Maps/Places key in `.env` (checked names only), and it doesn't need one: it already knows its cities.
+2. ~~**Google Places.**~~ *(Reversed — see below.)* The first cut argued 2026 already knows its cities and needs no key.
 
 ## How 2026 stores cities
 
@@ -53,3 +61,57 @@ So the v-model is the **city name string** (no shape migration), and suggestions
 - **Locate me / use my position** — needs reverse geocoding (Google or similar) and the catalogue has no coordinates. Revisit if `city-images.json` gains lat/lng (nearest-city lookup would then be free).
 - **"Anywhere"** — v3/v4 used the input as a *filter*; 2026's filter UIs don't need it. Clearing the field (Esc twice) gives an empty value.
 - **Writing new cities from the input** — free text is saved as typed in the owning record; nothing is created from a keystroke.
+
+## Why Places, not free text
+
+Commander, 2026-10-12: *"v3/v4 cities use maps api to search and add cities to
+database (and to find cities spelled in different languages and map back to
+what's being saved). we need that. adding whatever custom text is not
+maintainable long term solution."*
+
+He is right, and the production data shows why. Read-only count on 2026-10-12:
+**585 distinct free-text city strings** across `dancers.city`,
+`profiles.city`, `events.city`, `festivals.city`, `gigs.location` and
+`festival_ride_shares.origin_city` (583 after case-folding alone). Most came from
+v3/v4, where Google already canonicalised them — but every free-text save adds a
+new variant ("München-Flughafen", "munich ", "Мюнхен") that no city page,
+counter or "who's in my city" query can group. A local alt-name list only helps
+for the cities somebody hand-curated; it can't map a spelling it has never seen.
+
+What changed:
+
+| | Free text (first cut) | Places-backed (now) |
+|---|---|---|
+| Saved value | whatever was typed | one canonical `cities` row (English name; id/slug via `@select`) |
+| München / Мюнхен / Munique / munich | 4 values unless curated | 1 value — Google resolves the place, its id dedupes |
+| Unknown town | saved as typed | found via Places Autocomplete, added to `cities` on pick |
+| Cost | none | 0 calls for known cities; a new city ≈ 1 billed session + 1 extra Details |
+| Key | none | `GOOGLE_MAPS_API_KEY`, server-side only (legacy Places API) |
+
+How it works (`server/utils/cities/`, `/api/city-search`, `/api/city-resolve`):
+
+1. The known-city list (`/api/city-options` → the `cities` table, alt names
+   included) is fetched once and filtered on the client — no request per key.
+2. Fewer than 3 local matches and 2+ letters → after ≥250 ms the server checks
+   the table, then asks Places Autocomplete (`types=(cities)`, `language=en`)
+   with the field's session token. Predictions for places we already have come
+   back as our rows. Results are LRU-cached per query; Google is rate-limited
+   per IP (30/min search, 10/min resolve).
+3. Picking a Google city → `resolve`: Place Details in English (closes the
+   billed session) + once per new city a Details call in the country's language
+   for the local name (skipped for English-speaking and multi-language
+   countries). Upsert by `google_place_id`; the typed spelling is kept as an
+   alt name unless it already matches (so "Мюнх" teaches the table, "Muni"
+   doesn't). Same name + country under another place-id variant merges into the
+   existing row.
+4. Until migration 0024 is applied the field still works: the catalogue list is
+   the fallback and `resolve` returns the canonical city with `persisted: false`
+   (logged as "persistence is pending migration 0024").
+
+v3's "write a city from inside the input" smell is avoided by keeping the
+write in one server endpoint that only accepts a Google place id — not text.
+
+Still not carried over: locate-me (needs reverse geocoding; `cities` now has
+lat/lng, so nearest-city is cheap once the table is filled) and "Anywhere".
+Migration of the free-text columns to `city_id`:
+[2026-10-12-city-canonicalisation.md](./2026-10-12-city-canonicalisation.md).

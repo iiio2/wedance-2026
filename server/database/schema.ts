@@ -726,3 +726,34 @@ export const festivalWaves = pgTable('festival_waves', {
   unique('festival_wave_unique').on(t.festivalSlug, t.dancerId, t.targetDancerId),
   index('festival_waves_target_idx').on(t.festivalSlug, t.targetDancerId),
 ])
+
+// ---------------------------------------------------------------------------
+// Cities — canonical, Google-Places-backed (migration 0024). One row per
+// Google place: `name` is the English name ("Munich"), `local_name` the name in
+// the country's language ("München"), `alt_names` every other spelling we have
+// resolved or seen typed ("Мюнхен", "Munique", "munchen"). The CityCombobox
+// only ever saves one of these rows, so "München", "Мюнхен" and "munich" all
+// end up as the same city. Free-text `city` columns elsewhere are migrated to a
+// `city_id` FK later — plan: docs/research/2026-10-12-city-canonicalisation.md.
+// ---------------------------------------------------------------------------
+export const cities = pgTable('cities', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  googlePlaceId: text('google_place_id').notNull(),
+  slug: text('slug').notNull(),
+  name: text('name').notNull(),
+  localName: text('local_name'),
+  country: text('country'),
+  countryCode: text('country_code'),
+  region: text('region'),
+  lat: doublePrecision('lat'),
+  lng: doublePrecision('lng'),
+  altNames: jsonb('alt_names').$type<string[]>().notNull().default([]),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('cities_google_place_id_uidx').on(t.googlePlaceId),
+  uniqueIndex('cities_slug_uidx').on(t.slug),
+  index('cities_name_lower_idx').on(sql`lower(${t.name})`),
+  index('cities_local_name_lower_idx').on(sql`lower(${t.localName})`),
+  index('cities_alt_names_gin_idx').using('gin', t.altNames),
+])

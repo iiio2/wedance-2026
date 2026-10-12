@@ -1,21 +1,91 @@
 /**
  * City typeahead — the data shape and the matching rules behind <CityCombobox>.
  *
- * Shared on purpose: the server builds the option list (server/api/city-options.get.ts)
- * from data 2026 already has (profile cities + server/data/city-images.json), the
- * client filters it locally on every keystroke. No external geocoding API.
+ * Shared on purpose: the server matches the canonical `cities` table with these
+ * rules (server/utils/cities/), the client filters the known-city list with the
+ * same rules on every keystroke, and only asks the server (→ Google Places) when
+ * the city isn't known yet.
  */
 
 export interface CityOption {
-  /** Display name, also the value written to v-model (dancers.city / profiles.city are free-text names). */
+  /** Canonical English name ("Munich"), also the value written to v-model. */
   name: string
-  /** URL slug — /cities/<slug>. */
+  /** URL slug — /cities/<slug>. Empty for a Google suggestion that isn't resolved yet. */
   slug: string
   country: string | null
   /** Other spellings that should match: München, Múnich, Мюнхен … */
   altNames: string[]
   /** Visible venues + artists + organisers listed in this city. Ranks the list. */
   communities: number
+  /** `cities.id` — set once the city is a canonical row in our database. */
+  id?: string | null
+  /** Google place id — set for canonical rows and for Google suggestions. */
+  placeId?: string | null
+  /** Name in the country's own language ("München"). */
+  localName?: string | null
+  countryCode?: string | null
+  region?: string | null
+  lat?: number | null
+  lng?: number | null
+  /**
+   * Where the option came from: `city` = canonical row (safe to save),
+   * `google` = a Places prediction that must be resolved before it is saved,
+   * `catalogue` = the pre-migration list (profile cities + city-images.json),
+   * used only until the `cities` table exists.
+   */
+  source?: 'city' | 'google' | 'catalogue'
+  /** Google suggestion: secondary text ("Bavaria, Germany"). */
+  description?: string | null
+}
+
+/** A suggestion that still needs `/api/city-resolve` before it can be saved. */
+export function needsResolve(o: CityOption): boolean {
+  return o.source === 'google' && !o.id
+}
+
+/** Stable identity for de-duplication: place id first, then slug, then folded name + country. */
+export function cityKey(o: CityOption): string {
+  if (o.placeId) return `p:${o.placeId}`
+  if (o.slug) return `s:${o.slug}`
+  return `n:${normalizeCity(o.name)}|${normalizeCity(o.country ?? '')}`
+}
+
+/**
+ * Merge result lists in priority order, dropping duplicates. A city we already
+ * know (has an id / slug) wins over the Google prediction for the same place,
+ * so "Мюнх" shows our "Munich" row instead of an unresolved prediction.
+ */
+export function mergeCityResults(lists: CityOption[][], limit = 8): CityOption[] {
+  const out: CityOption[] = []
+  const seen = new Map<string, number>()
+  // folded name → [index, folded country] of listed non-Google cities
+  const names = new Map<string, Array<[number, string]>>()
+  const index = (o: CityOption, i: number) => {
+    seen.set(cityKey(o), i)
+    if (o.placeId && o.slug) seen.set(`s:${o.slug}`, i)
+    if (o.source !== 'google') {
+      const n = normalizeCity(o.name)
+      names.set(n, [...(names.get(n) ?? []), [i, normalizeCity(o.country ?? '')]])
+    }
+  }
+  for (const list of lists) {
+    for (const o of list) {
+      let at = seen.get(cityKey(o)) ?? (o.placeId && o.slug ? seen.get(`s:${o.slug}`) : undefined)
+      // A Google prediction named like a city already listed (same country, or
+      // the listed one has none) is that city — keep the listed one.
+      if (at === undefined && o.source === 'google') {
+        const c = normalizeCity(o.country ?? '')
+        at = names.get(normalizeCity(o.name))?.find(([, k]) => !k || !c || k === c)?.[0]
+      }
+      if (at !== undefined) {
+        if (needsResolve(out[at]!) && !needsResolve(o)) { out[at] = o; index(o, at) }
+        continue
+      }
+      out.push(o)
+      index(o, out.length - 1)
+    }
+  }
+  return out.slice(0, limit)
 }
 
 /** Lowercase, strip accents, collapse punctuation — "São Paulo" and "sao paulo" compare equal. */
