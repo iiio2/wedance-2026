@@ -46,3 +46,17 @@ Design-system decisions pending (Commander):
 - Dark mode: keep or remove.
 
 Infra notes: parallel worktrees sharing one `node_modules` also share the Nuxt build cache (`node_modules/.cache/nuxt`) — parallel builds collide; set `buildDir` per worktree next time.
+
+## Wave 2 — shipped 2026-10-12 (897e2cc)
+
+- Pages moved onto Button / form components and token classes (~150 buttons, ~60 form fields, ~2,300 inline styles). Drift baseline 86 → 20 hex, 0 literal font-family.
+- New components: FestivalCard, WaveDivider, ToggleChip, admin header/status/states, CityCombobox (Google Places-backed canonical cities), DanceStylePicker + DanceStyleChips (152-style taxonomy from v3, v4 presentation).
+- Caveat restored as `font-hand` (folding it into Playfair italic made the homepage generic).
+- Production fixes found on the way: /api/festivals 500 (RAZ-297 regression, hotfixed), missing schema in prod (profiles.languages, early_bird_*, festival_waves, artist_follows — applied), `cities` table + backfill (569 canonical cities after review).
+- Safety: vitest no longer runs DB-writing tests against the production DATABASE_URL in .env.
+
+### Next
+- City columns → `city_id` FK migration (plan: docs/research/2026-10-12-city-canonicalisation.md, manual mappings: scripts/cities/overrides.json).
+- Replace `app/lib/style-colors.ts` with taxonomy colours; clean `timba-2` in prod gigs.
+- Remaining a11y: SiteFooter link contrast/underline, organizers feature-card accent links, SubmitVideoForm purple-500.
+- Google Cloud (Commander): restrict GOOGLE_MAPS_API_KEY to Places API (legacy), add quota/budget alert.
