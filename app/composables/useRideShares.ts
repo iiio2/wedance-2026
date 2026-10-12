@@ -15,6 +15,7 @@ export function useRideShares(festivalSlug: string) {
         originCity: r.originCity,
         date: r.date,
         seatsAvailable: r.seatsAvailable ?? undefined,
+        contactLink: r.contactLink ?? undefined,
         isOwn: r.isOwn,
       }))
     } catch (e) {
@@ -22,7 +23,7 @@ export function useRideShares(festivalSlug: string) {
     }
   }
 
-  async function postRide(ride: { type: 'offering' | 'looking'; originCity: string; date: string; seats?: number }) {
+  async function postRide(ride: { type: 'offering' | 'looking'; originCity: string; date: string; seats?: number; contactLink?: string }) {
     try {
       await $trpc.rideShare.create.mutate({
         festivalSlug,
@@ -30,6 +31,7 @@ export function useRideShares(festivalSlug: string) {
         originCity: ride.originCity,
         date: ride.date,
         seatsAvailable: ride.seats,
+        contactLink: ride.contactLink,
       })
       await loadRideShares()
     } catch (e) {

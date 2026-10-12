@@ -6,7 +6,7 @@
  * falls back to a flight-search link when none exist, and lets the user
  * offer their own ride.
  */
-import { Car, Plane, ExternalLink } from 'lucide-vue-next'
+import { Car, Plane, ExternalLink, MessageCircle } from 'lucide-vue-next'
 import { RidePostSchema } from '#shared/validation'
 import { accentText } from '~/lib/accent'
 import { WD } from '~/lib/brand'
@@ -40,11 +40,13 @@ const rideMode = ref<'offering' | 'looking' | null>(null)
 const rideOriginCity = ref('')
 const rideDate = ref('')
 const rideSeats = ref(2)
+const rideContactLink = ref('')
 const rideForm = reactive(useFormValidation(RidePostSchema, () => ({
   type: rideMode.value ?? 'offering',
   originCity: rideOriginCity.value,
   date: rideDate.value,
   seats: rideMode.value === 'offering' ? rideSeats.value : undefined,
+  contactLink: rideContactLink.value,
 })))
 watch(rideMode, () => rideForm.reset())
 
@@ -59,6 +61,7 @@ async function submitRide() {
     rideOriginCity.value = ''
     rideDate.value = ''
     rideSeats.value = 2
+    rideContactLink.value = ''
     rideMode.value = null
   } finally {
     submitting.value = false
@@ -135,6 +138,9 @@ function onPhotoError(rideId: string) {
               <span v-if="ride.date" class="ml-1">&middot; {{ ride.date }}</span>
               <span v-if="ride.seatsAvailable" class="ml-1">&middot; {{ ride.seatsAvailable }} seats</span>
             </div>
+            <a v-if="ride.contactLink && isSignedIn" :href="ride.contactLink" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-xs font-bold hover:underline font-sans text-wd-cyan-700 shrink-0">
+              <MessageCircle class="w-3 h-3" aria-hidden="true" /> Contact
+            </a>
             <span
               class="text-tag font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0"
               :style="ride.type === 'offering' ? { background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: GREEN_CHIP } : { background: 'color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent)', color: AMBER_CHIP }"
@@ -210,6 +216,9 @@ function onPhotoError(rideId: string) {
             </Field>
             <Field v-if="rideMode === 'offering'" id="plan-ride-seats" label="Seats available" :error="rideForm.errors.seats">
               <Input v-model.number="rideSeats" type="number" min="1" max="6" v-bind="rideForm.fieldAttrs('seats', 'plan-ride-seats-error')" />
+            </Field>
+            <Field id="plan-ride-contact" label="WhatsApp or Telegram link (optional)" :error="rideForm.errors.contactLink">
+              <Input v-model="rideContactLink" type="url" placeholder="https://wa.me/… or https://t.me/…" v-bind="rideForm.fieldAttrs('contactLink', 'plan-ride-contact-error')" />
             </Field>
             <Button type="button" variant="pill" size="pill-sm" accent="var(--wd-cyan-700)" class="w-full h-9" :loading="submitting" @click="submitRide">
               {{ submitting ? 'Posting...' : 'Post my ride' }}

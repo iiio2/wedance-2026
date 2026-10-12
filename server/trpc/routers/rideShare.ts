@@ -4,6 +4,8 @@ import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
 import { festivalRideShares, festivals, dancers } from '../../database/schema'
 
+const CONTACT_LINK_PATTERN = /^https?:\/\/(wa\.me|chat\.whatsapp\.com|t\.me|telegram\.me)\//i
+
 export const rideShareRouter = router({
   list: publicProcedure
     .input(z.object({ festivalSlug: z.string() }))
@@ -22,6 +24,7 @@ export const rideShareRouter = router({
           originCity: festivalRideShares.originCity,
           date: festivalRideShares.date,
           seatsAvailable: festivalRideShares.seatsAvailable,
+          contactLink: festivalRideShares.contactLink,
           dancerId: festivalRideShares.dancerId,
           dancerName: dancers.name,
           dancerPhoto: dancers.photo,
@@ -30,12 +33,15 @@ export const rideShareRouter = router({
         .innerJoin(dancers, eq(festivalRideShares.dancerId, dancers.id))
         .where(eq(festivalRideShares.festivalId, festival.id))
 
+      const isAuthenticated = !!ctx.dancerId
+
       return rows.map((r) => ({
         id: r.id,
         type: r.type,
         originCity: r.originCity,
         date: r.date,
         seatsAvailable: r.seatsAvailable,
+        contactLink: isAuthenticated ? r.contactLink : null,
         dancerName: r.dancerName,
         dancerPhoto: r.dancerPhoto,
         isOwn: ctx.dancerId === r.dancerId,
@@ -49,6 +55,7 @@ export const rideShareRouter = router({
       originCity: z.string(),
       date: z.string(),
       seatsAvailable: z.number().optional(),
+      contactLink: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const [festival] = await ctx.db
@@ -57,6 +64,15 @@ export const rideShareRouter = router({
         .where(eq(festivals.slug, input.festivalSlug))
 
       if (!festival) throw new TRPCError({ code: 'NOT_FOUND', message: 'Festival not found' })
+
+      // Validate contact link if provided
+      const contactLink = input.contactLink?.trim() || null
+      if (contactLink && !CONTACT_LINK_PATTERN.test(contactLink)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Contact link must be a WhatsApp (wa.me, chat.whatsapp.com) or Telegram (t.me, telegram.me) link.',
+        })
+      }
 
       // Check for existing ride share by this dancer
       const [existing] = await ctx.db
@@ -76,6 +92,7 @@ export const rideShareRouter = router({
             originCity: input.originCity,
             date: input.date,
             seatsAvailable: input.seatsAvailable ?? null,
+            contactLink,
           })
           .where(eq(festivalRideShares.id, existing.id))
         return { updated: true }
@@ -88,6 +105,7 @@ export const rideShareRouter = router({
         originCity: input.originCity,
         date: input.date,
         seatsAvailable: input.seatsAvailable ?? null,
+        contactLink,
       })
 
       return { created: true }

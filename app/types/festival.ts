@@ -218,6 +218,7 @@ export interface RideShare {
   originCity: string
   date: string
   seatsAvailable?: number
+  contactLink?: string | null
   isOwn?: boolean
 }
 

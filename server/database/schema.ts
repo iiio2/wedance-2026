@@ -715,6 +715,7 @@ export const festivalRideShares = pgTable('festival_ride_shares', {
   originCity: text('origin_city').notNull(),
   date: date('date').notNull(),
   seatsAvailable: integer('seats_available'),
+  contactLink: text('contact_link'),
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => [
   unique('festival_ride_dancer_unique').on(t.festivalId, t.dancerId),

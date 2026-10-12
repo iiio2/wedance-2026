@@ -586,7 +586,7 @@ function joinActivity(id: string) {
 // Ride shares — persisted in database
 const { rideShares, loadRideShares, postRide: doPostRide } = useRideShares(festival.slug)
 
-function postRide(ride: { type: 'offering' | 'looking'; originCity: string; date: string; seats?: number }) {
+function postRide(ride: { type: 'offering' | 'looking'; originCity: string; date: string; seats?: number; contactLink?: string }) {
   if (!isSignedIn.value) {
     signUpAction.value = 'social'
     showSignUp.value = true

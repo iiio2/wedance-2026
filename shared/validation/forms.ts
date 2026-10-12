@@ -112,15 +112,27 @@ export const PartnerNameSchema = v.object({
   name: requiredText('Add your partner’s name.'),
 })
 
+const CONTACT_LINK_RE = /^https?:\/\/(wa\.me|chat\.whatsapp\.com|t\.me|telegram\.me)\//i
+
 export const RidePostSchema = v.object({
   type: v.picklist(['offering', 'looking']),
-  originCity: requiredText('Add the city you’re leaving from.'),
+  originCity: requiredText('Add the city you\u2019re leaving from.'),
   date: isoDate('Pick a date.'),
   seats: v.optional(v.pipe(
     v.number('Enter the number of seats.'),
     v.integer('Seats must be a whole number.'),
     v.minValue(1, 'Offer at least 1 seat.'),
     v.maxValue(6, 'You can offer up to 6 seats.'),
+  )),
+  contactLink: v.optional(v.pipe(
+    v.string(),
+    v.trim(),
+    v.transform(s => s || undefined),
+    v.optional(v.pipe(
+      v.string(),
+      v.url('Enter a valid link.'),
+      v.regex(CONTACT_LINK_RE, 'Use a WhatsApp (wa.me) or Telegram (t.me) link.'),
+    )),
   )),
 })
 
