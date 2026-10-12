@@ -96,6 +96,7 @@ const dateRange = computed(() => {
             </h3>
             <span
               v-if="festival.startDate"
+              data-visual-mask
               class="font-hand text-[15px] font-bold shrink-0 mt-1"
               :style="{ color: accent }"
             >

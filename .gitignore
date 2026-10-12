@@ -44,3 +44,6 @@ scripts/cities/.cache/
 # prepare/dev/build (ADR-000) — never edit or commit.
 app/generated/
 server/assets/architecture/
+
+# Argos screenshots (e2e/argos)
+screenshots/
