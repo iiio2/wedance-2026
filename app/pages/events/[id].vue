@@ -5,12 +5,13 @@
  * festival section language; sections appear only when the event has that
  * content, so an event can grow into a full festival-grade page over time.
  */
-import { Check, Plus, ArrowLeft, MapPin, Globe, User, Euro } from 'lucide-vue-next'
+import { Check, Plus, ArrowLeft, MapPin, Globe, User, Euro, Users } from 'lucide-vue-next'
 import { findMockEvent } from '~/lib/mockEvents'
 import { formatEventWhen, eventLocalDate } from '#shared/utils/eventTime'
 import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
 import { mixHex, readableOn } from '~/lib/contrast'
+import { readableAccent } from '~/lib/accent'
 
 definePageMeta({ layout: false })
 
@@ -92,6 +93,7 @@ const accent = computed(() => styleColor[String(ev.value?.styles?.[0] || '').toL
 // Accent text darkened just enough for 4.5:1 — on the cream page, or on its own '14' tint (chips).
 const ink = (c: string) => readableOn(c, WD.cream)
 const chipInk = (c: string) => readableOn(c, mixHex(c, WD.cream, 0.078))
+const buttonAccent = computed(() => readableAccent(accent.value))
 const picked = computed(() => !!ev.value && weekPlanIds?.value?.has(ev.value.id))
 const parentFestival = computed(() => ev.value?.parentFestival ?? null)
 
@@ -165,7 +167,7 @@ useHead(() => ({
       </NuxtLink>
 
       <!-- Same hero as festivals -->
-      <FestivalHero :festival="asFestival" review-target-type="event" :picked="picked" :date-label="ev.when" @pick="onPick" />
+      <FestivalHero :festival="asFestival" review-target-type="event" entity-label="event" cta-anchor="#going" cta-fallback-label="I'm going" :picked="picked" :date-label="ev.when" @pick="onPick" />
 
       <div v-if="ev.archived" class="max-w-3xl mx-auto px-4 pt-4 font-sans">
         <p class="rounded-xl px-4 py-3 text-sm bg-warning/[12.2%] text-wd-amber-800">This event is no longer listed by its organiser — it may have been cancelled or moved.</p>
@@ -202,11 +204,29 @@ useHead(() => ({
           <p v-if="ev.message" class="text-sm leading-relaxed whitespace-pre-line break-words text-muted-foreground">{{ ev.message }}</p>
         </section>
 
-        <!-- Who's going -->
+        <!-- Who's going — journey-focused placeholder (not live data) -->
         <section id="going" class="scroll-mt-16">
-          <h2 class="text-2xl font-black leading-tight mb-1" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Who's <em class="italic" :style="{ color: accent }">going</em></h2>
-          <p class="text-sm mb-4" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">See who else is planning to be there — mark yourself as going so others see you too.</p>
-          <GoingSection item-type="event" :item-id="ev.id" :accent-color="accent" />
+          <h2 class="text-2xl font-black leading-tight mb-1 font-display text-foreground">Who's <em class="italic" :style="{ color: accent }">going</em></h2>
+          <div
+            class="rounded-2xl border-2 border-dashed p-6 text-center"
+            style="border-color:color-mix(in srgb, var(--wd-brown-900) 15%, transparent); background:rgba(255,255,255,0.5);"
+          >
+            <Users class="w-8 h-8 mx-auto mb-3" :style="{ color: accent }" />
+            <p class="text-base font-bold mb-1 font-display text-foreground">Planning to go?</p>
+            <p class="text-sm mb-4 max-w-sm mx-auto" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
+              Mark yourself as going so other dancers know you'll be there.
+            </p>
+            <Button
+              type="button"
+              :variant="picked ? 'pill' : 'outline-pill'"
+              :accent="buttonAccent"
+              class="px-5"
+              :aria-pressed="picked"
+              @click="onPick"
+            >
+              <component :is="picked ? Check : Plus" aria-hidden="true" /> {{ picked ? 'Going!' : 'I\'m going' }}
+            </Button>
+          </div>
         </section>
 
         <!-- Lineup -->
