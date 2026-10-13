@@ -555,6 +555,7 @@ const faces = computed(() => st.value?.pictured.length ?? 0)
         <PartyPopper class="size-8 text-primary" aria-hidden="true" />
         <h2 class="mt-2 font-display text-2xl font-bold">Your flyer is ready</h2>
         <p class="mt-1 text-sm text-muted-foreground">It’s on the event now, and “{{ look.name }}” is your look. Change the details later and the event tells you the flyer is out of date, then refreshes it in this look.</p>
+        <BusinessCaption :event-id="id" class="mt-6" />
         <div class="mt-6 flex flex-wrap gap-2">
           <Button variant="pill" as-child><NuxtLink :to="editor">Back to the event <ArrowRight /></NuxtLink></Button>
           <Button variant="outline-pill" as-child><a :href="download(current!.url!)" download><Download /> Download</a></Button>

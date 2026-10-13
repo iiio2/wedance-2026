@@ -101,3 +101,10 @@ export async function askAboutImages<T>(prompt: string, images: InlineImage[]): 
   const text = json?.candidates?.[0]?.content?.parts?.map((p: any) => p.text ?? '').join('') ?? '{}'
   return JSON.parse(text.replace(/^```(json)?|```$/g, '').trim()) as T
 }
+
+/** Text in, JSON out (captions). */
+export async function writeJson<T>(prompt: string): Promise<T> {
+  const json = await call(TEXT_MODEL, { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } })
+  const text = json?.candidates?.[0]?.content?.parts?.map((p: any) => p.text ?? '').join('') ?? '{}'
+  return JSON.parse(text.replace(/^```(json)?|```$/g, '').trim()) as T
+}

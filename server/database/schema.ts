@@ -702,6 +702,9 @@ export const events = pgTable('events', {
   // (a URL, or null = name only; unset = their main photo).
   agenda: jsonb('agenda').$type<{ time: string; what: string }[]>().notNull().default([]),
   flyerOptions: jsonb('flyer_options').$type<{ showAgenda?: boolean; photos?: Record<string, string | null> }>().notNull().default({}),
+  // The Instagram caption to post with the flyer (migration 0030), plus the
+  // lines it was written from (out of date when the details change).
+  caption: jsonb('caption').$type<{ language: string; text: string; lines: string[]; writtenAt: string } | null>(),
 }, (t) => [
   index('events_host_profile_idx').on(t.hostProfileId),
   uniqueIndex('events_slug_uidx').on(t.slug).where(sql`${t.slug} IS NOT NULL`),

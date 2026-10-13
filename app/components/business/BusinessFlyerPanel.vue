@@ -36,7 +36,7 @@ const download = (url: string) => url.replace('/upload/', '/upload/fl_attachment
 </script>
 
 <template>
-  <aside class="lg:sticky lg:top-6 lg:self-start" aria-label="Flyer">
+  <aside aria-label="Flyer">
     <div class="rounded-2xl border bg-card p-4 shadow-wd-card" :class="highlight && status === 'none' ? 'border-2 border-primary/40' : ''">
       <div class="flex items-center justify-between">
         <p class="text-xs font-bold uppercase tracking-wider text-secondary">Flyer</p>

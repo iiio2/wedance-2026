@@ -56,6 +56,7 @@ async function save(v: BusinessEventValues) {
     await $trpc.businessEvents.update.mutate({ id: id.value, ...rest })
     await load()
     panelRef.value?.reload()
+    captionRef.value?.reload()
     notice.value = 'Saved.'
     if (pending.value) { const t = pending.value; pending.value = null; await toFlyer(t) }
   } catch (e: any) {
@@ -85,6 +86,7 @@ async function repeat() {
 
 const formRef = ref<{ dirty: boolean; submit: () => boolean } | null>(null)
 const panelRef = ref<{ reload: () => Promise<void> } | null>(null)
+const captionRef = ref<{ reload: () => Promise<void> } | null>(null)
 
 // Flyer actions start from saved details: save first if anything changed.
 type FlyerTarget = { action: 'make' | 'refresh' | 'open'; batchId?: string; flyerId?: string }
@@ -166,7 +168,10 @@ async function archive() {
           submit-label="Save changes"
           @submit="save"
         />
-        <BusinessFlyerPanel ref="panelRef" class="order-first lg:order-none" :event-id="ev.id" :highlight="!!route.query.flyer" @go="onFlyer" />
+        <div class="order-first grid content-start gap-4 lg:order-none">
+          <BusinessFlyerPanel ref="panelRef" :event-id="ev.id" :highlight="!!route.query.flyer" @go="onFlyer" />
+          <BusinessCaption ref="captionRef" :event-id="ev.id" />
+        </div>
       </div>
 
       <section class="mt-8 grid gap-4 sm:grid-cols-2">

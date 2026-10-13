@@ -1,12 +1,33 @@
 import { z } from 'zod'
-import { eq, and, desc, isNotNull } from 'drizzle-orm'
+import { eq, and, desc, isNotNull, inArray } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure } from '../trpc'
-import { events, eventFlyers, brandLooks } from '../../database/schema'
+import { events, eventFlyers, brandLooks, profiles } from '../../database/schema'
 import { requireEventManager } from './businessEvents'
 import { flyerSource, flyerStatusFor, runFlyer, texts } from '../../utils/flyer/paint'
-import { askAboutImages, fetchImage, type InlineImage } from '../../utils/flyer/gemini'
+import { askAboutImages, fetchImage, writeText, type InlineImage } from '../../utils/flyer/gemini'
 import { DIRECTIONS, LOOK_PROMPT } from '../../../shared/utils/flyer'
+import { LANGUAGES, captionPrompt, keepVerifiedMentions, instagramOf } from '../../../shared/utils/caption'
+
+// Who the caption may tag: the artists', venue's and host's Instagram on WeDance.
+async function captionContext(db: any, ev: any) {
+  const src = await flyerSource(db, ev)
+  const handles = [...(ev.artists ?? []), ev.venueUsername].filter(Boolean)
+  const rows = handles.length ? await db.select({ username: profiles.username, name: profiles.name, socials: profiles.socials }).from(profiles).where(inArray(profiles.username, handles)) : []
+  const [host] = await db.select({ name: profiles.name, socials: profiles.socials }).from(profiles).where(eq(profiles.id, ev.hostProfileId))
+  const byHandle = new Map<string, any>(rows.map((r: any) => [r.username, r]))
+  const venue = ev.venueUsername ? byHandle.get(ev.venueUsername) : null
+  const site = (useRuntimeConfig().siteUrl || 'https://2026.wedance.vip').replace(/\/$/, '')
+  return {
+    lines: texts(src.lines),
+    host: { name: host?.name ?? '', instagram: instagramOf(host?.socials) },
+    venue: venue ? { name: venue.name, instagram: instagramOf(venue.socials) } : (ev.venueName ? { name: ev.venueName, instagram: null } : null),
+    artists: (ev.artists ?? []).map((h: string) => ({ name: byHandle.get(h)?.name ?? h, instagram: instagramOf(byHandle.get(h)?.socials) })),
+    description: ev.description,
+    eventUrl: `${site}/events/${ev.id}`,
+    ticketUrl: ev.ticketUrl,
+  }
+}
 
 /**
  * Business mode — an event's flyer. The event editor is step one (the details
@@ -44,6 +65,47 @@ const shape = (f: any) => ({
 })
 
 export const businessFlyersRouter = router({
+  // The event's Instagram caption (if written) and whether the details changed since.
+  caption: protectedProcedure
+    .input(z.object({ eventId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const ev = await requireEventManager(ctx, input.eventId)
+      const c = await captionContext(ctx.db, ev)
+      const saved = ev.caption ?? null
+      const changed = saved ? c.lines.some(l => !saved.lines.includes(l)) || saved.lines.some((l: string) => !c.lines.includes(l)) : false
+      const tags = [...c.artists, c.venue, c.host].filter((t: any) => t?.instagram).map((t: any) => `@${t.instagram}`)
+      return { saved, changed, tags }
+    }),
+
+  // Write the caption from the event's lines, in the chosen language(s).
+  writeCaption: protectedProcedure
+    .input(z.object({ eventId: z.string().uuid(), language: z.enum(LANGUAGES.map(l => l.value) as [string, ...string[]]).default('en+de') }))
+    .mutation(async ({ ctx, input }) => {
+      const ev = await requireEventManager(ctx, input.eventId)
+      const c = await captionContext(ctx.db, ev)
+      let text: string
+      try {
+        text = await writeText(captionPrompt(c, input.language))
+      } catch (e: any) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e?.message || 'Couldn’t write the caption. Try again.' })
+      }
+      text = keepVerifiedMentions(text.replace(/^```\w*\n?|```$/g, '').trim(), [...c.artists.map((a: { instagram: string | null }) => a.instagram), c.venue?.instagram, c.host.instagram])
+      if (!text) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'The caption came back empty. Try again.' })
+      const caption = { language: input.language, text, lines: c.lines, writtenAt: new Date().toISOString() }
+      await ctx.db.update(events).set({ caption, updatedAt: new Date() }).where(eq(events.id, ev.id))
+      return caption
+    }),
+
+  // Keep the organizer's own edit of the caption.
+  saveCaption: protectedProcedure
+    .input(z.object({ eventId: z.string().uuid(), text: z.string().max(5000) }))
+    .mutation(async ({ ctx, input }) => {
+      const ev = await requireEventManager(ctx, input.eventId)
+      if (!ev.caption) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Write the caption first.' })
+      await ctx.db.update(events).set({ caption: { ...ev.caption, text: input.text } }).where(eq(events.id, ev.id))
+      return { saved: true }
+    }),
+
   // Everything the editor's flyer panel and the flyer page need.
   state: protectedProcedure
     .input(z.object({ eventId: z.string().uuid() }))
