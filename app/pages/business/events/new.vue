@@ -53,6 +53,6 @@ async function create(v: BusinessEventValues) {
       <p class="mt-1 text-sm text-muted-foreground">Events are run by an organizer, venue or artist profile you manage.</p>
       <Button variant="pill" class="mt-4" as-child><NuxtLink to="/business/claim">Find my profile</NuxtLink></Button>
     </div>
-    <BusinessEventForm v-else class="mt-6" :hosts="hosts" :initial="initial" :saving="saving" submit-label="Create event" @submit="create" />
+    <BusinessEventForm v-else class="mt-6" mode="create" :hosts="hosts" :initial="initial" :saving="saving" submit-label="Create event" @submit="create" />
   </div>
 </template>

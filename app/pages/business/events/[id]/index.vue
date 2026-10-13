@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * /business/events/<id> — edit an event, see what it still needs, repeat it weekly,
- * or archive it.
+ * /business/events/<id> — edit an event, see what it still needs, make or
+ * refresh its flyer (the panel beside the cards), repeat it weekly, or archive it.
  */
 import { Check, ExternalLink, Repeat, Archive } from 'lucide-vue-next'
 import type { BusinessEventValues } from '~/components/business/BusinessEventForm.vue'
@@ -42,6 +42,7 @@ const initial = computed<Partial<BusinessEventValues>>(() => ev.value
       venueAddress: ev.value.venueUsername ? '' : ev.value.venueAddress,
       artists: ev.value.artists, styles: ev.value.styles, description: ev.value.description,
       cover: ev.value.cover ?? '', ticketUrl: ev.value.ticketUrl ?? '', price: ev.value.price, published: ev.value.published,
+      agenda: ev.value.agenda, showAgenda: ev.value.flyerOptions.showAgenda !== false, photos: ev.value.flyerOptions.photos ?? {},
     }
   : {})
 
@@ -54,8 +55,11 @@ async function save(v: BusinessEventValues) {
     const { hostUsername: _h, ...rest } = toBusinessEventInput(v)
     await $trpc.businessEvents.update.mutate({ id: id.value, ...rest })
     await load()
+    panelRef.value?.reload()
     notice.value = 'Saved.'
+    if (pending.value) { const t = pending.value; pending.value = null; await toFlyer(t) }
   } catch (e: any) {
+    pending.value = null
     error.value = e?.message || 'Could not save.'
   } finally {
     saving.value = false
@@ -79,7 +83,31 @@ async function repeat() {
   }
 }
 
-const formRef = ref<{ dirty: boolean } | null>(null)
+const formRef = ref<{ dirty: boolean; submit: () => boolean } | null>(null)
+const panelRef = ref<{ reload: () => Promise<void> } | null>(null)
+
+// Flyer actions start from saved details: save first if anything changed.
+type FlyerTarget = { action: 'make' | 'refresh' | 'open'; batchId?: string; flyerId?: string }
+const pending = ref<FlyerTarget | null>(null)
+async function onFlyer(t: FlyerTarget) {
+  if (t.action !== 'open' && formRef.value?.dirty) {
+    pending.value = t
+    if (!formRef.value.submit()) { pending.value = null; error.value = 'Fix the details first: the flyer is made from them.' }
+    return
+  }
+  await toFlyer(t)
+}
+async function toFlyer(t: FlyerTarget) {
+  const base = `/business/events/${id.value}/flyer`
+  if (t.action === 'open') return navigateTo({ path: base, query: { batch: t.batchId, flyer: t.flyerId } })
+  if (t.action === 'make') return navigateTo(base)
+  try {
+    const { batchId } = await $trpc.businessFlyers.refresh.mutate({ eventId: id.value })
+    await navigateTo({ path: base, query: { batch: batchId, refresh: '1' } })
+  } catch (e: any) {
+    error.value = e?.message || 'Could not refresh the flyer.'
+  }
+}
 const confirmArchive = ref(false)
 const archiving = ref(false)
 async function archive() {
@@ -115,6 +143,11 @@ async function archive() {
         <Check class="size-4" aria-hidden="true" /> {{ notice }}
       </p>
 
+      <p v-if="route.query.flyer && !route.query.created" class="mt-4 rounded-2xl bg-secondary/10 p-4 text-sm" role="status">
+        <span class="font-bold">Check the details, then make the flyer.</span>
+        <span class="text-muted-foreground"> What’s here goes on it word for word. The panel shows exactly which words.</span>
+      </p>
+
       <section class="mt-4 rounded-2xl border bg-card p-4">
         <h2 class="text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Checklist</h2>
         <p v-if="!ev.missing.length && ev.published" class="mt-2 text-sm text-wd-green-700 font-bold">Ready: everything a dancer and a flyer need is here.</p>
@@ -124,7 +157,17 @@ async function archive() {
         </ul>
       </section>
 
-      <BusinessEventForm ref="formRef" class="mt-4" :initial="initial" :saving="saving" submit-label="Save changes" @submit="save" />
+      <div class="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
+        <BusinessEventForm
+          ref="formRef"
+          :initial="initial"
+          :labels="{ venue: ev.venueName, host: ev.host?.name }"
+          :saving="saving"
+          submit-label="Save changes"
+          @submit="save"
+        />
+        <BusinessFlyerPanel ref="panelRef" class="order-first lg:order-none" :event-id="ev.id" :highlight="!!route.query.flyer" @go="onFlyer" />
+      </div>
 
       <section class="mt-8 grid gap-4 sm:grid-cols-2">
         <div class="rounded-2xl border bg-card p-4">

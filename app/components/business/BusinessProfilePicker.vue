@@ -17,6 +17,8 @@ const props = defineProps({
   type: { type: String as PropType<'artist' | 'venue' | 'organizer'>, required: true },
   multiple: { type: Boolean, default: false },
   placeholder: { type: String, default: 'Search by name or @handle' },
+  /** Hide the chips of who's picked (BusinessLineupPicker lists them itself). */
+  hideSelected: { type: Boolean, default: false },
 })
 const model = defineModel<string[] | string | null>({ default: null })
 
@@ -93,7 +95,7 @@ async function addFromInstagram() {
 
 <template>
   <div>
-    <div v-if="selected.length" class="mb-2 flex flex-wrap gap-2">
+    <div v-if="selected.length && !hideSelected" class="mb-2 flex flex-wrap gap-2">
       <span
         v-for="h in selected"
         :key="h"

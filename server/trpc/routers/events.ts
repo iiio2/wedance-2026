@@ -106,6 +106,7 @@ export const eventsRouter = router({
         venueLng: events.venueLng,
         archived: events.archived,
         source: events.source,
+        agenda: events.agenda,
       })
       if (!ev) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found.' })
       return ev

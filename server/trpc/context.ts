@@ -13,11 +13,14 @@ export interface Context {
   // one. Optional so direct `createCaller` sites (tests, other entry points)
   // don't have to supply it; the vote flow treats a missing id as "no session".
   voterSessionId?: string | null
+  // Run work after the response is sent (flyer painting). Absent in tests and
+  // createCaller sites, where callers fall back to fire-and-forget.
+  waitUntil?: (p: Promise<unknown>) => void
 }
 
 export async function createContext(
   opts: FetchCreateContextFnOptions,
-  extra?: { voterSessionId?: string | null },
+  extra?: { voterSessionId?: string | null; waitUntil?: (p: Promise<unknown>) => void },
 ): Promise<Context> {
   const db = useDb()
 
@@ -52,5 +55,5 @@ export async function createContext(
     }
   }
 
-  return { db, dancerId, isAdmin, voterSessionId: extra?.voterSessionId ?? null }
+  return { db, dancerId, isAdmin, voterSessionId: extra?.voterSessionId ?? null, waitUntil: extra?.waitUntil }
 }

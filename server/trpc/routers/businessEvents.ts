@@ -9,6 +9,7 @@ import { zonedToUtc, eventLocalDate, eventLocalTime, eventLocalWeekday } from '.
 import { requireMember, linksInstagram } from './business'
 import { parseInstagramHandle, handleFromInstagram, instagramUrl } from '../../../shared/utils/instagram'
 import { joinRequestsForOwner } from './businessTeam'
+import { flyerStatusFor } from '../../utils/flyer/paint'
 
 /**
  * Business mode — events a profile runs, and the /business home inbox.
@@ -40,8 +41,15 @@ const eventInput = z.object({
   description: z.string().max(8000).default(''),
   cover: z.string().url().nullable().optional(),
   ticketUrl: z.string().url().nullable().optional(),
-  price: z.string().max(120).default(''),
+  // One price per line ("Workshops free\nFrom 21:00 · 10€").
+  price: z.string().max(400).default(''),
   published: z.boolean().default(false),
+  agenda: z.array(z.object({ time: z.string().trim().max(20), what: z.string().trim().max(160) })).max(20).default([]),
+  // Which photo of each artist the flyer uses: a URL, or null for name only.
+  flyerOptions: z.object({
+    showAgenda: z.boolean().optional(),
+    photos: z.record(z.string(), z.string().url().nullable()).optional(),
+  }).default({}),
 })
 type EventInput = z.infer<typeof eventInput>
 
@@ -54,7 +62,7 @@ async function profilesIManage(ctx: { db: any; dancerId: string }) {
 }
 
 // An event is editable by managers of its host profile (admins: any hosted event).
-async function requireEventManager(ctx: { db: any; dancerId: string; isAdmin?: boolean }, id: string) {
+export async function requireEventManager(ctx: { db: any; dancerId: string; isAdmin?: boolean }, id: string) {
   const [ev] = await ctx.db.select().from(events).where(eq(events.id, id))
   if (!ev) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found.' })
   if (!ev.hostProfileId) throw new TRPCError({ code: 'FORBIDDEN', message: 'This event isn’t managed on WeDance.' })
@@ -114,6 +122,8 @@ async function toRow(db: any, host: { username: string; type: string }, input: E
     ticketUrl: input.ticketUrl ?? null,
     price: input.price,
     published: input.published,
+    agenda: input.agenda.filter(a => a.what),
+    flyerOptions: input.flyerOptions,
     archived: false,
     updatedAt: new Date(),
   }
@@ -146,6 +156,8 @@ const listColumns = {
   timezone: events.timezone, published: events.published, cover: events.cover, ticketUrl: events.ticketUrl,
   price: events.price, venueUsername: events.venueUsername, venueName: events.venueName, artists: events.artists,
   city: events.city, hostProfileId: events.hostProfileId, seriesId: events.seriesId,
+  // What a flyer is made from (flyerStatusFor).
+  venueAddress: events.venueAddress, styles: events.styles, agenda: events.agenda, flyerOptions: events.flyerOptions,
 }
 
 export const businessEventsRouter = router({
@@ -199,6 +211,8 @@ export const businessEventsRouter = router({
         ticketUrl: ev.ticketUrl,
         price: ev.price ?? '',
         published: ev.published,
+        agenda: (ev.agenda ?? []) as { time: string; what: string }[],
+        flyerOptions: (ev.flyerOptions ?? {}) as { showAgenda?: boolean; photos?: Record<string, string | null> },
         timezone: tz,
         missing: (await checklistFor(ctx.db, [ev])).get(ev.id) ?? [],
       }
@@ -259,6 +273,21 @@ export const businessEventsRouter = router({
       const ev = await requireEventManager(ctx, input.id)
       await ctx.db.update(events).set({ archived: true, published: false, updatedAt: new Date() }).where(eq(events.id, ev.id))
       return { archived: true }
+    }),
+
+  // The line-up's names and photos, for picking each artist's flyer photo.
+  lineupPhotos: protectedProcedure
+    .input(z.object({ handles: z.array(z.string().min(1).max(200)).max(40) }))
+    .query(async ({ ctx, input }) => {
+      if (!input.handles.length) return []
+      const rows = await ctx.db.select({ username: profiles.username, name: profiles.name, photo: profiles.photo, photos: profiles.photos })
+        .from(profiles).where(inArray(profiles.username, input.handles))
+      return rows.map((r: any) => ({
+        username: r.username,
+        name: r.name,
+        // Main photo first, then the gallery, no duplicates.
+        photos: [...new Set([r.photo, ...((r.photos ?? []) as { url: string }[]).map(p => p.url)].filter(Boolean))] as string[],
+      }))
     }),
 
   // Profile picker for venue and line-up fields.
@@ -357,6 +386,19 @@ export const businessEventsRouter = router({
       needs.push(g.kind === 'draft'
         ? { kind: 'draft', tone: 'warning', title: `${g.first.name} is a draft`, detail: `${fmtDay(g.first)}${more} · dancers can’t see it until you publish it.`, to: `/business/events/${g.first.id}` }
         : { kind: 'missing', tone: 'warning', title: `${g.first.name} is missing details`, detail: `${fmtDay(g.first)}${more} · add ${[...g.missing].join(', ')}.`, to: `/business/events/${g.first.id}` })
+    }
+
+    // Flyers: published events in the next 14 days without one, or whose flyer
+    // no longer matches the details. One per series, like the items above.
+    const soon = hosted.filter((e: any) => e.published && new Date(e.startDate) < in14)
+    const flyers = await flyerStatusFor(ctx.db, soon)
+    const seenSeries = new Set<string>()
+    for (const e of soon) {
+      const st = flyers.get(e.id)!
+      const key = e.seriesId ?? e.id
+      if (seenSeries.has(key)) continue
+      if (!st.kept) { seenSeries.add(key); needs.push({ kind: 'flyer', tone: 'info', title: `${e.name} has no flyer yet`, detail: `${fmtDay(e)} · check the details, then make it in about a minute.`, to: `/business/events/${e.id}?flyer=1` }) }
+      else if (st.changes.length) { seenSeries.add(key); needs.push({ kind: 'flyer', tone: 'warning', title: `${e.name}: the flyer is out of date`, detail: `${fmtDay(e)} · you changed the details after it was made.`, to: `/business/events/${e.id}` }) }
     }
 
     // Line-ups I'm in, run by someone else (artist profiles I manage).

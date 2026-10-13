@@ -53,6 +53,9 @@ export default defineNuxtConfig({
   },
   nitro: {
     preset: 'vercel',
+    // Painting a flyer runs after the response (waitUntil): up to ~3 Gemini
+    // rounds of 20–40 s each, so functions get the full 5 minutes.
+    vercel: { functions: { maxDuration: 300 } },
   },
   // The architecture module regenerates the /docs/architecture docs data from code
   // (schema, tRPC routers, API handlers) before every dev/build — ADR-000.
@@ -88,6 +91,8 @@ export default defineNuxtConfig({
     stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
     tickettailorWebhookSecret: process.env.TICKETTAILOR_WEBHOOK_SECRET || '',
+    // Event flyers (business mode): Gemini paints the poster and reads it back.
+    geminiApiKey: process.env.GEMINI_API_KEY || '',
     cloudinaryApiKey: process.env.NUXT_CLOUDINARY_API_KEY || '',
     cloudinaryApiSecret: process.env.NUXT_CLOUDINARY_API_SECRET || '',
     public: {

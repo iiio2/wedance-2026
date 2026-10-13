@@ -3,7 +3,7 @@ import { Upload, X, Loader2 } from 'lucide-vue-next'
 
 const model = defineModel<string>({ default: '' })
 // Cloudinary sub-folder; the server only accepts known values.
-const props = withDefaults(defineProps<{ folder?: 'avatars' | 'profiles' | 'events' }>(), { folder: 'avatars' })
+const props = withDefaults(defineProps<{ folder?: 'avatars' | 'profiles' | 'events' | 'flyers' }>(), { folder: 'avatars' })
 
 const uploading = ref(false)
 const dragOver = ref(false)

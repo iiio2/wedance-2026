@@ -25,7 +25,8 @@ export default defineEventHandler(async (event) => {
     endpoint: '/api/trpc',
     req: request,
     router: appRouter,
-    createContext: (opts) => createContext(opts, { voterSessionId }),
+    // Long work (painting a flyer) keeps running after the response, on Vercel too.
+    createContext: (opts) => createContext(opts, { voterSessionId, waitUntil: p => event.waitUntil(p) }),
   })
 
   // Use sendWebResponse to correctly forward the tRPC Response to the client

@@ -70,6 +70,8 @@ function fromSyncedEvent(e: any) {
     ticketUrl: e.ticketUrl || '',
     link: e.link || '',
     price: e.price || '',
+    // The night's programme (business-mode events): [{ time, what }].
+    agenda: (e.agenda || []) as { time: string; what: string }[],
     cover: e.cover || '',
     venueName: e.venueName || '',
     venueAddress: e.venueAddress || '',
@@ -125,7 +127,7 @@ const asFestival = computed(() => ({
 // Which sections have content (so nav + page grow with the event).
 const sections = computed(() => {
   const s: { id: string; label: string }[] = []
-  if (ev.value?.message || ev.value?.cover || ev.value?.link || ev.value?.price) s.push({ id: 'about', label: 'About' })
+  if (ev.value?.message || ev.value?.cover || ev.value?.link || ev.value?.price || ev.value?.agenda?.length) s.push({ id: 'about', label: 'About' })
   s.push({ id: 'going', label: "Who's going" })
   if (ev.value?.artists?.length) s.push({ id: 'lineup', label: 'Lineup' })
   s.push({ id: 'venue', label: 'Venue' })
@@ -182,7 +184,7 @@ useHead(() => ({
 
       <div class="max-w-3xl mx-auto px-4 space-y-14 pt-8 pb-20 font-sans">
         <!-- About -->
-        <section v-if="ev.message || ev.cover || ev.link || ev.price" id="about" class="scroll-mt-16">
+        <section v-if="ev.message || ev.cover || ev.link || ev.price || ev.agenda?.length" id="about" class="scroll-mt-16">
           <h2 class="text-2xl font-black leading-tight mb-3 font-display text-foreground">About</h2>
           <img v-if="ev.cover" :src="ev.cover" :alt="ev.title" class="w-full max-h-[28rem] object-contain rounded-2xl mb-4 bg-wd-brown-900/[3.9%]" loading="lazy">
           <div class="flex flex-wrap items-center gap-2 mb-4">
@@ -190,7 +192,7 @@ useHead(() => ({
             <span v-for="s in (ev.styles || [])" :key="s" class="text-eyebrow font-bold uppercase tracking-wider px-2 py-1 rounded-full" :style="{ background: accent + '14', color: chipInk(accent) }">{{ s }}</span>
           </div>
           <ul class="space-y-1.5 text-sm mb-4 text-foreground">
-            <li v-if="ev.price" class="flex items-start gap-2"><Euro class="w-4 h-4 mt-0.5 shrink-0 text-secondary" /> {{ ev.price }}</li>
+            <li v-if="ev.price" class="flex items-start gap-2"><Euro class="w-4 h-4 mt-0.5 shrink-0 text-secondary" /> <span class="whitespace-pre-line">{{ ev.price }}</span></li>
             <li v-if="ev.organizerName" class="flex items-start gap-2">
               <User class="w-4 h-4 mt-0.5 shrink-0 text-secondary" />
               <NuxtLink v-if="ev.organizerHandle" :to="`/@${ev.organizerHandle}`" class="font-bold hover:underline">{{ ev.organizerName }}</NuxtLink>
@@ -201,6 +203,12 @@ useHead(() => ({
               <a :href="ev.link" target="_blank" rel="noopener noreferrer" class="font-bold underline break-all" :style="{ color: ink(accent) }">Event website</a>
             </li>
           </ul>
+          <div v-if="ev.agenda?.length" class="mb-4">
+            <h3 class="text-eyebrow font-black uppercase tracking-widest text-secondary mb-1.5">Programme</h3>
+            <ul class="space-y-1 text-sm text-foreground">
+              <li v-for="(a, i) in ev.agenda" :key="i"><span class="font-bold tabular-nums">{{ a.time }}</span> {{ a.what }}</li>
+            </ul>
+          </div>
           <p v-if="ev.message" class="text-sm leading-relaxed whitespace-pre-line break-words text-muted-foreground">{{ ev.message }}</p>
         </section>
 

@@ -697,6 +697,11 @@ export const events = pgTable('events', {
   // Hosting mode (migration 0026): the profile that runs this event. Its
   // managers (profile_members) can edit it. Null for synced/imported events.
   hostProfileId: uuid('host_profile_id').references(() => profiles.id, { onDelete: 'set null' }),
+  // Event flyers (migration 0029): the night's agenda, shown on the event page
+  // and optionally on the flyer, and which photo of each artist the flyer uses
+  // (a URL, or null = name only; unset = their main photo).
+  agenda: jsonb('agenda').$type<{ time: string; what: string }[]>().notNull().default([]),
+  flyerOptions: jsonb('flyer_options').$type<{ showAgenda?: boolean; photos?: Record<string, string | null> }>().notNull().default({}),
 }, (t) => [
   index('events_host_profile_idx').on(t.hostProfileId),
   uniqueIndex('events_slug_uidx').on(t.slug).where(sql`${t.slug} IS NOT NULL`),
@@ -817,4 +822,59 @@ export const cities = pgTable('cities', {
   index('cities_name_lower_idx').on(sql`lower(${t.name})`),
   index('cities_local_name_lower_idx').on(sql`lower(${t.localName})`),
   index('cities_alt_names_gin_idx').using('gin', t.altNames),
+])
+
+// ---------------------------------------------------------------------------
+// Event flyers (migration 0029). A profile's looks — how its flyers look, read
+// from flyers it made before or picked from four directions — and every flyer
+// painted for an event. Gemini paints the whole poster; each row stores the
+// exact lines it was painted from and the read-back check, so the editor can
+// tell when the kept flyer no longer matches the event.
+// ---------------------------------------------------------------------------
+export type FlyerLookSpec = { name?: string; description: string; palette?: { name: string; hex: string }[]; inspiration?: string | null }
+
+export const brandLooks = pgTable('brand_looks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  palette: jsonb('palette').$type<{ name: string; hex: string }[]>().notNull().default([]),
+  // Flyers the look was read from (the organizer's own past work).
+  references: jsonb('references').$type<{ url: string }[]>().notNull().default([]),
+  source: text('source'), // 'flyers' | 'directions'
+  createdBy: uuid('created_by').references(() => dancers.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => [
+  index('brand_looks_profile_idx').on(t.profileId),
+])
+
+export const eventFlyers = pgTable('event_flyers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  // One sitting: the four directions, or a flyer and its repaints — the versions you compare.
+  batchId: uuid('batch_id').notNull(),
+  lookId: uuid('look_id').references(() => brandLooks.id, { onDelete: 'set null' }),
+  look: jsonb('look').$type<FlyerLookSpec>().notNull(),
+  mode: text('mode').notNull().default('paint'), // paint · direction · fix · refresh
+  baseFlyerId: uuid('base_flyer_id'),
+  status: text('status').notNull().default('painting'), // painting · ready · failed
+  url: text('url'),
+  width: integer('width'),
+  height: integer('height'),
+  lines: jsonb('lines').$type<{ label: string; text: string }[]>().notNull().default([]),
+  pictured: jsonb('pictured').$type<string[]>().notNull().default([]),
+  notes: text('notes'),
+  prompt: text('prompt'),
+  model: text('model'),
+  check: jsonb('check').$type<{ ok: boolean; missing: string[]; extra: string[]; seen: string[] }>(),
+  error: text('error'),
+  // The flyer the event uses. One per event; keeping another clears it.
+  keptAt: timestamp('kept_at'),
+  createdBy: uuid('created_by').references(() => dancers.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => [
+  index('event_flyers_event_idx').on(t.eventId, t.createdAt),
+  index('event_flyers_batch_idx').on(t.batchId),
 ])
