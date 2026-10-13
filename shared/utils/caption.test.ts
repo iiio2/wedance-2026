@@ -1,47 +1,84 @@
 import { describe, it, expect } from 'vitest'
-import { captionPrompt, keepVerifiedMentions, instagramOf } from './caption'
+import { captionDetails, captionPrompt, composeCaption, keepVerifiedMentions, instagramOf } from './caption'
+
+// La Clave Thursday on prod (15 Oct 2026, 19:00–23:00 Berlin).
+const ctx = {
+  title: 'La Clave Thursday',
+  startDate: '2026-10-15T17:00:00Z',
+  endDate: '2026-10-15T21:00:00Z',
+  timezone: 'Europe/Berlin',
+  agenda: [
+    { time: '19:00', what: 'Reparto from Zero · Yunior' },
+    { time: '20:00', what: 'Bachata from Zero · Alösha' },
+    { time: '21:00', what: 'Party · DJ Papi' },
+  ],
+  styles: ['Salsa', 'Bachata'],
+  prices: ['€10 after 21:00', 'Workshops for free'],
+  host: { name: 'La Clave en Múnich', instagram: 'ritmo_jg' },
+  venue: { name: 'LUMA', address: 'Neuhauser Str. 47, 80331 München', instagram: 'evergreen_goes_luma' },
+  artists: [{ name: 'Yunior', instagram: 'yuniorflowcubano' }, { name: 'Alösha', instagram: 'alosha_corazon_cubano' }, { name: 'DJ Papi', instagram: null }],
+}
+
+describe('captionDetails', () => {
+  it('one fact per line: programme items and prices each on their own, venue with its address', () => {
+    expect(captionDetails(ctx)).toEqual([
+      '📅 Thursday 15 October',
+      '🕒 19:00 – 23:00',
+      '🔸 19:00 Reparto from Zero · Yunior',
+      '🔸 20:00 Bachata from Zero · Alösha',
+      '🔸 21:00 Party · DJ Papi',
+      '🎶 Salsa × Bachata',
+      '🎧 Yunior (@yuniorflowcubano) · Alösha (@alosha_corazon_cubano) · DJ Papi',
+      '🎟 €10 after 21:00',
+      '🎟 Workshops for free',
+      '📍 LUMA (@evergreen_goes_luma), Neuhauser Str. 47, 80331 München',
+    ])
+  })
+  it('names a profile named after its handle by the handle alone', () => {
+    const c = { ...ctx, artists: [{ name: 'alosha_corazon_cubano', instagram: 'alosha_corazon_cubano' }, { name: 'djpapi.muc', instagram: 'djpapi.muc' }] }
+    expect(captionDetails(c)).toContain('🎧 @alosha_corazon_cubano · @djpapi.muc')
+  })
+  it('writes the date in the first language', () => {
+    expect(captionDetails(ctx, 'de')[0]).toBe('📅 Donnerstag, 15. Oktober')
+  })
+})
+
+describe('composeCaption', () => {
+  it('hooks, the fixed details, calls to action and hashtags; strips made-up handles', () => {
+    const text = composeCaption(ctx, 'en+de', {
+      en: { hook: 'Dance with us at La Clave with @ritmo_jg and @madeup!', cta: 'Tickets via link in bio.' },
+      de: { hook: 'Tanzt mit uns!', cta: 'Tickets über den Link in der Bio.' },
+      hashtags: ['#LaClave', 'Salsa Munich', '#LaClave'],
+    })
+    expect(text).toBe([
+      'Dance with us at La Clave with @ritmo_jg and madeup!\n🇩🇪 Tanzt mit uns!',
+      captionDetails(ctx).join('\n'),
+      'Tickets via link in bio.\n🇩🇪 Tickets über den Link in der Bio.',
+      '#LaClave #SalsaMunich',
+    ].join('\n\n'))
+  })
+  it('still has every detail when Gemini returns nothing', () => {
+    expect(composeCaption(ctx, 'en', {})).toBe(captionDetails(ctx).join('\n'))
+  })
+})
+
+describe('captionPrompt', () => {
+  it('asks only for hook, cta and hashtags per language', () => {
+    const p = captionPrompt(ctx, 'en+de')
+    expect(p).toContain('"en": {"hook": "...", "cta": "..."}, "de": {"hook": "...", "cta": "..."}, "hashtags"')
+    expect(p).toContain('@ritmo_jg')
+  })
+})
 
 describe('keepVerifiedMentions', () => {
-  it('keeps verified handles and un-tags made-up ones', () => {
-    expect(keepVerifiedMentions('With @hmez2050 and @madeup.dj at @Evergreen_Goes_Luma.', ['hmez2050', 'evergreen_goes_luma']))
-      .toBe('With @hmez2050 and madeup.dj at @Evergreen_Goes_Luma.')
-  })
-  it('leaves email addresses alone', () => {
-    expect(keepVerifiedMentions('Write to hello@laclave.de', [])).toBe('Write to hello@laclave.de')
+  it('keeps verified handles and leaves emails alone', () => {
+    expect(keepVerifiedMentions('With @hmez2050 and @madeup.dj, hello@laclave.de', ['hmez2050'])).toBe('With @hmez2050 and madeup.dj, hello@laclave.de')
   })
 })
 
 describe('instagramOf', () => {
   it('reads the handle from a profile link', () => {
-    expect(instagramOf([{ platform: 'website', url: 'https://x.de' }, { platform: 'instagram', url: 'https://www.instagram.com/Ritmo_JG/?hl=de' }])).toBe('ritmo_jg')
+    expect(instagramOf([{ platform: 'instagram', url: 'https://www.instagram.com/Ritmo_JG/?hl=de' }])).toBe('ritmo_jg')
     expect(instagramOf([])).toBeNull()
-  })
-})
-
-describe('captionPrompt', () => {
-  const ctx = {
-    lines: [
-      { label: 'title', text: 'LA CLAVE THURSDAY' }, { label: 'date', text: 'THURSDAY 22 OCTOBER' }, { label: 'time', text: '19:00 – 23:00' },
-      { label: 'agenda', text: '19:00 Reparto from Zero · Yunior' }, { label: 'agenda', text: '21:00 Party · DJ Papi' },
-      { label: 'entry', text: '€10 after 21:00 · Workshops for free' }, { label: 'venue', text: 'LUMA · NEUHAUSER STR. 47 · 80331 MÜNCHEN' },
-    ],
-    host: { name: 'La Clave en Múnich', instagram: 'ritmo_jg' },
-    venue: { name: 'LUMA', address: 'Neuhauser Str. 47, 80331 München', instagram: null },
-    artists: [{ name: 'Hamza', instagram: 'hmez2050' }, { name: 'Yunior', instagram: null }],
-    eventUrl: 'https://2026.wedance.vip/events/1',
-  }
-  it('lists only verified accounts and the language', () => {
-    const p = captionPrompt(ctx, 'en+de')
-    expect(p).toContain('Hamza: @hmez2050')
-    expect(p).toContain('organizer La Clave en Múnich: @ritmo_jg')
-    expect(p).not.toContain('Yunior: @')
-    expect(p).toContain('🇩🇪')
-    expect(p).toContain('Place: LUMA, Neuhauser Str. 47, 80331 München')
-  })
-  it('gives the programme one line per item and each price its own line', () => {
-    const p = captionPrompt(ctx, 'en')
-    expect(p).toContain('  - 19:00 Reparto from Zero · Yunior\n  - 21:00 Party · DJ Papi')
-    expect(p).toContain('Never merge items')
-    expect(p).toContain('Entry: €10 after 21:00\nEntry: Workshops for free')
   })
 })

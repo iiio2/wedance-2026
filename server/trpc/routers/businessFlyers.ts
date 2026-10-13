@@ -5,9 +5,10 @@ import { router, protectedProcedure } from '../trpc'
 import { events, eventFlyers, brandLooks, profiles } from '../../database/schema'
 import { requireEventManager } from './businessEvents'
 import { flyerSource, flyerStatusFor, runFlyer, texts } from '../../utils/flyer/paint'
-import { askAboutImages, fetchImage, writeText, type InlineImage } from '../../utils/flyer/gemini'
+import { askAboutImages, fetchImage, writeJson, type InlineImage } from '../../utils/flyer/gemini'
 import { DIRECTIONS, LOOK_PROMPT } from '../../../shared/utils/flyer'
-import { LANGUAGES, captionPrompt, keepVerifiedMentions, instagramOf } from '../../../shared/utils/caption'
+import { LANGUAGES, captionPrompt, composeCaption, instagramOf, type CaptionContext, type CaptionWords } from '../../../shared/utils/caption'
+import { priceLines } from '../../../shared/utils/flyer'
 
 // Who the caption may tag: the artists', venue's and host's Instagram on WeDance.
 async function captionContext(db: any, ev: any) {
@@ -17,16 +18,22 @@ async function captionContext(db: any, ev: any) {
   const [host] = await db.select({ name: profiles.name, socials: profiles.socials }).from(profiles).where(eq(profiles.id, ev.hostProfileId))
   const byHandle = new Map<string, any>(rows.map((r: any) => [r.username, r]))
   const venue = ev.venueUsername ? byHandle.get(ev.venueUsername) : null
-  const site = (useRuntimeConfig().siteUrl || 'https://2026.wedance.vip').replace(/\/$/, '')
-  return {
-    lines: src.lines as { label: string; text: string }[],
+  const caption: CaptionContext = {
+    title: ev.name ?? '',
+    startDate: ev.startDate,
+    endDate: ev.endDate,
+    timezone: ev.timezone,
+    agenda: ev.agenda ?? [],
+    styles: ev.styles ?? [],
+    prices: priceLines(ev.price),
     host: { name: host?.name ?? '', instagram: instagramOf(host?.socials) },
     venue: venue ? { name: venue.name, address: venue.address, instagram: instagramOf(venue.socials) } : (ev.venueName ? { name: ev.venueName, address: ev.venueAddress, instagram: null } : null),
     artists: (ev.artists ?? []).map((h: string) => ({ name: byHandle.get(h)?.name ?? h, instagram: instagramOf(byHandle.get(h)?.socials) })),
     description: ev.description,
-    eventUrl: `${site}/events/${ev.id}`,
     ticketUrl: ev.ticketUrl,
   }
+  // The flyer's lines: a caption written from other lines is out of date.
+  return { caption, lines: texts(src.lines) }
 }
 
 /**
@@ -72,9 +79,9 @@ export const businessFlyersRouter = router({
       const ev = await requireEventManager(ctx, input.eventId)
       const c = await captionContext(ctx.db, ev)
       const saved = ev.caption ?? null
-      const now = texts(c.lines)
+      const now = c.lines
       const changed = saved ? now.some(l => !saved.lines.includes(l)) || saved.lines.some((l: string) => !now.includes(l)) : false
-      const tags = [...c.artists, c.venue, c.host].filter((t: any) => t?.instagram).map((t: any) => `@${t.instagram}`)
+      const tags = [...c.caption.artists, c.caption.venue, c.caption.host].filter((t: any) => t?.instagram).map((t: any) => `@${t.instagram}`)
       return { saved, changed, tags }
     }),
 
@@ -84,15 +91,15 @@ export const businessFlyersRouter = router({
     .mutation(async ({ ctx, input }) => {
       const ev = await requireEventManager(ctx, input.eventId)
       const c = await captionContext(ctx.db, ev)
-      let text: string
+      // Gemini writes the hook, call to action and hashtags; the details are fixed lines.
+      let words: CaptionWords
       try {
-        text = await writeText(captionPrompt(c, input.language))
+        words = await writeJson<CaptionWords>(captionPrompt(c.caption, input.language))
       } catch (e: any) {
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e?.message || 'Couldn’t write the caption. Try again.' })
       }
-      text = keepVerifiedMentions(text.replace(/^```\w*\n?|```$/g, '').trim(), [...c.artists.map((a: { instagram: string | null }) => a.instagram), c.venue?.instagram, c.host.instagram])
-      if (!text) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'The caption came back empty. Try again.' })
-      const caption = { language: input.language, text, lines: texts(c.lines), writtenAt: new Date().toISOString() }
+      const text = composeCaption(c.caption, input.language, words)
+      const caption = { language: input.language, text, lines: c.lines, writtenAt: new Date().toISOString() }
       await ctx.db.update(events).set({ caption, updatedAt: new Date() }).where(eq(events.id, ev.id))
       return caption
     }),

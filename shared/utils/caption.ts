@@ -1,71 +1,125 @@
 /**
- * The Instagram caption to post with an event's flyer, written by Gemini from
- * the same lines the flyer carries. The organizer adapts it for WhatsApp,
- * Telegram or Facebook themselves.
+ * The Instagram caption to post with an event's flyer. The organizer adapts it
+ * for WhatsApp, Telegram or Facebook themselves.
+ *
+ * The details are built here, not by Gemini: date, time, the programme one
+ * item per line, music, line-up, each price on its own line, the venue with
+ * its full address. Asked to lay them out, Gemini merged the programme into
+ * the time line and swapped the address for the venue's @handle. Gemini only
+ * writes the words around them: a hook line, a call to action and hashtags.
  *
  * Only verified @handles (the artists', venue's and host's Instagram on
  * WeDance) may appear: a made-up handle tags a stranger.
  */
+
+const LANG = {
+  en: { name: 'English', locale: 'en-GB', flag: '🇬🇧' },
+  de: { name: 'German', locale: 'de-DE', flag: '🇩🇪' },
+  es: { name: 'Spanish', locale: 'es-ES', flag: '🇪🇸' },
+  ru: { name: 'Russian', locale: 'ru-RU', flag: '🇷🇺' },
+} as const
+type Lang = keyof typeof LANG
+
 export const LANGUAGES = [
-  { value: 'en+de', label: 'English, then German', prompt: 'English first, then the German version after a line with 🇩🇪.' },
-  { value: 'en', label: 'English', prompt: 'English.' },
-  { value: 'de', label: 'German', prompt: 'German.' },
-  { value: 'es', label: 'Spanish', prompt: 'Spanish.' },
-  { value: 'ru', label: 'Russian', prompt: 'Russian.' },
-  { value: 'en+es', label: 'English, then Spanish', prompt: 'English first, then the Spanish version after a line with 🇪🇸.' },
+  { value: 'en+de', label: 'English and German' },
+  { value: 'en', label: 'English' },
+  { value: 'de', label: 'German' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'ru', label: 'Russian' },
+  { value: 'en+es', label: 'English and Spanish' },
 ] as const
 
+const langsOf = (value: string): Lang[] => {
+  const ls = value.split('+').filter((l): l is Lang => l in LANG)
+  return ls.length ? ls : ['en']
+}
+
 export type CaptionContext = {
-  /** The flyer's lines with their labels (title, date, time, agenda, …). */
-  lines: { label: string; text: string }[]
+  title: string
+  startDate: string | Date
+  endDate?: string | Date | null
+  timezone?: string | null
+  agenda: { time: string; what: string }[]
+  styles: string[]
+  /** One price per line, as typed. */
+  prices: string[]
   host: { name: string; instagram?: string | null }
   venue?: { name: string; address?: string | null; instagram?: string | null } | null
   artists: { name: string; instagram?: string | null }[]
   description?: string | null
-  eventUrl: string
   ticketUrl?: string | null
 }
 
-/** The prompt for the caption; Gemini replies with the caption text only. */
-export function captionPrompt(c: CaptionContext, language: string) {
-  const lang = LANGUAGES.find(l => l.value === language) ?? LANGUAGES[0]
-  const tags = [
-    ...c.artists.filter(a => a.instagram).map(a => `${a.name}: @${a.instagram}`),
-    c.venue?.instagram ? `venue ${c.venue.name}: @${c.venue.instagram}` : null,
-    c.host.instagram ? `organizer ${c.host.name}: @${c.host.instagram}` : null,
-  ].filter(Boolean)
-  const by = (label: string) => c.lines.filter(l => l.label === label).map(l => l.text)
-  const agenda = by('agenda')
-  // The flyer joins prices with " · "; the caption puts each on its own line.
-  const prices = by('entry').flatMap(t => t.split(' · ')).filter(Boolean)
+/** What Gemini writes: the words around the details. */
+export type CaptionWords = { hashtags?: string[] } & Partial<Record<Lang, { hook?: string; cta?: string }>>
+
+// "Yunior (@yuniorflowcubano)"; a profile named after its handle (imported from
+// Instagram, "alosha_corazon_cubano") is just "@alosha_corazon_cubano".
+const withTag = (name: string, ig?: string | null) => {
+  if (!ig) return name
+  const same = name.trim().replace(/^@/, '').toLowerCase() === ig.toLowerCase()
+  return same ? `@${ig}` : `${name} (@${ig})`
+}
+
+/** The fixed detail lines, one fact per line. Dates in the first language. */
+export function captionDetails(c: CaptionContext, lang: Lang = 'en'): string[] {
+  const tz = c.timezone || 'Europe/Berlin'
+  const start = new Date(c.startDate)
+  const end = c.endDate ? new Date(c.endDate) : null
+  const day = start.toLocaleDateString(LANG[lang].locale, { weekday: 'long', day: 'numeric', month: 'long', timeZone: tz })
+  const time = (d: Date) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz })
+  const venue = c.venue
+    ? [withTag(c.venue.name, c.venue.instagram), c.venue.address?.trim()].filter(Boolean).join(', ')
+    : null
   return [
-    `Write the Instagram caption for a dance event by ${c.host.name}, to post with its flyer. Language: ${lang.prompt}`,
-    'Warm and inviting, like the organizer talking to their dancers. No hype words ("epic", "unmissable"), no invented facts: use only what is below. 24h times, spell every name exactly as given (umlauts and accents included).',
-    [
-      'Shape, each detail on its own line starting with one fitting emoji:',
-      '1. A short hook line.',
-      '2. The date, then the overall time.',
-      agenda.length ? '3. The programme: one line per item, in order, time first, exactly as listed. Never merge items into one line or into the time line.' : null,
-      '4. The music. 5. Who is playing or teaching. 6. Entry, one line per price.',
-      '7. The place: the venue name and its full address.',
-      'Then say where to get tickets or details as "link in bio" (links are not clickable in captions), a short call to action, and 5–8 relevant hashtags on the last line.',
-    ].filter(Boolean).join('\n'),
-    [
-      'The event, exactly as on the flyer:',
-      ...by('title').map(t => `Title: ${t}`),
-      ...by('date').map(t => `Date: ${t}`),
-      ...by('time').map(t => `Time: ${t}`),
-      ...(agenda.length ? ['Programme (one line each):', ...agenda.map(t => `  - ${t}`)] : []),
-      ...by('music').map(t => `Music: ${t}`),
-      ...by('line-up').map(t => `Line-up: ${t}`),
-      ...prices.map(t => `Entry: ${t}`),
-      c.venue ? `Place: ${[c.venue.name, c.venue.address].filter(Boolean).join(', ')}` : by('venue').map(t => `Place: ${t}`)[0] ?? null,
-    ].filter(Boolean).join('\n'),
-    c.description?.trim() ? `About the event (for tone and extra detail): ${c.description.trim().slice(0, 1500)}` : null,
-    c.ticketUrl ? 'There is a ticket link (in bio).' : null,
-    tags.length ? `Tag these verified Instagram accounts with @ where they fit — the only @handles you may use: ${tags.join('; ')}.` : 'There are no verified Instagram accounts: write names without @.',
-    'Never make up an @handle. Write anyone else by name, without @.',
-    'Return only the caption text.',
+    `📅 ${day[0]!.toUpperCase()}${day.slice(1)}`,
+    `🕒 ${time(start)}${end && time(end) !== time(start) ? ` – ${time(end)}` : ''}`,
+    ...c.agenda.filter(a => a.what.trim()).map(a => `🔸 ${[a.time.trim(), a.what.trim()].filter(Boolean).join(' ')}`),
+    c.styles.length ? `🎶 ${c.styles.join(' × ')}` : null,
+    c.artists.length ? `🎧 ${c.artists.map(a => withTag(a.name, a.instagram)).join(' · ')}` : null,
+    ...c.prices.map(p => `🎟 ${p}`),
+    venue ? `📍 ${venue}` : null,
+  ].filter(Boolean) as string[]
+}
+
+/** Ask Gemini for the hook, call to action and hashtags only, as JSON. */
+export function captionPrompt(c: CaptionContext, language: string) {
+  const langs = langsOf(language)
+  return [
+    `You help ${c.host.name} post a dance event on Instagram. The details (date, times, programme, music, line-up, prices, place) are already written. Write only the words around them.`,
+    `For each language (${langs.map(l => LANG[l].name).join(', ')}): a "hook" (one short warm sentence inviting people, max 15 words) and a "cta" (one short closing line: tickets and details via the link in bio, and an invitation to come dance).`,
+    'Warm, like the organizer talking to their dancers. No hype words ("epic", "unmissable"), no facts that are not below, no dates or times (they are in the details).',
+    c.host.instagram ? `You may tag the organizer as @${c.host.instagram} in the hook. No other @handles.` : 'Use no @handles.',
+    'Also "hashtags": 5–8 relevant hashtags (city, dance styles, the event), each starting with #.',
+    `The event: ${c.title}. Music: ${c.styles.join(', ') || 'social dance'}. Place: ${c.venue?.name ?? ''}${c.venue?.address ? `, ${c.venue.address}` : ''}.`,
+    c.description?.trim() ? `About it (for tone): ${c.description.trim().slice(0, 800)}` : null,
+    `Reply as JSON: {${langs.map(l => `"${l}": {"hook": "...", "cta": "..."}`).join(', ')}, "hashtags": ["#..."]}`,
+  ].filter(Boolean).join('\n\n')
+}
+
+/**
+ * The caption: hook(s), the details, call(s) to action, hashtags. With two
+ * languages the second line of each pair carries its flag; the details, which
+ * are mostly names, times and prices, appear once.
+ */
+export function composeCaption(c: CaptionContext, language: string, words: CaptionWords) {
+  const langs = langsOf(language)
+  const pair = (k: 'hook' | 'cta') => langs
+    .map((l, i) => {
+      const t = words[l]?.[k]?.trim()
+      return t ? (i ? `${LANG[l].flag} ${t}` : t) : null
+    })
+    .filter(Boolean)
+    .join('\n')
+  const hashtags = (words.hashtags ?? [])
+    .map(h => `#${String(h).replace(/^#+/, '').replace(/\s+/g, '')}`)
+    .filter(h => h.length > 1)
+  const allowed = [c.host.instagram, c.venue?.instagram, ...c.artists.map(a => a.instagram)]
+  return [
+    keepVerifiedMentions(pair('hook'), allowed),
+    captionDetails(c, langs[0]).join('\n'),
+    keepVerifiedMentions(pair('cta'), allowed),
+    [...new Set(hashtags)].slice(0, 8).join(' '),
   ].filter(Boolean).join('\n\n')
 }
 
