@@ -16,9 +16,10 @@ export const LANGUAGES = [
 ] as const
 
 export type CaptionContext = {
-  lines: string[]
+  /** The flyer's lines with their labels (title, date, time, agenda, …). */
+  lines: { label: string; text: string }[]
   host: { name: string; instagram?: string | null }
-  venue?: { name: string; instagram?: string | null } | null
+  venue?: { name: string; address?: string | null; instagram?: string | null } | null
   artists: { name: string; instagram?: string | null }[]
   description?: string | null
   eventUrl: string
@@ -33,11 +34,33 @@ export function captionPrompt(c: CaptionContext, language: string) {
     c.venue?.instagram ? `venue ${c.venue.name}: @${c.venue.instagram}` : null,
     c.host.instagram ? `organizer ${c.host.name}: @${c.host.instagram}` : null,
   ].filter(Boolean)
+  const by = (label: string) => c.lines.filter(l => l.label === label).map(l => l.text)
+  const agenda = by('agenda')
+  // The flyer joins prices with " · "; the caption puts each on its own line.
+  const prices = by('entry').flatMap(t => t.split(' · ')).filter(Boolean)
   return [
     `Write the Instagram caption for a dance event by ${c.host.name}, to post with its flyer. Language: ${lang.prompt}`,
     'Warm and inviting, like the organizer talking to their dancers. No hype words ("epic", "unmissable"), no invented facts: use only what is below. 24h times, spell every name exactly as given (umlauts and accents included).',
-    'Shape: a short hook line first. Then the details as short lines, each starting with one fitting emoji: date, times and programme, music, who is playing or teaching, entry, place. Say where to get tickets or details as "link in bio" (links are not clickable in captions). End with a short call to action, then 5–8 relevant hashtags on the last line.',
-    `The event, exactly as on the flyer:\n${c.lines.map(l => `- ${l}`).join('\n')}`,
+    [
+      'Shape, each detail on its own line starting with one fitting emoji:',
+      '1. A short hook line.',
+      '2. The date, then the overall time.',
+      agenda.length ? '3. The programme: one line per item, in order, time first, exactly as listed. Never merge items into one line or into the time line.' : null,
+      '4. The music. 5. Who is playing or teaching. 6. Entry, one line per price.',
+      '7. The place: the venue name and its full address.',
+      'Then say where to get tickets or details as "link in bio" (links are not clickable in captions), a short call to action, and 5–8 relevant hashtags on the last line.',
+    ].filter(Boolean).join('\n'),
+    [
+      'The event, exactly as on the flyer:',
+      ...by('title').map(t => `Title: ${t}`),
+      ...by('date').map(t => `Date: ${t}`),
+      ...by('time').map(t => `Time: ${t}`),
+      ...(agenda.length ? ['Programme (one line each):', ...agenda.map(t => `  - ${t}`)] : []),
+      ...by('music').map(t => `Music: ${t}`),
+      ...by('line-up').map(t => `Line-up: ${t}`),
+      ...prices.map(t => `Entry: ${t}`),
+      c.venue ? `Place: ${[c.venue.name, c.venue.address].filter(Boolean).join(', ')}` : by('venue').map(t => `Place: ${t}`)[0] ?? null,
+    ].filter(Boolean).join('\n'),
     c.description?.trim() ? `About the event (for tone and extra detail): ${c.description.trim().slice(0, 1500)}` : null,
     c.ticketUrl ? 'There is a ticket link (in bio).' : null,
     tags.length ? `Tag these verified Instagram accounts with @ where they fit — the only @handles you may use: ${tags.join('; ')}.` : 'There are no verified Instagram accounts: write names without @.',

@@ -31,13 +31,18 @@ export async function flyerSource(db: any, ev: any) {
     const photo = h in chosen ? chosen[h] : (p?.photo || null)
     return { username: h, name: (p?.name as string) || h, photo: photo || null }
   })
+  // The venue as it is now: a venue on WeDance may have been renamed or got its
+  // address after the event copied them.
+  const [venue] = ev.venueUsername
+    ? await db.select({ name: profiles.name, address: profiles.address }).from(profiles).where(eq(profiles.username, ev.venueUsername))
+    : [null]
   const lines = flyerLines({
     name: ev.name ?? '',
     startDate: ev.startDate,
     endDate: ev.endDate,
     timezone: ev.timezone,
-    venueName: ev.venueName,
-    venueAddress: ev.venueAddress,
+    venueName: venue?.name || ev.venueName,
+    venueAddress: venue?.address || ev.venueAddress,
     agenda: ev.agenda ?? [],
     showAgenda: ev.flyerOptions?.showAgenda !== false,
     artists: people,

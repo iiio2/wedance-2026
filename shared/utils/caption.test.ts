@@ -20,9 +20,13 @@ describe('instagramOf', () => {
 
 describe('captionPrompt', () => {
   const ctx = {
-    lines: ['LA CLAVE THURSDAY', 'THURSDAY 22 OCTOBER', 'LUMA · NEUHAUSER STR. 47 · MÜNCHEN'],
+    lines: [
+      { label: 'title', text: 'LA CLAVE THURSDAY' }, { label: 'date', text: 'THURSDAY 22 OCTOBER' }, { label: 'time', text: '19:00 – 23:00' },
+      { label: 'agenda', text: '19:00 Reparto from Zero · Yunior' }, { label: 'agenda', text: '21:00 Party · DJ Papi' },
+      { label: 'entry', text: '€10 after 21:00 · Workshops for free' }, { label: 'venue', text: 'LUMA · NEUHAUSER STR. 47 · 80331 MÜNCHEN' },
+    ],
     host: { name: 'La Clave en Múnich', instagram: 'ritmo_jg' },
-    venue: { name: 'Luma', instagram: null },
+    venue: { name: 'LUMA', address: 'Neuhauser Str. 47, 80331 München', instagram: null },
     artists: [{ name: 'Hamza', instagram: 'hmez2050' }, { name: 'Yunior', instagram: null }],
     eventUrl: 'https://2026.wedance.vip/events/1',
   }
@@ -32,6 +36,12 @@ describe('captionPrompt', () => {
     expect(p).toContain('organizer La Clave en Múnich: @ritmo_jg')
     expect(p).not.toContain('Yunior: @')
     expect(p).toContain('🇩🇪')
-    expect(p).toContain('MÜNCHEN')
+    expect(p).toContain('Place: LUMA, Neuhauser Str. 47, 80331 München')
+  })
+  it('gives the programme one line per item and each price its own line', () => {
+    const p = captionPrompt(ctx, 'en')
+    expect(p).toContain('  - 19:00 Reparto from Zero · Yunior\n  - 21:00 Party · DJ Papi')
+    expect(p).toContain('Never merge items')
+    expect(p).toContain('Entry: €10 after 21:00\nEntry: Workshops for free')
   })
 })

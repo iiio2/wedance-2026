@@ -13,15 +13,15 @@ import { LANGUAGES, captionPrompt, keepVerifiedMentions, instagramOf } from '../
 async function captionContext(db: any, ev: any) {
   const src = await flyerSource(db, ev)
   const handles = [...(ev.artists ?? []), ev.venueUsername].filter(Boolean)
-  const rows = handles.length ? await db.select({ username: profiles.username, name: profiles.name, socials: profiles.socials }).from(profiles).where(inArray(profiles.username, handles)) : []
+  const rows = handles.length ? await db.select({ username: profiles.username, name: profiles.name, address: profiles.address, socials: profiles.socials }).from(profiles).where(inArray(profiles.username, handles)) : []
   const [host] = await db.select({ name: profiles.name, socials: profiles.socials }).from(profiles).where(eq(profiles.id, ev.hostProfileId))
   const byHandle = new Map<string, any>(rows.map((r: any) => [r.username, r]))
   const venue = ev.venueUsername ? byHandle.get(ev.venueUsername) : null
   const site = (useRuntimeConfig().siteUrl || 'https://2026.wedance.vip').replace(/\/$/, '')
   return {
-    lines: texts(src.lines),
+    lines: src.lines as { label: string; text: string }[],
     host: { name: host?.name ?? '', instagram: instagramOf(host?.socials) },
-    venue: venue ? { name: venue.name, instagram: instagramOf(venue.socials) } : (ev.venueName ? { name: ev.venueName, instagram: null } : null),
+    venue: venue ? { name: venue.name, address: venue.address, instagram: instagramOf(venue.socials) } : (ev.venueName ? { name: ev.venueName, address: ev.venueAddress, instagram: null } : null),
     artists: (ev.artists ?? []).map((h: string) => ({ name: byHandle.get(h)?.name ?? h, instagram: instagramOf(byHandle.get(h)?.socials) })),
     description: ev.description,
     eventUrl: `${site}/events/${ev.id}`,
@@ -72,7 +72,8 @@ export const businessFlyersRouter = router({
       const ev = await requireEventManager(ctx, input.eventId)
       const c = await captionContext(ctx.db, ev)
       const saved = ev.caption ?? null
-      const changed = saved ? c.lines.some(l => !saved.lines.includes(l)) || saved.lines.some((l: string) => !c.lines.includes(l)) : false
+      const now = texts(c.lines)
+      const changed = saved ? now.some(l => !saved.lines.includes(l)) || saved.lines.some((l: string) => !now.includes(l)) : false
       const tags = [...c.artists, c.venue, c.host].filter((t: any) => t?.instagram).map((t: any) => `@${t.instagram}`)
       return { saved, changed, tags }
     }),
@@ -91,7 +92,7 @@ export const businessFlyersRouter = router({
       }
       text = keepVerifiedMentions(text.replace(/^```\w*\n?|```$/g, '').trim(), [...c.artists.map((a: { instagram: string | null }) => a.instagram), c.venue?.instagram, c.host.instagram])
       if (!text) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'The caption came back empty. Try again.' })
-      const caption = { language: input.language, text, lines: c.lines, writtenAt: new Date().toISOString() }
+      const caption = { language: input.language, text, lines: texts(c.lines), writtenAt: new Date().toISOString() }
       await ctx.db.update(events).set({ caption, updatedAt: new Date() }).where(eq(events.id, ev.id))
       return caption
     }),

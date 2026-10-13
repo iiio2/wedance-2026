@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { eq, and, or, ilike, desc, inArray, sql } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure, adminProcedure } from '../trpc'
-import { profiles, profileMembers, profileClaims, dancers, cities } from '../../database/schema'
+import { profiles, profileMembers, profileClaims, dancers, cities, events } from '../../database/schema'
 import { slugify, randomSuffix } from '../../utils/slug'
 import { parseInstagramHandle, instagramUrl } from '../../../shared/utils/instagram'
 import { grant, logAccess } from '../../utils/profileAccess'
@@ -267,6 +267,14 @@ export const businessRouter = router({
       }
       if (Object.keys(set).length) {
         await ctx.db.update(profiles).set(set).where(eq(profiles.id, p.id))
+      }
+      // Events copy the venue's name and address when they're saved; keep the
+      // ones held here in step (the event page, flyer and caption read them).
+      // Hosted events only — synced v3 events are owned by the sync.
+      if (p.type === 'venue' && (fields.name !== undefined || fields.address !== undefined)) {
+        await ctx.db.update(events)
+          .set({ venueName: fields.name ?? p.name, venueAddress: (fields.address ?? p.address) || null, updatedAt: new Date() })
+          .where(and(eq(events.venueUsername, p.username), sql`${events.hostProfileId} IS NOT NULL`))
       }
       return { saved: true }
     }),

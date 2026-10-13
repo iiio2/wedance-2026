@@ -186,6 +186,9 @@ export const businessEventsRouter = router({
     .query(async ({ ctx, input }) => {
       const ev = await requireEventManager(ctx, input.id)
       const [host] = await ctx.db.select({ username: profiles.username, name: profiles.name, type: profiles.type }).from(profiles).where(eq(profiles.id, ev.hostProfileId))
+      const [venue] = ev.venueUsername
+        ? await ctx.db.select({ name: profiles.name, address: profiles.address }).from(profiles).where(eq(profiles.username, ev.venueUsername))
+        : [null]
       const tz = ev.timezone || 'Europe/Berlin'
       const end = ev.endDate ? new Date(ev.endDate) : null
       const sameDay = !end || eventLocalDate(end, tz) === eventLocalDate(ev.startDate, tz)
@@ -202,8 +205,9 @@ export const businessEventsRouter = router({
         endDate: end && !sameDay ? eventLocalDate(end, tz) : null,
         city: ev.city ?? '',
         venueUsername: ev.venueUsername,
-        venueName: ev.venueName ?? '',
-        venueAddress: ev.venueAddress ?? '',
+        // A venue on WeDance: its current name and address, not the copy made at save.
+        venueName: venue?.name || ev.venueName || '',
+        venueAddress: venue?.address || ev.venueAddress || '',
         artists: ev.artists ?? [],
         styles: ev.styles ?? [],
         description: ev.description ?? '',
