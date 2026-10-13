@@ -127,10 +127,14 @@ export const businessRouter = router({
   }),
 
   // Find an existing profile to claim (by name or handle).
+  // By name or handle; a pasted Instagram link or @handle also finds the page
+  // that links that account (instagram.com/ritmo_jg → La Clave en Múnich).
   search: protectedProcedure
-    .input(z.object({ q: z.string().trim().min(2).max(80) }))
+    .input(z.object({ q: z.string().trim().min(2).max(300) }))
     .query(async ({ ctx, input }) => {
-      const like = `%${input.q}%`
+      const ig = parseInstagramHandle(input.q)
+      const term = /instagram\.com\//i.test(input.q) && ig ? ig : input.q.replace(/^@/, '')
+      const like = `%${term}%`
       return ctx.db
         .select({
           username: profiles.username,
@@ -139,10 +143,13 @@ export const businessRouter = router({
           city: profiles.city,
           photo: profiles.photo,
           managed: isManaged,
+          // This page links the pasted Instagram account (else: offer to import it).
+          linksInstagram: ig ? sql<boolean>`${linksInstagram(ig)}` : sql<boolean>`false`,
         })
         .from(profiles)
-        .where(and(eq(profiles.status, 'visible'), or(ilike(profiles.name, like), ilike(profiles.username, like))))
-        .orderBy(profiles.name)
+        .where(and(eq(profiles.status, 'visible'), or(ilike(profiles.name, like), ilike(profiles.username, like), ig ? linksInstagram(ig) : undefined)))
+        // The page that links the pasted Instagram account comes first.
+        .orderBy(...(ig ? [desc(linksInstagram(ig))] : []), profiles.name)
         .limit(12)
     }),
 

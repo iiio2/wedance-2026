@@ -21,7 +21,14 @@ const types = [
   { value: 'venue', label: 'Venue', hint: 'Club, bar, studio, outdoor spot' },
   { value: 'organizer', label: 'Organizer', hint: 'Parties, festivals, workshops' },
 ] as const
-const form = reactive({ type: 'artist' as 'artist' | 'venue' | 'organizer', instagram: '', name: '', city: '', handle: '' })
+// ?instagram=… (from "Import from Instagram" on Find my profile) and ?type=… pre-fill the form.
+const route = useRoute()
+const qType = String(route.query.type ?? '')
+const form = reactive({
+  type: (['artist', 'venue', 'organizer'].includes(qType) ? qType : 'artist') as 'artist' | 'venue' | 'organizer',
+  instagram: String(route.query.instagram ?? ''),
+  name: '', city: '', handle: '',
+})
 const nameError = ref<string | undefined>()
 const saving = ref(false)
 const error = ref<string | null>(null)
@@ -35,7 +42,7 @@ watch(igHandle, (ig) => {
   if (!ig) return
   if (!form.name || form.name === filledFromIg.name) form.name = filledFromIg.name = nameFromInstagram(ig)
   if (!form.handle || form.handle === filledFromIg.handle) form.handle = filledFromIg.handle = handleFromInstagram(ig)
-})
+}, { immediate: true })
 
 type Existing = Awaited<ReturnType<typeof $trpc.business.findExisting.query>>
 const existing = ref<Existing>([])
@@ -51,7 +58,7 @@ watch(() => [igHandle.value, form.name.trim(), form.handle.trim()], () => {
       })
     } catch { existing.value = [] }
   }, 350)
-})
+}, { immediate: true })
 
 async function submit() {
   nameError.value = form.name.trim() ? undefined : 'Add a name.'

@@ -2,8 +2,11 @@
 /**
  * /business/claim — find an existing artist / venue / organizer profile and ask to
  * manage it. ?profile=<handle> pre-fills the search (linked from /@handle).
+ * Paste an Instagram link to find the page that links it — or, if there's none,
+ * import it: /business/new with the link filled in.
  */
-import { Search, Check } from 'lucide-vue-next'
+import { Search, Check, Instagram, Plus } from 'lucide-vue-next'
+import { parseInstagramHandle } from '#shared/utils/instagram'
 
 definePageMeta({ layout: 'business' })
 useHead({ title: 'Find my profile | WeDance' })
@@ -77,23 +80,42 @@ const formCopy = {
   reclaim: { label: 'Why is this page yours?', hint: 'WeDance checks this, not the people who manage it now. Give us something we can verify, e.g. a DM from the profile’s Instagram account.' },
 }
 
+// A pasted link or @handle → offer to import it unless a page already links it.
+const igHandle = computed(() => {
+  const t = q.value.trim()
+  return /instagram\.com\/|^@/i.test(t) ? parseInstagramHandle(t) : null
+})
+const igMatched = computed(() => results.value.some(r => r.linksInstagram))
+const importTo = computed(() => ({ path: '/business/new', query: { instagram: `https://instagram.com/${igHandle.value}` } }))
+
 const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', organizer: 'Organizer' }
 </script>
 
 <template>
   <div>
-    <AdminPageHeader eyebrow="Business" title="Find my profile" description="Search for your artist name, venue or event brand. If it’s already on WeDance, ask to manage it." />
+    <AdminPageHeader eyebrow="Business" title="Find my profile" description="Search for your artist name, venue or event brand, or paste its Instagram link. If it’s already on WeDance, ask to manage it." />
 
     <Field label="Search" hide-label class="mt-6">
       <div class="relative">
         <Search class="size-4 absolute left-3.5 top-3.5 text-muted-foreground" aria-hidden="true" />
-        <Input v-model="q" type="search" placeholder="Name or @handle" class="pl-10" autofocus />
+        <Input v-model="q" type="search" placeholder="Name, @handle or Instagram link" class="pl-10" autofocus />
       </div>
     </Field>
 
     <AdminState v-if="error" kind="error" :message="error" />
     <AdminState v-if="searching" kind="loading" message="Searching…" />
-    <AdminState v-else-if="searched && !results.length" kind="empty" message="Nothing found." hint="Try another spelling, or create a new profile." />
+    <div v-else-if="searched && igHandle && !igMatched" class="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border-2 border-dashed border-input bg-card p-4">
+      <Instagram class="size-6 shrink-0 text-secondary" aria-hidden="true" />
+      <div class="min-w-[12rem] flex-1">
+        <p class="text-sm font-bold">@{{ igHandle }} isn’t on WeDance yet</p>
+        <p class="text-xs text-muted-foreground">{{ results.length ? 'None of the pages below links this Instagram account.' : 'Import it: we fill in the name and handle, you check them.' }} You’ll manage it straight away.</p>
+      </div>
+      <Button variant="pill" size="pill-sm" as-child><NuxtLink :to="importTo"><Instagram /> Import from Instagram</NuxtLink></Button>
+    </div>
+    <div v-else-if="searched && !results.length" class="mt-4">
+      <AdminState kind="empty" message="Nothing found." hint="Try another spelling or paste its Instagram link. Or create a new profile." />
+      <Button variant="outline-pill" size="pill-sm" class="mt-2" as-child><NuxtLink to="/business/new"><Plus /> Create a profile</NuxtLink></Button>
+    </div>
 
     <div v-if="results.length" class="mt-4 grid gap-2">
       <div v-for="r in results" :key="r.username" class="rounded-2xl border bg-card p-4">
