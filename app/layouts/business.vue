@@ -4,7 +4,7 @@
  * managing their profiles). Mirrors the admin layout. Gate is signed-in only;
  * every page and procedure checks profile membership itself.
  */
-import { Home, CalendarDays, UserSquare, ArrowLeft, LogIn } from 'lucide-vue-next'
+import { Home, CalendarDays, UserSquare, ArrowLeft, LogIn, Eye, X } from 'lucide-vue-next'
 
 const route = useRoute()
 const { $trpc } = useNuxtApp()
@@ -30,6 +30,13 @@ async function check() {
   }
 }
 onMounted(check)
+// Admin viewing someone's Business (/admin/users → their name): read-only.
+const viewAs = useViewAs()
+watch(() => viewAs.value?.id, () => check())
+function stopViewing() {
+  viewAs.value = null
+  navigateTo('/admin/users')
+}
 watch(showSignIn, (open) => { if (!open) check() })
 // Re-read after creating/claiming a profile (the editor route changes).
 watch(() => route.path, (p, old) => { if (state.value === 'ok' && old?.startsWith('/business/new')) check() })
@@ -102,7 +109,17 @@ const isActive = (item: { match: (p: string) => boolean }) => item.match(route.p
           <SignUpModal v-model:open="showSignIn" action="signin" />
         </div>
 
-        <slot v-else />
+        <template v-else>
+          <div v-if="viewAs" class="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border-2 border-secondary/40 bg-secondary/10 px-4 py-3" role="status">
+            <Eye class="size-4 shrink-0 text-secondary" aria-hidden="true" />
+            <p class="min-w-0 flex-1 text-sm">
+              <span class="font-bold">Viewing as {{ viewAs.name }}</span>
+              <span class="text-muted-foreground"> · what they see in Business. Read-only: saving is off.</span>
+            </p>
+            <Button variant="outline-pill" size="pill-sm" @click="stopViewing"><X /> Stop viewing</Button>
+          </div>
+          <slot />
+        </template>
       </div>
     </main>
   </div>

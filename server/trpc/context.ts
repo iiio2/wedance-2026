@@ -16,6 +16,9 @@ export interface Context {
   // Run work after the response is sent (flyer painting). Absent in tests and
   // createCaller sites, where callers fall back to fire-and-forget.
   waitUntil?: (p: Promise<unknown>) => void
+  // Admin "view as": an admin opened /business as another user (x-wedance-view-as).
+  // protectedProcedure then runs queries as that user and refuses mutations.
+  viewAs?: { id: string; name: string } | null
 }
 
 export async function createContext(
@@ -55,5 +58,13 @@ export async function createContext(
     }
   }
 
-  return { db, dancerId, isAdmin, voterSessionId: extra?.voterSessionId ?? null, waitUntil: extra?.waitUntil }
+  // Only an admin can view as someone else; anyone else's header is ignored.
+  let viewAs: Context['viewAs'] = null
+  const asId = opts.req.headers.get('x-wedance-view-as')
+  if (isAdmin && asId && /^[0-9a-f-]{36}$/i.test(asId) && asId !== dancerId) {
+    const [d] = await db.select({ id: dancers.id, name: dancers.name }).from(dancers).where(eq(dancers.id, asId))
+    if (d) viewAs = d
+  }
+
+  return { db, dancerId, isAdmin, voterSessionId: extra?.voterSessionId ?? null, waitUntil: extra?.waitUntil, viewAs }
 }

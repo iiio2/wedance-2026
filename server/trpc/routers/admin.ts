@@ -3,7 +3,37 @@ import { eq, and, sql } from 'drizzle-orm'
 import { router, adminProcedure } from '../trpc'
 import { dinners, dinnerSignups, dinnerGroups, dinnerGroupMembers, dancers, festivals } from '../../database/schema'
 
+// Business profiles each user manages, as JSON, for the users list.
+const managedProfiles = sql<{ username: string; name: string; type: string; role: string }[]>`coalesce((
+  select json_agg(json_build_object('username', p.username, 'name', p.name, 'type', p.type, 'role', m.role) order by p.name)
+  from profile_members m join profiles p on p.id = m.profile_id where m.dancer_id = "dancers"."id"
+), '[]'::json)`
+const pendingClaims = sql<number>`(select count(*)::int from profile_claims c where c.dancer_id = "dancers"."id" and c.status = 'pending')`
+
 export const adminRouter = router({
+  // Every user, newest first, with the business profiles they manage. Search by
+  // name or email; "business" keeps only people who manage or claim a profile.
+  users: adminProcedure
+    .input(z.object({ q: z.string().trim().max(120).default(''), business: z.boolean().default(false), offset: z.number().int().min(0).default(0) }))
+    .query(async ({ ctx, input }) => {
+      const like = `%${input.q}%`
+      const where = and(
+        input.q ? sql`(${dancers.name} ILIKE ${like} OR ${dancers.email} ILIKE ${like})` : undefined,
+        input.business ? sql`(exists (select 1 from profile_members m where m.dancer_id = "dancers"."id") or exists (select 1 from profile_claims c where c.dancer_id = "dancers"."id"))` : undefined,
+      )
+      const rows = await ctx.db
+        .select({
+          id: dancers.id, name: dancers.name, email: dancers.email, photo: dancers.photo, city: dancers.city,
+          username: dancers.username, isAdmin: dancers.isAdmin, createdAt: dancers.createdAt,
+          profiles: managedProfiles, pendingClaims,
+        })
+        .from(dancers).where(where)
+        .orderBy(sql`${dancers.createdAt} desc nulls last`)
+        .limit(50).offset(input.offset)
+      const [count] = await ctx.db.select({ total: sql<number>`count(*)::int` }).from(dancers).where(where)
+      return { rows, total: count?.total ?? 0 }
+    }),
+
   dinnerSignups: adminProcedure
     .input(z.object({ dinnerId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {

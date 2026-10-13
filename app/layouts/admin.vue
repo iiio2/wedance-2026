@@ -7,8 +7,7 @@
  */
 import {
   LayoutDashboard, Video, Gift, Users, UtensilsCrossed,
-  ShieldAlert, ArrowLeft, BadgeCheck,
-} from 'lucide-vue-next'
+  ShieldAlert, ArrowLeft, BadgeCheck, UserRound } from 'lucide-vue-next'
 
 const route = useRoute()
 const { $trpc } = useNuxtApp()
@@ -48,6 +47,7 @@ const nav = computed(() => [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true, badge: null as number | null },
   { to: '/admin/videos', label: 'Videos', icon: Video, exact: false, badge: pendingVideos.value || null },
   { to: '/admin/claims', label: 'Claims', icon: BadgeCheck, exact: false, badge: pendingClaims.value || null },
+  { to: '/admin/users', label: 'Users', icon: UserRound, exact: false, badge: null },
   { to: '/admin/giveaways', label: 'Giveaways', icon: Gift, exact: false, badge: null },
   { to: '/admin/community-groups', label: 'Community', icon: Users, exact: false, badge: null },
   { to: '/admin/festivals', label: 'Festivals', icon: UtensilsCrossed, exact: false, badge: null },

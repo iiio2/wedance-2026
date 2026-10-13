@@ -32,6 +32,10 @@ export default defineNuxtPlugin({
     }
 
     const authToken = ref<string | null>(sessionCookieRef.value ?? null)
+    // Admin "view as" (useViewAs): sent only from /business pages, so the rest of
+    // the app — admin included — stays the admin's own.
+    const viewAs = useViewAs()
+    const router = useRouter()
 
     const trpc = createTRPCClient<AppRouter>({
       links: [
@@ -39,10 +43,9 @@ export default defineNuxtPlugin({
           url: '/api/trpc',
           headers() {
             const token = authToken.value
-            if (token) {
-              return { authorization: `Bearer ${token}` }
-            }
-            return {}
+            if (!token) return {}
+            const as = viewAs.value?.id && router.currentRoute.value.path.startsWith('/business') ? viewAs.value.id : null
+            return as ? { authorization: `Bearer ${token}`, 'x-wedance-view-as': as } : { authorization: `Bearer ${token}` }
           },
         }),
       ],
