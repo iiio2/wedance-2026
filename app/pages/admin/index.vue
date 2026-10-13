@@ -24,7 +24,7 @@ onMounted(async () => {
 const sections = computed(() => [
   { to: '/admin/videos', icon: Video, title: 'Video moderation', blurb: 'Approve or reject city-competition submissions.', badge: pendingVideos.value ? `${pendingVideos.value} pending` : null, accent: WD.red600 },
   { to: '/admin/claims', icon: BadgeCheck, title: 'Profile claims', blurb: 'Approve people who manage artist, venue and organizer pages.', badge: null, accent: WD.amber600 },
-  { to: '/admin/users', icon: UserRound, title: 'Users', blurb: 'Everyone on WeDance. Click a name to see their Business as they see it.', badge: null, accent: WD.blue600 },
+  { to: '/admin/users', icon: UserRound, title: 'Users', blurb: 'Everyone on WeDance. Click a name to open their Business and act as them.', badge: null, accent: WD.blue600 },
   { to: '/admin/giveaways', icon: Gift, title: 'Giveaways', blurb: 'Create and manage sponsor giveaways per city.', badge: null, accent: WD.purple500 },
   { to: '/admin/community-groups', icon: Users, title: 'Community groups', blurb: 'WhatsApp / Telegram groups shown on city pages.', badge: null, accent: WD.cyan600 },
   { to: '/admin/festivals', icon: UtensilsCrossed, title: 'Festival dinners', blurb: 'Assign dinner groups and reveal restaurants.', badge: null, accent: WD.green600 },

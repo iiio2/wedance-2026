@@ -30,7 +30,7 @@ async function check() {
   }
 }
 onMounted(check)
-// Admin viewing someone's Business (/admin/users → their name): read-only.
+// Admin acting as someone in Business (/admin/users → their name).
 const viewAs = useViewAs()
 watch(() => viewAs.value?.id, () => check())
 function stopViewing() {
@@ -114,7 +114,7 @@ const isActive = (item: { match: (p: string) => boolean }) => item.match(route.p
             <Eye class="size-4 shrink-0 text-secondary" aria-hidden="true" />
             <p class="min-w-0 flex-1 text-sm">
               <span class="font-bold">Viewing as {{ viewAs.name }}</span>
-              <span class="text-muted-foreground"> · what they see in Business. Read-only: saving is off.</span>
+              <span class="text-muted-foreground"> · you’re acting as them in Business: changes are saved as theirs.</span>
             </p>
             <Button variant="outline-pill" size="pill-sm" @click="stopViewing"><X /> Stop viewing</Button>
           </div>

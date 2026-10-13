@@ -17,7 +17,7 @@ export interface Context {
   // createCaller sites, where callers fall back to fire-and-forget.
   waitUntil?: (p: Promise<unknown>) => void
   // Admin "view as": an admin opened /business as another user (x-wedance-view-as).
-  // protectedProcedure then runs queries as that user and refuses mutations.
+  // protectedProcedure then runs everything as that user (admin rights kept).
   viewAs?: { id: string; name: string } | null
 }
 

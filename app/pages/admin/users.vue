@@ -2,7 +2,7 @@
 /**
  * /admin/users — every user, newest first. Search by name or email; filter to
  * people who manage or claim a business profile. Click a name to see their
- * Business exactly as they do (read-only "view as", see useViewAs).
+ * Business and act as them ("view as", see useViewAs).
  */
 import { Search, Eye, ExternalLink, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
@@ -47,7 +47,7 @@ const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', or
 
 <template>
   <div>
-    <AdminPageHeader title="Users" :description="data ? `${data.total.toLocaleString('en-GB')} ${business ? 'with a business' : 'in total'}. Click a name to see their Business as they see it.` : 'Everyone on WeDance.'" />
+    <AdminPageHeader title="Users" :description="data ? `${data.total.toLocaleString('en-GB')} ${business ? 'with a business' : 'in total'}. Click a name to open their Business and act as them.` : 'Everyone on WeDance.'" />
 
     <div class="mt-6 flex flex-wrap items-center gap-3">
       <Field label="Search users" hide-label class="min-w-[16rem] flex-1">
