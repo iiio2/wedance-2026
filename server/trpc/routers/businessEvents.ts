@@ -227,6 +227,7 @@ const listColumns = {
   timezone: events.timezone, published: events.published, cover: events.cover, ticketUrl: events.ticketUrl,
   price: events.price, venueUsername: events.venueUsername, venueName: events.venueName, artists: events.artists,
   city: events.city, hostProfileId: events.hostProfileId, seriesId: events.seriesId,
+  organizerName: events.organizerName, organizerUsername: events.organizerUsername, slug: events.slug,
   // What a flyer is made from (flyerStatusFor).
   venueAddress: events.venueAddress, styles: events.styles, agenda: events.agenda, flyerOptions: events.flyerOptions,
 }
@@ -250,15 +251,19 @@ export const businessEventsRouter = router({
         .orderBy(desc(events.updatedAt)).limit(50)
       const checks = await checklistFor(ctx.db, rows)
       const now = Date.now()
-      const shape = (e: any) => ({ ...e, host: hostSummary(byId.get(e.hostProfileId)), missing: checks.get(e.id) ?? [] })
+      const shape = (e: any) => ({ ...e, host: hostSummary(byId.get(e.hostProfileId)), missing: checks.get(e.id) ?? [], role: 'host' as const, canEdit: true, by: null as string | null, to: `/business/events/${e.id}` })
       const shaped = rows.map(shape)
       const ahead = (e: any) => new Date(e.endDate ?? e.startDate).getTime() >= now
+      // Plus the events I take part in (venue, organizer, line-up), from a year back.
+      const others = await eventsImIn(ctx.db, scope, gte(events.endDate, new Date(now - 365 * 86400_000)))
+      const byStart = (a: any, b: any) => +new Date(a.startDate) - +new Date(b.startDate)
+      const live = [...shaped.filter((e: any) => e.published), ...others].sort(byStart)
       return {
-        // Upcoming and past: published. Drafts: not published yet, any date.
-        upcoming: shaped.filter((e: any) => e.published && ahead(e)),
+        // Upcoming and past: published. Drafts: mine, not published yet, any date.
+        upcoming: live.filter(ahead),
         drafts: shaped.filter((e: any) => !e.published),
-        past: shaped.filter((e: any) => e.published && !ahead(e)).reverse().slice(0, 30),
-        archived: gone.map((e: any) => ({ ...e, host: hostSummary(byId.get(e.hostProfileId)), missing: [] })),
+        past: live.filter((e: any) => !ahead(e)).reverse().slice(0, 30),
+        archived: gone.map((e: any) => ({ ...e, host: hostSummary(byId.get(e.hostProfileId)), missing: [] as string[], role: 'host' as const, canEdit: true, by: null as string | null, to: `/business/events/${e.id}` })),
       }
     }),
 
@@ -645,22 +650,12 @@ export const businessEventsRouter = router({
       else if (st.changes.length) { seenSeries.add(key); needs.push({ kind: 'flyer', tone: 'warning', title: `${e.name}: the flyer is out of date`, detail: `${fmtDay(e)} · you changed the details after it was made.`, to: `/business/events/${e.id}` }) }
     }
 
-    // Line-ups I'm in, run by someone else (artist profiles I manage).
-    const myArtists = mine.filter((p: any) => p.type === 'artist').map((p: any) => p.username)
-    const gigs = myArtists.length
-      ? await ctx.db.select({ ...listColumns, organizerName: events.organizerName }).from(events)
-        .where(and(
-          eq(events.published, true), eq(events.archived, false), gte(events.endDate, now), lt(events.startDate, in60),
-          or(...myArtists.map((h: string) => sql`${events.artists} @> ${JSON.stringify([h])}::jsonb`)),
-        ))
-        .orderBy(asc(events.startDate)).limit(50)
-      : []
-    const mineIds = new Set(mine.map((p: any) => p.id))
-    const othersGigs = gigs.filter((g: any) => !mineIds.has(g.hostProfileId))
+    // Events run by someone else that my pages take part in (venue, organizer, line-up).
+    const othersGigs = await eventsImIn(ctx.db, mine, and(gte(events.endDate, now), lt(events.startDate, in60)))
 
     const comingUp = [
       ...hosted.map((e: any) => ({ id: e.id, name: e.name, startDate: e.startDate, timezone: e.timezone, published: e.published, role: 'host' as const, to: `/business/events/${e.id}`, missing: checks.get(e.id) ?? [] })),
-      ...othersGigs.map((g: any) => ({ id: g.id, name: g.name, startDate: g.startDate, timezone: g.timezone, published: true, role: 'lineup' as const, to: eventPath(g), missing: [] as string[] })),
+      ...othersGigs.map((g: any) => ({ id: g.id, name: g.name, startDate: g.startDate, timezone: g.timezone, published: true, role: g.role, to: g.to, missing: [] as string[] })),
     ]
       .filter(e => new Date(e.startDate) < in14)
       .sort((a, b) => +new Date(a.startDate) - +new Date(b.startDate))
@@ -668,6 +663,34 @@ export const businessEventsRouter = router({
     return { profiles: mine, needs, comingUp, lineupCount: othersGigs.length }
   }),
 })
+
+// Published events run by someone else that my pages take part in: at my
+// venue, organised by my organizer page (events synced from wedance.vip carry
+// these), or with my artist page in the line-up. `canEdit`: a synced event
+// (no host yet) is managed by its venue or organizer (requireEventManager).
+export async function eventsImIn(db: any, mine: { id: string; username: string; type: string }[], window: any) {
+  if (!mine.length) return []
+  const handles = mine.map(p => p.username)
+  const artists = mine.filter(p => p.type === 'artist').map(p => p.username)
+  const rows = await db.select(listColumns).from(events)
+    .where(and(
+      eq(events.published, true), eq(events.archived, false), window,
+      or(
+        inArray(events.venueUsername, handles),
+        inArray(events.organizerUsername, handles),
+        ...artists.map(h => sql`${events.artists} @> ${JSON.stringify([h])}::jsonb`),
+      ),
+      sql`(${events.hostProfileId} is null or ${events.hostProfileId} not in (${sql.join(mine.map(p => sql`${p.id}::uuid`), sql`, `)}))`,
+    ))
+    .orderBy(asc(events.startDate)).limit(300)
+  const set = new Set(handles)
+  return rows.map((e: any) => {
+    const role = e.venueUsername && set.has(e.venueUsername) ? 'venue' as const
+      : e.organizerUsername && set.has(e.organizerUsername) ? 'organizer' as const : 'lineup' as const
+    const canEdit = !e.hostProfileId && role !== 'lineup'
+    return { ...e, role, canEdit, host: null, missing: [] as string[], by: e.organizerName || e.venueName || null, to: canEdit ? `/business/events/${e.id}` : eventPath(e) }
+  })
+}
 
 // The host block every list row carries (name for display, handle for links).
 function hostSummary(p: any) {

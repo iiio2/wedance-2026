@@ -3,6 +3,8 @@
  * /business/events — events run by the profiles I manage (sidebar switcher filters).
  * Tabs: Upcoming and Past (published), Drafts (not published yet, any date),
  * Archived (Restore brings one back as a draft). Each row says what it still needs.
+ * Upcoming and Past also list events run by others that my pages take part in
+ * (at my venue, my organizer page, my artist in the line-up), with my role.
  */
 import { Plus, ExternalLink, ArchiveRestore } from 'lucide-vue-next'
 import { eventLocalDate, eventLocalTime, eventLocalWeekday } from '#shared/utils/eventTime'
@@ -90,13 +92,17 @@ function when(e: any) {
           <p class="text-xs font-bold uppercase tracking-wider text-secondary">{{ when(e) }}</p>
           <p class="text-sm font-bold">{{ eventLocalTime(e.startDate, tz(e)) }}</p>
         </div>
-        <NuxtLink :to="`/business/events/${e.id}`" class="flex-1 min-w-0 group">
+        <NuxtLink :to="e.to" class="flex-1 min-w-0 group">
           <p class="truncate text-sm font-bold group-hover:underline">{{ e.name }}</p>
           <p class="truncate text-xs text-muted-foreground">
-            {{ e.host?.name }}<template v-if="e.venueName"> · {{ e.venueName }}</template><template v-if="e.city"> · {{ e.city }}</template>
+            {{ e.host?.name || e.by }}<template v-if="e.venueName && e.venueName !== e.by"> · {{ e.venueName }}</template><template v-if="e.city"> · {{ e.city }}</template>
           </p>
           <div class="mt-1 flex flex-wrap gap-1.5">
-            <AdminStatus v-if="tab === 'archived'" tone="neutral">Archived</AdminStatus>
+            <AdminStatus v-if="e.role === 'lineup'" tone="info">You’re in the line-up</AdminStatus>
+            <AdminStatus v-else-if="e.role === 'venue'" tone="info">At your venue</AdminStatus>
+            <AdminStatus v-else-if="e.role === 'organizer'" tone="info">You organize it</AdminStatus>
+            <AdminStatus v-if="e.role !== 'host'" tone="neutral">{{ e.canEdit ? 'From wedance.vip · you can edit it' : 'Run by someone else' }}</AdminStatus>
+            <AdminStatus v-else-if="tab === 'archived'" tone="neutral">Archived</AdminStatus>
             <AdminStatus v-else-if="!e.published" tone="warning">Draft</AdminStatus>
             <AdminStatus v-else-if="e.missing.length" tone="warning" :title="e.missing.join(', ')">{{ e.missing.length }} to add</AdminStatus>
             <AdminStatus v-else tone="success">Ready</AdminStatus>
