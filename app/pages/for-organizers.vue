@@ -12,7 +12,7 @@
  * door claims until those are live. Numbers come from events.stats, live.
  * Example flyers are real ones kept by organizers on WeDance.
  */
-import { ArrowRight, CalendarSearch, MapPin, UserCheck, Sparkles, Palette, Check, Mail, Wand2, CalendarDays, Users, Share2, Map } from 'lucide-vue-next'
+import { ArrowRight, CalendarSearch, MapPin, UserCheck, Sparkles, Palette, Check, Mail, Wand2, CalendarDays, Users, Share2, Map, Ticket, QrCode, Wallet } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
 
 definePageMeta({ layout: false })
@@ -54,6 +54,16 @@ const FESTIVAL = [
   { icon: Map, title: 'On their festival year', detail: 'Dancers plan their year of festivals on WeDance. Yours is on that calendar.' },
 ]
 const EXAMPLE = '/events/meneate-viena-2026'
+
+// Ticketing on WeDance (RAZ-370): early access. Organizers apply; nothing here
+// is claimed as live until Stripe Connect and live payments are on.
+const TICKETING = [
+  { icon: Ticket, title: 'Sold where dancers plan', detail: 'Dancers pick their workshops and see the pass that covers them, then buy it on your page.' },
+  { icon: Wallet, title: 'The money goes to you', detail: 'Payments go straight to your own account, not through someone else’s.' },
+  { icon: QrCode, title: 'Tickets and the door', detail: 'Every buyer gets a ticket with a QR code; you check them in at the door and see your orders in Business.' },
+]
+const ticketingMail = 'mailto:hello@wedance.vip?subject=' + encodeURIComponent('Ticketing on WeDance: early access') + '&body=' + encodeURIComponent('My event:\nDate:\nWhere I sell tickets now:\n')
+const applyTicketing = () => useTrack().track('organizer_cta_click', { surface: 'for-organizers', kind: 'ticketing' })
 const start = () => useTrack().track('organizer_cta_click', { surface: 'for-organizers' })
 const startFestival = () => useTrack().track('organizer_cta_click', { surface: 'for-organizers', kind: 'festival' })
 </script>
@@ -139,13 +149,39 @@ const startFestival = () => useTrack().track('organizer_cta_click', { surface: '
       <p class="mt-6 text-sm text-muted-foreground font-sans">And dancers find it: your event goes on its own page and on your city’s calendar, where dancers plan their week.</p>
     </section>
 
+    <!-- Ticketing on WeDance: early access -->
+    <section id="tickets" class="max-w-5xl mx-auto px-4 pb-12 scroll-mt-20">
+      <div class="rounded-2xl border-2 bg-white p-6 sm:p-8" :style="{ borderColor: WD.amber500 + '55' }">
+        <div class="flex flex-wrap items-center gap-2 text-sm font-bold uppercase tracking-widest text-secondary font-sans">
+          <Ticket class="w-4 h-4" aria-hidden="true" /> Ticketing
+          <span class="rounded-full px-2 py-0.5 text-eyebrow tracking-wider text-white" :style="{ background: WD.amber500 }">Early access</span>
+        </div>
+        <h2 class="mt-2 text-3xl leading-tight">Sell your tickets on WeDance.</h2>
+        <p class="mt-2 max-w-2xl text-sm sm:text-base text-muted-foreground font-sans">Your passes, on the page dancers already plan from. We’re switching it on with a few organizers first.</p>
+        <ul class="mt-6 grid gap-4 sm:grid-cols-3">
+          <li v-for="t in TICKETING" :key="t.title" class="flex items-start gap-3">
+            <component :is="t.icon" class="mt-0.5 w-5 h-5 shrink-0 text-primary" style="stroke-width:1.5;" aria-hidden="true" />
+            <div>
+              <p class="font-bold text-foreground">{{ t.title }}</p>
+              <p class="mt-0.5 text-sm text-muted-foreground font-sans">{{ t.detail }}</p>
+            </div>
+          </li>
+        </ul>
+        <div class="mt-6 flex flex-wrap items-center gap-4 font-sans">
+          <Button as-child variant="cta" class="h-auto min-h-11 whitespace-normal px-6 py-2.5">
+            <a :href="ticketingMail" @click="applyTicketing">Get early access <ArrowRight aria-hidden="true" /></a>
+          </Button>
+          <p class="text-xs text-muted-foreground">Until it’s on for your event, “Get tickets” on your page links to where you sell now.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- Festivals: the page itself does the selling -->
     <section id="festivals" class="max-w-5xl mx-auto px-4 pb-12 scroll-mt-20">
       <div class="rounded-2xl border bg-white p-6 sm:p-8">
         <div class="text-sm font-bold uppercase tracking-widest text-secondary font-sans">Running a festival?</div>
         <h2 class="mt-2 text-3xl leading-tight">Your festival gets a page dancers plan on.</h2>
         <p class="mt-2 max-w-2xl text-sm sm:text-base text-muted-foreground font-sans">Add your passes, line-up and programme by day in the same editor. Dancers start planning weeks before the doors open.</p>
-        <p class="mt-3 max-w-2xl text-sm text-muted-foreground font-sans"><span class="font-bold text-foreground">Tickets:</span> keep selling where you sell now. Link your ticket shop and your page’s “Get tickets” button goes there, with your passes, prices and what each covers shown on the page.</p>
         <ul class="mt-6 grid gap-4 sm:grid-cols-2">
           <li v-for="f in FESTIVAL" :key="f.title" class="flex items-start gap-3">
             <component :is="f.icon" class="mt-0.5 w-5 h-5 shrink-0 text-primary" style="stroke-width:1.5;" aria-hidden="true" />
