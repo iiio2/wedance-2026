@@ -5,7 +5,7 @@
  * festival section language; sections appear only when the event has that
  * content, so an event can grow into a full festival-grade page over time.
  */
-import { Check, ArrowLeft, MapPin, Globe, User, Euro, Pencil } from 'lucide-vue-next'
+import { Check, ArrowLeft, MapPin, Globe, User, Euro, Pencil, ExternalLink } from 'lucide-vue-next'
 import type { DanceRole, SwipeCard } from '~/types/festival'
 import { findMockEvent } from '~/lib/mockEvents'
 import { formatEventWhen, eventLocalDate } from '#shared/utils/eventTime'
@@ -310,8 +310,8 @@ useHead(() => ({
           <span v-else-if="ev.venueName" class="inline-flex items-center gap-2 text-sm font-bold text-foreground">
             <MapPin class="w-4 h-4 text-secondary" /> <span>{{ ev.venueName }}<template v-if="ev.venueCity">, {{ ev.venueCity }}</template></span>
           </span>
-          <p v-if="ev.venueAddress" class="mt-1 text-xs text-secondary">{{ ev.venueAddress }}</p>
-          <a v-if="ev.mapUrl" :href="ev.mapUrl" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-xs font-bold underline" :style="{ color: ink(accent) }">Open in Google Maps</a>
+          <a v-if="ev.venueAddress && ev.mapUrl" :href="ev.mapUrl" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 mt-1 text-xs hover:underline" :style="{ color: ink(accent) }">{{ ev.venueAddress }} <ExternalLink class="w-3 h-3 shrink-0" /></a>
+          <p v-else-if="ev.venueAddress" class="mt-1 text-xs text-secondary">{{ ev.venueAddress }}</p>
           <p v-if="ev.citySlug" class="mt-3 text-xs"><NuxtLink :to="`/cities/${ev.citySlug}`" class="font-bold hover:underline text-secondary">More dancing in {{ ev.venueCity }} →</NuxtLink></p>
         </section>
 
