@@ -63,13 +63,14 @@ const initial = computed<Partial<BusinessEventValues>>(() => ev.value
 
 const saving = ref(false)
 // After switching organizer, offer to copy flyer styles from the old profile.
-const copyLooksOffer = ref<{ from: string; to: string; fromName: string } | null>(null)
+const copyLooksOffer = ref<{ from: string; to: string; fromName: string; toName: string } | null>(null)
 const copyingLooks = ref(false)
 async function copyLooks() {
   if (!copyLooksOffer.value) return
   copyingLooks.value = true
   try {
-    const { copied } = await $trpc.businessFlyers.copyLooks.mutate(copyLooksOffer.value)
+    const { from, to } = copyLooksOffer.value
+    const { copied } = await $trpc.businessFlyers.copyLooks.mutate({ fromUsername: from, toUsername: to })
     notice.value = copied ? `Copied ${copied} flyer ${copied === 1 ? 'style' : 'styles'}.` : 'No new styles to copy.'
     copyLooksOffer.value = null
     panelRef.value?.reload()
@@ -101,7 +102,8 @@ async function save(v: BusinessEventValues) {
     notice.value = 'Saved.'
     if (hostChanged && oldHost && input.hostUsername) {
       const oldName = hosts.value.find(h => h.username === oldHost)?.name ?? oldHost
-      copyLooksOffer.value = { from: oldHost, to: input.hostUsername, fromName: oldName }
+      const newName = hosts.value.find(h => h.username === input.hostUsername)?.name ?? input.hostUsername
+      copyLooksOffer.value = { from: oldHost, to: input.hostUsername, fromName: oldName, toName: newName }
     }
     if (pending.value) { const t = pending.value; pending.value = null; await toFlyer(t) }
     if (pendingPost.value) { const t = pendingPost.value; pendingPost.value = null; await toPost(t) }
@@ -218,7 +220,7 @@ async function archive() {
         <Check class="size-4" aria-hidden="true" /> {{ notice }}
       </p>
       <div v-if="copyLooksOffer" class="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-secondary/10 p-4 text-sm">
-        <p>Copy flyer styles from <span class="font-bold">{{ copyLooksOffer.fromName }}</span> to the new organizer?</p>
+        <p>Copy flyer styles from <span class="font-bold">{{ copyLooksOffer.fromName }}</span> to <span class="font-bold">{{ copyLooksOffer.toName }}</span>?</p>
         <Button type="button" variant="outline-pill" size="pill-sm" :loading="copyingLooks" @click="copyLooks"><Copy /> Copy styles</Button>
         <Button type="button" variant="ghost" size="sm" @click="copyLooksOffer = null">Skip</Button>
       </div>
