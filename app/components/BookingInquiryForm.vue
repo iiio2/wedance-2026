@@ -60,7 +60,7 @@ async function send() {
       </Field>
       <div class="grid gap-3 sm:grid-cols-2">
         <Field id="inq-date" label="Date" optional><Input v-model="form.eventDate" type="date" :min="today" /></Field>
-        <Field id="inq-city" label="City" optional><Input v-model="form.city" placeholder="Where the event is" /></Field>
+        <Field id="inq-city" label="City" optional><CityCombobox v-model="form.city" placeholder="Where the event is" /></Field>
         <Field id="inq-guests" label="How many people" optional><Input v-model="form.guests" type="number" min="1" inputmode="numeric" /></Field>
         <Field id="inq-budget" label="Budget" optional><Input v-model="form.budget" placeholder="e.g. €300 + travel" /></Field>
       </div>
