@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { YearPlanFestival, DanceRole } from '~/types/festival'
-import { UserPlus, Check, Calendar, MapPin, ChevronRight, Heart, Gift, ArrowRight } from 'lucide-vue-next'
+import { UserPlus, Check, Calendar, MapPin, ChevronRight, Heart, Gift, ArrowRight, Globe, Music, Sparkles } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
 
 const props = defineProps<{
@@ -20,8 +20,6 @@ const emit = defineEmits<{
 const friendAdded = ref(false)
 
 function addFriend() {
-  // Don't claim success locally — the parent owns the real action (join to
-  // connect). friendAdded flips only once that actually completes.
   emit('add-friend')
 }
 
@@ -44,7 +42,6 @@ const overlapSlugs = computed(() => {
   return props.viewerFestivalSlugs.filter((s) => sharerSlugs.has(s))
 })
 
-// Full festival objects for the overlap (for listing names)
 const overlapFestivals = computed(() => {
   const slugs = new Set(overlapSlugs.value)
   return props.festivals.filter((f) => slugs.has(f.slug))
@@ -52,6 +49,34 @@ const overlapFestivals = computed(() => {
 
 const totalWorkshops = computed(() => props.festivals.reduce((sum, f) => sum + f.workshopCount, 0))
 const totalLooking = computed(() => props.festivals.reduce((sum, f) => sum + f.lookingCount, 0))
+
+// ── Wrapped-style stats (derived from the sharer's shared data) ──
+const countries = computed(() => [...new Set(props.festivals.map((f) => f.country).filter(Boolean))])
+
+const topStyles = computed(() => {
+  const styleMap = new Map<string, number>()
+  for (const f of props.festivals) {
+    for (const s of f.styles) {
+      styleMap.set(s, (styleMap.get(s) ?? 0) + 1)
+    }
+  }
+  const total = [...styleMap.values()].reduce((a, b) => a + b, 0) || 1
+  return [...styleMap.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([style, count]) => ({ style, percent: Math.round((count / total) * 100) }))
+})
+
+const monthSpan = computed(() => {
+  if (props.festivals.length === 0) return ''
+  const dates = props.festivals.map((f) => new Date(f.startDate)).sort((a, b) => a.getTime() - b.getTime())
+  const first = dates[0]
+  const last = dates[dates.length - 1]
+  const fMonth = first.toLocaleString('en', { month: 'short' })
+  const lMonth = last.toLocaleString('en', { month: 'short' })
+  if (fMonth === lMonth) return fMonth
+  return `${fMonth} – ${lMonth}`
+})
 
 function formatDateRange(start: string, end: string): string {
   const s = new Date(start)
@@ -104,6 +129,53 @@ function formatDateRange(start: string, end: string): string {
         <Check class="w-4 h-4" aria-hidden="true" />
         Friend added
       </p>
+    </div>
+
+    <!-- Year in Numbers — Wrapped-style stats -->
+    <div v-if="festivals.length > 0" class="rounded-xl border-2 border-dashed p-5 space-y-4" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(255,255,255,0.7);">
+      <h2 class="text-base font-bold font-display text-foreground">{{ sharer.name }}'s Year in Numbers</h2>
+
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+        <div>
+          <p class="text-3xl font-black font-display text-primary">{{ festivals.length }}</p>
+          <p class="text-eyebrow uppercase tracking-[0.2em] text-secondary">Festivals</p>
+        </div>
+        <div>
+          <p class="text-3xl font-black font-display text-wd-green-600">{{ totalWorkshops }}</p>
+          <p class="text-eyebrow uppercase tracking-[0.2em] text-secondary">Workshops</p>
+        </div>
+        <div>
+          <p class="text-3xl font-black font-display text-wd-cyan-600">{{ countries.length }}</p>
+          <p class="text-eyebrow uppercase tracking-[0.2em] text-secondary">{{ countries.length === 1 ? 'Country' : 'Countries' }}</p>
+        </div>
+      </div>
+
+      <!-- Top dance styles -->
+      <div v-if="topStyles.length > 0" class="space-y-1.5">
+        <p class="text-xs font-bold text-secondary">Top dance styles</p>
+        <div v-for="entry in topStyles" :key="entry.style" class="flex items-center gap-2">
+          <span class="text-xs w-16 shrink-0 text-muted-foreground font-sans">{{ entry.style }}</span>
+          <div class="flex-1 h-2 rounded-full overflow-hidden" style="background:color-mix(in srgb, var(--wd-brown-900) 8.2%, transparent);">
+            <div
+              class="h-full rounded-full"
+              :style="{ width: entry.percent + '%', background: 'linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500))' }"
+            />
+          </div>
+          <span class="text-eyebrow w-8 text-right text-secondary">{{ entry.percent }}%</span>
+        </div>
+      </div>
+
+      <!-- Month span -->
+      <div v-if="monthSpan" class="flex items-center justify-between text-xs">
+        <span class="text-secondary">Festival season</span>
+        <span class="font-bold text-foreground">{{ monthSpan }}</span>
+      </div>
+
+      <!-- Countries list -->
+      <div v-if="countries.length > 0" class="flex items-center justify-between text-xs">
+        <span class="text-secondary">Dancing in</span>
+        <span class="font-bold text-foreground">{{ countries.join(', ') }}</span>
+      </div>
     </div>
 
     <!-- Overlap banner — shared festivals -->
@@ -242,15 +314,15 @@ function formatDateRange(start: string, end: string): string {
       </div>
     </div>
 
-    <!-- CTA: Create your own year plan -->
-    <div class="rounded-xl border-2 border-dashed p-6 text-center space-y-3" style="border-color:color-mix(in srgb, var(--wd-red-600) 26.7%, transparent); background:rgba(255,255,255,0.8);">
-      <Calendar class="w-8 h-8 mx-auto text-primary" />
-      <h3 class="text-lg font-bold font-display text-foreground">Plan your own dance year</h3>
-      <p class="text-sm text-muted-foreground">
-        Browse festivals, pick workshops, find partners, and share your year with friends.
+    <!-- CTA: Start your own dance year -->
+    <div class="rounded-xl border-2 border-dashed p-6 text-center space-y-4" style="border-color:color-mix(in srgb, var(--wd-red-600) 26.7%, transparent); background:rgba(255,255,255,0.8);">
+      <Sparkles class="w-8 h-8 mx-auto text-primary" aria-hidden="true" />
+      <h3 class="text-xl font-bold font-display text-foreground">Your Next Dance Year Starts Here</h3>
+      <p class="text-sm text-muted-foreground max-w-md mx-auto">
+        Browse festivals, choose workshops, find dance partners, and share your dance-year plans with friends. Create your own Dance Year and start planning your next adventure.
       </p>
       <Button variant="cta" size="lg" class="px-6" @click="emit('create-year-plan')">
-        {{ viewerFestivalSlugs.length > 0 ? 'Go to my year plan' : 'Create my year plan' }}
+        {{ viewerFestivalSlugs.length > 0 ? 'Go to my year plan' : 'Start My Dance Year' }}
         <ArrowRight aria-hidden="true" />
       </Button>
     </div>

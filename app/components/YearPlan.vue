@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { YearPlanFestival, YearStats } from '~/types/festival'
-import { Calendar, MapPin, Users, Ticket, Clock, ChevronRight, Share2, Sparkles, ExternalLink, ArrowRight } from 'lucide-vue-next'
+import { Calendar, MapPin, Users, Ticket, Clock, ChevronRight, Share2, Sparkles, ExternalLink } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
 
 const props = defineProps<{
@@ -84,23 +84,6 @@ const ticketStatusClass: Record<string, string> = {
         <Share2 class="size-3.5" aria-hidden="true" />
         Share
       </Button>
-    </div>
-
-    <!-- Empty state — no festivals yet -->
-    <div v-if="festivals.length === 0" class="rounded-xl border-2 border-dashed p-8 text-center space-y-4" style="border-color:color-mix(in srgb, var(--wd-red-600) 26.7%, transparent); background:rgba(255,255,255,0.8);">
-      <Calendar class="w-10 h-10 mx-auto" style="color:var(--wd-red-600);" />
-      <h2 class="text-xl font-bold" style="font-family:var(--wd-font-display); color:var(--wd-brown-900);">Start your dance year</h2>
-      <p class="text-sm max-w-md mx-auto" style="color:var(--wd-brown-700);">
-        Browse festivals, pick workshops, find dance partners, and share your year with friends.
-      </p>
-      <button
-        class="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold uppercase tracking-wider hover:-translate-y-0.5 transition-transform"
-        style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500)); box-shadow: 0 4px 0 -1px var(--wd-red-800);"
-        @click="emit('browse-festivals')"
-      >
-        Browse festivals
-        <ArrowRight class="w-4 h-4" />
-      </button>
     </div>
 
     <!-- Ticket deadline alerts -->
