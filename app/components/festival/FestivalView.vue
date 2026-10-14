@@ -455,13 +455,9 @@ function leaveDinner(id: string) {
   doLeaveDinner(id).catch(() => {})
 }
 
-// Extra activities
-const extraActivities = ref<ExtraActivity[]>([
-  { id: 'a1', title: 'City walking tour', date: 'Friday', time: '14:00', participantCount: 8, maxParticipants: 15, userJoined: false, description: 'Explore Vienna\'s historic center with fellow dancers' },
-  { id: 'a2', title: 'Beach social dance', date: 'Saturday', time: '16:00', participantCount: 12, userJoined: false, description: 'Open-air dancing at Donauinsel — bring your shoes!' },
-  { id: 'a3', title: 'Flashmob rehearsal', date: 'Saturday', time: '11:00', participantCount: 5, maxParticipants: 20, userJoined: false, description: 'Learn the choreography for Sunday\'s surprise flashmob' },
-  { id: 'a4', title: 'Salsa brunch', date: 'Sunday', time: '10:00', participantCount: 6, maxParticipants: 12, userJoined: false, description: 'Morning brunch with live music before workshops' },
-])
+// Extra activities: none until they come from real data (the old demo list
+// put a Vienna walking tour on every festival page).
+const extraActivities = ref<ExtraActivity[]>([])
 
 function joinActivity(id: string) {
   tryUnlockSocialActivity(() => {
@@ -867,14 +863,29 @@ interface Recommendation {
   soldOut: boolean
 }
 
-const recommendation = computed<Recommendation | null>(() => {
-  const all = festival.tickets
-  if (!all?.length) return null
-  const days = plannedDays.value
-  if (days.size === 0) return null
+// A pass with no days, workshop count or party flag reads as "covers
+// everything", so passes entered as just name + price would make the €12
+// party-only pass "best value" for a full bootcamp. Only recommend when the
+// passes say what they cover.
+const passesDescribed = (festival.tickets ?? []).some((t) =>
+  t.days.length > 0 || t.workshopCount !== undefined || t.includesParty !== undefined,
+)
 
-  const workshopCount = plannedWorkshopCount.value
-  const wantsParty = hasPartyInPlan.value
+const recommendation = computed<Recommendation | null>(() => {
+  if (plannedDays.value.size === 0) return null
+  return recommendFor(plannedDays.value, plannedWorkshopCount.value, hasPartyInPlan.value)
+})
+
+// Before the dancer picks anything: the cheapest way to the whole programme.
+const bestValueNames = computed(() => new Set((recommendFor(
+  new Set(workshops.map((w) => w.day)),
+  workshops.filter((w) => w.type !== 'party').length,
+  workshops.some((w) => w.type === 'party'),
+)?.tickets ?? []).map((t) => t.name)))
+
+function recommendFor(days: Set<string>, workshopCount: number, wantsParty: boolean): Recommendation | null {
+  const all = festival.tickets
+  if (!all?.length || !passesDescribed || days.size === 0) return null
 
   interface Candidate { tickets: TicketOption[]; total: number; soldOut: boolean }
   const candidates: Candidate[] = []
@@ -938,7 +949,7 @@ const recommendation = computed<Recommendation | null>(() => {
     savings: next && next.total > best.total ? next.total - best.total : undefined,
     soldOut: best.soldOut,
   }
-})
+}
 
 // Which ticket names are in the current recommendation (for grid highlight)
 const recommendedNames = computed(() => new Set((recommendation.value?.tickets ?? []).map((t) => t.name)))
@@ -954,10 +965,11 @@ function getRecommendedPass() {
 }
 
 // Which grid card gets the highlight: the recommended pass(es) once the
-// dancer has a plan, otherwise the first (cheapest full) pass by default.
-function isTopPass(t: TicketOption, i: number): boolean {
+// dancer has a plan, otherwise the cheapest pass for the whole programme.
+// No highlight when the passes don't say what they cover.
+function isTopPass(t: TicketOption): boolean {
   if (recommendation.value) return recommendedNames.value.has(t.name)
-  return i === 0
+  return bestValueNames.value.has(t.name)
 }
 
 // V3 tropical direction — layout:false + inline header so we can wrap
@@ -1296,9 +1308,9 @@ useHead({
             </div>
           </div>
 
-          <!-- Nudge: no plan yet -->
+          <!-- Nudge: no plan yet (only when we can actually recommend) -->
           <NuxtLink
-            v-else
+            v-else-if="passesDescribed"
             to="#schedule"
             class="rounded-2xl p-5 mb-6 flex items-center gap-3 border-2 border-dashed transition-colors hover:bg-white/60"
             style="border-color:color-mix(in srgb, var(--wd-brown-900) 20%, transparent); background:rgba(255,255,255,0.4);"
@@ -1337,21 +1349,21 @@ useHead({
 
           <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div
-              v-for="(t, i) in festival.tickets"
+              v-for="t in festival.tickets"
               :key="t.name"
               class="relative rounded-2xl bg-white p-5 border transition-all"
-              :class="isTopPass(t, i) ? 'md:-translate-y-1' : ''"
+              :class="isTopPass(t) ? 'md:-translate-y-1' : ''"
               :style="{
-                borderColor: (isTopPass(t, i) ? WD.red600 : (WD.brown900 + '22')),
-                borderWidth: isTopPass(t, i) ? '2px' : '1px',
-                boxShadow: isTopPass(t, i)
+                borderColor: (isTopPass(t) ? WD.red600 : (WD.brown900 + '22')),
+                borderWidth: isTopPass(t) ? '2px' : '1px',
+                boxShadow: isTopPass(t)
                   ? '6px 8px 0 -2px var(--wd-red-600), 0 12px 28px rgba(59,31,18,0.08)'
                   : '0 1px 0 color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent), 0 6px 18px rgba(59,31,18,0.04)',
                 opacity: t.soldOut ? 0.75 : 1,
               }"
             >
               <div
-                v-if="isTopPass(t, i) && !t.soldOut"
+                v-if="isTopPass(t) && !t.soldOut"
                 class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-eyebrow font-black uppercase tracking-widest text-white whitespace-nowrap bg-primary"
               >
                 {{ recommendation ? 'Recommended for you' : 'Best value' }}
