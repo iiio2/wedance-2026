@@ -9,6 +9,15 @@ const uploading = ref(false)
 const dragOver = ref(false)
 const errorMsg = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
+// The in-flight upload. Starting a new upload or removing the photo aborts it,
+// so a slow earlier response can never overwrite a newer choice.
+let controller: AbortController | null = null
+
+function cancelUpload() {
+  controller?.abort()
+  controller = null
+  uploading.value = false
+}
 
 async function uploadFile(file: File) {
   if (!file.type.startsWith('image/')) {
@@ -20,24 +29,38 @@ async function uploadFile(file: File) {
     return
   }
 
+  cancelUpload()
+  const current = new AbortController()
+  controller = current
   errorMsg.value = ''
   uploading.value = true
   try {
     const formData = new FormData()
     formData.append('file', file)
-    const res = await fetch(`/api/media/image?folder=${props.folder}`, { method: 'POST', body: formData })
+    const res = await fetch(`/api/media/image?folder=${props.folder}`, {
+      method: 'POST',
+      body: formData,
+      signal: current.signal,
+    })
     if (!res.ok) {
       const body = await res.json().catch(() => null)
       throw new Error(body?.statusMessage || 'Upload failed.')
     }
     const { url } = await res.json()
+    if (current.signal.aborted) return
     model.value = url
   } catch (e: unknown) {
+    if (current.signal.aborted) return
     errorMsg.value = (e as Error).message || 'Upload failed.'
   } finally {
-    uploading.value = false
+    if (controller === current) {
+      controller = null
+      uploading.value = false
+    }
   }
 }
+
+onBeforeUnmount(cancelUpload)
 
 function onFileInput(event: Event) {
   const input = event.target as HTMLInputElement
@@ -52,6 +75,7 @@ function onDrop(event: DragEvent) {
 }
 
 function remove() {
+  cancelUpload()
   model.value = ''
 }
 </script>

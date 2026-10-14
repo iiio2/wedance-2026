@@ -35,6 +35,7 @@ interface AuthCache {
   dancerName: string
   isAdmin: boolean
   username: string | null
+  photo: string | null
   city: string | null
   danceStyles: string[]
   onboardedAt: string | null
@@ -48,6 +49,7 @@ function _saveAuthCache(): void {
       dancerName: _dancerName.value!,
       isAdmin: _isAdmin.value,
       username: _username.value,
+      photo: _photo.value,
       city: _city.value,
       danceStyles: [..._danceStyles.value],
       onboardedAt: _onboardedAt.value,
@@ -191,6 +193,8 @@ export function useAuth() {
       _dancerName.value = cached.dancerName
       _isAdmin.value = cached.isAdmin
       _username.value = cached.username
+      // Older caches predate `photo` — fall back to null until auth.me lands.
+      _photo.value = cached.photo ?? null
       _city.value = cached.city
       _danceStyles.value = cached.danceStyles
       _onboardedAt.value = cached.onboardedAt
@@ -355,6 +359,7 @@ export function useAuth() {
     _dancerName.value = null
     _username.value = null
     _bio.value = null
+    _photo.value = null
     _instagram.value = null
     _youtube.value = null
     _website.value = null
