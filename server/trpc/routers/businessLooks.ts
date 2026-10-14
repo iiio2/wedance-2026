@@ -6,6 +6,7 @@ import { brandLooks, profiles, eventFlyers } from '../../database/schema'
 import { requireMember } from './business'
 import { requireEventManager } from './businessEvents'
 import { writeJson, askAboutImages, fetchImage, type InlineImage } from '../../utils/flyer/gemini'
+import { withAi } from '../../utils/aiUsage'
 import { DIRECTIONS, LOOK_PROMPT, styleIdeasPrompt } from '../../../shared/utils/flyer'
 
 /**
@@ -99,7 +100,7 @@ export const businessLooksRouter = router({
       const imgs = (await Promise.all(input.urls.map(fetchImage))).filter(Boolean) as InlineImage[]
       if (!imgs.length) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Couldn’t open those images. Try uploading them again.' })
       let r: { name?: string; description?: string; palette?: { name: string; hex: string }[] }
-      try { r = await askAboutImages(LOOK_PROMPT, imgs) } catch (e: any) {
+      try { r = await withAi({ label: 'read style' }, () => askAboutImages(LOOK_PROMPT, imgs)) } catch (e: any) {
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e?.message || 'Couldn’t read the flyers. Try again.' })
       }
       const [l] = await ctx.db.insert(brandLooks).values({
@@ -121,7 +122,7 @@ export const businessLooksRouter = router({
         existing: [...have.map((h: any) => h.name), ...DIRECTIONS.map(d => d.name!)],
       })
       let r: { styles?: { name?: string; hint?: string; description?: string; palette?: { name: string; hex: string }[] }[] }
-      try { r = await writeJson(prompt) } catch (e: any) {
+      try { r = await withAi({ label: 'style ideas' }, () => writeJson(prompt)) } catch (e: any) {
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e?.message || 'Couldn’t come up with styles. Try again.' })
       }
       const ideas = (r.styles ?? []).filter(x => x?.name && (x.description ?? '').length >= 20).slice(0, input.count)

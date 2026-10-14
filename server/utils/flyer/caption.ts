@@ -7,6 +7,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { profiles } from '../../database/schema'
 import { flyerSource, texts } from './paint'
 import { writeJson } from './gemini'
+import { withAi } from '../aiUsage'
 import { priceLines } from '../../../shared/utils/flyer'
 import { captionPrompt, composeCaption, instagramOf, type CaptionContext, type CaptionWords } from '../../../shared/utils/caption'
 import type { PostKind } from '../../../shared/utils/posts'
@@ -55,6 +56,6 @@ export async function captionContext(db: any, ev: any, post: { kind: PostKind; s
 /** Gemini writes the hook, call to action and hashtags; the details are fixed lines. */
 export async function writeCaption(db: any, ev: any, post: { kind: PostKind; subject?: string | null } | null, language: string) {
   const c = await captionContext(db, ev, post)
-  const words = await writeJson<CaptionWords>(captionPrompt(c.caption, language))
+  const words = await withAi({ eventId: ev.id, label: `caption: ${post?.kind ?? 'announcement'}` }, () => writeJson<CaptionWords>(captionPrompt(c.caption, language)))
   return { language, text: composeCaption(c.caption, language, words), lines: c.lines, writtenAt: new Date().toISOString() }
 }

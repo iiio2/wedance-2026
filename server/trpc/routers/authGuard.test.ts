@@ -37,8 +37,9 @@ const PUBLIC_MUTATIONS_ALLOW_LIST: Record<string, string> = {
 }
 
 // Reference middleware functions from the procedure builders
-const protectedMw = (protectedProcedure as any)._def.middlewares[0]
-const adminMw = (adminProcedure as any)._def.middlewares[0]
+// The guard is each builder's last middleware (a shared logging one runs first).
+const protectedMw = (protectedProcedure as any)._def.middlewares.at(-1)
+const adminMw = (adminProcedure as any)._def.middlewares.at(-1)
 
 // ---------------------------------------------------------------------------
 // Helpers

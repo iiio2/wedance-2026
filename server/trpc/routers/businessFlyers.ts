@@ -7,6 +7,7 @@ import { requireEventManager } from './businessEvents'
 import { announcementPost, flyerSource, runFlyer, texts } from '../../utils/flyer/paint'
 import { flyerChanges } from '../../../shared/utils/flyer'
 import { askAboutImages, fetchImage, type InlineImage } from '../../utils/flyer/gemini'
+import { withAi } from '../../utils/aiUsage'
 import { DIRECTIONS, LOOK_PROMPT } from '../../../shared/utils/flyer'
 import { LANGUAGES } from '../../../shared/utils/caption'
 
@@ -140,7 +141,7 @@ export const businessFlyersRouter = router({
       const imgs = (await Promise.all(input.urls.map(fetchImage))).filter(Boolean) as InlineImage[]
       if (!imgs.length) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Couldn’t open those images. Try uploading them again.' })
       try {
-        const r = await askAboutImages<{ name?: string; description?: string; palette?: { name: string; hex: string }[] }>(LOOK_PROMPT, imgs)
+        const r = await withAi({ eventId: input.eventId, label: 'read style' }, () => askAboutImages<{ name?: string; description?: string; palette?: { name: string; hex: string }[] }>(LOOK_PROMPT, imgs))
         return {
           name: String(r.name ?? 'Main look').slice(0, 60),
           description: String(r.description ?? ''),

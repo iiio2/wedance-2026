@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, boolean, timestamp, date, unique, index, json, jsonb, doublePrecision, uniqueIndex } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, integer, boolean, timestamp, date, unique, index, json, jsonb, doublePrecision, uniqueIndex, numeric } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 export const dancers = pgTable('dancers', {
@@ -874,6 +874,29 @@ export const brandLooks = pgTable('brand_looks', {
 }, (t) => [
   index('brand_looks_profile_idx').on(t.profileId),
 ])
+
+// AI usage log (migration 0038): every Gemini call, for /admin/ai-usage.
+export const aiUsage = pgTable('ai_usage', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  // What the call was: paint · read-back · caption · read-style · style-ideas · …
+  purpose: text('purpose').notNull(),
+  // The action that started it (tRPC path, e.g. businessFlyers.make).
+  source: text('source'),
+  model: text('model').notNull(),
+  modelVersion: text('model_version'),
+  status: text('status').notNull().$type<'ok' | 'refused' | 'error'>(),
+  durationMs: integer('duration_ms').notNull(),
+  inputTokens: integer('input_tokens').notNull().default(0),
+  outputTextTokens: integer('output_text_tokens').notNull().default(0),
+  outputImageTokens: integer('output_image_tokens').notNull().default(0),
+  thoughtTokens: integer('thought_tokens').notNull().default(0),
+  costUsd: numeric('cost_usd', { precision: 12, scale: 6 }),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'set null' }),
+  flyerId: uuid('flyer_id').references(() => eventFlyers.id, { onDelete: 'set null' }),
+  dancerId: uuid('dancer_id').references(() => dancers.id, { onDelete: 'set null' }),
+  error: text('error'),
+}, (t) => [index('ai_usage_created_idx').on(t.createdAt), index('ai_usage_purpose_idx').on(t.purpose)])
 
 // Content plan (migration 0037): an event's posts, each with its own flyer
 // versions (event_flyers.post_id) and one kept. Kinds: shared/utils/posts.ts.

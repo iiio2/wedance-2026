@@ -233,4 +233,37 @@ export const adminRouter = router({
         .from(festivals)
         .orderBy(festivals.startDate)
     }),
+
+  // The AI usage log (ai_usage): what every Gemini call cost and how it went.
+  // Totals for today / 7 / 30 days, per purpose and per day over the range,
+  // and the latest calls with their event and who asked.
+  aiUsage: adminProcedure
+    .input(z.object({ days: z.number().int().min(1).max(365).default(30), purpose: z.string().max(80).optional() }))
+    .query(async ({ ctx, input }) => {
+      const q = async (s: any) => { const r: any = await ctx.db.execute(s); return (r.rows ?? r) as any[] }
+      const since = new Date(Date.now() - input.days * 86400_000)
+      const only = input.purpose ? sql`and purpose = ${input.purpose}` : sql``
+      const [totals] = await q(sql`select
+        coalesce(sum(cost_usd) filter (where created_at >= date_trunc('day', now())), 0)::float as today,
+        coalesce(sum(cost_usd) filter (where created_at >= now() - interval '7 days'), 0)::float as week,
+        coalesce(sum(cost_usd) filter (where created_at >= now() - interval '30 days'), 0)::float as month,
+        count(*) filter (where created_at >= now() - interval '30 days')::int as calls30,
+        count(*) filter (where created_at >= now() - interval '30 days' and cost_usd is null)::int as unpriced30
+        from ai_usage`)
+      const byPurpose = await q(sql`select purpose, count(*)::int as calls,
+        count(*) filter (where status = 'ok')::int as ok, count(*) filter (where status = 'refused')::int as refused, count(*) filter (where status = 'error')::int as errors,
+        round(avg(duration_ms))::int as avg_ms, (percentile_cont(0.95) within group (order by duration_ms))::int as p95_ms,
+        coalesce(sum(input_tokens), 0)::int as input_tokens, coalesce(sum(output_text_tokens + thought_tokens), 0)::int as text_tokens, coalesce(sum(output_image_tokens), 0)::int as image_tokens,
+        coalesce(sum(cost_usd), 0)::float as cost
+        from ai_usage where created_at >= ${since} ${only} group by purpose order by cost desc, calls desc`)
+      const byDay = await q(sql`select to_char(date_trunc('day', created_at), 'YYYY-MM-DD') as day, count(*)::int as calls, coalesce(sum(cost_usd), 0)::float as cost,
+        count(*) filter (where status <> 'ok')::int as failed
+        from ai_usage where created_at >= ${since} ${only} group by 1 order by 1`)
+      const recent = await q(sql`select a.id, a.created_at as "createdAt", a.purpose, a.source, a.model_version as "modelVersion", a.model, a.status, a.duration_ms as "durationMs",
+        a.input_tokens as "inputTokens", a.output_text_tokens + a.thought_tokens as "textTokens", a.output_image_tokens as "imageTokens", a.cost_usd::float as cost, a.error,
+        a.event_id as "eventId", e.name as "eventName", d.name as "dancerName", d.username as "dancerUsername", f.url as "flyerUrl"
+        from ai_usage a left join events e on e.id = a.event_id left join dancers d on d.id = a.dancer_id left join event_flyers f on f.id = a.flyer_id
+        where a.created_at >= ${since} ${only} order by a.created_at desc limit 200`)
+      return { totals, byPurpose, byDay, recent, days: input.days }
+    }),
 })

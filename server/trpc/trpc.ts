@@ -1,12 +1,16 @@
 import { initTRPC, TRPCError } from '@trpc/server'
 import type { Context } from './context'
+import { withAi } from '../utils/aiUsage'
 
 const t = initTRPC.context<Context>().create()
 
 export const router = t.router
-export const publicProcedure = t.procedure
+// Every procedure names itself and its caller for the AI usage log (an AI call
+// made inside, even after the response, is logged with them).
+const base = t.procedure.use(({ ctx, path, next }) => withAi({ source: path, dancerId: ctx.dancerId }, () => next()))
+export const publicProcedure = base
 
-export const protectedProcedure = t.procedure.use(({ ctx, next, type, path }) => {
+export const protectedProcedure = base.use(({ ctx, next, type, path }) => {
   if (!ctx.dancerId) {
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not signed in' })
   }
@@ -20,7 +24,7 @@ export const protectedProcedure = t.procedure.use(({ ctx, next, type, path }) =>
   return next({ ctx: { ...ctx, dancerId: ctx.dancerId } })
 })
 
-export const adminProcedure = t.procedure.use(({ ctx, next }) => {
+export const adminProcedure = base.use(({ ctx, next }) => {
   if (!ctx.isAdmin) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin access required' })
   }

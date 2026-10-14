@@ -226,8 +226,10 @@ export async function buildArchitecture(opts: BuildOptions = {}): Promise<Archit
   const { procedures, routers } = extractTrpc({
     rootDir,
     appRouter,
-    adminMiddlewares: adminProcedure._def.middlewares,
-    protectedMiddlewares: protectedProcedure._def.middlewares,
+    // Only the guards (each builder's last middleware): a shared one (the AI
+    // usage context) runs on every procedure and says nothing about auth.
+    adminMiddlewares: adminProcedure._def.middlewares.slice(-1),
+    protectedMiddlewares: protectedProcedure._def.middlewares.slice(-1),
     reach,
     sqlName,
   })

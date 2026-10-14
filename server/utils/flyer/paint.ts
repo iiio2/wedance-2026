@@ -16,6 +16,7 @@ import sharp from 'sharp'
 import type { PostKind } from '../../../shared/utils/posts'
 import { paintWithRetries, readText, fetchImage, IMAGE_MODEL, type InlineImage } from './gemini'
 import { faceGrid } from './grid'
+import { withAi } from '../aiUsage'
 
 /**
  * Up to four people go in as their own photos, numbered and named (the
@@ -157,6 +158,11 @@ async function styleReference(db: any, f: any): Promise<string | null> {
 export async function runFlyer(db: any, flyerId: string) {
   const [f] = await db.select().from(eventFlyers).where(eq(eventFlyers.id, flyerId))
   if (!f) return
+  // The AI usage log: this flyer, its event, who asked, and what kind of painting.
+  return withAi({ eventId: f.eventId, flyerId, dancerId: f.createdBy, label: f.mode }, () => paintRow(db, f, flyerId))
+}
+
+async function paintRow(db: any, f: any, flyerId: string) {
   const set = (v: Record<string, unknown>) => db.update(eventFlyers).set({ ...v, updatedAt: new Date() }).where(eq(eventFlyers.id, flyerId))
   // Stopped by the organizer meanwhile: spend nothing more on it.
   const stopped = async () => (await db.select({ status: eventFlyers.status }).from(eventFlyers).where(eq(eventFlyers.id, flyerId)))[0]?.status === 'stopped'

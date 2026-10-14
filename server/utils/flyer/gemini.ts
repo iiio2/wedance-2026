@@ -2,6 +2,8 @@
  * Thin Gemini REST client for flyers: paint an image, read text off an image,
  * write a caption. No SDK — same endpoints as the image-from-gemini skill.
  */
+import { logAiCall, aiLabel } from '../aiUsage'
+
 const API = 'https://generativelanguage.googleapis.com/v1beta/models'
 export const IMAGE_MODEL = 'gemini-3.1-flash-image-preview'
 // The alias, not a pinned version: pinned flash models get retired for new keys
@@ -18,8 +20,10 @@ function key() {
 
 // A call that hangs would leave a flyer "painting" or "checking" forever.
 // Painting gets 2 minutes, reading text 1.
-async function call(model: string, body: unknown) {
+// Every call is logged to ai_usage (purpose, tokens, cost, time; /admin/ai-usage).
+async function call(model: string, body: unknown, purpose: string) {
   const ms = model === IMAGE_MODEL ? 120_000 : 60_000
+  const started = performance.now()
   let res: Response
   try {
     res = await fetch(`${API}/${model}:generateContent?key=${key()}`, {
@@ -29,10 +33,16 @@ async function call(model: string, body: unknown) {
       signal: AbortSignal.timeout(ms),
     })
   } catch (e: any) {
-    if (e?.name === 'TimeoutError' || e?.name === 'AbortError') throw new Error(model === IMAGE_MODEL ? 'Painting took too long. Try again.' : 'Reading the words took too long.')
+    const timeout = e?.name === 'TimeoutError' || e?.name === 'AbortError'
+    await logAiCall({ purpose, model, durationMs: performance.now() - started, status: 'error', error: timeout ? 'timeout' : (e?.message ?? String(e)) })
+    if (timeout) throw new Error(model === IMAGE_MODEL ? 'Painting took too long. Try again.' : 'Reading the words took too long.')
     throw e
   }
   const json: any = await res.json().catch(() => ({}))
+  const parts = json?.candidates?.[0]?.content?.parts ?? []
+  // A painting with no image back is a soft refusal.
+  const refused = res.ok && model === IMAGE_MODEL && !parts.some((p: any) => p.inlineData?.data)
+  await logAiCall({ purpose, model, durationMs: performance.now() - started, status: !res.ok ? 'error' : refused ? 'refused' : 'ok', response: json, error: res.ok ? (refused ? json?.candidates?.[0]?.finishReason : undefined) : (json?.error?.message || `Gemini ${res.status}`) })
   if (!res.ok) throw new Error(json?.error?.message || `Gemini ${res.status}`)
   return json
 }
@@ -46,7 +56,7 @@ export async function paint(prompt: string, images: InlineImage[], aspectRatio: 
     // Images first, then the words: "Image 1" in the prompt is the first image (the skill's order).
     contents: [{ parts: [...images.map(i => ({ inlineData: i })), { text: prompt }] }],
     generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig: { aspectRatio } },
-  })
+  }, `paint: ${aiLabel() ?? 'image'}`)
   const parts = json?.candidates?.[0]?.content?.parts ?? []
   const img = parts.find((p: any) => p.inlineData?.data)
   return img ? { mimeType: img.inlineData.mimeType || 'image/png', data: img.inlineData.data } : null
@@ -86,13 +96,13 @@ export async function readText(image: InlineImage): Promise<string[]> {
       responseSchema: { type: 'OBJECT', properties: { lines: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['lines'] },
       temperature: 0,
     },
-  })
+  }, 'read-back')
   const text = json?.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}'
   try { return JSON.parse(text).lines ?? [] } catch { return [] }
 }
 
 export async function writeText(prompt: string): Promise<string> {
-  const json = await call(TEXT_MODEL, { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7 } })
+  const json = await call(TEXT_MODEL, { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7 } }, aiLabel() ?? 'text')
   return (json?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text ?? '').join('').trim()
 }
 
@@ -116,14 +126,14 @@ export async function askAboutImages<T>(prompt: string, images: InlineImage[]): 
   const json = await call(TEXT_MODEL, {
     contents: [{ parts: [{ text: prompt }, ...images.map(i => ({ inlineData: i }))] }],
     generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
-  })
+  }, aiLabel() ?? 'read images')
   const text = json?.candidates?.[0]?.content?.parts?.map((p: any) => p.text ?? '').join('') ?? '{}'
   return JSON.parse(text.replace(/^```(json)?|```$/g, '').trim()) as T
 }
 
 /** Text in, JSON out (captions). */
 export async function writeJson<T>(prompt: string): Promise<T> {
-  const json = await call(TEXT_MODEL, { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } })
+  const json = await call(TEXT_MODEL, { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }, aiLabel() ?? 'text')
   const text = json?.candidates?.[0]?.content?.parts?.map((p: any) => p.text ?? '').join('') ?? '{}'
   return JSON.parse(text.replace(/^```(json)?|```$/g, '').trim()) as T
 }

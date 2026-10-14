@@ -7,7 +7,7 @@
  */
 import {
   LayoutDashboard, Video, Gift, Users, UtensilsCrossed,
-  ShieldAlert, ArrowLeft, BadgeCheck, UserRound } from 'lucide-vue-next'
+  ShieldAlert, ArrowLeft, BadgeCheck, UserRound, Cpu } from 'lucide-vue-next'
 
 const route = useRoute()
 const { $trpc } = useNuxtApp()
@@ -51,6 +51,7 @@ const nav = computed(() => [
   { to: '/admin/giveaways', label: 'Giveaways', icon: Gift, exact: false, badge: null },
   { to: '/admin/community-groups', label: 'Community', icon: Users, exact: false, badge: null },
   { to: '/admin/festivals', label: 'Festivals', icon: UtensilsCrossed, exact: false, badge: null },
+  { to: '/admin/ai-usage', label: 'AI usage', icon: Cpu, exact: false, badge: null },
 ])
 
 const isActive = (item: { to: string; exact: boolean }) =>

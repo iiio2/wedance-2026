@@ -37,7 +37,7 @@ export const DOMAINS: Domain[] = [
     id: 'events',
     title: 'Events & plans',
     summary: 'Dated public events (v4 archive + live v3 mirror), their flyers and the hosts\' saved flyer looks, and each dancer\'s week/year plan.',
-    tables: ['events', 'planItems', 'brandLooks', 'eventFlyers', 'eventPosts'],
+    tables: ['events', 'planItems', 'brandLooks', 'eventFlyers', 'eventPosts', 'aiUsage'],
   },
   {
     id: 'directory',
