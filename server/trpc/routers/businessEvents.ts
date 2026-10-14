@@ -193,7 +193,9 @@ async function toRow(db: any, host: { username: string; type: string } | null, i
     ...(input.festival !== undefined
       ? { festival: input.festival ? { ...input.festival, key: existing?.festival?.key ?? existing?.slug ?? null } : (existing?.festival ?? null) }
       : {}),
-    archived: false,
+    // A hosted event keeps its archive state on save (Restore brings it back);
+    // a new or synced event is live.
+    archived: existing?.hostProfileId ? !!existing.archived : false,
     updatedAt: new Date(),
   }
 }
@@ -236,17 +238,27 @@ export const businessEventsRouter = router({
     .query(async ({ ctx, input }) => {
       const mine = await profilesIManage(ctx)
       const scope = input?.profile ? mine.filter((p: any) => p.username === input.profile) : mine
-      if (!scope.length) return { upcoming: [], past: [] }
+      if (!scope.length) return { upcoming: [], drafts: [], past: [], archived: [] }
       const byId = new Map(scope.map((p: any) => [p.id, p]))
+      const ids = scope.map((p: any) => p.id)
       const rows = await ctx.db.select(listColumns).from(events)
-        .where(and(inArray(events.hostProfileId, scope.map((p: any) => p.id)), eq(events.archived, false)))
+        .where(and(inArray(events.hostProfileId, ids), eq(events.archived, false)))
         .orderBy(asc(events.startDate)).limit(500)
+      // Archived: the latest 50, newest first; Restore brings one back as a draft.
+      const gone = await ctx.db.select(listColumns).from(events)
+        .where(and(inArray(events.hostProfileId, ids), eq(events.archived, true)))
+        .orderBy(desc(events.updatedAt)).limit(50)
       const checks = await checklistFor(ctx.db, rows)
       const now = Date.now()
-      const shaped = rows.map((e: any) => ({ ...e, host: hostSummary(byId.get(e.hostProfileId)), missing: checks.get(e.id) ?? [] }))
+      const shape = (e: any) => ({ ...e, host: hostSummary(byId.get(e.hostProfileId)), missing: checks.get(e.id) ?? [] })
+      const shaped = rows.map(shape)
+      const ahead = (e: any) => new Date(e.endDate ?? e.startDate).getTime() >= now
       return {
-        upcoming: shaped.filter((e: any) => new Date(e.endDate ?? e.startDate).getTime() >= now),
-        past: shaped.filter((e: any) => new Date(e.endDate ?? e.startDate).getTime() < now).reverse().slice(0, 30),
+        // Upcoming and past: published. Drafts: not published yet, any date.
+        upcoming: shaped.filter((e: any) => e.published && ahead(e)),
+        drafts: shaped.filter((e: any) => !e.published),
+        past: shaped.filter((e: any) => e.published && !ahead(e)).reverse().slice(0, 30),
+        archived: gone.map((e: any) => ({ ...e, host: hostSummary(byId.get(e.hostProfileId)), missing: [] })),
       }
     }),
 
@@ -282,6 +294,7 @@ export const businessEventsRouter = router({
         host: host ? { username: host.username, name: host.name, type: host.type } : null,
         // Synced from wedance.vip and not saved here yet: the first save takes it over.
         synced: !ev.hostProfileId,
+        archived: !!ev.archived,
         editedAt: ev.editedAt as Date | null,
         name: ev.name ?? '',
         type: (EVENT_TYPES as readonly string[]).includes(ev.type) ? ev.type : 'Party',
@@ -375,6 +388,16 @@ export const businessEventsRouter = router({
       })
       const created = await ctx.db.insert(events).values(rows).returning({ id: events.id, startDate: events.startDate })
       return { created }
+    }),
+
+  // Back from the archive, as a draft: publish it again when it's ready.
+  restore: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const ev = await requireEventManager(ctx, input.id)
+      if (!ev.hostProfileId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only events run on WeDance can be restored here.' })
+      await ctx.db.update(events).set({ archived: false, published: false, updatedAt: new Date() }).where(eq(events.id, ev.id))
+      return { restored: true }
     }),
 
   archive: protectedProcedure

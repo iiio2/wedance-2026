@@ -125,11 +125,13 @@ describe.skipIf(!DATABASE_URL)('businessEvents router', () => {
   })
 
   it('archive removes an event from the lists', async () => {
-    const { upcoming } = await caller(owner).businessEvents.list()
-    const target = upcoming.find((e: any) => e.name === `${tag} Draft`)!
+    const { drafts } = await caller(owner).businessEvents.list()
+    const target = drafts.find((e: any) => e.name === `${tag} Draft`)!
     await caller(owner).businessEvents.archive({ id: target.id })
     const after = await caller(owner).businessEvents.list()
+    expect(after.drafts.some((e: any) => e.id === target.id)).toBe(false)
     expect(after.upcoming.some((e: any) => e.id === target.id)).toBe(false)
+    expect(after.archived.some((e: any) => e.id === target.id)).toBe(true)
   })
 })
 

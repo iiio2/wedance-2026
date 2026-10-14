@@ -5,7 +5,7 @@
  * Content plan (?tab=plan): every post it's promoted with, each made with the
  * flyer pipeline. Both stay mounted, so switching keeps unsaved edits.
  */
-import { Check, ExternalLink, Repeat, Archive, Sparkles, FileText, Copy } from 'lucide-vue-next'
+import { Check, ExternalLink, Repeat, Archive, ArchiveRestore, Sparkles, FileText, Copy } from 'lucide-vue-next'
 import type { BusinessEventValues } from '~/components/business/BusinessEventForm.vue'
 import { toBusinessEventInput } from '~/lib/businessEvent'
 import { eventLocalDate } from '#shared/utils/eventTime'
@@ -185,6 +185,15 @@ async function toFlyer(t: FlyerTarget) {
     error.value = e?.message || 'Could not refresh the flyer.'
   }
 }
+const restoring = ref(false)
+async function restore() {
+  restoring.value = true
+  try {
+    await $trpc.businessEvents.restore.mutate({ id: id.value })
+    await load()
+    notice.value = 'Restored as a draft. Publish it when it’s ready.'
+  } catch (e: any) { error.value = e?.message || 'Could not restore it.' } finally { restoring.value = false }
+}
 const confirmArchive = ref(false)
 const archiving = ref(false)
 async function archive() {
@@ -234,6 +243,10 @@ async function archive() {
       </Tabs>
 
       <div v-show="tab === 'details' || ev.synced">
+      <div v-if="ev.archived" class="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border-2 border-dashed bg-muted/50 p-4 text-sm" role="status">
+        <p class="min-w-0 flex-1"><span class="font-bold">Archived.</span> It’s off WeDance and not listed anywhere. Restore it to bring it back as a draft.</p>
+        <Button type="button" variant="outline-pill" size="pill-sm" :loading="restoring" @click="restore"><ArchiveRestore /> Restore</Button>
+      </div>
       <p v-if="ev.synced" class="mt-4 rounded-2xl bg-secondary/10 p-4 text-sm" role="status">
         <span class="font-bold">This event comes from wedance.vip.</span>
         <span class="text-muted-foreground"> Check the details and save: it shows as “Checked” to dancers, the daily sync stops overwriting it{{ ev.host ? `, and it moves to ${ev.host.name}’s events` : '' }}. Then you can make its flyer.</span>
@@ -284,6 +297,11 @@ async function archive() {
         </div>
         <div class="rounded-2xl border bg-card p-4">
           <h2 class="text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Archive</h2>
+          <template v-if="ev.archived">
+            <p class="mt-1 text-sm text-muted-foreground">This event is archived: it’s off WeDance. Restore it to edit and publish it again.</p>
+            <Button type="button" variant="outline-pill" size="pill-sm" class="mt-3" :loading="restoring" @click="restore"><ArchiveRestore /> Restore</Button>
+          </template>
+          <template v-else>
           <p class="mt-1 text-sm text-muted-foreground">Cancelled or a mistake? Archiving takes it off WeDance.</p>
           <Button v-if="!confirmArchive" type="button" variant="destructive" size="sm" class="mt-3" @click="confirmArchive = true"><Archive /> Archive event</Button>
           <div v-else class="mt-3 flex flex-wrap items-center gap-2">
@@ -291,6 +309,7 @@ async function archive() {
             <Button type="button" variant="destructive" size="sm" :loading="archiving" @click="archive">Yes, archive</Button>
             <Button type="button" variant="ghost" size="sm" @click="confirmArchive = false">Keep it</Button>
           </div>
+          </template>
         </div>
       </section>
       </div>
