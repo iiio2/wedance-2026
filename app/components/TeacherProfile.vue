@@ -3,7 +3,7 @@
  * TeacherProfile — inline artist preview shown on the festival page when
  * an artist is tapped in the Lineup. Filters the schedule (via the page's
  * selectedTeacherId) and previews bio + video + socials here, with a link
- * out to the artist's full /artists/[id] profile. V3 tropical style.
+ * out to the artist's full /@handle profile. V3 tropical style.
  */
 import type { Teacher } from '~/types/festival'
 import { Instagram, Youtube, Globe, ArrowRight, X } from 'lucide-vue-next'

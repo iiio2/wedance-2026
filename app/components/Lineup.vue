@@ -5,7 +5,7 @@ defineProps<{
   teachers: Teacher[]
   selectedId: string | null
   // When provided and it returns a URL, each artist becomes a link to
-  // that URL (e.g. their /artists/[id] profile). Otherwise the avatar
+  // that URL (e.g. their /@handle profile). Otherwise the avatar
   // is a button that emits `select` (the inline-filter behaviour used
   // on the city page). Keeps both call sites working from one component.
   hrefFor?: (teacher: Teacher) => string | null | undefined
