@@ -235,8 +235,13 @@ const stats = computed(() => {
 
 // Share modal
 const showShareModal = ref(false)
-// The own-plan view's "Sign in" CTA (was a no-op).
 const showSignIn = ref(false)
+const signInAction = ref('signin')
+
+function promptSignIn(action: string) {
+  signInAction.value = action
+  showSignIn.value = true
+}
 
 function openFestival(slug: string) {
   if (isSharedView.value) {
@@ -250,7 +255,7 @@ function openFestival(slug: string) {
 
 function onCreateYearPlan() {
   if (!isSignedIn.value) {
-    navigateTo('/onboarding')
+    promptSignIn('save')
     return
   }
   router.replace({ query: {} })
@@ -262,7 +267,7 @@ function onBrowseFestivals() {
 
 function onAddFestival(slug: string) {
   if (!isSignedIn.value) {
-    navigateTo('/onboarding')
+    promptSignIn('going')
     return
   }
   const { addFestival } = useYearPlan()
@@ -271,6 +276,10 @@ function onAddFestival(slug: string) {
 
 function onAddFriend() {
   useTrack().track('shared_plan_signup', { surface: 'my-year', sharer: sharer.value.name })
+  if (!isSignedIn.value) {
+    promptSignIn('social')
+    return
+  }
   navigateTo('/onboarding')
 }
 
@@ -317,7 +326,7 @@ useHead({
         @open-festival="openFestival"
         @add-festival="onAddFestival"
         @share="showShareModal = true"
-        @sign-in="showSignIn = true"
+        @sign-in="promptSignIn('signin')"
         @browse-festivals="onBrowseFestivals"
       />
 
@@ -326,8 +335,9 @@ useHead({
         :festivals="myFestivals"
         sharer-name="You"
       />
-      <SignUpModal v-model:open="showSignIn" action="signin" />
     </template>
+
+    <SignUpModal v-model:open="showSignIn" :action="signInAction" />
     </main>
 
     <SiteFooter />

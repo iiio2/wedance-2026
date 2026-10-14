@@ -7,7 +7,7 @@ audience: Dancer
 p: P237
 cuj: "C4 — Traveler — Plan your festival year (festivals, tickets, travel)"
 jtbd: "J4 — Plan and afford my dance travel"
-status: partial
+status: built
 wsjf_business_value: 5
 wsjf_time_criticality: 5
 wsjf_risk_opportunity: 5
