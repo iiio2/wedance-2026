@@ -1,12 +1,15 @@
 <script setup lang="ts">
 /**
- * /business/events/<id> — edit an event, see what it still needs, make or
- * refresh its flyer (the panel beside the cards), repeat it weekly, or archive it.
+ * /business/events/<id> — two tabs. Details: edit the event, see what it still
+ * needs, its flyer (the panel beside the cards), repeat it weekly, archive it.
+ * Content plan (?tab=plan): every post it's promoted with, each made with the
+ * flyer pipeline. Both stay mounted, so switching keeps unsaved edits.
  */
-import { Check, ExternalLink, Repeat, Archive } from 'lucide-vue-next'
+import { Check, ExternalLink, Repeat, Archive, Sparkles, FileText } from 'lucide-vue-next'
 import type { BusinessEventValues } from '~/components/business/BusinessEventForm.vue'
 import { toBusinessEventInput } from '~/lib/businessEvent'
 import { eventLocalDate } from '#shared/utils/eventTime'
+import { eventPath } from '#shared/utils/eventSlug'
 
 definePageMeta({ layout: 'business' })
 
@@ -19,6 +22,8 @@ const ev = ref<Ev | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const notice = ref<string | null>(route.query.created ? 'Event created.' : null)
+const tab = ref<'details' | 'plan'>(route.query.tab === 'plan' ? 'plan' : 'details')
+watch(tab, t => navigateTo({ query: { ...route.query, tab: t === 'plan' ? 'plan' : undefined } }, { replace: true }))
 
 async function load() {
   error.value = null
@@ -42,7 +47,9 @@ const initial = computed<Partial<BusinessEventValues>>(() => ev.value
       venueAddress: ev.value.venueUsername ? '' : ev.value.venueAddress,
       artists: ev.value.artists, styles: ev.value.styles, description: ev.value.description,
       cover: ev.value.cover ?? '', ticketUrl: ev.value.ticketUrl ?? '', price: ev.value.price, published: ev.value.published,
-      agenda: ev.value.agenda, showAgenda: ev.value.flyerOptions.showAgenda !== false, photos: ev.value.flyerOptions.photos ?? {},
+      agenda: ev.value.agenda, showAgenda: ev.value.flyerOptions.showAgenda !== false, photos: ev.value.flyerOptions.photos ?? {}, names: ev.value.flyerOptions.names ?? {},
+      // The key isn't editable: dancers' plans and picks hang on it.
+      festival: ev.value.festival ? (({ key: _k, ...rest }) => rest)(ev.value.festival) : null,
     }
   : {})
 
@@ -57,8 +64,11 @@ async function save(v: BusinessEventValues) {
     await load()
     panelRef.value?.reload()
     captionRef.value?.reload()
+    planRef.value?.reload()
+    teaserRef.value?.reload()
     notice.value = 'Saved.'
     if (pending.value) { const t = pending.value; pending.value = null; await toFlyer(t) }
+    if (pendingPost.value) { const t = pendingPost.value; pendingPost.value = null; await toPost(t) }
   } catch (e: any) {
     pending.value = null
     error.value = e?.message || 'Could not save.'
@@ -85,6 +95,33 @@ async function repeat() {
 }
 
 const formRef = ref<{ dirty: boolean; submit: () => boolean } | null>(null)
+const planRef = ref<{ reload: () => Promise<void> } | null>(null)
+const teaserRef = ref<{ reload: () => Promise<void> } | null>(null)
+// Line-up names for "Add a post · artist".
+const lineup = computed(() => (ev.value?.artists ?? []).map((h: string) => ({ username: h, name: ev.value?.flyerOptions?.names?.[h] || h })))
+
+// A content-plan post: like the flyer, made from saved details.
+type PostTarget = { postId: string; action: 'make' | 'open' | 'refresh'; batchId?: string }
+const pendingPost = ref<PostTarget | null>(null)
+async function onPost(t: PostTarget) {
+  if (t.action !== 'open' && formRef.value?.dirty) {
+    pendingPost.value = t
+    if (!formRef.value.submit()) { pendingPost.value = null; tab.value = 'details'; error.value = 'Fix the details first: the posts are made from them.' }
+    return
+  }
+  await toPost(t)
+}
+async function toPost(t: PostTarget) {
+  const base = `/business/events/${id.value}/flyer`
+  if (t.action === 'open') return navigateTo({ path: base, query: { post: t.postId, ...(t.batchId ? { batch: t.batchId } : {}) } })
+  if (t.action === 'make') return navigateTo({ path: base, query: { post: t.postId } })
+  try {
+    const { batchId } = await $trpc.businessFlyers.refresh.mutate({ eventId: id.value, postId: t.postId })
+    await navigateTo({ path: base, query: { post: t.postId, batch: batchId, refresh: '1' } })
+  } catch (e: any) {
+    error.value = e?.message || 'Could not refresh the post.'
+  }
+}
 const panelRef = ref<{ reload: () => Promise<void> } | null>(null)
 const captionRef = ref<{ reload: () => Promise<void> } | null>(null)
 
@@ -136,13 +173,27 @@ async function archive() {
         :back="{ to: '/business/events', label: 'Events' }"
       >
         <Button v-if="ev.published" variant="outline-pill" size="pill-sm" as-child>
-          <NuxtLink :to="`/events/${ev.id}`" target="_blank"><ExternalLink /> View as dancers see it</NuxtLink>
+          <NuxtLink :to="eventPath({ id: ev.id, name: ev.name })" target="_blank"><ExternalLink /> View as dancers see it</NuxtLink>
         </Button>
       </AdminPageHeader>
 
       <AdminState v-if="error" kind="error" :message="error" />
       <p v-if="notice" role="status" class="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-success/10 px-3 py-2 text-sm font-bold text-wd-green-700">
         <Check class="size-4" aria-hidden="true" /> {{ notice }}
+      </p>
+
+      <!-- Tabs: both panels stay mounted (v-show), so unsaved details survive a switch. -->
+      <Tabs v-if="!ev.synced" v-model="tab" class="mt-4">
+        <TabsList>
+          <TabsTrigger value="details"><span class="inline-flex items-center gap-1.5"><FileText class="size-4" aria-hidden="true" /> Details</span></TabsTrigger>
+          <TabsTrigger value="plan"><span class="inline-flex items-center gap-1.5"><Sparkles class="size-4 text-primary" aria-hidden="true" /> Content plan</span></TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      <div v-show="tab === 'details' || ev.synced">
+      <p v-if="ev.synced" class="mt-4 rounded-2xl bg-secondary/10 p-4 text-sm" role="status">
+        <span class="font-bold">This event comes from wedance.vip.</span>
+        <span class="text-muted-foreground"> Check the details and save: it shows as “Checked” to dancers, the daily sync stops overwriting it{{ ev.host ? `, and it moves to ${ev.host.name}’s events` : '' }}. Then you can make its flyer.</span>
       </p>
 
       <p v-if="route.query.flyer && !route.query.created" class="mt-4 rounded-2xl bg-secondary/10 p-4 text-sm" role="status">
@@ -159,16 +210,18 @@ async function archive() {
         </ul>
       </section>
 
-      <div class="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
+      <div class="mt-4 grid gap-5" :class="ev.synced ? '' : 'lg:grid-cols-[minmax(0,1fr)_19rem]'">
         <BusinessEventForm
           ref="formRef"
+          :event-id="ev.id"
           :initial="initial"
           :labels="{ venue: ev.venueName, host: ev.host?.name }"
           :saving="saving"
           submit-label="Save changes"
           @submit="save"
         />
-        <div class="order-first grid content-start gap-4 lg:order-none">
+        <div v-if="!ev.synced" class="order-first grid content-start gap-4 lg:order-none">
+          <BusinessPlanTeaser ref="teaserRef" :event-id="ev.id" @open="tab = 'plan'" />
           <BusinessFlyerPanel ref="panelRef" :event-id="ev.id" :highlight="!!route.query.flyer" @go="onFlyer" />
           <BusinessCaption ref="captionRef" :event-id="ev.id" />
         </div>
@@ -196,6 +249,11 @@ async function archive() {
           </div>
         </div>
       </section>
+      </div>
+
+      <div v-if="!ev.synced" v-show="tab === 'plan'" class="mt-4">
+        <BusinessContentPlan ref="planRef" :event-id="ev.id" :lineup="lineup" @go="onPost" @changed="teaserRef?.reload()" />
+      </div>
     </template>
   </div>
 </template>

@@ -2,6 +2,7 @@
 import { X, CalendarDays, Save, MapPin, Calendar, Check, ChevronDown, Target, Wallet, Clock, Users, CalendarPlus, ExternalLink, Footprints, GraduationCap, Video } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { GoalSchema, validateForm } from '#shared/validation'
+import { festivalPath } from '#shared/utils/eventSlug'
 
 interface FestivalSummary {
   slug: string
@@ -211,7 +212,7 @@ const simpleChecklistItems = [
               :key="f.slug"
               class="py-2 flex items-start justify-between gap-2"
             >
-              <NuxtLink :to="`/festivals/${f.slug}`" class="flex items-start gap-2 min-w-0 hover:text-primary transition-colors">
+              <NuxtLink :to="`${festivalPath(f.slug)}`" class="flex items-start gap-2 min-w-0 hover:text-primary transition-colors">
                 <img
                   v-if="f.logo"
                   :src="f.logo"

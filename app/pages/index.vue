@@ -390,7 +390,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                   </template>
                 </ul>
                 <Button as-child variant="pill" class="mt-4 w-full text-xs tracking-widest">
-                  <NuxtLink :to="hasRealProof ? proofData!.link : '/festivals/bachata-stars-barcelona-2026'">
+                  <NuxtLink :to="hasRealProof ? proofData!.link : '/events/bachata-stars-barcelona-2026'">
                     {{ hasRealProof ? 'See all attendees' : 'Get tickets ✨' }}
                   </NuxtLink>
                 </Button>

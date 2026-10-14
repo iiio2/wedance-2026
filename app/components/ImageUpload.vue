@@ -59,7 +59,7 @@ function remove() {
 <template>
   <div class="space-y-2">
     <!-- Preview -->
-    <div v-if="model" class="relative inline-block">
+    <div v-if="model" class="relative w-fit">
       <img
         :src="model"
         alt="Profile photo"
@@ -99,8 +99,9 @@ function remove() {
     <!-- Upload / replace button when photo exists -->
     <Button
       v-if="model && !uploading"
+      type="button"
       variant="link"
-      class="h-auto p-0 text-xs font-bold text-primary"
+      class="flex h-auto p-0 text-xs font-bold text-primary"
       @click="fileInput?.click()"
     >
       Replace photo

@@ -14,7 +14,7 @@
  *   - org: object | JSON string
  */
 import { createSign } from 'node:crypto'
-import { and, eq, getTableColumns, gte, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, eq, getTableColumns, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import { events, profiles } from '../database/schema'
 import cityImages from '../data/city-images.json'
 
@@ -573,13 +573,16 @@ export async function syncV3Events(opts: {
           return [k, sql.raw(`excluded."${col.name}"`)]
         }),
       ),
+      // Someone checked and edited it on WeDance: their version wins over v3's.
+      setWhere: isNull(events.editedAt),
     })
     log(`  …upserted ${Math.min(i + CHUNK, toWrite.length)}/${toWrite.length}`)
   }
   if (gone.length) {
     await db.update(events)
       .set({ archived: true, syncedAt, updatedAt: syncedAt })
-      .where(and(eq(events.source, V3_SOURCE), inArray(events.sourceId, gone.map((r: any) => r.sourceId)), gte(events.startDate, syncedAt)))
+      // An edited event is its organizer's now: gone from v3 doesn't archive it.
+      .where(and(eq(events.source, V3_SOURCE), inArray(events.sourceId, gone.map((r: any) => r.sourceId)), gte(events.startDate, syncedAt), isNull(events.editedAt)))
   }
   // Touch unchanged rows' syncedAt so "last seen in v3" stays truthful.
   const unchangedIds = rows.filter(r => !toWrite.includes(r)).map(r => r.sourceId)

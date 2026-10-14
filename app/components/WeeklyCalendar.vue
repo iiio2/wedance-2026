@@ -12,6 +12,7 @@ import { getStyleColors } from '~/lib/style-colors'
 import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
 import { mixHex, readableOn } from '~/lib/contrast'
+import { eventPath } from '#shared/utils/eventSlug'
 
 const props = defineProps<{
   events: CityEvent[]
@@ -109,13 +110,12 @@ function styleAccent(style: string): string {
 
 const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }) as DayOfWeek
 
-// Booked events with a venueHandle link to the venue's /@handle page;
-// other real (UUID) events link to /events/<id>; mock weekly events don't link.
+// Real events link to their event page; mock weekly events don't link.
 const isRealEvent = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}/i.test(String(id))
 function eventHref(e: CityEvent): string | undefined {
-  if ((e as any).venueHandle) return `/@${(e as any).venueHandle}`
-  if (isRealEvent(e.id)) return `/events/${e.id}`
-  return undefined
+  if (!isRealEvent(e.id)) return undefined
+  // Bookings open by their full id; dated events by /events/<name>-<short id>.
+  return (e as any).booking ? `/events/${e.id}` : eventPath(e)
 }
 </script>
 
@@ -166,7 +166,7 @@ function eventHref(e: CityEvent): string | undefined {
 
       <!-- Event rows -->
       <div class="grid grid-cols-1 gap-2">
-        <!-- Booked events link to their venue /@handle; other real events to /events/<id>. -->
+        <!-- Real events link to their event page. -->
         <!-- Stretched link: the title is the link (its ::after covers the card); the
              person and Going? buttons sit above it — no <button> nested in an <a>. -->
         <div

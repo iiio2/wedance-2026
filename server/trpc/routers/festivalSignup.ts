@@ -5,6 +5,7 @@ import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
 import { festivals, festivalSignups, dancers, referrals } from '../../database/schema'
 import { getTicketPriceCents, getReferralDiscountPercent } from '../../utils/ticket-prices'
+import { festivalPath } from '../../../shared/utils/eventSlug'
 
 function getStripe() {
   const config = useRuntimeConfig()
@@ -168,8 +169,8 @@ export const festivalSignupRouter = router({
           festivalSlug: input.festivalSlug,
           dancerId: ctx.dancerId,
         },
-        success_url: `${config.siteUrl}/festivals/${input.festivalSlug}?payment=success`,
-        cancel_url: `${config.siteUrl}/festivals/${input.festivalSlug}?payment=cancel`,
+        success_url: `${config.siteUrl}${festivalPath(input.festivalSlug)}?payment=success`,
+        cancel_url: `${config.siteUrl}${festivalPath(input.festivalSlug)}?payment=cancel`,
       })
 
       return { checkoutUrl: session.url }
@@ -360,8 +361,8 @@ export const festivalSignupRouter = router({
           ...(referrerId ? { referrerId, referralDiscount: String(refereeDiscountCents) } : {}),
           ...(appliedCreditCents > 0 ? { referrerCredit: String(appliedCreditCents) } : {}),
         },
-        success_url: `${config.siteUrl}/festivals/${input.festivalSlug}?payment=success`,
-        cancel_url: `${config.siteUrl}/festivals/${input.festivalSlug}?payment=cancel`,
+        success_url: `${config.siteUrl}${festivalPath(input.festivalSlug)}?payment=success`,
+        cancel_url: `${config.siteUrl}${festivalPath(input.festivalSlug)}?payment=cancel`,
       })
 
       // Record the referral (pending until Stripe webhook confirms payment).

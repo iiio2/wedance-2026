@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, sql } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
 import { dancers, cityVideos } from '../../database/schema'
@@ -21,6 +21,15 @@ import { DANCE_LEVELS, sanitizeDanceLevels } from '../../../shared/utils/styleLe
 const socialField = z.union([z.string().max(200), z.literal('')]).optional()
 
 export const profileRouter = router({
+  // A dancer's handle now, for an old one (renamed to a readable handle).
+  movedTo: publicProcedure
+    .input(z.object({ username: z.string().min(1).max(200) }))
+    .query(async ({ ctx, input }) => {
+      const [d] = await ctx.db.select({ username: dancers.username }).from(dancers)
+        .where(sql`${dancers.oldUsernames} ? ${input.username}`).limit(1)
+      return d?.username ? { username: d.username } : null
+    }),
+
   getByUsername: publicProcedure
     .input(z.object({ username: z.string().min(1) }))
     .query(async ({ ctx, input }) => {

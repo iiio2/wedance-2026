@@ -21,6 +21,7 @@ import { isFreePrice, isTasterCandidate } from '#shared/utils/taster'
 import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
 import { mixHex, readableOn } from '~/lib/contrast'
+import { eventPath } from '#shared/utils/eventSlug'
 
 definePageMeta({ layout: false })
 
@@ -116,10 +117,14 @@ const bookedThisWeek = computed(() => bookedEvents.value
     style: b.styles?.[0] || '', day: new Date(String(b.eventDate).slice(0, 10)).toLocaleDateString('en-US', { weekday: 'long' }),
     time: b.startTime || '', duration: 0, venue: b.venueName, address: '', organizer: '',
     accentColor: WD.red600, attendeeCount: eventGoingCounts.value[b.id] ?? 0, recurring: false, date: b.eventDate,
-    venueHandle: b.venueHandle || undefined,
+    venueHandle: b.venueHandle || undefined, booking: true,
   })))
 
 // v3 eventType → WeeklyCalendar type badge.
+// Every item opens its event page. Bookings are only found by their full id;
+// dated events by /events/<name>-<short id>.
+const eventHref = (e: { id: string; name?: string | null; booking?: boolean }) => (e.booking ? `/events/${e.id}` : eventPath(e))
+
 const syncedTypeMap: Record<string, string> = { Course: 'class', Workshop: 'workshop', Party: 'social', Concert: 'social', Show: 'social' }
 const toCityEvent = (e: any) => ({
   id: e.id, name: e.name || 'Event', type: syncedTypeMap[e.type] || 'social',
@@ -160,7 +165,7 @@ const bookedLater = computed(() => {
         style: b.styles?.[0] || '', styles: b.styles || [],
         time: b.startTime || '', venue: b.venueName || '', venueName: b.venueName || '',
         date,
-        venueHandle: b.venueHandle || undefined,
+        venueHandle: b.venueHandle || undefined, booking: true,
       }
     })
 })
@@ -370,7 +375,7 @@ const tasterClasses = computed(() => {
     id: b.id, name: b.title || 'Class', type: b.eventType, styles: b.styles || [],
     venueName: b.venueName || '', venueHandle: b.venueHandle || undefined,
     date: String(b.eventDate).slice(0, 10), time: b.startTime || '',
-    free: false, price: '',
+    free: false, price: '', booking: true,
   }))
   const sorted = [...synced, ...booked]
     .filter(e => !selectedStyle.value || e.styles.some((s: string) => sameDanceStyle(s, selectedStyle.value)))
@@ -633,7 +638,7 @@ onMounted(() => {
           <NuxtLink
             v-for="e in tasterClasses"
             :key="e.id"
-            :to="e.venueHandle ? `/@${e.venueHandle}` : `/events/${e.id}`"
+            :to="eventHref(e)"
             data-testid="taster-class"
             class="group rounded-xl p-3 border flex items-center gap-3 hover:-translate-y-0.5 transition-all border-wd-brown-900/[12.2%] bg-background/[50.2%]"
           >
@@ -725,7 +730,7 @@ onMounted(() => {
             <NuxtLink
               v-for="e in g.items"
               :key="e.id"
-              :to="e.venueHandle ? `/@${e.venueHandle}` : `/events/${e.id}`"
+              :to="eventHref(e)"
               class="group rounded-xl bg-white p-3 border flex items-center gap-3 hover:-translate-y-0.5 transition-all border-wd-brown-900/[12.2%]"
               style="box-shadow:0 1px 0 color-mix(in srgb, var(--wd-brown-900) 5.1%, transparent);"
             >
@@ -874,7 +879,7 @@ onMounted(() => {
           <NuxtLink
             v-for="f in cityFestivals"
             :key="f.id"
-            :to="`/events/${f.id}`"
+            :to="eventPath(f)"
             class="group block rounded-2xl overflow-hidden bg-white border transition-all hover:-translate-y-1"
             :style="{ borderColor: f.accentColor + '55', boxShadow: '0 1px 0 ' + f.accentColor + '22, 0 8px 22px rgba(59,31,18,0.05)' }"
           >

@@ -69,7 +69,7 @@ function filteredForDay(day: string) {
     .filter((w) => {
       if (w.day !== day) return false
       if (w.type === 'party') return false
-      if (props.selectedTeacherId && w.teacherId !== props.selectedTeacherId) return false
+      if (props.selectedTeacherId && w.teacherId !== props.selectedTeacherId && !w.withIds?.includes(props.selectedTeacherId)) return false
       if (selectedStyle.value && w.style !== selectedStyle.value) return false
       if (selectedLevel.value && w.level !== selectedLevel.value) return false
       return true
@@ -84,7 +84,10 @@ function partiesForDay(day: string) {
 }
 
 function teacherFor(workshop: Workshop): Teacher | undefined {
-  return props.teachers.find((t) => t.id === workshop.teacherId)
+  const main = props.teachers.find((t) => t.id === workshop.teacherId)
+  // Taught together ("Ivan & Ivana"): one name line for the pair.
+  const others = (workshop.withIds ?? []).map(id => props.teachers.find(t => t.id === id)).filter(Boolean) as Teacher[]
+  return main && others.length ? { ...main, name: [main, ...others].map(t => t.name).join(' & ') } : main
 }
 
 function toggleStyle(value: string) {

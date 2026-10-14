@@ -1,4 +1,5 @@
 import type { DanceRole, PlanEntry } from '~/types/festival'
+import { festivalPath } from '#shared/utils/eventSlug'
 
 /**
  * Compact share payload encoded in the URL. Kept small so the link stays
@@ -87,7 +88,7 @@ export function useSharePlan() {
   ): string {
     const token = encode(name, role, plan)
     const base = import.meta.client ? window.location.origin : ''
-    return `${base}/festivals/${festivalSlug}?invite=${token}`
+    return `${base}${festivalPath(festivalSlug)}?invite=${token}`
   }
 
   return { encode, decode, buildShareUrl }

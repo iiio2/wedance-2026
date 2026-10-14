@@ -5,6 +5,7 @@
  */
 import { Plus, ExternalLink } from 'lucide-vue-next'
 import { eventLocalDate, eventLocalTime, eventLocalWeekday } from '#shared/utils/eventTime'
+import { eventPath } from '#shared/utils/eventSlug'
 
 definePageMeta({ layout: 'business' })
 useHead({ title: 'Events | Business | WeDance' })
@@ -91,7 +92,7 @@ function when(e: any) {
           </div>
         </NuxtLink>
         <Button v-if="e.published" variant="ghost" size="icon-sm" as-child>
-          <NuxtLink :to="`/events/${e.id}`" target="_blank" :aria-label="`Open ${e.name} as dancers see it`"><ExternalLink /></NuxtLink>
+          <NuxtLink :to="eventPath(e)" target="_blank" :aria-label="`Open ${e.name} as dancers see it`"><ExternalLink /></NuxtLink>
         </Button>
       </div>
     </div>

@@ -47,11 +47,11 @@ const alreadyPlanning = [
 ]
 
 const features = [
-  { icon: CalendarDays, title: 'Interactive schedule', description: 'Dancers browse workshops, filter by style and level, and build a plan — excitement builds weeks before the doors open.', color: WD.red600, link: '/festivals/meneate-viena-2026#schedule' },
-  { icon: Users,        title: 'Partner matching',    description: 'Leads and follows find each other before the festival. More matched partners = more workshop sign-ups.',              color: WD.cyan600, link: '/festivals/meneate-viena-2026#discover' },
-  { icon: Heart,        title: 'Discover dancers',    description: 'Swipe to find dance partners. Mutual matches become a dance list — your attendees arrive already connected.',        color: WD.purple500, link: '/festivals/meneate-viena-2026#discover' },
-  { icon: Ticket,       title: 'Smart ticket picks',  description: 'As dancers add workshops to their plan, we suggest the best-value ticket. Your pass tiers, their perfect fit.',       color: WD.amber500, link: '/festivals/meneate-viena-2026#tickets' },
-  { icon: Zap,          title: 'One-tap checkout',    description: 'Signed-in dancers buy their pass in a single tap — no forms, no re-entering details. Fewer drop-offs, more sold tickets.', color: WD.pink500, link: '/festivals/meneate-viena-2026#tickets' },
+  { icon: CalendarDays, title: 'Interactive schedule', description: 'Dancers browse workshops, filter by style and level, and build a plan — excitement builds weeks before the doors open.', color: WD.red600, link: '/events/meneate-viena-2026#schedule' },
+  { icon: Users,        title: 'Partner matching',    description: 'Leads and follows find each other before the festival. More matched partners = more workshop sign-ups.',              color: WD.cyan600, link: '/events/meneate-viena-2026#discover' },
+  { icon: Heart,        title: 'Discover dancers',    description: 'Swipe to find dance partners. Mutual matches become a dance list — your attendees arrive already connected.',        color: WD.purple500, link: '/events/meneate-viena-2026#discover' },
+  { icon: Ticket,       title: 'Smart ticket picks',  description: 'As dancers add workshops to their plan, we suggest the best-value ticket. Your pass tiers, their perfect fit.',       color: WD.amber500, link: '/events/meneate-viena-2026#tickets' },
+  { icon: Zap,          title: 'One-tap checkout',    description: 'Signed-in dancers buy their pass in a single tap — no forms, no re-entering details. Fewer drop-offs, more sold tickets.', color: WD.pink500, link: '/events/meneate-viena-2026#tickets' },
   { icon: Share2,       title: 'Plan sharing',        description: 'Dancers share their festival plan with friends. Every share is a personalized invitation with your event front and centre.', color: WD.green600 },
   { icon: TrendingUp,   title: 'Year planning',       description: 'Dancers plan their whole festival year on WeDance. Your festival appears in their year plan and in discovery suggestions.',            color: WD.red600, link: '/festivals' },
 ]
@@ -130,8 +130,8 @@ const howItWorks = [
   { step: '1', title: 'List your event',       description: 'Add your festival, schedule, teachers, and venue in minutes.',                    color: WD.red600 },
   { step: '2', title: 'Dancers plan',          description: 'Dancers find your event, build workshop plans, and match with partners.',        color: WD.amber500, substeps: [
     { icon: Globe,        label: 'Discover your festival in the directory', link: '/festivals' },
-    { icon: CalendarDays, label: 'Build a workshop plan from the schedule', link: '/festivals/meneate-viena-2026#schedule' },
-    { icon: Users,        label: 'Match with dance partners before arriving', link: '/festivals/meneate-viena-2026#discover' },
+    { icon: CalendarDays, label: 'Build a workshop plan from the schedule', link: '/events/meneate-viena-2026#schedule' },
+    { icon: Users,        label: 'Match with dance partners before arriving', link: '/events/meneate-viena-2026#discover' },
   ] },
   { step: '3', title: 'Plans drive tickets',   description: 'Smart recommendations guide dancers to the right pass. Sharing spreads the word.', color: WD.green600 },
   { step: '4', title: 'You get insights',      description: 'Real demand data, audience geography, and post-event signal.',                   color: WD.cyan600 },
@@ -170,7 +170,7 @@ const editorLink = (plan?: string) => ({ path: '/organizers/create', query: plan
                 <NuxtLink :to="editorLink('starter')">List your festival <ArrowRight aria-hidden="true" /></NuxtLink>
               </Button>
               <NuxtLink
-                to="/festivals/meneate-viena-2026"
+                to="/events/meneate-viena-2026"
                 class="inline-flex items-center gap-2 text-sm hover:underline text-wd-cyan-700 font-hand"
                 style="font-style:italic; font-size:20px;"
               >

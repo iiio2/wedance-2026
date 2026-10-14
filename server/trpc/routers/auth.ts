@@ -14,6 +14,7 @@ import {
 } from '../../database/schema'
 import { sendMagicLinkEmail, sendPasswordResetEmail } from '../../utils/email'
 import { generateUsername } from '../../utils/slug'
+import { freeHandle } from '../../utils/handles'
 
 // FirebaseScrypt parameters, ported verbatim from wedance-v4
 // (server/api/auth/[...].ts). These MUST match v4 exactly so legacy user
@@ -288,7 +289,9 @@ export const authRouter = router({
             .values({
               name: input.name,
               email: input.email,
-              username: generateUsername(input.name),
+              // A readable handle ("ana-garcia"); a random one only if a
+              // simultaneous signup took it first.
+              username: attempt === 0 ? await freeHandle(ctx.db, input.name, input.city) : generateUsername(input.name),
               danceStyles: input.danceStyles,
               role: input.role ?? null,
               city: input.city ?? null,
@@ -382,7 +385,7 @@ export const authRouter = router({
         .from(dancers)
         .where(eq(dancers.id, ctx.dancerId))
       if (current && !current.username) {
-        updateSet.username = generateUsername(current.name)
+        updateSet.username = await freeHandle(ctx.db, current.name)
       }
 
       await ctx.db

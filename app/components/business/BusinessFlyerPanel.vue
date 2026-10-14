@@ -95,7 +95,7 @@ const download = (url: string) => url.replace('/upload/', '/upload/fl_attachment
             <li v-for="t in st.lines" :key="t" class="leading-snug">{{ t }}</li>
           </ul>
           <p class="mt-2 text-xs text-muted-foreground">Pictured: {{ st.pictured.length ? st.pictured.join(', ') : 'nobody (names only)' }}</p>
-          <p v-if="st.pictured.length > 2" class="mt-1 text-xs font-bold text-wd-red-800">{{ st.pictured.length }} faces is a lot for a story: the first two are used. Set the others to “Name only”.</p>
+          <p v-if="st.pictured.length > 2" class="mt-1 text-xs text-muted-foreground">All {{ st.pictured.length }} go on it as a line-up of portraits{{ st.pictured.length > 16 ? ' (the first 16)' : '' }}. Fewer faces read bigger: set some to “Name only” to make them stand out.</p>
           <p class="mt-2 text-xs text-muted-foreground">Saved details only. Every word is read back off the finished flyer and checked against this list.</p>
         </details>
       </template>

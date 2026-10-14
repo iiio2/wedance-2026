@@ -1,8 +1,10 @@
 import { z } from 'zod'
-import { and, asc, eq, gte, lt, or, sql, type SQL } from 'drizzle-orm'
+import { and, asc, eq, gte, lt, ne, or, sql, type SQL } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, publicProcedure } from '../trpc'
-import { events } from '../../database/schema'
+import { events, cities } from '../../database/schema'
+import { festivalView } from '../../utils/festivalView'
+import { eventKey } from '../../../shared/utils/eventSlug'
 
 /**
  * Public dated events from the `events` table — today the live mirror of
@@ -65,6 +67,34 @@ export const eventsRouter = router({
       return selectCards(ctx.db, and(eq(events.citySlug, input.citySlug), live(), gte(events.endDate, now), lt(events.startDate, until)))
     }),
 
+  // What else is on those days, for an organizer picking a date: events in the
+  // same city, and festivals (and weekenders, congresses) in the same country.
+  // Days are local dates; a night that runs past midnight still counts.
+  sameDays: publicProcedure
+    .input(z.object({
+      city: z.string().trim().min(1).max(120),
+      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      /** The event being edited, left out of its own competition. */
+      exceptId: z.string().uuid().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const [c] = await ctx.db.select({ slug: cities.slug, name: cities.name, country: cities.country }).from(cities)
+        .where(sql`lower(${cities.name}) = lower(${input.city})`).limit(1)
+      const citySlug = c?.slug ?? input.city.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      // Local day bounds, with a few hours' slack for time zones.
+      const start = new Date(`${input.from}T00:00:00Z`)
+      const end = new Date(new Date(`${input.to && input.to >= input.from ? input.to : input.from}T00:00:00Z`).getTime() + 86400_000)
+      const overlaps = and(lt(events.startDate, new Date(end.getTime() + 2 * 3600_000)), gte(sql`coalesce(${events.endDate}, ${events.startDate})`, new Date(start.getTime() + 4 * 3600_000)))
+      const except = input.exceptId ? ne(events.id, input.exceptId) : undefined
+      const multiDay = or(eq(events.isFestival, true), sql`${events.festival} is not null`, sql`${events.type} in ('Festival', 'Weekender', 'Congress')`)
+      const [inCity, festivals] = await Promise.all([
+        selectCards(ctx.db, and(live(), overlaps, eq(events.citySlug, citySlug), except), 50),
+        c?.country ? selectCards(ctx.db, and(live(), overlaps, eq(events.country, c.country), multiDay, sql`${events.citySlug} is distinct from ${citySlug}`, except), 30) : [],
+      ])
+      return { city: c?.name ?? input.city, country: c?.country ?? null, inCity, festivals }
+    }),
+
   // Upcoming events a venue hosts, an organiser runs or an artist plays — for /@handle.
   // Optional `name` lets artist profiles also match events that list the artist
   // by display name instead of @handle (name fallback).
@@ -94,10 +124,17 @@ export const eventsRouter = router({
       }
     }),
 
+  // By id; by a festival's key or a stored slug (/events/meneate-viena-2026, the
+  // links festival cards and old plans make); or by the URL /events/<name>-<short
+  // id> (the 8 characters at the end are the start of the id).
   get: publicProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string().min(1).max(200) }))
     .query(async ({ ctx, input }) => {
-      const [ev] = await selectCards(ctx.db, and(eq(events.id, input.id), eq(events.published, true)), 1, {
+      const key = eventKey(input.id)
+      const exact = key && 'id' in key
+        ? eq(events.id, key.id)
+        : or(eq(events.slug, input.id), sql`${events.festival}->>'key' = ${input.id}`)
+      const extra = {
         description: events.description,
         link: events.link,
         ticketUrl: events.ticketUrl,
@@ -106,9 +143,31 @@ export const eventsRouter = router({
         venueLng: events.venueLng,
         archived: events.archived,
         source: events.source,
+        // "Checked by …": who last edited it on WeDance — the host profile when
+        // the editor is on its team, else WeDance (an admin checked it).
+        editedAt: events.editedAt,
+        checkedBy: sql<string | null>`case
+          when ${events.editedAt} is null then null
+          when exists (select 1 from profile_members m where m.profile_id = ${events.hostProfileId} and m.dancer_id = ${events.editedBy})
+            then (select p.name from profiles p where p.id = ${events.hostProfileId})
+          else 'WeDance' end`,
         agenda: events.agenda,
-      })
+        festival: events.festival,
+      }
+      let [ev] = await selectCards(ctx.db, and(exact, eq(events.published, true)), 1, extra)
+      if (!ev && key && 'short' in key) [ev] = await selectCards(ctx.db, and(sql`${events.id}::text LIKE ${`${key.short}%`}`, eq(events.published, true)), 1, extra)
       if (!ev) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found.' })
       return ev
+    }),
+
+  // A festival event in the shape the festival page renders (Festival,
+  // workshops, teachers — app/types/festival.ts), built from the event, its
+  // festival details and its line-up's profiles.
+  festival: publicProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const [ev] = await ctx.db.select().from(events).where(and(eq(events.id, input.id), eq(events.published, true)))
+      if (!ev?.festival) throw new TRPCError({ code: 'NOT_FOUND', message: 'Festival not found.' })
+      return festivalView(ctx.db, ev)
     }),
 })

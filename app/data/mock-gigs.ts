@@ -41,7 +41,7 @@ export const mockGigs: Gig[] = [
     when: '1–4 July 2027',
     compensation: 'Fee + travel + accommodation',
     deadline: '2026-12-01',
-    href: '/festivals/agua-pichi-2027',
+    href: '/events/agua-pichi-2027',
     accent: '#dc2626',
   },
   {
@@ -56,7 +56,7 @@ export const mockGigs: Gig[] = [
     when: 'Saturday night',
     compensation: 'Paid · €300–450',
     deadline: '2026-08-15',
-    href: '/festivals/cuban-fire-munich-2026',
+    href: '/events/cuban-fire-munich-2026',
     accent: '#0891b2',
   },
   {
@@ -86,7 +86,7 @@ export const mockGigs: Gig[] = [
     when: 'Mar 2027 edition',
     compensation: 'Fee + pass',
     deadline: '2026-11-30',
-    href: '/festivals/meneate-viena-2026',
+    href: '/events/meneate-viena-2026',
     accent: '#f59e0b',
   },
   {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { YearPlanFestival, DanceRole } from '~/types/festival'
 import { Button } from '~/components/ui/button'
+import { festivalPath } from '#shared/utils/eventSlug'
 
 definePageMeta({ layout: false })
 
@@ -241,9 +242,9 @@ function openFestival(slug: string) {
   if (isSharedView.value) {
     const query: Record<string, string> = { plan: 'shared' }
     if (referralCode.value) query.ref = referralCode.value
-    router.push({ path: `/festivals/${slug}`, query })
+    router.push({ path: `${festivalPath(slug)}`, query })
   } else {
-    router.push(`/festivals/${slug}`)
+    router.push(`${festivalPath(slug)}`)
   }
 }
 

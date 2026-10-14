@@ -26,7 +26,7 @@ export type FlyerSource = {
   price?: string | null
 }
 
-export type FlyerLine = { label: 'title' | 'date' | 'time' | 'agenda' | 'line-up' | 'music' | 'entry' | 'venue'; text: string }
+export type FlyerLine = { label: 'kicker' | 'title' | 'subtitle' | 'date' | 'time' | 'agenda' | 'detail' | 'line-up' | 'music' | 'entry' | 'venue'; text: string }
 
 const clean = (s: string) => s.trim().replace(/\s+/g, ' ')
 const up = (s: string) => clean(s).toUpperCase()
@@ -44,11 +44,20 @@ export function flyerLines(e: FlyerSource): FlyerLine[] {
   const names = e.artists.map(a => clean(a.name)).filter(Boolean)
   // "Neuhauser Str. 47, München" → "LUMA · NEUHAUSER STR. 47 · MÜNCHEN"
   const venue = e.venueName ? up([e.venueName, ...(e.venueAddress ? e.venueAddress.split(/\s*,\s*/) : [])].filter(Boolean).join(' · ')) : null
-  const out: FlyerLine[] = [
-    { label: 'title', text: up(e.name) },
-    { label: 'date', text: up(`${eventLocalWeekday(e.startDate, tz)} ${Number(d.slice(8))} ${month}`) },
-    { label: 'time', text: end && end !== start ? `${start} – ${end}` : start },
-  ]
+  // Several days (a festival): the dates, no time. One night: weekday, date and time.
+  const lastDay = e.endDate ? eventLocalDate(e.endDate, tz) : d
+  const multiDay = lastDay > d && (new Date(e.endDate!).getTime() - new Date(e.startDate).getTime()) > 24 * 3600_000
+  const monthOf = (x: string) => new Date(`${x}T12:00:00Z`).toLocaleDateString('en-GB', { month: 'long', timeZone: 'UTC' })
+  const out: FlyerLine[] = multiDay
+    ? [
+        { label: 'title', text: up(e.name) },
+        { label: 'date', text: up(monthOf(lastDay) === month ? `${Number(d.slice(8))} – ${Number(lastDay.slice(8))} ${month}` : `${Number(d.slice(8))} ${month} – ${Number(lastDay.slice(8))} ${monthOf(lastDay)}`) },
+      ]
+    : [
+        { label: 'title', text: up(e.name) },
+        { label: 'date', text: up(`${eventLocalWeekday(e.startDate, tz)} ${Number(d.slice(8))} ${month}`) },
+        { label: 'time', text: end && end !== start ? `${start} – ${end}` : start },
+      ]
   if (e.showAgenda !== false) {
     for (const a of e.agenda ?? []) if (clean(a.what)) out.push({ label: 'agenda', text: clean(`${a.time} ${a.what}`) })
   }
@@ -58,6 +67,56 @@ export function flyerLines(e: FlyerSource): FlyerLine[] {
   if (prices.length) out.push({ label: 'entry', text: prices.join(' · ') })
   if (venue) out.push({ label: 'venue', text: venue })
   return out
+}
+
+/** A content-plan post's words (shared/utils/posts.ts): its own lines, from the event's. */
+export type PostSource = FlyerSource & {
+  kind: import('./posts').PostKind
+  /** Artist post: who it's about, and what they do at the event. */
+  artist?: { name: string; styles?: string[]; sessions?: string[] } | null
+  /** Festival passes, "FULL PASS · 210 €". */
+  passes?: string[]
+  /** Programme highlights, "SAT 11:00 · TIMBA · BARBARA JIMENEZ". */
+  programme?: string[]
+}
+
+/** The lines of a post. The announcement is the event's flyer; the others reuse its date and venue lines. */
+export function postLines(p: PostSource): FlyerLine[] {
+  const base = flyerLines(p)
+  if (p.kind === 'announcement') return base
+  const pick = (...labels: FlyerLine['label'][]) => base.filter(l => labels.includes(l.label))
+  const title = up(p.name)
+  const when = pick('date', 'time')
+  const where = pick('venue')
+  const kicker = (t: string): FlyerLine => ({ label: 'kicker', text: t })
+  switch (p.kind) {
+    case 'artist': {
+      const a = p.artist
+      if (!a) return base
+      return [
+        kicker('IN THE LINE-UP'),
+        { label: 'title', text: up(a.name) },
+        { label: 'subtitle', text: title },
+        ...pick('date'),
+        ...(a.sessions ?? []).slice(0, 3).map(t => ({ label: 'detail' as const, text: up(t) })),
+        ...(a.styles?.length ? [{ label: 'music' as const, text: up(a.styles.slice(0, 3).join(' × ')) }] : []),
+        ...where,
+      ]
+    }
+    case 'lineup': return [kicker('LINE-UP'), { label: 'title', text: title }, ...pick('date'), ...pick('line-up'), ...where]
+    case 'programme': {
+      const items = (p.programme?.length ? p.programme : (p.agenda ?? []).map(a => `${a.time} ${a.what}`)).slice(0, 6)
+      return [kicker('PROGRAMME'), { label: 'title', text: title }, ...pick('date'), ...items.map(t => ({ label: 'detail' as const, text: up(t) })), ...where]
+    }
+    case 'passes': {
+      const items = (p.passes?.length ? p.passes : priceLines(p.price)).slice(0, 5)
+      return [kicker('PASSES'), { label: 'title', text: title }, ...pick('date'), ...items.map(t => ({ label: 'detail' as const, text: up(t) })), ...where]
+    }
+    case 'countdown': return [kicker('ONE WEEK TO GO'), { label: 'title', text: title }, ...when, ...where]
+    case 'last-call': return [kicker('LAST TICKETS'), { label: 'title', text: title }, ...when, ...pick('entry'), ...where]
+    case 'thanks': return [kicker('THANK YOU'), { label: 'title', text: title }, { label: 'subtitle', text: 'SEE YOU NEXT TIME' }]
+  }
+  return base
 }
 
 /** What a kept flyer differs from the event now: old → new pairs, then photo changes. */
@@ -75,16 +134,20 @@ export function flyerChanges(was: { lines: string[]; pictured: string[] }, now: 
 
 function textBlock(lines: FlyerLine[]) {
   const by = (l: FlyerLine['label']) => lines.filter(x => x.label === l).map(x => x.text)
-  const [title] = by('title'); const [date] = by('date'); const [time] = by('time')
+  const [title] = by('title'); const [date] = by('date'); const [time] = by('time') as (string | undefined)[]
   const agenda = by('agenda'); const [names] = by('line-up'); const [music] = by('music')
   const [entry] = by('entry'); const [venue] = by('venue')
+  const [kicker] = by('kicker'); const [subtitle] = by('subtitle'); const details = by('detail')
   return [
-    `"${date}" at the top.`,
+    kicker ? `Small label "${kicker}" at the very top.` : null,
+    date ? `"${date}" ${kicker ? 'under it' : 'at the top'}.` : null,
     `Huge title "${title}".`,
+    subtitle ? `Under the title, smaller: "${subtitle}".` : null,
+    details.length ? `A short list, one line each: ${details.map(d => `"${d}"`).join(', ')}.` : null,
     // Worded so Gemini doesn't paint a literal "LINE-UP" label.
     names ? `Under the title, the artists' names "${names}".` : null,
     music ? `Genre line "${music}".` : null,
-    `Big time badge "${time}".`,
+    time ? `Big time badge "${time}".` : null,
     agenda.length ? `A small programme list, one line each: ${agenda.map(a => `"${a}"`).join(', ')}.` : null,
     entry ? `Entry line "${entry}".` : null,
     venue ? `Bottom bar with a location pin: "${venue}".` : null,
@@ -94,21 +157,51 @@ function textBlock(lines: FlyerLine[]) {
 // The reader marks covered letters; this keeps the painter from covering them.
 const CLEAR_TEXT = 'Keep every letter fully visible: no person, hand, hat or object may cover or cut off any part of the text.'
 
-/** A full painting: the look, the people (as photos), every line spelled out. */
-export function paintPrompt(lines: FlyerLine[], look: FlyerLook, opts: { people: number; notes?: string | null; inspiration?: boolean } = { people: 0 }) {
-  const who = opts.people === 1
-    ? ' featuring the person from the first photo as the artist, big in the centre, keeping their real face'
-    : opts.people > 1 ? ` featuring the ${opts.people} people from the first ${opts.people} photos as the artists, big, keeping their real faces` : ''
+/**
+ * A full painting, the way the house process does it (~/Orgs/LaClave/assets/
+ * flyer-style.md, the image-from-gemini skill): the style reference flyer as
+ * image 1, then each artist's photo, numbered and named; the look; a strict
+ * layout in percentages (else heads cover the title); every word spelled out.
+ * Always a 9:16 story: the 4:5 feed post is recomposed from it (painting the
+ * feed straight from photos was refused far more often). Short on purpose:
+ * shorter prompts pass more often.
+ */
+export function paintPrompt(lines: FlyerLine[], look: FlyerLook, opts: { people?: string[]; grid?: string[]; styleRef?: boolean; notes?: string | null; inspiration?: boolean } = {}) {
+  let n = 0
+  const style = opts.styleRef ? ++n : 0
+  const people = opts.people ?? []
+  const first = n + 1
+  n += opts.grid?.length ? 1 : people.length
+  const who = opts.grid?.length
+    ? `, featuring all ${opts.grid.length} artists as a line-up of portraits, all the same size, each with their name just under it. Image ${first} is a grid of their photos, in this order: ${opts.grid.join(', ')}. Keep their real faces`
+    : people.length === 1
+      ? `, featuring the person from image ${first} as the artist, big in the centre`
+      : people.length > 1 ? `, featuring the ${people.length} artists from the photos, big` : ''
   const palette = look.palette?.length ? `Colours: ${look.palette.map(p => `${p.name} ${p.hex}`).join(', ')}.` : null
+  const hasPeople = people.length > 0 || !!opts.grid?.length
   return [
     `Tall vertical 9:16 Instagram story poster for a dance event${who}.`,
+    style ? `Image ${style} is the STYLE and LAYOUT reference: match its scene, colours, lettering and layout closely. Do not copy its words, people or dates.` : null,
+    people.length > 1 ? people.map((name, i) => `Image ${first + i}: ${name}.`).join(' ') : null,
     clean(look.description),
     palette,
+    hasPeople
+      ? 'Layout: the date and the title in the top 38%; the artists from 40% to 85% of the height, below the title, never covering any text; the details in the bottom 15%.'
+      : 'Layout: the date and the title in the top third; the details below, with room to breathe.',
     opts.inspiration ? 'The last image is a flyer the organizer likes: borrow its mood only. Do not copy its text, people or layout.' : null,
     opts.notes?.trim() ? `Also: ${clean(opts.notes)}` : null,
     `Exact text on the poster, spelled exactly, nothing else: ${textBlock(lines)}`,
     CLEAR_TEXT,
   ].filter(Boolean).join('\n')
+}
+
+/** The 4:5 feed post from a finished story: the same poster, recomposed (the house way). */
+export function recomposePrompt(lines: FlyerLine[]) {
+  return [
+    'Recompose this exact poster into a vertical 4:5 Instagram feed format. Keep the same scene, people, style, colours and all the text; move things so everything fits, nothing cropped.',
+    `The text stays exactly, spelled exactly: ${textBlock(lines)}`,
+    CLEAR_TEXT,
+  ].join('\n')
 }
 
 /** Edit the given poster: keep it, change only what's asked. Keeps the picture. */
@@ -130,21 +223,47 @@ export function refreshPrompt(lines: FlyerLine[]) {
   ].join('\n')
 }
 
-/** Read a look off flyers the organizer made before (Gemini text model, JSON out). */
+/**
+ * Read a look off flyers the organizer made before (Gemini text model, JSON
+ * out) — written the way the proven styles are (~/Orgs/LaClave/assets/
+ * flyer-style.md): the scene, then the lettering of each kind of text, so the
+ * next flyer matches element by element. The flyers are kept as the style's
+ * reference images (image 1 of every painting in it).
+ */
 export const LOOK_PROMPT = [
-  'These are dance-event flyers by one organizer. Describe their shared visual style so a new flyer can be painted in the same style.',
-  'In 3–4 sentences cover: the scene and background, the colours, the lettering (shape, weight, colour of the title and of the times), how people are shown, and the layout.',
+  'These are dance-event flyers by one organizer. Describe their shared visual style so a new flyer can be painted in exactly the same style.',
+  'Write it as one paragraph of 4–6 sentences, like a brief to a poster designer: the scene and background (setting, light, objects, textures); the lettering of each kind of text — the main title, the date, the genre or music line, the times, any box or badge (e.g. for workshops or entry), and the footer location line (font shape, weight, colour, effects like glow or gradient); how the people are shown; the layout from top to bottom.',
   'Do not mention any dates, names, places, prices or other words printed on them.',
   'Also give the 3–5 main colours with a short name and a hex value, and a 1–3 word name for the style.',
   'Reply as JSON: {"name": "...", "description": "...", "palette": [{"name": "...", "hex": "#rrggbb"}]}',
 ].join('\n')
 
-/** Starting points when an organizer has no flyers yet: four different directions. */
+/**
+ * More style ideas for a profile (Gemini text model, JSON out): new visual
+ * directions that fit its music and city and differ from the ones it has.
+ * Painted only when the organizer picks them.
+ */
+export function styleIdeasPrompt(c: { name: string; styles: string[]; city?: string | null; feelings?: string[]; existing: string[]; count: number }) {
+  return [
+    `Suggest ${c.count} distinct visual styles for dance-event flyers by ${c.name}${c.city ? ` in ${c.city}` : ''}. The music: ${c.styles.join(', ') || 'social dance'}.`,
+    c.feelings?.length ? `The feeling they want: ${c.feelings.join(', ').toLowerCase()}.` : null,
+    c.existing.length ? `Different from the styles they already have: ${c.existing.join('; ')}.` : null,
+    'Make them clearly different from each other: setting, era, colours, lettering. Each must work as a poster with a photo of the artists and clear, readable text.',
+    'For each: "name" (1–3 words), "hint" (up to 8 words), "description" (3–4 sentences: the scene and background, the colours, the lettering — shape, weight and colour of the title and of the times —, how people are shown, the layout; no dates, names, places, prices or other words to print), and "palette" (3–5 colours, each {"name", "hex": "#rrggbb"}).',
+    'Reply as JSON: {"styles": [{"name": "...", "hint": "...", "description": "...", "palette": [{"name": "...", "hex": "#rrggbb"}]}]}',
+  ].filter(Boolean).join('\n')
+}
+
+/**
+ * Starting points when an organizer has no flyers yet: the house's proven
+ * styles (~/Orgs/LaClave/assets/flyer-style.md Styles A and B,
+ * ~/Orgs/ikigai/ops/design/flyer-styles.md Styles B and D), lettering included.
+ */
 export const DIRECTIONS: (FlyerLook & { hint: string })[] = [
-  { name: 'Neon street', hint: 'Red neon, night, gold title', description: 'Red-neon Havana street at night: old colonial balconies, red and gold neon light along the facades, red palm leaves in the corners, a golden spotlight on the street. Tall condensed uppercase lettering, gold headline, white times.' },
-  { name: 'Revolution poster', hint: 'Bold flag shapes, halftone, cream paper', description: 'Bold propaganda-poster style on cream paper: big red and blue flag-like shapes with a white star, halftone print texture, the person in high-contrast duotone. Heavy blocky uppercase lettering in red and navy.' },
-  { name: 'Tropical', hint: 'Palms, warm sunset, vintage', description: 'Warm vintage tropical poster: sunset orange and pink sky, palm silhouettes, soft film grain, dancers silhouetted in the back. Elegant retro script for the title, cream condensed uppercase for the details.' },
-  { name: 'Afro club', hint: 'Purple and gold, stage lights', description: 'Luxury club poster: deep purple and magenta, stage lasers and haze, a blurred dancing crowd, gold geometric borders and confetti. 3D metallic gold title, white details.' },
+  { name: 'Neon street', hint: 'Red neon Havana, gold title', description: 'Red-neon Havana street at night: crumbling colonial balconies, red and gold neon light streaks along the facades, red palm leaves framing the corners, a golden spotlight cone on the empty street. Tall condensed uppercase lettering: gold-gradient headline and date, red and gold genre words, white times. A red-glow rounded box for workshops or entry. Footer: a thin gold rule and a gold location pin with the place.' },
+  { name: 'Cuban vintage', hint: '1950s Havana poster, cream paper', description: 'Vintage 1950s Cuban propaganda and Havana cabaret poster: aged cream paper texture with fold creases, screen-print look, red, navy and mustard palette, halftone sun rays behind the headline, old Havana facades and a classic car silhouette at the edges, distressed ink. Red script headline with a gold outline, navy condensed sans for the info lines, a red ticket-style box with a gold border, the location bar at the bottom.' },
+  { name: 'Afro club', hint: 'Purple and gold, stage lights', description: 'Luxury Afro-fusion club poster: purple and magenta with gold, stage lasers and haze, a blurred dancing crowd, kente-cloth strips, gold geometric African-pattern borders, gold palm and monstera leaves, gold confetti. 3D metallic gold title, a gold ribbon subtitle, a colourful genre line, a round gold time medallion, white details.' },
+  { name: 'Afro-tropical', hint: 'Bold street party, deep purple', description: 'Bold Afro-Caribbean street party poster on a deep purple background: vibrant orange, green, yellow and magenta, flat graphic African-print patterns and tropical leaves as borders, spiral sunburst shapes, a calm dark spotlight behind the people. Chunky playful display type with drop shadows: orange headline with a magenta shadow, yellow and green info lines, a patterned-border box for workshops or entry.' },
 ]
 
 // Read-back comparison: case, spacing, dash and bullet variants don't count as

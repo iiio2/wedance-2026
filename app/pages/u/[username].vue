@@ -8,6 +8,7 @@
  * 2026 tropical style.
  */
 import { MapPin, Pencil, ArrowLeft, Instagram, Youtube, Globe, Play, EyeOff, Calendar } from 'lucide-vue-next'
+import { festivalPath } from '#shared/utils/eventSlug'
 
 definePageMeta({ layout: false })
 
@@ -37,6 +38,9 @@ async function load() {
       yearPlan.value = result
     }).catch(() => {})
   } catch {
+    // An old handle: forward to the dancer's readable one.
+    const moved = await $trpc.profile.movedTo.query({ username: username.value }).catch(() => null)
+    if (moved) { await navigateTo(`/u/${moved.username}`, { replace: true, redirectCode: 301 }); return }
     profile.value = null
     failed.value = true
   } finally {
@@ -196,7 +200,7 @@ useHead(() => ({
           <NuxtLink
             v-for="f in upcomingFestivals"
             :key="f.slug"
-            :to="`/festivals/${f.slug}`"
+            :to="`${festivalPath(f.slug)}`"
             class="flex items-center gap-3 rounded-xl p-3 no-underline transition-colors hover:brightness-[0.97]"
             style="background:white; border:1px solid color-mix(in srgb, var(--wd-brown-900) 10%, transparent);"
           >

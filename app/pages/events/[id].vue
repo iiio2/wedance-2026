@@ -1,21 +1,24 @@
 <script setup lang="ts">
 /**
- * /events/<id> — a single event, rendered through the SAME rich view as a
+ * /events/<name>-<short id> (old /events/<id> links redirect here) — a single event, rendered through the SAME rich view as a
  * festival (an event is just a smaller festival). It reuses FestivalHero and the
  * festival section language; sections appear only when the event has that
  * content, so an event can grow into a full festival-grade page over time.
  */
-import { Check, Plus, ArrowLeft, MapPin, Globe, User, Euro, Users } from 'lucide-vue-next'
+import { Check, Plus, ArrowLeft, MapPin, Globe, User, Euro, Users, Pencil } from 'lucide-vue-next'
 import { findMockEvent } from '~/lib/mockEvents'
 import { formatEventWhen, eventLocalDate } from '#shared/utils/eventTime'
 import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
 import { mixHex, readableOn } from '~/lib/contrast'
 import { readableAccent } from '~/lib/accent'
+import { isUuid, eventSlug } from '#shared/utils/eventSlug'
+import { festivalPath } from '#shared/utils/eventSlug'
 
 definePageMeta({ layout: false })
 
 const route = useRoute()
+const router = useRouter()
 const { $trpc } = useNuxtApp()
 const { weekPlanIds, toggleEvent } = useWeekPlan()
 
@@ -33,17 +36,27 @@ function onPick() {
 
 const id = computed(() => String(route.params.id))
 const ev = ref<any>(null)
+const festivalData = ref<Awaited<ReturnType<typeof $trpc.events.festival.query>> | null>(null)
 const pending = ref(true)
 const failed = ref(false)
 
 async function load() {
   pending.value = true; failed.value = false
   try {
+    // Booking requests are only linked by their full id; anything else is a dated event.
+    if (!isUuid(id.value)) throw new Error('not a booking')
     ev.value = await $trpc.booking.getEvent.query({ id: id.value })
   } catch {
     try {
       // A dated public event (wedance.vip mirror) — adapt to the booking shape.
-      ev.value = fromSyncedEvent(await $trpc.events.get.query({ id: id.value }))
+      const e = await $trpc.events.get.query({ id: id.value })
+      // A festival renders the festival page (programme, passes, line-up, dinners…).
+      if (e.festival) festivalData.value = await $trpc.events.festival.query({ id: e.id })
+      ev.value = fromSyncedEvent(e)
+      // An old /events/<id> link, or a name that changed since → the current
+      // address, without a new history entry.
+      const canonical = eventSlug(e)
+      if (id.value !== canonical) router.replace({ path: `/events/${canonical}`, query: route.query, hash: route.hash })
     } catch {
       // Neither — fall back to a mock city event so it still has a page.
       const mock = findMockEvent(id.value)
@@ -53,6 +66,15 @@ async function load() {
   } finally { pending.value = false }
 }
 onMounted(load)
+
+// Managers of the hosting profile (and admins) get an Edit button. Bookings and
+// synced events have no host on WeDance, so nobody edits them here.
+const canEdit = ref(false)
+watch(() => ev.value?.id, async (eid) => {
+  canEdit.value = false
+  if (!eid || !isUuid(eid)) return
+  try { canEdit.value = (await $trpc.businessEvents.canEdit.query({ id: eid })).canEdit } catch { /* stays hidden */ }
+})
 
 function fromSyncedEvent(e: any) {
   return {
@@ -70,6 +92,8 @@ function fromSyncedEvent(e: any) {
     ticketUrl: e.ticketUrl || '',
     link: e.link || '',
     price: e.price || '',
+    editedAt: e.editedAt || null,
+    checkedBy: e.checkedBy || null,
     // The night's programme (business-mode events): [{ time, what }].
     agenda: (e.agenda || []) as { time: string; what: string }[],
     cover: e.cover || '',
@@ -144,7 +168,8 @@ useHead(() => ({
 </script>
 
 <template>
-  <div class="min-h-screen bg-background text-foreground font-display">
+  <FestivalView v-if="festivalData && !pending" :data="festivalData" :type="ev?.eventType" :edit-to="canEdit ? `/business/events/${festivalData.eventId}` : undefined" />
+  <div v-else class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
     <main>
@@ -160,13 +185,28 @@ useHead(() => ({
 
     <template v-else>
       <!-- Part-of-festival banner (workshops / festival schedule items) -->
-      <NuxtLink v-if="parentFestival" :to="`/festivals/${parentFestival.slug}`" class="block border-b hover:brightness-95 transition-all bg-primary/[6.3%] border-border">
+      <NuxtLink v-if="parentFestival" :to="`${festivalPath(parentFestival.slug)}`" class="block border-b hover:brightness-95 transition-all bg-primary/[6.3%] border-border">
         <div class="max-w-3xl mx-auto px-4 py-2.5 flex items-center gap-2 text-sm text-muted-foreground font-sans">
           <span class="text-eyebrow uppercase tracking-widest font-black shrink-0 text-primary">Festival</span>
           <span class="truncate">Part of <b class="text-foreground">{{ parentFestival.name }}</b></span>
           <span class="ml-auto font-bold whitespace-nowrap shrink-0 text-primary">View festival →</span>
         </div>
       </NuxtLink>
+
+      <div v-if="canEdit" class="border-b bg-secondary/[8%] border-border">
+        <div class="max-w-3xl mx-auto px-4 py-2 flex items-center gap-3 text-sm font-sans">
+          <span class="text-muted-foreground">You manage this event.</span>
+          <Button variant="outline-pill" size="pill-sm" class="ml-auto" as-child>
+            <NuxtLink :to="`/business/events/${ev.id}`"><Pencil /> Edit event</NuxtLink>
+          </Button>
+        </div>
+      </div>
+
+      <div v-if="ev.editedAt" class="max-w-3xl mx-auto px-4 pt-3 font-sans">
+        <p class="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-bold text-wd-green-700">
+          <Check class="size-3.5" aria-hidden="true" /> Checked{{ ev.checkedBy ? ` by ${ev.checkedBy}` : '' }} · {{ new Date(ev.editedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }}
+        </p>
+      </div>
 
       <!-- Same hero as festivals -->
       <FestivalHero :festival="asFestival" review-target-type="event" entity-label="event" cta-anchor="#going" cta-fallback-label="I'm going" :picked="picked" :date-label="ev.when" @pick="onPick" />

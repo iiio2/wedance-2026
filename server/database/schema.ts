@@ -19,6 +19,8 @@ export const dancers = pgTable('dancers', {
   // for dancers created before this field existed. Nullable so legacy rows stay
   // valid until backfilled; unique so the URL is a stable identity.
   username: text('username').unique(),
+  // Earlier handles (0036), so old /u/<handle> links forward.
+  oldUsernames: jsonb('old_usernames').$type<string[]>().notNull().default([]),
   // Profile detail rendered on /u/<username>: a short bio + social links.
   bio: text('bio'),
   instagram: text('instagram'),
@@ -319,8 +321,20 @@ export const profiles = pgTable('profiles', {
   // 'OpenAir' | 'Indoor' | … — an OpenAir community spot (e.g. Pinakothek) is a
   // free commons, not a commercial rental.
   venueType: text('venue_type'),
-  // Drawn map of the areas (image URL).
+  // Drawn map of the areas (image URL) — or, for most imported venues, their
+  // Google Maps link (maps.google.com/?cid=…).
   mapUrl: text('map_url'),
+  // Venue details (migration 0036, shared/types/venueDetails.ts): v3's
+  // amenities, how many people it holds, opening hours, the floor plan image,
+  // and booking contacts only signed-in organizers see (never public).
+  amenities: jsonb('amenities').$type<string[]>().notNull().default([]),
+  capacity: integer('capacity'),
+  openingHours: jsonb('opening_hours').$type<import('../../shared/types/venueDetails').OpeningHours>().notNull().default([]),
+  floorPlan: text('floor_plan'),
+  contact: jsonb('contact').$type<import('../../shared/types/venueDetails').VenueContact>().notNull().default({}),
+  // Where the venue is (0036), from its Google listing.
+  lat: doublePrecision('lat'),
+  lng: doublePrecision('lng'),
   // Community guidelines the space runs by (the "politics" a moderator proposes).
   guidelines: text('guidelines'),
   // 'free' (community commons, moderator-managed) | 'commercial' (venue rental).
@@ -333,6 +347,8 @@ export const profiles = pgTable('profiles', {
   socials: json('socials').$type<{ platform: string; url: string }[]>().default([]),
   // Gallery for artists/venues; `photo` stays the hero (the one flyers and cards use).
   photos: jsonb('photos').$type<{ url: string }[]>().notNull().default([]),
+  // Video links (YouTube embed URLs) on the artist's page (migration 0033).
+  videos: jsonb('videos').$type<{ url: string }[]>().notNull().default([]),
   claimed: boolean('claimed').default(false),
   status: text('status').notNull().default('visible').$type<'visible' | 'hidden'>(),
   createdAt: timestamp('created_at').defaultNow(),
@@ -701,10 +717,17 @@ export const events = pgTable('events', {
   // and optionally on the flyer, and which photo of each artist the flyer uses
   // (a URL, or null = name only; unset = their main photo).
   agenda: jsonb('agenda').$type<{ time: string; what: string }[]>().notNull().default([]),
-  flyerOptions: jsonb('flyer_options').$type<{ showAgenda?: boolean; photos?: Record<string, string | null> }>().notNull().default({}),
+  flyerOptions: jsonb('flyer_options').$type<{ showAgenda?: boolean; photos?: Record<string, string | null>; names?: Record<string, string> }>().notNull().default({}),
   // The Instagram caption to post with the flyer (migration 0030), plus the
   // lines it was written from (out of date when the details change).
   caption: jsonb('caption').$type<{ language: string; text: string; lines: string[]; writtenAt: string } | null>(),
+  // Last checked by a person on WeDance (migration 0031): shown as "Checked by"
+  // on the event page; the v3 sync no longer overwrites an edited event.
+  editedAt: timestamp('edited_at'),
+  editedBy: uuid('edited_by').references(() => dancers.id, { onDelete: 'set null' }),
+  // Festivals are events (migration 0032): logo, links, passes, programme…
+  // (shared/types/festivalDetails.ts). Null for an ordinary event.
+  festival: jsonb('festival').$type<import('../../shared/types/festivalDetails').FestivalDetails | null>(),
 }, (t) => [
   index('events_host_profile_idx').on(t.hostProfileId),
   uniqueIndex('events_slug_uidx').on(t.slug).where(sql`${t.slug} IS NOT NULL`),
@@ -852,16 +875,38 @@ export const brandLooks = pgTable('brand_looks', {
   index('brand_looks_profile_idx').on(t.profileId),
 ])
 
+// Content plan (migration 0037): an event's posts, each with its own flyer
+// versions (event_flyers.post_id) and one kept. Kinds: shared/utils/posts.ts.
+export const eventPosts = pgTable('event_posts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull().$type<import('../../shared/utils/posts').PostKind>(),
+  // The artist an artist post is about (their handle).
+  subject: text('subject'),
+  dueOn: date('due_on'),
+  // 'post' 4:5 · 'story' 9:16
+  format: text('format').notNull().default('post').$type<'post' | 'story'>(),
+  status: text('status').notNull().default('planned').$type<'planned' | 'posted' | 'dropped'>(),
+  sort: integer('sort').notNull().default(0),
+  // Its Instagram caption, like events.caption (the announcement's is events.caption).
+  caption: jsonb('caption').$type<{ language: string; text: string; lines: string[]; writtenAt: string } | null>(),
+  createdBy: uuid('created_by').references(() => dancers.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => [index('event_posts_event_idx').on(t.eventId)])
+
 export const eventFlyers = pgTable('event_flyers', {
   id: uuid('id').primaryKey().defaultRandom(),
   eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  // The post this version is for (0037); one kept per post.
+  postId: uuid('post_id').references(() => eventPosts.id, { onDelete: 'cascade' }),
   // One sitting: the four directions, or a flyer and its repaints — the versions you compare.
   batchId: uuid('batch_id').notNull(),
   lookId: uuid('look_id').references(() => brandLooks.id, { onDelete: 'set null' }),
   look: jsonb('look').$type<FlyerLookSpec>().notNull(),
   mode: text('mode').notNull().default('paint'), // paint · direction · fix · refresh
   baseFlyerId: uuid('base_flyer_id'),
-  status: text('status').notNull().default('painting'), // painting · ready · failed
+  status: text('status').notNull().default('painting'), // painting · checking (picture done, words being read) · ready · failed · stopped
   url: text('url'),
   width: integer('width'),
   height: integer('height'),
@@ -880,4 +925,54 @@ export const eventFlyers = pgTable('event_flyers', {
 }, (t) => [
   index('event_flyers_event_idx').on(t.eventId, t.createdAt),
   index('event_flyers_batch_idx').on(t.batchId),
+])
+
+// ---------------------------------------------------------------------------
+// Artist confirmation (migration 0033). An organizer's photos, video and name
+// for an artist in their line-up are suggestions on the artist's profile until
+// the artist approves them through a personal link (profile_invites).
+// ---------------------------------------------------------------------------
+export const profileSuggestions = pgTable('profile_suggestions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull().$type<'photo' | 'video' | 'name' | 'bio' | 'city' | 'styles' | 'instagram' | 'website' | 'facebook'>(),
+  value: text('value').notNull(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'set null' }),
+  suggestedBy: uuid('suggested_by').references(() => dancers.id, { onDelete: 'set null' }),
+  status: text('status').notNull().default('pending').$type<'pending' | 'approved' | 'rejected'>(),
+  decidedAt: timestamp('decided_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  index('profile_suggestions_profile_idx').on(t.profileId, t.status),
+  uniqueIndex('profile_suggestions_pending_uidx').on(t.profileId, t.kind, t.value).where(sql`${t.status} = 'pending'`),
+])
+
+export const profileInvites = pgTable('profile_invites', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  token: text('token').notNull(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }),
+  createdBy: uuid('created_by').references(() => dancers.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow(),
+  lastUsedAt: timestamp('last_used_at'),
+  // The artist's answer (migration 0034): in or not, programme right or what's
+  // wrong, OK for posts using their photo, and anything else they want to say.
+  status: text('status').notNull().default('invited').$type<'invited' | 'confirmed' | 'declined' | 'proposed'>(),
+  respondedAt: timestamp('responded_at'),
+  programmeOk: boolean('programme_ok'),
+  programmeNote: text('programme_note'),
+  postsOkAt: timestamp('posts_ok_at'),
+  message: text('message'),
+  // Asking a venue (migration 0035): the same link, kind 'venue'. Status then
+  // means can host (confirmed) · another date (proposed) · can't (declined).
+  kind: text('kind').notNull().default('artist').$type<'artist' | 'venue'>(),
+  request: jsonb('request').$type<import('../../shared/types/venueAsk').VenueRequest | null>(),
+  terms: jsonb('terms').$type<import('../../shared/types/venueAsk').VenueTerms | null>(),
+  alternative: text('alternative'),
+  outcome: text('outcome').$type<'booked' | 'elsewhere' | null>(),
+  // When the page's team was last emailed about this link (0035).
+  notifiedAt: timestamp('notified_at'),
+}, (t) => [
+  uniqueIndex('profile_invites_token_uidx').on(t.token),
+  uniqueIndex('profile_invites_event_profile_uidx').on(t.eventId, t.profileId),
 ])

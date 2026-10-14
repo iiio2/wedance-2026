@@ -13,6 +13,7 @@ import { daysUntil } from '#shared/utils/festivalDateFormatter'
 import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
 import { accentText, readableAccent } from '~/lib/accent'
+import { festivalPath } from '#shared/utils/eventSlug'
 
 export interface FestivalCardData {
   slug: string
@@ -90,7 +91,7 @@ const dateRange = computed(() => {
         <div class="flex-1 min-w-0">
           <div class="flex items-start justify-between gap-2">
             <h3 class="font-bold text-lg leading-tight text-foreground">
-              <NuxtLink :to="`/festivals/${festival.slug}`" class="outline-none after:absolute after:inset-0">
+              <NuxtLink :to="`${festivalPath(festival.slug)}`" class="outline-none after:absolute after:inset-0">
                 {{ festival.name }}
               </NuxtLink>
             </h3>

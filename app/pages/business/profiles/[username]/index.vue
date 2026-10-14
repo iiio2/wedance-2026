@@ -3,7 +3,9 @@
  * /business/profiles/<handle> — edit a profile you manage: details, photos (one is the main
  * photo used on cards and flyers), links, and venue details for venues.
  */
-import { ExternalLink, Star, Trash2, Check, Users } from 'lucide-vue-next'
+import { ExternalLink, Star, Trash2, Check, Users, Palette } from 'lucide-vue-next'
+import type { VenueDetailsValue } from '~/components/business/BusinessVenueDetails.vue'
+import type { Room } from '~/components/business/BusinessVenueRooms.vue'
 
 definePageMeta({ layout: 'business' })
 
@@ -19,14 +21,18 @@ const error = ref<string | null>(null)
 const form = reactive({
   name: '', city: '', bio: '', styles: [] as string[],
   instagram: '', website: '', facebook: '',
-  address: '', floorType: '', venueType: '',
   photo: null as string | null,
   photos: [] as { url: string }[],
 })
+// Venues: their details and rooms.
+const venue = reactive<VenueDetailsValue>({ address: '', venueType: '', floorType: '', capacity: null, amenities: [], openingHours: [], floorPlan: null, contact: {} })
+const rooms = ref<Room[]>([])
+const keptRooms = ref<string[]>([])
 const newPhoto = ref('')
 // Last loaded/saved state — drives the honest Saved / Unsaved label.
 const snapshot = ref('')
-const dirty = computed(() => !!snapshot.value && JSON.stringify(form) !== snapshot.value)
+const state = () => JSON.stringify([form, venue, rooms.value])
+const dirty = computed(() => !!snapshot.value && state() !== snapshot.value)
 
 const SOCIALS = ['instagram', 'website', 'facebook'] as const
 function socialOf(p: Profile, platform: string) {
@@ -42,12 +48,18 @@ async function load() {
     Object.assign(form, {
       name: p.name, city: p.city, bio: p.bio, styles: [...p.styles],
       instagram: socialOf(p, 'instagram'), website: socialOf(p, 'website'), facebook: socialOf(p, 'facebook'),
-      address: p.address, floorType: p.floorType, venueType: p.venueType,
       photo: p.photo,
       // Older profiles only have the single photo — show it in the gallery.
       photos: p.photos.length ? [...p.photos] : (p.photo ? [{ url: p.photo }] : []),
     })
-    snapshot.value = JSON.stringify(form)
+    Object.assign(venue, {
+      address: p.address, venueType: p.venueType, floorType: p.floorType, capacity: p.capacity,
+      amenities: [...p.amenities], openingHours: p.openingHours.map(h => ({ ...h })), floorPlan: p.floorPlan, contact: { ...p.contact },
+    })
+    rooms.value = p.type === 'venue'
+      ? (await $trpc.business.spaces.query({ username: username.value })).map((r: any) => ({ id: r.id, name: r.name, capacity: r.capacity, floorType: r.floorType ?? '', priceInfo: r.priceInfo ?? '', description: r.description ?? '', imageUrl: r.imageUrl }))
+      : []
+    snapshot.value = state()
   } catch (e: any) {
     error.value = e?.message || 'Could not load this profile.'
   } finally {
@@ -94,8 +106,21 @@ async function save() {
       socials,
       photo: form.photo,
       photos: form.photos,
-      ...(p.type === 'venue' ? { address: form.address, floorType: form.floorType, venueType: form.venueType } : {}),
+      ...(p.type === 'venue' ? {
+        address: venue.address, floorType: venue.floorType, venueType: venue.venueType,
+        capacity: venue.capacity || null, amenities: venue.amenities, openingHours: venue.openingHours.filter(h => h.hours.trim()),
+        floorPlan: venue.floorPlan || null,
+        contact: Object.fromEntries(Object.entries(venue.contact).map(([k, v]) => [k, String(v ?? '').trim()]).filter(([, v]) => v)),
+      } : {}),
     })
+    if (p.type === 'venue') {
+      const r = await $trpc.business.saveSpaces.mutate({
+        username: username.value,
+        // Rooms without a name aren't saved.
+        spaces: rooms.value.filter(x => x.name.trim()).map(x => ({ ...x, capacity: x.capacity || null })),
+      })
+      keptRooms.value = r.kept
+    }
     savedAt.value = Date.now()
     await load()
   } catch (e: any) {
@@ -125,6 +150,9 @@ const photoHint = computed(() => loaded.value?.type === 'artist'
       >
         <Button variant="outline-pill" size="pill-sm" as-child>
           <NuxtLink :to="`/business/profiles/${loaded.username}/team`"><Users /> Team</NuxtLink>
+        </Button>
+        <Button variant="outline-pill" size="pill-sm" as-child>
+          <NuxtLink :to="`/business/profiles/${loaded.username}/styles`"><Palette /> Flyer styles</NuxtLink>
         </Button>
         <Button variant="outline-pill" size="pill-sm" as-child>
           <NuxtLink :to="`/@${loaded.username}`" target="_blank"><ExternalLink /> View page</NuxtLink>
@@ -185,20 +213,11 @@ const photoHint = computed(() => loaded.value?.type === 'artist'
           </div>
         </section>
 
-        <section v-if="loaded.type === 'venue'" class="mt-4 rounded-2xl border bg-card p-5 shadow-wd-card">
-          <h2 class="text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Venue</h2>
-          <div class="mt-4 grid gap-4 sm:grid-cols-3">
-            <Field id="edit-address" label="Address" class="sm:col-span-3">
-              <Input v-model="form.address" />
-            </Field>
-            <Field id="edit-floor" label="Floor" optional>
-              <Input v-model="form.floorType" placeholder="Parquet, tiles…" />
-            </Field>
-            <Field id="edit-venue-type" label="Type" optional>
-              <Input v-model="form.venueType" placeholder="Club, studio, outdoor…" />
-            </Field>
-          </div>
-        </section>
+        <template v-if="loaded.type === 'venue'">
+          <BusinessVenueDetails v-model="venue" class="mt-4" />
+          <BusinessVenueRooms v-model="rooms" class="mt-4" />
+          <p v-if="keptRooms.length" class="mt-2 text-sm text-muted-foreground">Kept {{ keptRooms.join(', ') }}: someone already asked to book {{ keptRooms.length === 1 ? 'it' : 'them' }}.</p>
+        </template>
 
         <div class="mt-6 flex items-center gap-3">
           <Button type="submit" variant="pill" :loading="saving">Save changes</Button>

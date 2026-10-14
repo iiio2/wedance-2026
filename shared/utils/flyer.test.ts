@@ -75,10 +75,20 @@ describe('checkFlyerText', () => {
 
 describe('paintPrompt', () => {
   it('spells out every line and the people', () => {
-    const p = paintPrompt(flyerLines(ev), { description: 'Red neon street.' }, { people: 1 })
-    expect(p).toContain('person from the first photo')
+    const p = paintPrompt(flyerLines(ev), { description: 'Red neon street.' }, { people: ['Yunior'] })
+    expect(p).toContain('featuring the person from image 1 as the artist')
+    expect(p).toContain('Layout: the date and the title in the top 38%')
     expect(p).toContain('"LUMA · NEUHAUSER STR. 47 · MÜNCHEN"')
     expect(p).toContain('"19:00 Reparto workshop · Yunior"')
+  })
+})
+
+describe('paintPrompt, the house way', () => {
+  it('names the style reference as image 1 and numbers the photos after it', () => {
+    const p = paintPrompt(flyerLines(ev), { description: 'Red neon street.' }, { styleRef: true, people: ['Yunior', 'Alösha'] })
+    expect(p).toContain('Image 1 is the STYLE and LAYOUT reference')
+    expect(p).toContain('Image 2: Yunior. Image 3: Alösha.')
+    expect(p).toContain('Tall vertical 9:16')
   })
 })
 
@@ -96,5 +106,20 @@ describe('a line painted twice', () => {
     const c = checkFlyerText(lines, [...lines.map(l => l.text), 'TIMBA × BACHATA'])
     expect(c.ok).toBe(true)
     expect(c.extra).toEqual(['TIMBA × BACHATA (twice)'])
+  })
+})
+
+describe('a festival over several days', () => {
+  it('shows the dates and no time', () => {
+    const lines = flyerLines({ name: 'Menéate Viena', startDate: '2026-11-26T20:00:00Z', endDate: '2026-11-29T22:59:00Z', timezone: 'Europe/Vienna', artists: [] })
+    expect(lines.map(l => l.text)).toEqual(['MENÉATE VIENA', '26 – 29 NOVEMBER'])
+  })
+  it('spans months', () => {
+    const lines = flyerLines({ name: 'X', startDate: '2026-10-30T10:00:00Z', endDate: '2026-11-01T20:00:00Z', timezone: 'Europe/Berlin', artists: [] })
+    expect(lines[1]!.text).toBe('30 OCTOBER – 1 NOVEMBER')
+  })
+  it('a night past midnight is still one night', () => {
+    const lines = flyerLines({ name: 'X', startDate: '2026-10-15T20:00:00Z', endDate: '2026-10-16T01:00:00Z', timezone: 'Europe/Berlin', artists: [] })
+    expect(lines.map(l => l.label)).toEqual(['title', 'date', 'time'])
   })
 })

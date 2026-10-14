@@ -2,7 +2,8 @@ import { z } from 'zod'
 import { eq, and, or, ilike, desc, inArray, sql } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure, adminProcedure } from '../trpc'
-import { profiles, profileMembers, profileClaims, dancers, cities, events } from '../../database/schema'
+import { profiles, profileMembers, profileClaims, dancers, cities, events, bookableSpaces, bookingRequests } from '../../database/schema'
+import { WEEKDAYS } from '../../../shared/types/venueDetails'
 import { slugify, randomSuffix } from '../../utils/slug'
 import { parseInstagramHandle, instagramUrl } from '../../../shared/utils/instagram'
 import { grant, logAccess } from '../../utils/profileAccess'
@@ -34,6 +35,17 @@ const editableFields = {
   address: z.string().max(300),
   floorType: z.string().max(60),
   venueType: z.string().max(60),
+  // Venue details (0036).
+  amenities: z.array(z.string().trim().min(1).max(40)).max(30),
+  capacity: z.number().int().min(1).max(100_000).nullable(),
+  openingHours: z.array(z.object({ day: z.enum(WEEKDAYS), hours: z.string().trim().min(1).max(60) })).max(14),
+  floorPlan: z.string().url().nullable(),
+  contact: z.object({
+    phone: z.string().trim().max(40).optional(),
+    email: z.string().trim().max(200).optional(),
+    whatsapp: z.string().trim().max(60).optional(),
+    telegram: z.string().trim().max(100).optional(),
+  }),
 }
 
 // Membership check shared by get/update. Admins may manage any profile.
@@ -248,7 +260,57 @@ export const businessRouter = router({
         address: p.address ?? '',
         floorType: p.floorType ?? '',
         venueType: p.venueType ?? '',
+        amenities: (p.amenities ?? []) as string[],
+        capacity: (p.capacity ?? null) as number | null,
+        openingHours: (p.openingHours ?? []) as { day: (typeof WEEKDAYS)[number]; hours: string }[],
+        floorPlan: (p.floorPlan ?? null) as string | null,
+        contact: (p.contact ?? {}) as { phone?: string; email?: string; whatsapp?: string; telegram?: string },
       }
+    }),
+
+  // A venue's rooms (bookable_spaces): name, capacity, floor, price info, photo.
+  spaces: protectedProcedure
+    .input(z.object({ username: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const p = await requireMember(ctx, input.username)
+      return ctx.db.select({
+        id: bookableSpaces.id, name: bookableSpaces.name, capacity: bookableSpaces.capacity, floorType: bookableSpaces.floorType,
+        priceInfo: bookableSpaces.priceInfo, description: bookableSpaces.description, imageUrl: bookableSpaces.imageUrl,
+      }).from(bookableSpaces).where(eq(bookableSpaces.profileId, p.id)).orderBy(bookableSpaces.sortOrder)
+    }),
+
+  // Save the rooms as listed: new ones added, changed ones updated, removed ones
+  // deleted — except rooms someone already asked to book, which stay.
+  saveSpaces: protectedProcedure
+    .input(z.object({
+      username: z.string().min(1),
+      spaces: z.array(z.object({
+        id: z.string().uuid().optional(),
+        name: z.string().trim().min(1).max(80),
+        capacity: z.number().int().min(1).max(100_000).nullable().optional(),
+        floorType: z.string().trim().max(60).optional(),
+        priceInfo: z.string().trim().max(200).optional(),
+        description: z.string().trim().max(1000).optional(),
+        imageUrl: z.string().url().nullable().optional(),
+      })).max(30),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const p = await requireMember(ctx, input.username)
+      const existing = await ctx.db.select({ id: bookableSpaces.id, name: bookableSpaces.name }).from(bookableSpaces).where(eq(bookableSpaces.profileId, p.id))
+      const keep = new Set(input.spaces.map(s => s.id).filter(Boolean))
+      const kept: string[] = []
+      for (const e of existing) {
+        if (keep.has(e.id)) continue
+        const [b] = await ctx.db.select({ id: bookingRequests.id }).from(bookingRequests).where(eq(bookingRequests.spaceId, e.id)).limit(1)
+        if (b) kept.push(e.name)
+        else await ctx.db.delete(bookableSpaces).where(eq(bookableSpaces.id, e.id))
+      }
+      for (const [i, s] of input.spaces.entries()) {
+        const row = { name: s.name, capacity: s.capacity ?? null, floorType: s.floorType || null, priceInfo: s.priceInfo || null, description: s.description || null, imageUrl: s.imageUrl ?? null, sortOrder: i }
+        if (s.id && existing.some(e => e.id === s.id)) await ctx.db.update(bookableSpaces).set(row).where(eq(bookableSpaces.id, s.id))
+        else await ctx.db.insert(bookableSpaces).values({ ...row, profileId: p.id })
+      }
+      return { saved: true, kept }
     }),
 
   update: protectedProcedure

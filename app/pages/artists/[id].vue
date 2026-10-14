@@ -8,6 +8,7 @@ import { Instagram, Youtube, Globe, Calendar, MapPin, ArrowRight } from 'lucide-
 import { findArtist, festivalAppearances, cityAppearances, artistOrigin, artistResidence, artistLanguages, placeFlag } from '~/data/artists'
 import { WD } from '~/lib/brand'
 import { mixHex, readableOn } from '~/lib/contrast'
+import { festivalPath } from '#shared/utils/eventSlug'
 
 definePageMeta({ layout: false })
 
@@ -187,7 +188,7 @@ function formatDateRange(start: string, end: string) {
           <NuxtLink
             v-for="a in festivals"
             :key="a.festival.slug"
-            :to="`/festivals/${a.festival.slug}`"
+            :to="`${festivalPath(a.festival.slug)}`"
             class="group block rounded-2xl overflow-hidden bg-white border transition-all hover:-translate-y-1"
             :style="{ borderColor: a.festival.accentColor + '55', boxShadow: '0 1px 0 ' + a.festival.accentColor + '22, 0 8px 22px rgba(59,31,18,0.05)' }"
           >

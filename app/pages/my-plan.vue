@@ -19,6 +19,7 @@ import { detectDanceStyle, relatedDanceStyles } from '#shared/dance-styles'
 import * as cubanFire from '~/data/mock-cuban-fire'
 import * as caribbeanUrbanFire from '~/data/mock-caribbean-urban-fire'
 import { WD } from '~/lib/brand'
+import { festivalPath } from '#shared/utils/eventSlug'
 
 definePageMeta({ layout: false })
 
@@ -690,7 +691,7 @@ function tracks(f: CatalogueEntry): Track[] {
       // Tickets section, not on the organizer's own site.
       action: p.ticketBought
         ? null
-        : { label: f.ticketFromPrice ? `Buy ${priceText}` : 'Buy', href: `/festivals/${f.slug}#tickets`, external: false },
+        : { label: f.ticketFromPrice ? `Buy ${priceText}` : 'Buy', href: `${festivalPath(f.slug)}#tickets`, external: false },
       toggleKey: 'ticketBought',
       done: !!p.ticketBought,
     },
@@ -726,7 +727,7 @@ function tracks(f: CatalogueEntry): Track[] {
       icon: Home,
       label: 'Stay',
       state: p.stayBooked ? { text: 'Booked', tone: 'done' } : { text: 'Not booked', tone: 'todo' },
-      action: p.stayBooked ? null : { label: 'Share a room', href: `/festivals/${f.slug}#activities`, external: false },
+      action: p.stayBooked ? null : { label: 'Share a room', href: `${festivalPath(f.slug)}#activities`, external: false },
       altAction: p.stayBooked ? undefined : { label: 'or hotel', href: staysLink(f), external: true },
       toggleKey: 'stayBooked',
       done: !!p.stayBooked,
@@ -737,7 +738,7 @@ function tracks(f: CatalogueEntry): Track[] {
       icon: GraduationCap,
       label: 'Workshops',
       state: { text: `${f.workshopCount} on the schedule · ${getSelectedWorkshops(f.slug).size} picked`, tone: getSelectedWorkshops(f.slug).size > 0 ? 'done' : 'todo' },
-      action: getWorkshopsForFestival(f.slug).length === 0 ? { label: 'Browse workshops', href: `/festivals/${f.slug}#schedule`, external: false } : null,
+      action: getWorkshopsForFestival(f.slug).length === 0 ? { label: 'Browse workshops', href: `${festivalPath(f.slug)}#schedule`, external: false } : null,
       done: getSelectedWorkshops(f.slug).size > 0,
     },
     // Partner
@@ -746,7 +747,7 @@ function tracks(f: CatalogueEntry): Track[] {
       icon: Heart,
       label: 'Partner',
       state: p.partnerFound ? { text: 'Matched', tone: 'done' } : { text: 'Not looking yet', tone: 'todo' },
-      action: p.partnerFound ? null : { label: 'Find one', href: `/festivals/${f.slug}#discover`, external: false },
+      action: p.partnerFound ? null : { label: 'Find one', href: `${festivalPath(f.slug)}#discover`, external: false },
       toggleKey: 'partnerFound',
       done: !!p.partnerFound,
     },
@@ -756,7 +757,7 @@ function tracks(f: CatalogueEntry): Track[] {
       icon: Coffee,
       label: 'Community',
       state: { text: 'Rides, dinners, roommate', tone: 'muted' },
-      action: { label: 'Browse', href: `/festivals/${f.slug}#activities`, external: false },
+      action: { label: 'Browse', href: `${festivalPath(f.slug)}#activities`, external: false },
       done: false,
     },
   ]
@@ -1343,7 +1344,7 @@ const heatItems = computed<HeatItem[]>(() => {
       key: `fest-${f.slug}`,
       label: `${f.name} · early-bird`,
       detail: `Ends in ${d}d · from €${f.ticketFromPrice}`,
-      href: `/festivals/${f.slug}#tickets`,
+      href: `${festivalPath(f.slug)}#tickets`,
       external: false,
       color: WD.red600,
       urgency: 100 - d,
@@ -2434,7 +2435,7 @@ function cardSummary(f: CatalogueEntry) {
 
             <div class="mt-4 flex items-center gap-4 text-xs">
               <NuxtLink
-                :to="`/festivals/${f.slug}`"
+                :to="`${festivalPath(f.slug)}`"
                 class="italic hover:underline text-muted-foreground font-sans"
               >
                 Open festival page →

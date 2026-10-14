@@ -11,9 +11,11 @@
  *     a FREE "book a slot" flow (accept the guidelines).
  *   - 'commercial' → a rentable venue: bookable spaces with a request flow.
  */
+import { venueTypeLabel, amenityLabel } from '#shared/types/venueDetails'
 import { eventLocalDate, eventLocalTime } from '#shared/utils/eventTime'
 import { bookingRequestSchema } from '#shared/validation'
 import { MapPin, Instagram, Youtube, Globe, Facebook, LayoutGrid, ArrowLeft, Check, Calendar, ScrollText, ShieldCheck, Trees, Plus, Heart } from 'lucide-vue-next'
+import { eventPath } from '#shared/utils/eventSlug'
 
 definePageMeta({ layout: false })
 
@@ -58,11 +60,18 @@ async function resolve() {
       managed.value = access.managed
       return
     }
+    // An old handle: merged into another profile, or renamed.
+    const moved = await $trpc.entity.movedTo.query({ handle: handle.value }).catch(() => null)
+    if (moved) { await navigateTo(`/@${moved.handle}`, { replace: true, redirectCode: 301 }); return }
     try {
       await $trpc.profile.getByUsername.query({ username: handle.value })
       await navigateTo(`/u/${handle.value}`, { replace: true })
       return
-    } catch { isStub.value = true }
+    } catch {
+      const dancerMoved = await $trpc.profile.movedTo.query({ username: handle.value }).catch(() => null)
+      if (dancerMoved) { await navigateTo(`/u/${dancerMoved.username}`, { replace: true, redirectCode: 301 }); return }
+      isStub.value = true
+    }
   } catch { isStub.value = true }
   pending.value = false
 }
@@ -106,7 +115,7 @@ const scheduleCards = computed(() => [
     eventDate: eventLocalDate(e.startDate, e.timezone), startTime: eventLocalTime(e.startDate, e.timezone),
     endTime: e.endDate ? eventLocalTime(e.endDate, e.timezone) : undefined,
     location: e.venueUsername === profile.value?.username ? (e.organizerName || '') : (e.venueName || ''),
-    href: `/events/${e.id}`,
+    href: eventPath(e),
   })),
 ])
 // Busy schools have 100+ dated classes — show the next ones, expand on demand.
@@ -116,6 +125,9 @@ const visibleScheduleCards = computed(() => [...scheduleCards.value]
   .slice(0, scheduleLimit.value))
 // v4-imported venues carry a Google Maps LINK in map_url, not a drawn map image.
 const mapIsImage = computed(() => !!profile.value?.mapUrl && !/(maps\.google\.|google\.[a-z.]+\/maps|goo\.gl\/maps)/i.test(profile.value.mapUrl))
+// The floor plan: its own image (0036), else an old map_url that is an image.
+const floorPlan = computed(() => profile.value?.floorPlan || (mapIsImage.value ? profile.value!.mapUrl : null))
+const hasVenueFacts = computed(() => profile.value?.type === 'venue' && !!(profile.value.capacity || profile.value.amenities?.length || profile.value.openingHours?.length || (profile.value.venueType && profile.value.venueType !== 'OpenAir') || profile.value.floorType))
 const directionsUrl = computed(() => {
   const p = profile.value
   if (!p) return ''
@@ -257,10 +269,30 @@ useHead(() => ({
         </div>
       </section>
 
-      <!-- Map -->
-      <section v-if="mapIsImage" class="max-w-2xl mx-auto px-4 pb-6 font-sans">
-        <div class="flex items-center gap-2 mb-2"><LayoutGrid class="w-5 h-5 text-primary" /><h2 class="text-2xl font-display text-foreground">The map</h2></div>
-        <img :src="profile.mapUrl" alt="Map of the dance areas" class="w-full rounded-2xl border" style="border-color:color-mix(in srgb, var(--wd-brown-900) 10.2%, transparent);">
+      <!-- The venue: kind, size, amenities, opening hours -->
+      <section v-if="hasVenueFacts" class="max-w-2xl mx-auto px-4 pb-6 font-sans">
+        <div class="rounded-2xl border bg-card p-5">
+          <dl class="grid gap-3 text-sm sm:grid-cols-2">
+            <div v-if="profile.venueType && profile.venueType !== 'OpenAir'"><dt class="text-eyebrow font-bold uppercase tracking-wider text-secondary">Kind of place</dt><dd>{{ venueTypeLabel(profile.venueType) }}</dd></div>
+            <div v-if="profile.capacity"><dt class="text-eyebrow font-bold uppercase tracking-wider text-secondary">Holds</dt><dd>Up to {{ profile.capacity }} people</dd></div>
+            <div v-if="profile.floorType"><dt class="text-eyebrow font-bold uppercase tracking-wider text-secondary">Floor</dt><dd>{{ profile.floorType }}</dd></div>
+          </dl>
+          <div v-if="profile.amenities?.length" class="mt-4 flex flex-wrap gap-1.5">
+            <span v-for="a in profile.amenities" :key="a" class="rounded-full bg-muted px-2.5 py-1 text-xs">{{ amenityLabel(a) }}</span>
+          </div>
+          <div v-if="profile.openingHours?.length" class="mt-4">
+            <p class="text-eyebrow font-bold uppercase tracking-wider text-secondary">Opening hours</p>
+            <ul class="mt-1 grid gap-0.5 text-sm">
+              <li v-for="h in profile.openingHours" :key="h.day" class="grid grid-cols-[7rem_minmax(0,1fr)]"><span class="text-muted-foreground">{{ h.day }}</span><span>{{ h.hours }}</span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Floor plan -->
+      <section v-if="floorPlan" class="max-w-2xl mx-auto px-4 pb-6 font-sans">
+        <div class="flex items-center gap-2 mb-2"><LayoutGrid class="w-5 h-5 text-primary" /><h2 class="text-2xl font-display text-foreground">The floor plan</h2></div>
+        <img :src="floorPlan" alt="Floor plan of the dance areas" class="w-full rounded-2xl border" style="border-color:color-mix(in srgb, var(--wd-brown-900) 10.2%, transparent);">
       </section>
 
       <!-- Scheduled events (first) -->

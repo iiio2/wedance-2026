@@ -3,6 +3,7 @@ import type { Workshop, PlanEntry, DanceRole, Teacher } from '~/types/festival'
 import { Link, UserPlus, Gift, Copy, Check, ExternalLink } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
+import { festivalPath } from '#shared/utils/eventSlug'
 
 const props = defineProps<{
   open: boolean
@@ -40,7 +41,7 @@ const baseUrl = computed(() => {
 const referralCode = computed(() => username.value || dancerId.value || '')
 const referralUrl = computed(() => {
   if (!referralCode.value) return ''
-  return `${baseUrl.value}/festivals/${props.festivalSlug}?ref=${encodeURIComponent(referralCode.value)}`
+  return `${baseUrl.value}${festivalPath(props.festivalSlug)}?ref=${encodeURIComponent(referralCode.value)}`
 })
 
 const planned = computed(() => {

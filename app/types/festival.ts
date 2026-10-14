@@ -38,6 +38,8 @@ export interface Teacher {
   styles: string[]
   videoUrl?: string
   socialLinks?: { platform: string; url: string }[]
+  /** Hasn't confirmed they're in yet (line-up confirmation): shown as "to be confirmed". */
+  tbc?: boolean
 }
 
 export interface Workshop {
@@ -50,6 +52,8 @@ export interface Workshop {
   style: string
   level: 'Beginner' | 'Intermediate' | 'Advanced'
   teacherId: string
+  /** Who they teach it with (more line-up ids). */
+  withIds?: string[]
   goingCount: number
   type?: 'workshop' | 'party'
   venue?: string

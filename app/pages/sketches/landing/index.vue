@@ -14,6 +14,7 @@
  * Lives at /sketches/landing so it doesn't replace the live homepage until
  * we've measured conversion. The current /index stays untouched.
  */
+import { festivalPath } from '#shared/utils/eventSlug'
 import {
   ArrowRight,
   Sparkles,
@@ -253,7 +254,7 @@ function go(href: string) {
               <Button
                 size="sm"
                 class="gap-1.5 shrink-0"
-                @click="go(`/festivals/${proofFestival.slug}`)"
+                @click="go(`${festivalPath(proofFestival.slug)}`)"
               >
                 <Ticket class="w-4 h-4" /> Get tickets
               </Button>

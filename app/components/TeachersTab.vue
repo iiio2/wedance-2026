@@ -9,7 +9,7 @@ const props = defineProps<{
 const expandedId = ref<string | null>(null)
 
 function workshopsFor(teacher: Teacher): Workshop[] {
-  return props.workshops.filter((w) => w.teacherId === teacher.id)
+  return props.workshops.filter((w) => w.teacherId === teacher.id || w.withIds?.includes(teacher.id))
 }
 </script>
 

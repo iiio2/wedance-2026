@@ -187,13 +187,26 @@ export function planProfiles(input: {
   // real handle over a bare Google place id, then alphabetical.
   const isPlaceHandle = (u: string) => /^(ChIJ|Ei|Gh)[\w-]{15,}$/.test(u)
   const rank = (r: ExistingProfile) => `${r.claimed ? 0 : 1}${isPlaceHandle(r.username) ? 1 : 0}${r.username.toLowerCase()}`
-  for (const r of [...input.existing].sort((a, b) => rank(a).localeCompare(rank(b)))) {
-    const ref = r.sourceRef ?? {}
+  // A copy merged into another (scripts/merge-duplicate-profiles.ts) answers
+  // for the one it merged into: its keys find that one, never the hidden copy.
+  const byUsername = new Map(input.existing.map(r => [r.username.toLowerCase(), r]))
+  const live = (r: ExistingProfile) => {
+    let x = r
+    for (let i = 0; i < 5 && x.sourceRef?.mergedInto; i++) x = byUsername.get(String(x.sourceRef.mergedInto).toLowerCase()) ?? x
+    return x
+  }
+  for (const raw of [...input.existing].sort((a, b) => rank(a).localeCompare(rank(b)))) {
+    const r = live(raw)
+    const ref = raw.sourceRef ?? {}
     put(byId, (ref.sourceId as string) ?? (ref.firebaseId as string) ?? null, r)
-    put(byHandle, r.username.toLowerCase(), r)
-    put(byNameCity, nameKey(r.type, r.name, r.citySlug), r)
+    put(byHandle, raw.username.toLowerCase(), r)
+    // Renamed to a readable handle (scripts/readable-handles.ts): the old handle
+    // and the Google place id still find it.
+    for (const old of (ref.oldHandles ?? []) as string[]) put(byHandle, String(old).toLowerCase(), r)
+    if (ref.placeId) put(byHandle, String(ref.placeId).toLowerCase(), r)
+    put(byNameCity, nameKey(raw.type, raw.name, raw.citySlug), r)
     if (r.type === 'venue') {
-      put(venueByAddr, addressKey(r.address) ? `${addressKey(r.address)}|${r.citySlug}` : null, r)
+      put(venueByAddr, addressKey(raw.address) ? `${addressKey(raw.address)}|${raw.citySlug}` : null, r)
       if (r.citySlug) { const l = venuesInCity.get(r.citySlug) ?? []; l.push(r); venuesInCity.set(r.citySlug, l) }
       // Venues an earlier run created keep their coordinates in source_ref → geo dedupe across runs.
       const lat = Number(ref.lat), lng = Number(ref.lng)
@@ -201,7 +214,8 @@ export function planProfiles(input: {
         geoVenues.push({ username: r.username, name: r.name, citySlug: r.citySlug, lat, lng, addrKey: addressKey(r.address) })
       }
     }
-    taken.add(r.username.toLowerCase())
+    taken.add(raw.username.toLowerCase())
+    for (const old of (ref.oldHandles ?? []) as string[]) taken.add(String(old).toLowerCase())
   }
   const v3ById = new Map(input.v3Profiles.map(p => [p.id, p]))
   const v3ByHandle = new Map<string, V3Profile>()
@@ -325,13 +339,14 @@ export function planProfiles(input: {
       decided.set(key, row.username)
       return row.username
     }
-    // Create: v4 convention keys venues by Google place id; else a readable handle.
+    // Create with a readable handle (the venue's name, else name + city); the
+    // Google place id is kept in source_ref.placeId for matching.
     const name = addrLike ? (v.address?.split(',')[0]?.trim() || v.name || 'Venue') : v.name!
-    const username = pick(v.placeId ?? `${handleSlug(name)}-${city.slug}`)
+    const username = pick(taken.has(handleSlug(name)) ? `${handleSlug(name)}-${city.slug}` : handleSlug(name))
     const f = {
       username, type: 'venue' as const, name, city: city.name, citySlug: city.slug, photo: null, bio: null, styles: [],
       address: v.address, socials: [] as any[],
-      sourceRef: { source: V3_SOURCE, sourceId: v.placeId ? `place:${v.placeId}` : `venue:${aKey ?? normName(name)}|${city.slug}`, v3Venue: true, lat: v.lat, lng: v.lng },
+      sourceRef: { source: V3_SOURCE, sourceId: v.placeId ? `place:${v.placeId}` : `venue:${aKey ?? normName(name)}|${city.slug}`, v3Venue: true, lat: v.lat, lng: v.lng, ...(v.placeId ? { placeId: v.placeId } : {}) },
     }
     plan.ops.push({ op: 'create', fields: f }); plan.stats.venue.created++; plan.stats.venue.profiles++
     plan.newProfiles.set(username, name)

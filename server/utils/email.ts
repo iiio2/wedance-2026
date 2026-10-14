@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { festivalPath } from '../../shared/utils/eventSlug'
 
 let _resend: Resend | null = null
 
@@ -101,7 +102,7 @@ export async function sendTicketConfirmationEmail(params: TicketConfirmationPara
 
   const dateRange = formatDateRange(params.startDate, params.endDate)
 
-  const festivalUrl = `${siteUrl}/festivals/${params.festivalSlug}`
+  const festivalUrl = `${siteUrl}${festivalPath(params.festivalSlug)}`
 
   await resend.emails.send({
     from: config.resendFromEmail || 'WeDance <noreply@wedance.vip>',
@@ -182,5 +183,49 @@ export async function sendAccessDecisionEmail(params: {
     subject,
     html: `<div style="font-family: sans-serif; max-width: 420px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #333;">Hey ${escapeHtml(params.name)}!</h2>${body}</div>`,
+  })
+}
+
+/**
+ * Business mode: an organizer asked a page someone runs on WeDance — an artist
+ * to confirm they're in a line-up, or a venue to host an event. Sent to the
+ * page's team when the organizer clicks "Email them". Logged in local dev.
+ */
+export async function sendInviteEmail(params: {
+  to: string
+  name: string
+  kind: 'artist' | 'venue'
+  host: string
+  profileName: string
+  eventName: string
+  when: string
+  lines: string[]
+  link: string
+}) {
+  const config = useRuntimeConfig()
+  const subject = params.kind === 'venue'
+    ? `${params.host} asked ${params.profileName} to host ${params.eventName}`
+    : `${params.host} added ${params.profileName} to ${params.eventName}`
+  if (!config.resendApiKey) {
+    console.log(`\n✉️  ${params.to}: ${subject} → ${params.link}\n`)
+    return
+  }
+  const ask = params.kind === 'venue'
+    ? 'Can you host it? Say yes, suggest another date, or no, with your terms. It takes a minute.'
+    : 'Confirm you’re in, check your programme and the posts about you.'
+  const lines = params.lines.map(l => `<li>${escapeHtml(l)}</li>`).join('')
+  await getResend().emails.send({
+    from: config.resendFromEmail || 'WeDance <noreply@wedance.vip>',
+    to: params.to,
+    subject,
+    html: `<div style="font-family: sans-serif; max-width: 460px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #333;">Hey ${escapeHtml(params.name)}!</h2>
+      <p><strong>${escapeHtml(params.host)}</strong> ${params.kind === 'venue' ? 'would like to hold' : 'added you to'} <strong>${escapeHtml(params.eventName)}</strong>${params.kind === 'venue' ? ` at ${escapeHtml(params.profileName)}` : ''}.</p>
+      <p style="color: #555;">${escapeHtml(params.when)}</p>
+      ${lines ? `<ul style="color: #555; padding-left: 18px;">${lines}</ul>` : ''}
+      <p>${ask}</p>
+      <a href="${params.link}" style="display: inline-block; background: #000; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Answer</a>
+      <p style="color: #888; font-size: 13px; margin-top: 20px;">You get this because you run ${escapeHtml(params.profileName)} on WeDance. It’s also under “Needs you” on your Business home.</p>
+    </div>`,
   })
 }

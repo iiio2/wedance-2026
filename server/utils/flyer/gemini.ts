@@ -16,12 +16,22 @@ function key() {
   return k
 }
 
+// A call that hangs would leave a flyer "painting" or "checking" forever.
+// Painting gets 2 minutes, reading text 1.
 async function call(model: string, body: unknown) {
-  const res = await fetch(`${API}/${model}:generateContent?key=${key()}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  })
+  const ms = model === IMAGE_MODEL ? 120_000 : 60_000
+  let res: Response
+  try {
+    res = await fetch(`${API}/${model}:generateContent?key=${key()}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(ms),
+    })
+  } catch (e: any) {
+    if (e?.name === 'TimeoutError' || e?.name === 'AbortError') throw new Error(model === IMAGE_MODEL ? 'Painting took too long. Try again.' : 'Reading the words took too long.')
+    throw e
+  }
   const json: any = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json?.error?.message || `Gemini ${res.status}`)
   return json
@@ -33,7 +43,8 @@ async function call(model: string, body: unknown) {
  */
 export async function paint(prompt: string, images: InlineImage[], aspectRatio: '9:16' | '4:5'): Promise<InlineImage | null> {
   const json = await call(IMAGE_MODEL, {
-    contents: [{ parts: [{ text: prompt }, ...images.map(i => ({ inlineData: i }))] }],
+    // Images first, then the words: "Image 1" in the prompt is the first image (the skill's order).
+    contents: [{ parts: [...images.map(i => ({ inlineData: i })), { text: prompt }] }],
     generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig: { aspectRatio } },
   })
   const parts = json?.candidates?.[0]?.content?.parts ?? []
@@ -41,10 +52,16 @@ export async function paint(prompt: string, images: InlineImage[], aspectRatio: 
   return img ? { mimeType: img.inlineData.mimeType || 'image/png', data: img.inlineData.data } : null
 }
 
-/** Paint with retries on soft refusals (the La Clave recipe: up to ~8 tries). */
-export async function paintWithRetries(prompt: string, images: InlineImage[], aspectRatio: '9:16' | '4:5', tries = 5) {
+/**
+ * Paint with retries on soft refusals. Refusals (no image back) are random and
+ * the La Clave recipe retries the same prompt up to ~8×; a refusal returns no
+ * image, so it costs far less than a painting. Six here, within the 5-minute job.
+ */
+export async function paintWithRetries(prompt: string, images: InlineImage[], aspectRatio: '9:16' | '4:5', tries = 6) {
   let lastError: unknown = null
-  for (let i = 0; i < tries; i++) {
+  // The job has 5 minutes: no new try after 3.5.
+  const until = Date.now() + 210_000
+  for (let i = 0; i < tries && Date.now() < until; i++) {
     try {
       const img = await paint(prompt, images, aspectRatio)
       if (img) return img
@@ -82,7 +99,9 @@ export async function writeText(prompt: string): Promise<string> {
 /** Fetch a photo URL as an inline image (line-up reference photos). */
 export async function fetchImage(url: string): Promise<InlineImage | null> {
   try {
-    const res = await fetch(url)
+    // Photos stored as site paths ("/people/silvio.jpg", the festival imports).
+    const abs = url.startsWith('/') ? `${(useRuntimeConfig().siteUrl || 'https://2026.wedance.vip').replace(/\/$/, '')}${url}` : url
+    const res = await fetch(abs)
     if (!res.ok) return null
     const mimeType = (res.headers.get('content-type') || 'image/jpeg').split(';')[0]!
     if (!mimeType.startsWith('image/')) return null

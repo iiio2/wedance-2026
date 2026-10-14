@@ -20,6 +20,7 @@
  */
 import { ArrowRight, Ticket, Mail, AlertCircle } from 'lucide-vue-next'
 import { ClaimTicketSchema } from '#shared/validation'
+import { festivalPath } from '#shared/utils/eventSlug'
 
 const { $trpc } = useNuxtApp()
 const route = useRoute()
@@ -144,7 +145,7 @@ async function handleSignIn() {
           <NuxtLink
             v-for="f in status.festivals"
             :key="f.slug"
-            :to="`/festivals/${f.slug}`"
+            :to="`${festivalPath(f.slug)}`"
             class="flex w-full items-center justify-between rounded-md border bg-card px-4 py-3 text-sm font-medium hover:bg-muted"
           >
             <span>Continue to {{ f.name }}</span>
