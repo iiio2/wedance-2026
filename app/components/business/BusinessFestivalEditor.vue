@@ -18,7 +18,7 @@ type Editable = Omit<FestivalDetails, 'key'>
 const model = defineModel<Editable>({ required: true })
 const props = defineProps({
   part: { type: String as PropType<'branding' | 'practical' | 'passes' | 'programme'>, required: true },
-  /** The festival's days, yyyy-mm-dd, from its dates. */
+  /** The event’s days, yyyy-mm-dd, from its dates. */
   days: { type: Array as PropType<string[]>, required: true },
   /** Line-up handles, for the session artist and the videos. */
   lineup: { type: Array as PropType<string[]>, default: () => [] },
@@ -170,9 +170,9 @@ const LEVELS = ['Beginner', 'Intermediate', 'Advanced']
   <!-- Programme -->
   <div v-else>
       <p class="text-xs text-muted-foreground">Workshops and parties, day by day. Dancers pick from it to build their plan.</p>
-      <p v-if="!days.length" class="mt-3 text-sm text-muted-foreground">Set the festival’s first and last day under “When and where” to plan its days.</p>
+      <p v-if="!days.length" class="mt-3 text-sm text-muted-foreground">Set the date under “When” to plan its days.</p>
       <div v-for="d in byDay" :key="d.date" class="mt-4 first:mt-0">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-secondary">{{ fmtDay(d.date) }} <span v-if="!days.includes(d.date)" class="normal-case text-destructive">· outside the festival’s dates</span></h3>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-secondary">{{ fmtDay(d.date) }} <span v-if="!days.includes(d.date)" class="normal-case text-destructive">· outside the event’s dates</span></h3>
         <ul class="mt-2 grid gap-2">
           <li v-for="s in d.items" :key="s.id" class="rounded-xl border">
             <button type="button" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm" :aria-expanded="open === s.id" @click="open = open === s.id ? null : s.id">

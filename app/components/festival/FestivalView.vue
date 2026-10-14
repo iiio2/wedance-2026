@@ -352,78 +352,10 @@ function toggleTeacherFilter(id: string) {
   nextTick(() => scrollTo('schedule'))
 }
 
-// Mock friends (shown after sign-in)
-const mockFriends: FestivalFriend[] = [
-  {
-    id: 'friend-1',
-    name: 'Ana Rodriguez',
-    photo: 'https://i.pravatar.cc/150?u=ana',
-    role: 'follow',
-    workshopIds: ['fri-1', 'fri-party', 'sat-1', 'sat-7', 'sat-party', 'sun-4', 'sun-7'],
-  },
-  {
-    id: 'friend-2',
-    name: 'Marco Silva',
-    photo: 'https://i.pravatar.cc/150?u=marco',
-    role: 'lead',
-    workshopIds: ['fri-2', 'fri-party', 'sat-4', 'sat-8', 'sat-party', 'sun-1', 'sun-7', 'sun-party'],
-  },
-  {
-    id: 'friend-3',
-    name: 'Yuki Tanaka',
-    photo: 'https://i.pravatar.cc/150?u=yuki',
-    role: 'follow',
-    workshopIds: ['sat-3', 'sat-11', 'sat-13', 'sat-party', 'sun-6', 'sun-9'],
-  },
-]
-
-const friends = computed<FestivalFriend[]>(() => isSignedIn.value ? mockFriends : [])
-
-// Mock partner matches (dancers looking for partners at the same workshops)
-const mockPartnerMatches: PartnerMatch[] = [
-  {
-    id: 'match-1',
-    name: 'Sofia Petrov',
-    photo: 'https://i.pravatar.cc/150?u=sofia',
-    role: 'follow',
-    level: 'Intermediate',
-    styles: ['Salsa', 'Bachata'],
-    workshopIds: ['fri-1', 'fri-2', 'sat-1', 'sat-4', 'sat-7', 'sun-1', 'sun-4'],
-    bio: 'Dancing salsa for 3 years, first time at this festival!',
-  },
-  {
-    id: 'match-2',
-    name: 'Elena Kova',
-    photo: 'https://i.pravatar.cc/150?u=elena',
-    role: 'follow',
-    level: 'Advanced',
-    styles: ['Salsa', 'Mambo'],
-    workshopIds: ['fri-1', 'sat-1', 'sat-8', 'sun-1', 'sun-7'],
-    bio: 'Competitive salsa dancer, love musicality workshops.',
-  },
-  {
-    id: 'match-3',
-    name: 'David Chen',
-    photo: 'https://i.pravatar.cc/150?u=david',
-    role: 'lead',
-    level: 'Intermediate',
-    styles: ['Bachata', 'Kizomba'],
-    workshopIds: ['fri-2', 'sat-4', 'sat-11', 'sun-4', 'sun-6'],
-    bio: 'Bachata is my thing, also exploring kizomba.',
-  },
-  {
-    id: 'match-4',
-    name: 'Lucas Moretti',
-    photo: 'https://i.pravatar.cc/150?u=lucas',
-    role: 'lead',
-    level: 'Beginner',
-    styles: ['Salsa'],
-    workshopIds: ['fri-1', 'sat-1', 'sat-7', 'sun-1'],
-    bio: 'Just started salsa 6 months ago, looking for patient partners.',
-  },
-]
-
-const partnerMatches = computed<PartnerMatch[]>(() => isSignedIn.value ? mockPartnerMatches : [])
+// Friends and partner matches: none until they come from real data (no
+// made-up people on an event page).
+const friends = computed<FestivalFriend[]>(() => [])
+const partnerMatches = computed<PartnerMatch[]>(() => [])
 
 // Discover dancers are now loaded by the DiscoverDancers component itself
 // via tRPC (wave.discoverPool) — no mock data needed here.
@@ -1717,7 +1649,7 @@ useHead({
               <!-- Purchase details -->
               <div class="space-y-3 pb-4 mb-4 border-b" style="border-color:color-mix(in srgb, var(--wd-brown-900) 8.2%, transparent);">
                 <div class="flex items-center justify-between">
-                  <span class="text-xs uppercase tracking-wider font-bold text-secondary">Festival</span>
+                  <span class="text-xs uppercase tracking-wider font-bold text-secondary">{{ kind.charAt(0).toUpperCase() + kind.slice(1) }}</span>
                   <span class="text-sm font-bold text-foreground font-display">{{ paymentSuccessInfo.festivalName }}</span>
                 </div>
                 <div class="flex items-center justify-between">

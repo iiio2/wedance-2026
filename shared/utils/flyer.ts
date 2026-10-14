@@ -304,3 +304,15 @@ export function checkFlyerText(lines: FlyerLine[], seenLines: string[]): FlyerCh
   for (const [n, c] of counts) if (c > 1 && wanted.includes(n)) extra.push(`${seenLines.find(l => norm(l) === n)} (twice)`)
   return { ok: missing.length === 0, missing, extra, seen: seenLines }
 }
+
+/**
+ * The programme (events.festival.sessions) as one-line agenda items for the
+ * flyer and captions: "21:00 Rumba workshop". With several days, the weekday
+ * comes first ("Sat 21:00 …"). Every event type plans its programme by day.
+ */
+export function programmeLines(sessions: { date: string; time: string; title: string }[] | null | undefined): { time: string; what: string }[] {
+  const s = (sessions ?? []).filter(x => x.title?.trim()).slice().sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+  const multi = new Set(s.map(x => x.date)).size > 1
+  const wd = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })
+  return s.map(x => ({ time: multi ? `${wd(x.date)} ${x.time}` : x.time, what: x.title.trim() }))
+}

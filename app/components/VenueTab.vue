@@ -17,9 +17,9 @@ defineProps<{ venue: Venue }>()
         />
       </CardContent>
     </Card>
-    <Card>
+    <Card v-if="venue.practicalInfo?.length">
       <CardContent class="p-4">
-        <h3 class="font-semibold mb-2">Practical Info</h3>
+        <h3 class="font-semibold mb-2">Practical info</h3>
         <ul class="space-y-1">
           <li v-for="info in venue.practicalInfo" :key="info" class="text-sm text-muted-foreground">
             {{ info }}

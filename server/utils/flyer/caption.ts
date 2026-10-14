@@ -8,7 +8,7 @@ import { profiles } from '../../database/schema'
 import { flyerSource, texts } from './paint'
 import { writeJson } from './gemini'
 import { withAi } from '../aiUsage'
-import { priceLines } from '../../../shared/utils/flyer'
+import { priceLines, programmeLines } from '../../../shared/utils/flyer'
 import { captionPrompt, composeCaption, instagramOf, type CaptionContext, type CaptionWords } from '../../../shared/utils/caption'
 import type { PostKind } from '../../../shared/utils/posts'
 
@@ -29,7 +29,7 @@ export async function captionContext(db: any, ev: any, post: { kind: PostKind; s
     startDate: ev.startDate,
     endDate: ev.endDate,
     timezone: ev.timezone,
-    agenda: ev.agenda ?? [],
+    agenda: sessions.length ? programmeLines(sessions) : (ev.agenda ?? []),
     styles: ev.styles ?? [],
     prices: priceLines(ev.price),
     host: { name: host?.name ?? '', instagram: instagramOf(host?.socials) },

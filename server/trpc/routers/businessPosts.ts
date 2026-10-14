@@ -141,7 +141,7 @@ export const businessPostsRouter = router({
       const plan = proposePlan({
         startDay: eventLocalDate(ev.startDate, tz),
         endDay: ev.endDate ? eventLocalDate(ev.endDate, tz) : null,
-        festival: FESTIVAL_TYPES.includes(ev.type ?? '') || !!ev.festival,
+        festival: FESTIVAL_TYPES.includes(ev.type ?? ''),
         artists: ev.artists ?? [],
         hasPasses: !!ev.festival?.passes?.length,
         hasProgramme: !!ev.festival?.sessions?.length || !!ev.agenda?.length,

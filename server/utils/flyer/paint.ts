@@ -11,7 +11,7 @@
 import cloudinary from 'cloudinary'
 import { eq, and, inArray, isNotNull, desc } from 'drizzle-orm'
 import { events, profiles, eventFlyers, eventPosts, brandLooks } from '../../database/schema'
-import { postLines, flyerChanges, paintPrompt, fixPrompt, refreshPrompt, recomposePrompt, checkFlyerText, type FlyerLine, type FlyerCheck } from '../../../shared/utils/flyer'
+import { postLines, flyerChanges, paintPrompt, fixPrompt, refreshPrompt, recomposePrompt, checkFlyerText, programmeLines, type FlyerLine, type FlyerCheck } from '../../../shared/utils/flyer'
 import sharp from 'sharp'
 import type { PostKind } from '../../../shared/utils/posts'
 import { paintWithRetries, readText, fetchImage, IMAGE_MODEL, type InlineImage } from './gemini'
@@ -87,7 +87,8 @@ export async function flyerSource(db: any, ev: any, post: Post = null) {
     timezone: ev.timezone,
     venueName: venue?.name || ev.venueName,
     venueAddress: venue?.address || ev.venueAddress,
-    agenda: ev.agenda ?? [],
+    // The programme by day; events from before it (only an old agenda) still use theirs.
+    agenda: ev.festival?.sessions?.length ? programmeLines(ev.festival.sessions) : (ev.agenda ?? []),
     showAgenda: ev.flyerOptions?.showAgenda !== false,
     artists: people,
     styles: ev.styles ?? [],

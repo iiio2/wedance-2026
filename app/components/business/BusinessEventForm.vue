@@ -74,12 +74,11 @@ const multiDay = ref(!!form.endDate)
 const isMultiDayType = computed(() => ['Festival', 'Weekender', 'Congress'].includes(form.type))
 watch(isMultiDayType, (v) => { if (v) multiDay.value = true }, { immediate: true })
 
-// Every event has the same cards; a festival's extras (logo and links, practical
-// info, passes, programme by day) go inside them. Its days come from its dates.
-// Only these types get a festival page; switching away keeps the details in
-// the form (switch back and they're there) but saves the event without them.
+// Every event has the same cards and the same details: programme by day,
+// passes, practical info. Festivals (multi-day types) also get a logo, colour
+// and links under Branding. Its days come from its dates.
 const isFestival = isMultiDayType
-watch(isFestival, (v) => { if (v && !form.festival) form.festival = { socialLinks: [], practicalInfo: [], passes: [], sessions: [], videos: {} } }, { immediate: true })
+if (!form.festival) form.festival = { socialLinks: [], practicalInfo: [], passes: [], sessions: [], videos: {} }
 const festivalDays = computed(() => {
   if (!form.date) return []
   const last = multiDay.value && form.endDate ? form.endDate : form.date
@@ -130,9 +129,11 @@ function submit() {
     venueUsername: venueManual.value ? null : form.venueUsername,
     venueName: venueManual.value ? form.venueName : '',
     venueAddress: venueManual.value ? form.venueAddress : '',
+    // The old one-line agenda isn't edited any more (the programme replaced
+    // it); what an event already has is kept as it is.
     agenda: form.agenda.filter(a => a.what.trim()),
     // Unfinished rows (no title / no name) aren't saved.
-    festival: form.festival && isFestival.value
+    festival: form.festival
       ? {
           ...clone(form.festival),
           sessions: (form.festival.sessions ?? []).filter(s => s.title.trim()),
@@ -160,6 +161,21 @@ const pickedVenue = ref('')
 const venueText = computed(() => venueManual.value
   ? [form.venueName, form.venueAddress].filter(Boolean).join(' · ')
   : form.venueUsername ? (pickedVenue.value || props.labels.venue || '@' + form.venueUsername) : '')
+// The old one-line agenda, shown until it's moved into the programme.
+const legacyAgenda = computed(() => (form.festival?.sessions?.length ? [] : form.agenda.filter(a => a.what.trim())))
+const PARTY = /party|social|dj|concert|show|live|open floor|fiesta|baile/i
+function agendaToProgramme() {
+  if (!form.festival) return
+  const day = form.date
+  form.festival.sessions = legacyAgenda.value.map((a, i) => ({
+    id: `s-${Math.random().toString(36).slice(2, 8)}${i}`,
+    date: day, time: /^\d{1,2}:\d{2}$/.test(a.time.trim()) ? a.time.trim().padStart(5, '0') : form.startTime,
+    duration: PARTY.test(a.what) ? 240 : 60, type: PARTY.test(a.what) ? 'party' : 'workshop',
+    title: a.what.trim(), artist: '', style: '', level: 'Beginner',
+  }) as any)
+  form.agenda = []
+  open.value = new Set([...open.value, 'agenda'])
+}
 const sessionsText = computed(() => {
   const n = form.festival?.sessions?.length ?? 0
   return n ? `${n} session${n === 1 ? '' : 's'} over ${festivalDays.value.length || 1} day${festivalDays.value.length === 1 ? '' : 's'}` : 'Workshops and parties, day by day.'
@@ -276,37 +292,31 @@ const hostText = computed(() => props.hosts.find(h => h.username === form.hostUs
           class="mt-4"
           @pick="v => { venueManual = false; pickedVenue = v.name }"
         />
-        <BusinessFestivalEditor v-if="isFestival && form.festival" v-model="form.festival" part="practical" :days="festivalDays" class="mt-4" />
+        <BusinessFestivalEditor v-if="form.festival" v-model="form.festival" part="practical" :days="festivalDays" class="mt-4" />
       </div>
       <p v-else class="mt-1 text-sm">
         {{ [venueText, form.city].filter(Boolean).join(' · ') || 'No venue yet' }}
-        <template v-if="isFestival && form.festival?.practicalInfo?.length"><br><span class="text-muted-foreground">{{ form.festival.practicalInfo.length }} lines of practical info</span></template>
+        <template v-if="form.festival?.practicalInfo?.length"><br><span class="text-muted-foreground">{{ form.festival.practicalInfo.length }} lines of practical info</span></template>
       </p>
     </section>
 
-    <!-- Programme: an agenda, or a festival's sessions day by day -->
+    <!-- Programme: day by day, for every type -->
     <section class="rounded-2xl border bg-card p-4">
       <div class="flex items-center justify-between gap-2">
         <h2 class="flex items-center gap-1.5 text-sm font-bold"><ListOrdered class="size-4 text-muted-foreground" aria-hidden="true" /> Programme <span class="font-normal text-muted-foreground">(optional)</span></h2>
         <Button v-if="mode === 'edit'" type="button" variant="ghost" size="sm" :aria-expanded="isOpen('agenda')" @click="toggle('agenda')"><template v-if="isOpen('agenda')"><Check /> Done</template><template v-else><Pencil /> Edit</template></Button>
       </div>
-      <template v-if="isFestival && form.festival">
+      <template v-if="form.festival">
         <BusinessFestivalEditor v-if="isOpen('agenda')" v-model="form.festival" part="programme" :days="festivalDays" :lineup="form.artists" :styles="form.styles" class="mt-3" />
         <p v-else class="mt-1 text-sm text-muted-foreground">{{ sessionsText }}</p>
       </template>
-      <div v-else-if="isOpen('agenda')" class="mt-3 grid gap-2">
-        <div v-for="(a, i) in form.agenda" :key="i" class="flex gap-2">
-          <Input v-model="a.time" class="w-24" placeholder="19:00" :aria-label="`Time, line ${i + 1}`" />
-          <Input v-model="a.what" class="flex-1" placeholder="Bachata workshop · Alösha" :aria-label="`What happens, line ${i + 1}`" />
-          <Button type="button" variant="ghost" size="icon-sm" :aria-label="`Remove line ${i + 1}`" @click="form.agenda.splice(i, 1)"><X /></Button>
-        </div>
-        <Button type="button" variant="ghost" size="sm" class="justify-self-start" @click="form.agenda.push({ time: '', what: '' })"><Plus /> Add a line</Button>
+      <!-- An event from before the programme: its old agenda, until it's in the programme. -->
+      <div v-if="legacyAgenda.length" class="mt-3 rounded-xl bg-muted/60 p-3 text-sm">
+        <p class="font-bold">Your earlier agenda</p>
+        <ul class="mt-1 grid gap-0.5"><li v-for="(a, i) in legacyAgenda" :key="i"><span class="font-bold tabular-nums">{{ a.time }}</span> {{ a.what }}</li></ul>
+        <Button type="button" variant="outline-pill" size="pill-sm" class="mt-2" @click="agendaToProgramme"><ListOrdered /> Put it in the programme</Button>
       </div>
-      <ul v-else-if="form.agenda.length" class="mt-1 grid gap-0.5 text-sm">
-        <li v-for="(a, i) in form.agenda" :key="i"><span class="font-bold tabular-nums">{{ a.time }}</span> {{ a.what }}</li>
-      </ul>
-      <p v-else class="mt-1 text-sm text-muted-foreground">Workshops, show, DJ sets: what happens when.</p>
-      <label v-if="!isFestival && form.agenda.length" class="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><Checkbox v-model="form.showAgenda" /> Put the agenda on the flyer</label>
+      <label v-if="form.festival?.sessions?.length || legacyAgenda.length" class="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><Checkbox v-model="form.showAgenda" /> Put the programme on the flyer</label>
     </section>
 
     <!-- Entry and tickets -->
@@ -325,11 +335,11 @@ const hostText = computed(() => props.hosts.find(h => h.username === form.hostUs
         <Field id="ev-ticket" label="Ticket link" optional :error="errors.ticketUrl" class="mt-2" hint="For Tickettailor, use the checkout link so people land on the ticket list.">
           <Input v-model="form.ticketUrl" type="url" placeholder="https://…" />
         </Field>
-        <BusinessFestivalEditor v-if="isFestival && form.festival" v-model="form.festival" part="passes" :days="festivalDays" class="mt-4" />
+        <BusinessFestivalEditor v-if="form.festival" v-model="form.festival" part="passes" :days="festivalDays" class="mt-4" />
       </div>
       <div v-else class="mt-1 text-sm">
         <p>{{ prices.filter(Boolean).join(' · ') || 'No price yet' }}</p>
-        <p v-if="isFestival && form.festival?.passes?.length">Passes: {{ form.festival.passes.map(p => p.name).filter(Boolean).join(' · ') }}</p>
+        <p v-if="form.festival?.passes?.length">Passes: {{ form.festival.passes.map(p => p.name).filter(Boolean).join(' · ') }}</p>
         <p class="truncate text-xs text-muted-foreground">{{ form.ticketUrl ? `Tickets: ${form.ticketUrl}` : 'No ticket link' }}</p>
       </div>
     </section>
