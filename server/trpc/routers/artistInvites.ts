@@ -339,7 +339,7 @@ export const artistInvitesRouter = router({
         id: profileSuggestions.id, kind: profileSuggestions.kind, value: profileSuggestions.value,
         eventName: events.name, eventId: profileSuggestions.eventId,
       }).from(profileSuggestions).leftJoin(events, eq(events.id, profileSuggestions.eventId))
-        .where(and(eq(profileSuggestions.profileId, p.id), eq(profileSuggestions.status, 'pending')))
+        .where(and(eq(profileSuggestions.profileId, p.id), eq(profileSuggestions.status, 'pending'), sql`${events.archived} is not true`))
         .orderBy(desc(profileSuggestions.createdAt))
       const event = invite?.eventId ? await eventContext(ctx.db, invite.eventId, p) : null
       if (invite) await ctx.db.update(profileInvites).set({ lastUsedAt: new Date() }).where(eq(profileInvites.id, invite.id))

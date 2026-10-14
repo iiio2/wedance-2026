@@ -34,7 +34,7 @@ export const inquiriesRouter = router({
     const evs = mine.length
       ? await ctx.db.select({ id: events.id, name: events.name, startDate: events.startDate, timezone: events.timezone, artists: events.artists, host: profiles.name })
         .from(events).innerJoin(profiles, eq(profiles.id, events.hostProfileId))
-        .where(and(inArray(events.hostProfileId, mine.map((p: any) => p.id)), gte(events.startDate, new Date())))
+        .where(and(inArray(events.hostProfileId, mine.map((p: any) => p.id)), eq(events.archived, false), gte(events.startDate, new Date())))
         .orderBy(asc(events.startDate)).limit(20)
       : []
     return {

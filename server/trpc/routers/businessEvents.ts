@@ -541,7 +541,8 @@ export const businessEventsRouter = router({
     if (mine.length) {
       const sugg = await ctx.db.select({ username: profiles.username, name: profiles.name, n: sql<number>`count(*)::int` })
         .from(profileSuggestions).innerJoin(profiles, eq(profiles.id, profileSuggestions.profileId))
-        .where(and(inArray(profileSuggestions.profileId, mine.map((p: any) => p.id)), eq(profileSuggestions.status, 'pending')))
+        .leftJoin(events, eq(events.id, profileSuggestions.eventId))
+        .where(and(inArray(profileSuggestions.profileId, mine.map((p: any) => p.id)), eq(profileSuggestions.status, 'pending'), sql`${events.archived} is not true`))
         .groupBy(profiles.username, profiles.name)
       for (const g of sugg) {
         needs.push({ kind: 'suggestions', tone: 'info', title: `${g.n} ${g.n === 1 ? 'change' : 'changes'} suggested for ${g.name}`, detail: 'An organizer added photos, a video or your name for their event. Approve or turn them down.', to: `/confirm/@${g.username}` })

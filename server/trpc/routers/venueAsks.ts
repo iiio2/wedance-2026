@@ -110,5 +110,5 @@ export async function asksWaitingFor(db: any, profileIds: string[]) {
   if (!profileIds.length) return []
   return db.select({ token: profileInvites.token, kind: profileInvites.kind, profileName: profiles.name, eventName: events.name, startDate: events.startDate, timezone: events.timezone })
     .from(profileInvites).innerJoin(profiles, eq(profiles.id, profileInvites.profileId)).innerJoin(events, eq(events.id, profileInvites.eventId))
-    .where(and(inArray(profileInvites.profileId, profileIds), eq(profileInvites.status, 'invited'), gte(events.endDate, new Date())))
+    .where(and(inArray(profileInvites.profileId, profileIds), eq(profileInvites.status, 'invited'), eq(events.archived, false), gte(events.endDate, new Date())))
 }
