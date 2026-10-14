@@ -5,7 +5,7 @@
  * Content plan (?tab=plan): every post it's promoted with, each made with the
  * flyer pipeline. Both stay mounted, so switching keeps unsaved edits.
  */
-import { Check, ExternalLink, Repeat, Archive, Sparkles, FileText } from 'lucide-vue-next'
+import { Check, ExternalLink, Repeat, Archive, Sparkles, FileText, Copy } from 'lucide-vue-next'
 import type { BusinessEventValues } from '~/components/business/BusinessEventForm.vue'
 import { toBusinessEventInput } from '~/lib/businessEvent'
 import { eventLocalDate } from '#shared/utils/eventTime'
@@ -19,6 +19,7 @@ const id = computed(() => String(route.params.id))
 
 type Ev = Awaited<ReturnType<typeof $trpc.businessEvents.get.query>>
 const ev = ref<Ev | null>(null)
+const hosts = ref<{ username: string; name: string }[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const notice = ref<string | null>(route.query.created ? 'Event created.' : route.query.added ? `@${route.query.added} is in the line-up. Send them their link below so they can confirm.` : null)
@@ -28,7 +29,12 @@ watch(tab, t => navigateTo({ query: { ...route.query, tab: t === 'plan' ? 'plan'
 async function load() {
   error.value = null
   try {
-    ev.value = await $trpc.businessEvents.get.query({ id: id.value })
+    const [evData, profileData] = await Promise.all([
+      $trpc.businessEvents.get.query({ id: id.value }),
+      $trpc.business.myProfiles.query(),
+    ])
+    ev.value = evData
+    hosts.value = profileData.managed.map((p: any) => ({ username: p.username, name: p.name }))
   } catch (e: any) {
     error.value = e?.message || 'Could not load this event.'
   } finally {
@@ -56,19 +62,47 @@ const initial = computed<Partial<BusinessEventValues>>(() => ev.value
   : {})
 
 const saving = ref(false)
+// After switching organizer, offer to copy flyer styles from the old profile.
+const copyLooksOffer = ref<{ from: string; to: string; fromName: string } | null>(null)
+const copyingLooks = ref(false)
+async function copyLooks() {
+  if (!copyLooksOffer.value) return
+  copyingLooks.value = true
+  try {
+    const { copied } = await $trpc.businessFlyers.copyLooks.mutate(copyLooksOffer.value)
+    notice.value = copied ? `Copied ${copied} flyer ${copied === 1 ? 'style' : 'styles'}.` : 'No new styles to copy.'
+    copyLooksOffer.value = null
+    panelRef.value?.reload()
+  } catch (e: any) {
+    error.value = e?.message || 'Could not copy styles.'
+  } finally {
+    copyingLooks.value = false
+  }
+}
+
 async function save(v: BusinessEventValues) {
   saving.value = true
   error.value = null
   notice.value = null
+  copyLooksOffer.value = null
   try {
-    const { hostUsername: _h, ...rest } = toBusinessEventInput(v)
-    await $trpc.businessEvents.update.mutate({ id: id.value, ...rest })
+    const input = toBusinessEventInput(v)
+    const oldHost = ev.value?.host?.username
+    const hostChanged = input.hostUsername !== oldHost
+    await $trpc.businessEvents.update.mutate({
+      id: id.value,
+      ...(hostChanged ? input : (() => { const { hostUsername: _h, ...rest } = input; return rest })()),
+    })
     await load()
     panelRef.value?.reload()
     captionRef.value?.reload()
     planRef.value?.reload()
     teaserRef.value?.reload()
     notice.value = 'Saved.'
+    if (hostChanged && oldHost && input.hostUsername) {
+      const oldName = hosts.value.find(h => h.username === oldHost)?.name ?? oldHost
+      copyLooksOffer.value = { from: oldHost, to: input.hostUsername, fromName: oldName }
+    }
     if (pending.value) { const t = pending.value; pending.value = null; await toFlyer(t) }
     if (pendingPost.value) { const t = pendingPost.value; pendingPost.value = null; await toPost(t) }
   } catch (e: any) {
@@ -183,6 +217,11 @@ async function archive() {
       <p v-if="notice" role="status" class="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-success/10 px-3 py-2 text-sm font-bold text-wd-green-700">
         <Check class="size-4" aria-hidden="true" /> {{ notice }}
       </p>
+      <div v-if="copyLooksOffer" class="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-secondary/10 p-4 text-sm">
+        <p>Copy flyer styles from <span class="font-bold">{{ copyLooksOffer.fromName }}</span> to the new organizer?</p>
+        <Button type="button" variant="outline-pill" size="pill-sm" :loading="copyingLooks" @click="copyLooks"><Copy /> Copy styles</Button>
+        <Button type="button" variant="ghost" size="sm" @click="copyLooksOffer = null">Skip</Button>
+      </div>
 
       <!-- Tabs: both panels stay mounted (v-show), so unsaved details survive a switch. -->
       <Tabs v-if="!ev.synced" v-model="tab" class="mt-4">
@@ -217,6 +256,7 @@ async function archive() {
           ref="formRef"
           :event-id="ev.id"
           :initial="initial"
+          :hosts="hosts"
           :labels="{ venue: ev.venueName, host: ev.host?.name }"
           :saving="saving"
           submit-label="Save changes"

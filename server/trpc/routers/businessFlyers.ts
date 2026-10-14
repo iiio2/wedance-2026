@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure } from '../trpc'
 import { events, eventFlyers, eventPosts, brandLooks, profiles } from '../../database/schema'
 import { requireEventManager } from './businessEvents'
+import { requireMember } from './business'
 import { announcementPost, flyerSource, runFlyer, texts } from '../../utils/flyer/paint'
 import { flyerChanges } from '../../../shared/utils/flyer'
 import { askAboutImages, fetchImage, type InlineImage } from '../../utils/flyer/gemini'
@@ -335,5 +336,27 @@ export const businessFlyersRouter = router({
       // No cover yet → the event's flyer is the cover.
       if (!ev.cover && post.kind === 'announcement') await ctx.db.update(events).set({ cover: f.url, updatedAt: new Date() }).where(eq(events.id, ev.id))
       return { kept: true, lookId }
+    }),
+
+  // Copy brand looks from one profile to another. The caller must manage both.
+  copyLooks: protectedProcedure
+    .input(z.object({ fromUsername: z.string().min(1), toUsername: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      if (input.fromUsername === input.toUsername) return { copied: 0 }
+      const from = await requireMember(ctx, input.fromUsername)
+      const to = await requireMember(ctx, input.toUsername)
+      const looks = await ctx.db.select().from(brandLooks).where(eq(brandLooks.profileId, from.id))
+      if (!looks.length) return { copied: 0 }
+      // Skip looks the target already has (same name + description).
+      const existing = await ctx.db.select({ name: brandLooks.name, description: brandLooks.description })
+        .from(brandLooks).where(eq(brandLooks.profileId, to.id))
+      const existingSet = new Set(existing.map((l: any) => `${l.name}::${l.description}`))
+      const toCopy = looks.filter((l: any) => !existingSet.has(`${l.name}::${l.description}`))
+      if (!toCopy.length) return { copied: 0 }
+      await ctx.db.insert(brandLooks).values(toCopy.map((l: any) => ({
+        profileId: to.id, name: l.name, description: l.description, palette: l.palette,
+        references: l.references, source: l.source, createdBy: ctx.dancerId,
+      })))
+      return { copied: toCopy.length }
     }),
 })

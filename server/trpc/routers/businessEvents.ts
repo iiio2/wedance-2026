@@ -323,18 +323,26 @@ export const businessEventsRouter = router({
     }),
 
   update: protectedProcedure
-    .input(eventInput.extend({ id: z.string().uuid() }))
+    .input(eventInput.extend({ id: z.string().uuid(), hostUsername: z.string().min(1).optional() }))
     .mutation(async ({ ctx, input }) => {
       const ev = await requireEventManager(ctx, input.id)
-      const host = await eventHostProfile(ctx.db, ev)
-      const { id: _id, ...fields } = input
+      let host: { id: string; username: string; type: string; name: string } | null
+      let hostProfileId: string | null
+      if (input.hostUsername) {
+        // Switching host: the caller must manage the target profile too.
+        const newHost = await requireMember(ctx, input.hostUsername)
+        host = { id: newHost.id, username: newHost.username, type: newHost.type, name: newHost.name }
+        hostProfileId = newHost.id
+      } else {
+        host = await eventHostProfile(ctx.db, ev)
+        hostProfileId = ev.hostProfileId ?? host?.id ?? null
+      }
+      const { id: _id, hostUsername: _hu, ...fields } = input
       await ctx.db.update(events).set({
         ...(await toRow(ctx.db, host, fields, ev)),
-        // Someone checked it: shown on the event page, and the sync leaves it alone.
         editedAt: new Date(),
         editedBy: ctx.dancerId,
-        // A synced event moves to the profile that runs it, into its Business events.
-        hostProfileId: ev.hostProfileId ?? host?.id ?? null,
+        hostProfileId,
       }).where(eq(events.id, ev.id))
       return { saved: true }
     }),
