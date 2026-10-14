@@ -2,9 +2,10 @@
 /**
  * /business/profiles/<handle>/team — who manages this profile. Owners approve
  * join requests, change roles and titles, remove people, and see the history.
- * Everyone on the team can leave (except the last owner).
+ * Everyone on the team can leave (except the last owner). WeDance admins can
+ * release the page: everyone leaves, so its owner can claim it.
  */
-import { Check, X, LogOut } from 'lucide-vue-next'
+import { Check, X, LogOut, Unlink } from 'lucide-vue-next'
 
 definePageMeta({ layout: 'business' })
 
@@ -21,7 +22,10 @@ const error = ref<string | null>(null)
 const notice = ref<string | null>(null)
 const busy = ref<string | null>(null)
 
+const { isAdmin } = useAuth()
 const isOwner = computed(() => team.value?.myRole === 'owner')
+const confirmRelease = ref(false)
+const release = () => run('release', () => $trpc.businessTeam.release.mutate({ username: username.value }), 'Released. Nobody manages this page now: its owner can claim it from an invite link or the page.').then(() => { confirmRelease.value = false })
 const ownerCount = computed(() => team.value?.members.filter(m => m.role === 'owner').length ?? 0)
 
 async function load() {
@@ -110,6 +114,7 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
 
       <section class="mt-6">
         <h2 class="text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Members</h2>
+        <p v-if="!team.members.length" class="mt-3 rounded-2xl border bg-card p-4 text-sm text-muted-foreground">Nobody manages this page. Its owner can claim it from an organizer’s invite link or “Is this you? Claim this page” on <NuxtLink :to="`/@${team.profile.username}`" class="font-bold text-foreground hover:underline">/@{{ team.profile.username }}</NuxtLink>.</p>
         <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
           <div v-for="m in team.members" :key="m.dancerId" class="flex flex-wrap items-center gap-3 rounded-2xl border bg-card p-4">
             <img v-if="m.photo" :src="m.photo" alt="" class="size-10 rounded-full object-cover">
@@ -139,10 +144,24 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
             </div>
           </div>
         </div>
-        <p v-if="ownerCount <= 1 && isOwner" class="mt-2 text-xs text-muted-foreground">You’re the only owner. Make someone else owner before you leave.</p>
+        <p v-if="ownerCount === 1 && team.members.some(m => m.me && m.role === 'owner')" class="mt-2 text-xs text-muted-foreground">You’re the only owner. Make someone else owner before you leave.</p>
         <p class="mt-3 text-xs text-muted-foreground">
           To add someone, send them this page’s link: <span class="font-mono">/@{{ team.profile.username }}</span> → “Join the team”. You’ll see their request here.
         </p>
+      </section>
+
+      <!-- WeDance admins: hand the page back to its owner -->
+      <section v-if="isAdmin && team.members.length" class="mt-8 rounded-2xl border border-dashed bg-card p-4">
+        <h2 class="flex items-center gap-1.5 text-sm font-bold"><Unlink class="size-4 text-muted-foreground" aria-hidden="true" /> Release this page</h2>
+        <p class="mt-1 text-xs text-muted-foreground">Admin only. Everyone above leaves the team, so {{ team.profile.name }} can take the page over from an organizer’s invite link or “Is this you? Claim this page”. The page’s details stay. You can still edit it as an admin.</p>
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <Button v-if="!confirmRelease" type="button" variant="outline-pill" size="pill-sm" @click="confirmRelease = true"><Unlink /> Release page</Button>
+          <template v-else>
+            <span class="text-sm font-bold">Remove all {{ team.members.length }} from the team?</span>
+            <Button type="button" variant="destructive" size="sm" :disabled="busy === 'release'" @click="release">{{ busy === 'release' ? 'Releasing…' : 'Yes, release' }}</Button>
+            <Button type="button" variant="ghost" size="sm" @click="confirmRelease = false">Cancel</Button>
+          </template>
+        </div>
       </section>
 
       <section v-if="isOwner && history.length" class="mt-8">
@@ -153,6 +172,7 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
             <span class="text-foreground">{{ h.actorName || 'WeDance' }}</span>
             {{ actionLabel[h.action] || h.action }}
             <template v-if="h.subjectName && h.subjectName !== h.actorName"> <span class="text-foreground">{{ h.subjectName }}</span></template>
+            <template v-else-if="h.subjectName && h.action === 'removed'"> themselves</template>
             <template v-if="h.role"> ({{ h.role }}<template v-if="h.note && h.action !== 'role_changed'">, {{ h.note }}</template>)</template>
           </li>
         </ul>

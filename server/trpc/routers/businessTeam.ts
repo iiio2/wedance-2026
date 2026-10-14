@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { eq, and, desc, inArray, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { TRPCError } from '@trpc/server'
-import { router, protectedProcedure } from '../trpc'
+import { router, protectedProcedure, adminProcedure } from '../trpc'
 import { profiles, profileMembers, profileClaims, profileAccessLog, dancers } from '../../database/schema'
 import { profileByHandle, membershipOf, requireOwner, keepAnOwner, grant, logAccess } from '../../utils/profileAccess'
 import { sendAccessDecisionEmail } from '../../utils/email'
@@ -157,6 +157,23 @@ export const businessTeamRouter = router({
       await ctx.db.delete(profileMembers).where(eq(profileMembers.id, m.id))
       await logAccess(ctx.db, { profileId: p.id, actorId: ctx.dancerId, subjectId: input.dancerId, action: leaving ? 'left' : 'removed', role: m.role })
       return { removed: true }
+    }),
+
+  // Admins: release the page — everyone leaves its team, so its owner (an
+  // artist, a venue) can take it over from an invite link or a claim. For pages
+  // a WeDance admin set up while testing or on their behalf. Each removal is
+  // logged. `claimed` stays true so the v3 sync still leaves the details alone.
+  release: adminProcedure
+    .input(z.object({ username: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const p = await profileByHandle(ctx.db, input.username)
+      const members = await ctx.db.select({ id: profileMembers.id, dancerId: profileMembers.dancerId, role: profileMembers.role })
+        .from(profileMembers).where(eq(profileMembers.profileId, p.id))
+      for (const m of members) {
+        await ctx.db.delete(profileMembers).where(eq(profileMembers.id, m.id))
+        await logAccess(ctx.db, { profileId: p.id, actorId: ctx.dancerId, subjectId: m.dancerId, action: 'removed', role: m.role, note: 'Page released by WeDance for its owner to claim.' })
+      }
+      return { released: members.length }
     }),
 
   // Who got, lost or changed access, newest first. Owners and admins only.
