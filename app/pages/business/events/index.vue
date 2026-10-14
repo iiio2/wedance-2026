@@ -73,7 +73,7 @@ function when(e: any) {
       :hint="tab === 'upcoming' ? 'Add your next party, class or festival with “New event”.' : undefined"
     />
 
-    <div v-else class="mt-4 grid gap-2">
+    <div v-else class="mt-4 grid grid-cols-[minmax(0,1fr)] gap-2">
       <div v-for="e in rows" :key="e.id" class="flex items-center gap-4 rounded-2xl border bg-card p-4">
         <div class="w-24 shrink-0">
           <p class="text-xs font-bold uppercase tracking-wider text-secondary">{{ when(e) }}</p>

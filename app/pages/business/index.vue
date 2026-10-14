@@ -78,7 +78,7 @@ function dayLabel(iso: string | Date, tz: string | null) {
           <p v-if="!data.needs.length" class="mt-3 rounded-2xl border bg-card p-4 text-sm text-muted-foreground">
             Nothing waiting. Your events have everything they need.
           </p>
-          <div v-else class="mt-3 grid gap-2">
+          <div v-else class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
             <NuxtLink
               v-for="n in data.needs"
               :key="n.title + n.to"
@@ -104,7 +104,7 @@ function dayLabel(iso: string | Date, tz: string | null) {
             Nothing in the next two weeks.
             <NuxtLink to="/business/events/new" class="font-bold text-wd-red-800 hover:underline">Add an event</NuxtLink>
           </div>
-          <div v-else class="mt-3 grid gap-2">
+          <div v-else class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
             <NuxtLink
               v-for="e in data.comingUp"
               :key="e.role + e.id"

@@ -73,7 +73,7 @@ const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', or
 
       <section v-if="data.claims.length" class="mt-8">
         <h2 class="text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Your requests</h2>
-        <div class="mt-3 grid gap-2">
+        <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
           <div v-for="c in data.claims" :key="c.id" class="flex items-center gap-3 rounded-2xl border bg-card p-4">
             <div class="flex-1 min-w-0">
               <p class="text-sm font-bold truncate">{{ c.name }}</p>

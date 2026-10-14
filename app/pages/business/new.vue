@@ -22,8 +22,10 @@ const types = [
   { value: 'organizer', label: 'Organizer', hint: 'Parties, festivals, workshops' },
 ] as const
 // ?instagram=… (from "Import from Instagram" on Find my profile) and ?type=… pre-fill the form.
+// ?next=/business/… returns there once it's made (e.g. back to the new event).
 const route = useRoute()
 const qType = String(route.query.type ?? '')
+const next = typeof route.query.next === 'string' && /^\/business\/[^/]/.test(route.query.next) && !route.query.next.startsWith('//') ? route.query.next : ''
 const form = reactive({
   type: (['artist', 'venue', 'organizer'].includes(qType) ? qType : 'artist') as 'artist' | 'venue' | 'organizer',
   instagram: String(route.query.instagram ?? ''),
@@ -73,7 +75,7 @@ async function submit() {
       instagram: igHandle.value || undefined,
       handle: form.handle.trim() || undefined,
     })
-    await navigateTo(`/business/profiles/${username}`)
+    await navigateTo(next || `/business/profiles/${username}`)
   } catch (e: any) {
     error.value = e?.message || 'Could not create the profile.'
   } finally {
@@ -134,7 +136,7 @@ const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', or
       <div v-if="existing.length" class="mt-5 rounded-xl border border-warning/40 bg-warning/10 p-4" role="status">
         <p class="text-sm font-bold">Already on WeDance?</p>
         <p class="text-xs text-muted-foreground">If one of these is yours, take it over instead of creating a second page.</p>
-        <div class="mt-3 grid gap-2">
+        <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
           <div v-for="p in existing" :key="p.username" class="flex flex-wrap items-center gap-3 rounded-xl bg-card p-3">
             <img v-if="p.photo" :src="p.photo" alt="" class="size-9 rounded-lg object-cover">
             <span v-else class="size-9 rounded-lg bg-muted" />

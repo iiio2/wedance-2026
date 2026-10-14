@@ -56,21 +56,22 @@ const isActive = (item: { match: (p: string) => boolean }) => item.match(route.p
 
 <template>
   <div class="min-h-screen md:flex bg-background text-foreground font-sans">
-    <aside class="md:w-60 md:min-h-screen md:border-r border-b md:border-b-0 border-border shrink-0 md:sticky md:top-0 md:h-screen flex flex-col bg-card/55">
-      <div class="px-4 py-4 md:py-6 flex md:block items-center justify-between w-full">
+    <!-- Phones: logo and profile switcher share the first row, the menu is the second. -->
+    <aside class="md:w-60 md:min-h-screen md:border-r border-b md:border-b-0 border-border shrink-0 md:sticky md:top-0 md:h-screen grid grid-cols-[auto_minmax(0,1fr)] items-center md:flex md:flex-col md:items-stretch bg-card/55">
+      <div class="px-4 py-3 md:py-6 flex md:block items-center justify-between md:w-full">
         <NuxtLink to="/" class="inline-flex items-center gap-2">
           <Brand />
         </NuxtLink>
         <div class="hidden md:block mt-6 text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Business</div>
       </div>
 
-      <div v-if="managed.length > 1" class="px-3 pb-3">
+      <div v-if="managed.length > 1" class="pr-3 py-2 md:px-3 md:py-0 md:pb-3">
         <Field label="Profile" hide-label>
           <Select v-model="businessProfile" :options="switcherOptions" size="sm" />
         </Field>
       </div>
 
-      <nav class="flex md:flex-col gap-1 px-2 md:px-3 pb-3 md:pb-0 overflow-x-auto md:overflow-visible" aria-label="Business">
+      <nav class="col-span-2 flex md:flex-col gap-1 px-2 md:px-3 pb-2 md:pb-0 overflow-x-auto md:overflow-visible" aria-label="Business">
         <NuxtLink
           v-for="item in nav"
           :key="item.to"
@@ -95,7 +96,7 @@ const isActive = (item: { match: (p: string) => boolean }) => item.match(route.p
     </aside>
 
     <main class="flex-1 min-w-0">
-      <div class="max-w-4xl mx-auto px-4 py-8">
+      <div class="max-w-4xl mx-auto px-4 py-5 md:py-8">
         <AdminState v-if="state === 'checking'" kind="loading" class="py-24" />
 
         <div

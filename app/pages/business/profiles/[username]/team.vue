@@ -93,7 +93,7 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
 
       <section v-if="team.requests.length" class="mt-6">
         <h2 class="text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Asking to join</h2>
-        <div class="mt-3 grid gap-2">
+        <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
           <div v-for="r in team.requests" :key="r.id" class="rounded-2xl border bg-card p-4">
             <p class="text-sm font-bold">{{ r.name }}<span v-if="r.title" class="font-normal text-muted-foreground"> · {{ r.title }}</span></p>
             <p class="mt-1 rounded-xl bg-muted p-3 text-sm whitespace-pre-line">{{ r.message }}</p>
@@ -110,7 +110,7 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
 
       <section class="mt-6">
         <h2 class="text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Members</h2>
-        <div class="mt-3 grid gap-2">
+        <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
           <div v-for="m in team.members" :key="m.dancerId" class="flex flex-wrap items-center gap-3 rounded-2xl border bg-card p-4">
             <img v-if="m.photo" :src="m.photo" alt="" class="size-10 rounded-full object-cover">
             <div v-else class="size-10 rounded-full bg-muted" />

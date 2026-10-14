@@ -117,7 +117,7 @@ const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', or
       <Button variant="outline-pill" size="pill-sm" class="mt-2" as-child><NuxtLink to="/business/new"><Plus /> Create a profile</NuxtLink></Button>
     </div>
 
-    <div v-if="results.length" class="mt-4 grid gap-2">
+    <div v-if="results.length" class="mt-4 grid grid-cols-[minmax(0,1fr)] gap-2">
       <div v-for="r in results" :key="r.username" class="rounded-2xl border bg-card p-4">
         <div class="flex items-center gap-3">
           <img v-if="r.photo" :src="r.photo" :alt="r.name" class="size-10 rounded-xl object-cover bg-muted">

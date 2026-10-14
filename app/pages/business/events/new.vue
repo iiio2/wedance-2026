@@ -4,6 +4,7 @@
  */
 import type { BusinessEventValues } from '~/components/business/BusinessEventForm.vue'
 import { toBusinessEventInput } from '~/lib/businessEvent'
+import { Plus, Search } from 'lucide-vue-next'
 
 definePageMeta({ layout: 'business' })
 useHead({ title: 'New event | Business | WeDance' })
@@ -54,8 +55,11 @@ async function create(v: BusinessEventValues) {
     <AdminState v-if="!hosts" kind="loading" />
     <div v-else-if="!hosts.length" class="mt-6 rounded-2xl border-2 border-dashed border-input bg-card/60 p-8 text-center">
       <p class="font-display text-lg font-bold">First, a profile</p>
-      <p class="mt-1 text-sm text-muted-foreground">Events are run by an organizer, venue or artist profile you manage.</p>
-      <Button variant="pill" class="mt-4" as-child><NuxtLink to="/business/claim">Find my profile</NuxtLink></Button>
+      <p class="mx-auto mt-1 max-w-md text-sm text-muted-foreground">Events are run by a profile: your festival, school, party series or venue. Make one in a minute, then you’re back here. Already on WeDance? Find yours.</p>
+      <div class="mt-4 flex flex-wrap justify-center gap-2">
+        <Button variant="pill" as-child><NuxtLink :to="{ path: '/business/new', query: { type: 'organizer', next: $route.fullPath } }"><Plus /> Create a profile</NuxtLink></Button>
+        <Button variant="outline-pill" as-child><NuxtLink to="/business/claim"><Search /> Find my profile</NuxtLink></Button>
+      </div>
     </div>
     <BusinessEventForm v-else class="mt-6" mode="create" :hosts="hosts" :initial="initial" :saving="saving" submit-label="Create event" @submit="create" />
   </div>
