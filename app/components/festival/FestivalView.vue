@@ -588,8 +588,6 @@ function onSignedIn() {
   loadFreemiumStatus()
 }
 
-const goingSectionRef = ref<{ reload: () => void } | null>(null)
-
 function onPick() {
   if (!isSignedIn.value) {
     signUpAction.value = 'plan'
@@ -599,8 +597,6 @@ function onPick() {
   const wasGoing = yearPlanIds.value.has(festival.slug)
   liveAttendeeCount.value = Math.max(0, liveAttendeeCount.value + (wasGoing ? -1 : 1))
   toggleFestival(festival.slug)
-  // Reload the public going list so the avatar grid reflects the change
-  nextTick(() => goingSectionRef.value?.reload())
 }
 
 function onSave() {
@@ -1044,18 +1040,12 @@ useHead({
           <AboutTab :festival="festival" />
         </section>
 
-        <!-- Who's going lives here: the faces first, then swipe to meet them. -->
         <section id="discover" class="scroll-mt-16">
           <h2 class="text-2xl font-black leading-tight mb-1 text-foreground">Shall we <em class="italic text-primary">dance?</em></h2>
-          <p class="text-sm mb-4 text-muted-foreground font-sans">See who's going, then swipe to meet dancers, join group dinners and activities around the {{ kind }}.</p>
-          <GoingSection ref="goingSectionRef" :festival-slug="festival.slug" :accent-color="festival.accentColor" class="mb-6" />
-          <!-- Verified ticket holders: the TicketTailor claim flow exists for Charanga only (/charanga/claim). -->
-          <div v-if="festival.slug === 'charanga-habanera-munich-2026'" class="mb-6">
-            <h3 class="mb-3 text-lg font-bold font-display">Verified attendees</h3>
-            <AttendeeRoster :festival-slug="festival.slug" />
-          </div>
+          <p class="text-sm mb-4 text-muted-foreground font-sans">Swipe to discover dancers, group dinners, and activities happening around the {{ kind }}.</p>
           <DiscoverDancers
             :festival-slug="festival.slug"
+            :city="festival.city"
             :extra-cards="extraSwipeCards"
             :workshops="workshops"
             :plan-ids="planIds"
@@ -1065,6 +1055,11 @@ useHead({
             @join-dinner="joinDinner"
             @join-activity="joinActivity"
           />
+          <!-- Verified ticket holders: the TicketTailor claim flow exists for Charanga only (/charanga/claim). -->
+          <div v-if="festival.slug === 'charanga-habanera-munich-2026'" class="mt-6">
+            <h3 class="mb-3 text-lg font-bold font-display">Verified attendees</h3>
+            <AttendeeRoster :festival-slug="festival.slug" />
+          </div>
         </section>
 
         <section id="activities" class="scroll-mt-16">

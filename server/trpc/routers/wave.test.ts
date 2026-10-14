@@ -63,7 +63,14 @@ vi.mock('drizzle-orm', async (importOriginal) => {
     }
   }
 
-  return { ...real, eq, and, inArray, ne }
+  // Case-insensitive equality — enough for the city match (no wildcards used).
+  const ilike = (col: any, val: string) => {
+    const jsKey = col?.name ? snakeToCamel(col.name) : undefined
+    return (row: Record<string, any>) =>
+      !!jsKey && String(row[jsKey] ?? '').toLowerCase() === String(val).toLowerCase()
+  }
+
+  return { ...real, eq, and, ilike, inArray, ne }
 })
 
 // ---------- FakeDb ----------
@@ -328,6 +335,22 @@ describe('wave router (RAZ-82)', () => {
       expect(await caller.wave.discoverPool({ festivalSlug: 'event-1' })).toHaveLength(0)
       const pool = await caller.wave.discoverPool({ festivalSlug: 'event-1', itemType: 'event' })
       expect(pool.map(d => d.id)).toEqual([BOB])
+    })
+
+    it('fills the deck with public dancers from the city when few are going', async () => {
+      dancerRows.push({ id: 'd0000000-0000-4000-b000-000000000004', name: 'Dan', photo: null, city: 'munich', username: 'dan', danceStyles: ['Timba'], danceLevels: {}, role: 'lead', bio: null, profilePublic: true })
+      addPlanItem(BOB) // Bob (Berlin) is going and sharing
+
+      const caller = makeCaller(db, ALICE)
+      const pool = await caller.wave.discoverPool({ festivalSlug: 'fest-1', city: 'Munich' })
+      // Going first, then locals; never me (Alice) or private Carol
+      expect(pool.map(d => [d.name, d.going])).toEqual([['Bob', true], ['Dan', false]])
+    })
+
+    it('does not add local dancers without a city', async () => {
+      dancerRows.push({ id: 'd0000000-0000-4000-b000-000000000004', name: 'Dan', photo: null, city: 'Munich', username: 'dan', danceStyles: [], danceLevels: {}, role: 'lead', bio: null, profilePublic: true })
+      const caller = makeCaller(db, ALICE)
+      expect(await caller.wave.discoverPool({ festivalSlug: 'fest-1' })).toEqual([])
     })
 
     it('excludes dancers the caller already swiped on', async () => {

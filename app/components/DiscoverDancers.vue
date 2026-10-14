@@ -11,6 +11,8 @@ const props = withDefaults(defineProps<{
   festivalSlug: string
   /** Whose "going" list feeds the deck: a festival's or a plain event's. */
   itemType?: 'festival' | 'event'
+  /** The event's city: its public dancers fill the deck when few are going. */
+  city?: string
   /** Extra non-dancer cards (dinners, activities, onboarding) interleaved into the deck */
   extraCards?: SwipeCard[]
   workshops: Workshop[]
@@ -45,7 +47,7 @@ async function loadPool() {
   poolLoading.value = true
   try {
     const [pool, friends, incoming] = await Promise.all([
-      $trpc.wave.discoverPool.query({ festivalSlug: props.festivalSlug, itemType: props.itemType }),
+      $trpc.wave.discoverPool.query({ festivalSlug: props.festivalSlug, itemType: props.itemType, city: props.city || undefined }),
       $trpc.wave.friends.query({ festivalSlug: props.festivalSlug }),
       $trpc.wave.incomingCount.query({ festivalSlug: props.festivalSlug }),
     ])
@@ -57,6 +59,8 @@ async function loadPool() {
       styles: d.styles,
       workshopIds: [],
       bio: d.bio ?? '',
+      going: d.going,
+      city: d.city ?? undefined,
     }))
     matchedFriends.value = friends.map(d => ({
       id: d.dancerId,
@@ -602,6 +606,9 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
                     📹 Videographer · &euro;{{ currentDancer.hourlyRate }}/h
                   </Badge>
                 </div>
+                <p v-if="currentDancer.going || currentDancer.city || city" class="text-eyebrow font-bold uppercase tracking-wider text-white/90 mt-0.5">
+                  {{ currentDancer.going ? 'Going' : `Dances in ${currentDancer.city || city}` }}
+                </p>
                 <p class="text-xs text-white/80 mt-0.5">{{ currentDancer.bio }}</p>
               </div>
               <div class="flex flex-wrap gap-1.5">

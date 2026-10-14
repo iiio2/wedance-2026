@@ -33,8 +33,6 @@ function onSignIn(action?: string) {
   showSignUp.value = true
 }
 
-const goingSectionRef = ref<{ reload: () => void } | null>(null)
-
 function onPick() {
   if (!isSignedIn.value) {
     onSignIn('plan')
@@ -43,7 +41,6 @@ function onPick() {
   const wasGoing = picked.value
   toggleEvent(ev.value.id)
   liveGoingCount.value = Math.max(0, liveGoingCount.value + (wasGoing ? -1 : 1))
-  nextTick(() => goingSectionRef.value?.reload())
 }
 
 // "Shall we dance?" — same swipe deck as festivals, fed by this event's
@@ -277,14 +274,14 @@ useHead(() => ({
           <p v-if="ev.message" class="text-sm leading-relaxed whitespace-pre-line break-words text-muted-foreground">{{ ev.message }}</p>
         </section>
 
-        <!-- Shall we dance? — who's going, then swipe to meet them -->
+        <!-- Shall we dance? — the same swipe deck as festivals -->
         <section id="discover" class="scroll-mt-16">
           <h2 class="text-2xl font-black leading-tight mb-1 font-display text-foreground">Shall we <em class="italic" :style="{ color: accent }">dance?</em></h2>
-          <p class="text-sm mb-4 text-muted-foreground">See who's going, then swipe to meet the dancers you'd like to dance with.</p>
-          <GoingSection ref="goingSectionRef" item-type="event" :item-id="ev.id" :accent-color="accent" class="mb-6" />
+          <p class="text-sm mb-4 text-muted-foreground">Swipe to discover the dancers you'd like to dance with.</p>
           <DiscoverDancers
             :festival-slug="ev.id"
             item-type="event"
+            :city="ev.venueCity"
             :extra-cards="swipeCards"
             :workshops="[]"
             :plan-ids="noPlan"

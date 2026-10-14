@@ -35,6 +35,7 @@ export async function festivalView(db: any, ev: any): Promise<{ festival: Festiv
   const festival: Festival = {
     name: ev.name ?? '',
     slug: f.key,
+    city: ev.city || undefined,
     startDate: ev.startDate ? eventLocalDate(ev.startDate, tz) : '',
     endDate: ev.endDate ? eventLocalDate(ev.endDate, tz) : '',
     description: ev.description ?? '',

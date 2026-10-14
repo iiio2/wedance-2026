@@ -11,6 +11,8 @@ export interface TicketOption {
 export interface Festival {
   name: string
   slug: string
+  /** Where it happens — local dancers fill the swipe deck from here. */
+  city?: string
   startDate: string
   endDate: string
   description: string
@@ -113,6 +115,9 @@ export interface DiscoverDancer {
   endorsements?: Record<string, number> // style name -> count of mutual endorsements
   serviceType?: 'taxi-dancer' | 'videographer'
   hourlyRate?: number // EUR per hour, for bookable professionals
+  /** Marked going to this event; false = a local dancer filling the deck. */
+  going?: boolean
+  city?: string
 }
 
 export interface SwipeCardDinner {
