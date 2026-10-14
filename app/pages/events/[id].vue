@@ -124,9 +124,12 @@ function fromSyncedEvent(e: any) {
     venueAddress: e.venueAddress || '',
     venueCity: e.city || '',
     citySlug: e.citySlug || '',
-    mapUrl: e.venueLat != null && e.venueLng != null
-      ? `https://www.google.com/maps/search/?api=1&query=${e.venueLat},${e.venueLng}`
-      : (e.venueAddress ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.venueAddress)}` : ''),
+    mapUrl: (() => {
+      const parts = [e.venueName, e.venueAddress].filter(Boolean).join(', ')
+      if (parts) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts)}`
+      if (e.venueLat && e.venueLng) return `https://www.google.com/maps/search/?api=1&query=${e.venueLat},${e.venueLng}`
+      return ''
+    })(),
     organizerName: e.organizerName || '',
     organizerHandle: e.organizerUsername || '',
     archived: !!e.archived,

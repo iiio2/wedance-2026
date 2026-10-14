@@ -45,7 +45,7 @@ export async function festivalView(db: any, ev: any): Promise<{ festival: Festiv
     venue: {
       name: ev.venueName || [ev.city, ev.country].filter(Boolean).join(', ') || 'TBA',
       address: ev.venueAddress || '',
-      coordinates: { lat: ev.venueLat ?? 0, lng: ev.venueLng ?? 0 },
+      coordinates: ev.venueLat && ev.venueLng ? { lat: ev.venueLat, lng: ev.venueLng } : undefined,
       practicalInfo: f.practicalInfo ?? [],
     },
     attendeeCount: 0, // the page loads the live count

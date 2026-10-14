@@ -28,7 +28,7 @@ export interface Festival {
 export interface Venue {
   name: string
   address: string
-  coordinates: { lat: number; lng: number }
+  coordinates?: { lat: number; lng: number }
   practicalInfo: string[]
 }
 

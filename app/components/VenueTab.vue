@@ -5,10 +5,10 @@ import type { Venue } from '~/types/festival'
 defineProps<{ venue: Venue }>()
 
 function mapsUrl(venue: Venue) {
-  if (venue.coordinates?.lat != null && venue.coordinates?.lng != null)
+  const parts = [venue.name, venue.address].filter(Boolean).join(', ')
+  if (parts) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts)}`
+  if (venue.coordinates?.lat && venue.coordinates?.lng)
     return `https://www.google.com/maps/search/?api=1&query=${venue.coordinates.lat},${venue.coordinates.lng}`
-  if (venue.address)
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue.address)}`
   return ''
 }
 </script>
