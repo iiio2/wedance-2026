@@ -145,6 +145,7 @@ const startFestival = () => useTrack().track('organizer_cta_click', { surface: '
         <div class="text-sm font-bold uppercase tracking-widest text-secondary font-sans">Running a festival?</div>
         <h2 class="mt-2 text-3xl leading-tight">Your festival gets a page dancers plan on.</h2>
         <p class="mt-2 max-w-2xl text-sm sm:text-base text-muted-foreground font-sans">Add your passes, line-up and programme by day in the same editor. Dancers start planning weeks before the doors open.</p>
+        <p class="mt-3 max-w-2xl text-sm text-muted-foreground font-sans"><span class="font-bold text-foreground">Tickets:</span> keep selling where you sell now. Link your ticket shop and your page’s “Get tickets” button goes there, with your passes, prices and what each covers shown on the page.</p>
         <ul class="mt-6 grid gap-4 sm:grid-cols-2">
           <li v-for="f in FESTIVAL" :key="f.title" class="flex items-start gap-3">
             <component :is="f.icon" class="mt-0.5 w-5 h-5 shrink-0 text-primary" style="stroke-width:1.5;" aria-hidden="true" />
