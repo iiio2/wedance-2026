@@ -104,6 +104,25 @@ async function toggleFollow() {
 
 const profile = computed(() => data.value?.profile ?? null)
 
+// --- Photo gallery (Instagram-story-like) ---
+const galleryOpen = ref(false)
+const galleryStartIndex = ref(0)
+const allPhotos = computed(() => {
+  const p = profile.value
+  if (!p) return []
+  const urls: string[] = []
+  if (p.photo) urls.push(p.photo)
+  if (p.photos?.length) {
+    for (const ph of p.photos) { if (ph.url && ph.url !== p.photo) urls.push(ph.url) }
+  }
+  return urls
+})
+function openGallery(index = 0) {
+  if (!allPhotos.value.length) return
+  galleryStartIndex.value = index
+  galleryOpen.value = true
+}
+
 // --- Book them (anyone, no account) on /@handle/book: artists, and venues
 // without bookable spaces (those use the space request below).
 const canBook = computed(() => !!profile.value && (profile.value.type === 'artist' || (profile.value.type === 'venue' && !(data.value?.spaces ?? []).length)))
@@ -216,22 +235,21 @@ useHead(() => ({
         <div class="rounded-2xl overflow-hidden bg-white border" style="border-color:color-mix(in srgb, var(--wd-red-600) 20%, transparent); box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-red-600) 13.3%, transparent), 0 10px 28px rgba(59,31,18,0.06);">
           <div class="h-2" style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500));" />
           <div class="p-6 sm:p-8">
-            <div class="flex items-start gap-5">
-              <div class="shrink-0">
-                <img v-if="profile.photo" :src="profile.photo" :alt="profile.name" class="w-20 h-20 rounded-full object-cover" style="border:2px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent);">
-                <div v-else class="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));">{{ initials }}</div>
+            <!-- Centered hero photo circle -->
+            <div class="flex flex-col items-center">
+              <button v-if="profile.photo" class="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" :class="allPhotos.length > 1 ? 'ring-2 ring-primary ring-offset-2' : ''" @click="openGallery(0)">
+                <img :src="profile.photo" :alt="profile.name" class="w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover object-top" style="border:3px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent);">
+              </button>
+              <div v-else class="w-32 h-32 sm:w-40 sm:h-40 rounded-full flex items-center justify-center text-4xl font-bold text-white" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));">{{ initials }}</div>
+              <div class="flex items-center gap-2 mt-4">
+                <span class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary font-sans">{{ typeLabel[profile.type] || 'Profile' }}</span>
+                <span v-if="profile.venueType === 'OpenAir'" class="inline-flex items-center gap-1 text-eyebrow font-bold uppercase tracking-wider rounded-full px-2 py-0.5 text-wd-green-600 font-sans" style="background:color-mix(in srgb, var(--wd-green-600) 9.4%, transparent);"><Trees class="w-3 h-3" /> Open air</span>
+                <span v-if="isFree" class="text-eyebrow font-bold uppercase tracking-wider rounded-full px-2 py-0.5 text-primary font-sans" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);">Free · community-run</span>
               </div>
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2">
-                  <span class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary font-sans">{{ typeLabel[profile.type] || 'Profile' }}</span>
-                  <span v-if="profile.venueType === 'OpenAir'" class="inline-flex items-center gap-1 text-eyebrow font-bold uppercase tracking-wider rounded-full px-2 py-0.5 text-wd-green-600 font-sans" style="background:color-mix(in srgb, var(--wd-green-600) 9.4%, transparent);"><Trees class="w-3 h-3" /> Open air</span>
-                  <span v-if="isFree" class="text-eyebrow font-bold uppercase tracking-wider rounded-full px-2 py-0.5 text-primary font-sans" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);">Free · community-run</span>
-                </div>
-                <h1 class="text-3xl leading-tight mt-0.5 text-foreground">{{ profile.name }}</h1>
-                <div class="text-sm mt-0.5 text-secondary font-hand" style="font-size:18px;">@{{ profile.username }}</div>
-                <div v-if="profile.address" class="flex items-start gap-1 mt-2 text-xs text-muted-foreground font-sans"><MapPin class="w-3 h-3 mt-0.5 shrink-0 text-secondary" /> <span>{{ profile.address }}<a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener noreferrer" class="ml-1.5 font-bold underline text-primary">Map</a></span></div>
-                <NuxtLink v-if="profile.citySlug && profile.city" :to="`/cities/${profile.citySlug}`" class="inline-block mt-1 text-xs font-bold hover:underline text-secondary font-sans">{{ profile.city }} →</NuxtLink>
-              </div>
+              <h1 class="text-3xl leading-tight mt-1 text-foreground text-center">{{ profile.name }}</h1>
+              <div class="text-sm mt-0.5 text-secondary font-hand" style="font-size:18px;">@{{ profile.username }}</div>
+              <div v-if="profile.address" class="flex items-start gap-1 mt-2 text-xs text-muted-foreground font-sans"><MapPin class="w-3 h-3 mt-0.5 shrink-0 text-secondary" /> <span>{{ profile.address }}<a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener noreferrer" class="ml-1.5 font-bold underline text-primary">Map</a></span></div>
+              <NuxtLink v-if="profile.citySlug && profile.city" :to="`/cities/${profile.citySlug}`" class="inline-block mt-1 text-xs font-bold hover:underline text-secondary font-sans">{{ profile.city }} →</NuxtLink>
             </div>
             <p v-if="profile.bio" class="mt-5 text-sm leading-relaxed text-muted-foreground font-sans">{{ profile.bio }}</p>
             <div v-if="profile.styles?.length" class="mt-3 flex flex-wrap gap-1.5">
@@ -337,6 +355,9 @@ useHead(() => ({
     </main>
 
     <SiteFooter />
+
+    <!-- Photo gallery -->
+    <PhotoGallery v-if="galleryOpen" :photos="allPhotos" :start-index="galleryStartIndex" @close="galleryOpen = false" />
 
     <!-- Booking modal -->
     <div v-if="booking.open" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style="background:rgba(59,31,18,0.4);" @click.self="booking.open = false">
