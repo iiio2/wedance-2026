@@ -15,6 +15,8 @@ export interface Festival {
   endDate: string
   description: string
   logo: string
+  /** The event's flyer (its cover), shown in About. */
+  flyer?: string
   accentColor: string
   socialLinks: { platform: string; url: string }[]
   venue: Venue

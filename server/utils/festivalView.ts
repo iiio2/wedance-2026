@@ -22,6 +22,9 @@ export async function festivalView(db: any, ev: any): Promise<{ festival: Festiv
       .from(profiles).where(inArray(profiles.username, handles))
     : []
   const byHandle = new Map<string, any>(people.map((p: any) => [p.username, p]))
+  // The round badge is a logo: the festival's own, else the brand running it
+  // (host profile, then the organizer). Never the flyer: that goes in About.
+  const brand = f.logo ? null : await brandLogo(db, ev)
 
   // "N going" per workshop: dancers' picks, stored as `<key>:<workshop id>`.
   const picks = await db.select({ itemId: planItems.itemId, n: sql<number>`count(*)::int` }).from(planItems)
@@ -35,7 +38,8 @@ export async function festivalView(db: any, ev: any): Promise<{ festival: Festiv
     startDate: ev.startDate ? eventLocalDate(ev.startDate, tz) : '',
     endDate: ev.endDate ? eventLocalDate(ev.endDate, tz) : '',
     description: ev.description ?? '',
-    logo: f.logo || ev.cover || '',
+    logo: f.logo || brand || '',
+    flyer: ev.cover || undefined,
     accentColor: f.accentColor || '#d97706',
     socialLinks: f.socialLinks ?? [],
     venue: {
@@ -106,4 +110,16 @@ export async function confirmedArtists(db: any, ev: any, handles: string[]): Pro
     }
   }
   return out
+}
+
+async function brandLogo(db: any, ev: any): Promise<string | null> {
+  if (ev.hostProfileId) {
+    const [p] = await db.select({ photo: profiles.photo }).from(profiles).where(eq(profiles.id, ev.hostProfileId)).limit(1)
+    if (p?.photo) return p.photo
+  }
+  if (ev.organizerUsername) {
+    const [p] = await db.select({ photo: profiles.photo }).from(profiles).where(eq(profiles.username, ev.organizerUsername)).limit(1)
+    if (p?.photo) return p.photo
+  }
+  return null
 }
