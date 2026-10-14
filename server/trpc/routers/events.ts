@@ -95,6 +95,16 @@ export const eventsRouter = router({
       return { city: c?.name ?? input.city, country: c?.country ?? null, inCity, festivals }
     }),
 
+  // Live counts for the pages that pitch WeDance (/for-organizers): never a
+  // number typed into the copy, so it can't go stale.
+  stats: publicProcedure.query(async ({ ctx }) => {
+    const now = new Date()
+    const res: any = await ctx.db.execute(sql`select count(*)::int as events, count(distinct ${events.citySlug})::int as cities
+      from ${events} where ${events.published} and not ${events.archived} and ${events.startDate} > ${now}`)
+    const r = (res.rows ?? res)[0] ?? { events: 0, cities: 0 }
+    return { upcomingEvents: Number(r.events) || 0, cities: Number(r.cities) || 0 }
+  }),
+
   // Upcoming events a venue hosts, an organiser runs or an artist plays — for /@handle.
   // Optional `name` lets artist profiles also match events that list the artist
   // by display name instead of @handle (name fallback).
