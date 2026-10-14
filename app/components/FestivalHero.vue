@@ -12,7 +12,7 @@ const props = withDefaults(defineProps<{
   reviewTargetType?: 'festival' | 'event' | 'venue' | 'artist' | 'organizer'
   entityLabel?: string
   // Where the non-ticket CTA scrolls (festivals use the in-page #discover flow;
-  // events point at their #going section). And an optional clearer label.
+  // events point at their #discover section too). And an optional clearer label.
   ctaAnchor?: string
   ctaFallbackLabel?: string
   // Add-to-plan ("Pick") state — shown alongside tickets. Parent owns the store

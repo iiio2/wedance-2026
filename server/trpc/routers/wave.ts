@@ -180,7 +180,12 @@ export const waveRouter = router({
    * already expressed interest, so a right-swipe creates an instant match).
    */
   discoverPool: protectedProcedure
-    .input(z.object({ festivalSlug: z.string().min(1).max(120) }))
+    .input(z.object({
+      // A festival slug, or an event id when itemType is 'event' (plain
+      // events key their waves by event id).
+      festivalSlug: z.string().min(1).max(120),
+      itemType: z.enum(['festival', 'event']).default('festival'),
+    }))
     .query(async ({ ctx, input }) => {
       // 1. IDs I've already swiped on (so we exclude them from the deck)
       const alreadySwiped = await ctx.db
@@ -212,7 +217,7 @@ export const waveRouter = router({
         .from(planItems)
         .where(
           and(
-            eq(planItems.itemType, 'festival'),
+            eq(planItems.itemType, input.itemType),
             eq(planItems.itemId, input.festivalSlug),
             eq(planItems.shareGoing, true),
             ne(planItems.dancerId, ctx.dancerId),

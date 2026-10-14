@@ -300,11 +300,11 @@ describe('wave router (RAZ-82)', () => {
     const BOB = 'b0000000-0000-4000-b000-000000000002'
     const CAROL = 'c0000000-0000-4000-b000-000000000003'
 
-    function addPlanItem(dancerId: string, slug = 'fest-1', shareGoing = true) {
+    function addPlanItem(dancerId: string, slug = 'fest-1', shareGoing = true, itemType = 'festival') {
       planItemRows.push({
         id: `plan-${planItemRows.length}`,
         dancerId,
-        itemType: 'festival',
+        itemType,
         itemId: slug,
         shareGoing,
       })
@@ -319,6 +319,15 @@ describe('wave router (RAZ-82)', () => {
       expect(pool).toHaveLength(1)
       expect(pool[0].id).toBe(BOB)
       expect(pool[0].name).toBe('Bob')
+    })
+
+    it('reads a plain event\'s going list when itemType is event', async () => {
+      addPlanItem(BOB, 'event-1', true, 'event')
+
+      const caller = makeCaller(db, ALICE)
+      expect(await caller.wave.discoverPool({ festivalSlug: 'event-1' })).toHaveLength(0)
+      const pool = await caller.wave.discoverPool({ festivalSlug: 'event-1', itemType: 'event' })
+      expect(pool.map(d => d.id)).toEqual([BOB])
     })
 
     it('excludes dancers the caller already swiped on', async () => {

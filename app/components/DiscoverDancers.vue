@@ -1,27 +1,28 @@
 <script setup lang="ts">
-import type { DiscoverDancer, DanceListEntry, DanceEndorsement, Workshop, SwipeCard, SwipeCardDinner, SwipeCardActivity, SwipeCardOnboardingDanceCard, SwipeCardOnboardingProfile, DanceRole, FreemiumState } from '~/types/festival'
+import type { DiscoverDancer, DanceListEntry, DanceEndorsement, Workshop, SwipeCard, SwipeCardDinner, SwipeCardActivity, SwipeCardOnboardingDanceCard, SwipeCardOnboardingProfile, DanceRole } from '~/types/festival'
 import { Heart, X, Sparkles, Check, ChevronDown, ChevronUp, RotateCcw, Star, MessageCircle, UtensilsCrossed, Compass, Camera } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 import { chilis } from '~/lib/levels'
 import { DanceCardSchema, DanceFeedbackSchema, DiscoverProfileSchema, validateForm } from '#shared/validation'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
+  /** The festival slug, or the event id when itemType is 'event'. */
   festivalSlug: string
+  /** Whose "going" list feeds the deck: a festival's or a plain event's. */
+  itemType?: 'festival' | 'event'
   /** Extra non-dancer cards (dinners, activities, onboarding) interleaved into the deck */
   extraCards?: SwipeCard[]
   workshops: Workshop[]
   planIds: Set<string>
   isSignedIn: boolean
-  freemiumState?: FreemiumState
-}>()
+}>(), { itemType: 'festival' })
 
 const emit = defineEmits<{
   'sign-in': [action?: string]
   'join-dinner': [id: string]
   'join-activity': [id: string]
   'onboarding-complete': [role: DanceRole, styles: string[], name: string, city: string]
-  'show-paywall': []
 }>()
 
 const { $trpc } = useNuxtApp()
@@ -44,7 +45,7 @@ async function loadPool() {
   poolLoading.value = true
   try {
     const [pool, friends, incoming] = await Promise.all([
-      $trpc.wave.discoverPool.query({ festivalSlug: props.festivalSlug }),
+      $trpc.wave.discoverPool.query({ festivalSlug: props.festivalSlug, itemType: props.itemType }),
       $trpc.wave.friends.query({ festivalSlug: props.festivalSlug }),
       $trpc.wave.incomingCount.query({ festivalSlug: props.festivalSlug }),
     ])
@@ -146,12 +147,7 @@ const currentDinnerCard = computed(() => isDinnerCard.value ? currentCard.value 
 const dinnerSpotsLeft = computed(() => {
   const dinner = currentDinnerCard.value
   if (!dinner) return 0
-  const perTable = dinner.maxSize - dinner.joined
-  if (props.freemiumState && !props.freemiumState.userUnlocked) {
-    const freemiumLeft = Math.max(0, props.freemiumState.maxFreeSpots - props.freemiumState.totalSignups)
-    return Math.min(perTable, freemiumLeft)
-  }
-  return perTable
+  return dinner.maxSize - dinner.joined
 })
 
 const currentActivityCard = computed(() => isActivityCard.value ? currentCard.value as SwipeCardActivity : null)
@@ -299,17 +295,6 @@ function swipe(direction: 'left' | 'right') {
       emit('sign-in')
       return
     }
-  }
-
-  if (
-    direction === 'right'
-    && (cardType === 'dinner' || cardType === 'activity')
-    && props.freemiumState
-    && !props.freemiumState.userUnlocked
-    && props.freemiumState.totalSignups >= props.freemiumState.maxFreeSpots
-  ) {
-    emit('show-paywall')
-    return
   }
 
   const card = currentCard.value
@@ -499,7 +484,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
           <!-- ONBOARDING: DANCE CARD (role + styles combined) -->
           <div v-if="currentDanceCard" class="bg-gradient-to-br from-violet-50 to-sky-100 p-5 space-y-4">
             <h4 class="text-base font-semibold text-foreground text-center">Your dance card</h4>
-            <p class="text-xs text-muted-foreground text-center">What do you want to focus on at this festival?</p>
+            <p class="text-xs text-muted-foreground text-center">What do you want to dance here?</p>
 
             <!-- Role -->
             <div class="flex gap-2 justify-center" @mousedown.stop @touchstart.stop>

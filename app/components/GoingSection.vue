@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * "Who's going" section for festival and event detail pages.
+ * Who's going — the faces at the top of "Shall we dance?" on festival and event pages.
  *
  * Fetches the public list of dancers who marked "Going" (plan_items)
  * via `plan.goingList` and renders a grid of tappable profile cards.

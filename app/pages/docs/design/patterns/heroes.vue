@@ -33,7 +33,7 @@ const waveCode = `<svg class="block w-full h-10 -mb-px" viewBox="0 0 1440 60" pr
 </svg>`
 
 const festivalCode = `<FestivalHero :festival="festival" :picked="inPlan" @pick="togglePlan" />
-<!-- events reuse it: entity-label="event" review-target-type="event" cta-anchor="#going" -->`
+<!-- events reuse it: entity-label="event" review-target-type="event" cta-anchor="#discover" -->`
 
 const imageRules = [
   { rule: 'Real photos only.', why: 'Every person shown is a real dancer, teacher or host at a real night. No stock, no AI-generated people, no avatar generators — “Every face — real” is on the homepage.' },

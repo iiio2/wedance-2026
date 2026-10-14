@@ -5,13 +5,13 @@
  * festival section language; sections appear only when the event has that
  * content, so an event can grow into a full festival-grade page over time.
  */
-import { Check, Plus, ArrowLeft, MapPin, Globe, User, Euro, Users, Pencil } from 'lucide-vue-next'
+import { Check, ArrowLeft, MapPin, Globe, User, Euro, Pencil } from 'lucide-vue-next'
+import type { DanceRole, SwipeCard } from '~/types/festival'
 import { findMockEvent } from '~/lib/mockEvents'
 import { formatEventWhen, eventLocalDate } from '#shared/utils/eventTime'
 import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
 import { mixHex, readableOn } from '~/lib/contrast'
-import { readableAccent } from '~/lib/accent'
 import { isUuid, eventSlug } from '#shared/utils/eventSlug'
 import { festivalPath } from '#shared/utils/eventSlug'
 
@@ -25,13 +25,39 @@ const { weekPlanIds, toggleEvent } = useWeekPlan()
 // Auth gate — "Going?" requires sign-in
 const { isSignedIn } = useAuth()
 const showSignUp = ref(false)
+const signUpAction = ref('plan')
+const signUpPrefill = ref<{ name?: string; danceStyles?: string[]; role?: 'lead' | 'follow' | 'both'; city?: string }>({})
+
+function onSignIn(action?: string) {
+  signUpAction.value = action || 'plan'
+  showSignUp.value = true
+}
+
+const goingSectionRef = ref<{ reload: () => void } | null>(null)
 
 function onPick() {
   if (!isSignedIn.value) {
-    showSignUp.value = true
+    onSignIn('plan')
     return
   }
+  const wasGoing = picked.value
   toggleEvent(ev.value.id)
+  liveGoingCount.value = Math.max(0, liveGoingCount.value + (wasGoing ? -1 : 1))
+  nextTick(() => goingSectionRef.value?.reload())
+}
+
+// "Shall we dance?" — same swipe deck as festivals, fed by this event's
+// going list. Signed-out visitors start with the dance card + profile cards.
+const swipeCards = computed<SwipeCard[]>(() => isSignedIn.value
+  ? []
+  : [
+      { id: 'onboarding-dancecard', cardType: 'onboarding-dancecard', availableStyles: ev.value?.styles ?? [] },
+      { id: 'onboarding-profile', cardType: 'onboarding-profile' },
+    ])
+const noPlan = new Set<string>()
+
+function onOnboardingComplete(role: DanceRole, styles: string[], name: string, city: string) {
+  signUpPrefill.value = { name: name || undefined, danceStyles: styles, role: role as 'lead' | 'follow' | 'both', city: city || undefined }
 }
 
 const id = computed(() => String(route.params.id))
@@ -119,19 +145,18 @@ const accent = computed(() => styleColor[String(ev.value?.styles?.[0] || '').toL
 // Accent text darkened just enough for 4.5:1 — on the cream page, or on its own '14' tint (chips).
 const ink = (c: string) => readableOn(c, WD.cream)
 const chipInk = (c: string) => readableOn(c, mixHex(c, WD.cream, 0.078))
-const buttonAccent = computed(() => readableAccent(accent.value))
 const picked = computed(() => !!ev.value && weekPlanIds?.value?.has(ev.value.id))
 const parentFestival = computed(() => ev.value?.parentFestival ?? null)
 
 // Live going count from plan items (replaces static headcount).
+// Keyed by the event's id — that's what "Going" stores, not the URL slug.
 const liveGoingCount = ref(0)
-async function loadGoingCount() {
-  if (!id.value) return
+watch(() => ev.value?.id, async (eid) => {
+  if (!eid) return
   try {
-    liveGoingCount.value = await $trpc.plan.count.query({ itemType: 'event', itemId: id.value })
+    liveGoingCount.value = await $trpc.plan.count.query({ itemType: 'event', itemId: eid })
   } catch { /* non-critical */ }
-}
-onMounted(loadGoingCount)
+})
 
 // Adapt the event into the Festival shape FestivalHero expects.
 const asFestival = computed(() => ({
@@ -152,7 +177,7 @@ const asFestival = computed(() => ({
 const sections = computed(() => {
   const s: { id: string; label: string }[] = []
   if (ev.value?.message || ev.value?.cover || ev.value?.link || ev.value?.price || ev.value?.agenda?.length) s.push({ id: 'about', label: 'About' })
-  s.push({ id: 'going', label: "Who's going" })
+  s.push({ id: 'discover', label: 'Shall we dance?' })
   if (ev.value?.artists?.length) s.push({ id: 'lineup', label: 'Lineup' })
   s.push({ id: 'venue', label: 'Venue' })
   s.push({ id: 'reviews', label: 'Reviews' })
@@ -209,7 +234,7 @@ useHead(() => ({
       </div>
 
       <!-- Same hero as festivals -->
-      <FestivalHero :festival="asFestival" review-target-type="event" entity-label="event" cta-anchor="#going" cta-fallback-label="I'm going" :picked="picked" :date-label="ev.when" @pick="onPick" />
+      <FestivalHero :festival="asFestival" review-target-type="event" entity-label="event" cta-anchor="#discover" cta-fallback-label="I'm going" :picked="picked" :date-label="ev.when" @pick="onPick" />
 
       <div v-if="ev.archived" class="max-w-3xl mx-auto px-4 pt-4 font-sans">
         <p class="rounded-xl px-4 py-3 text-sm bg-warning/[12.2%] text-wd-amber-800">This event is no longer listed by its organiser — it may have been cancelled or moved.</p>
@@ -252,29 +277,21 @@ useHead(() => ({
           <p v-if="ev.message" class="text-sm leading-relaxed whitespace-pre-line break-words text-muted-foreground">{{ ev.message }}</p>
         </section>
 
-        <!-- Who's going — journey-focused placeholder (not live data) -->
-        <section id="going" class="scroll-mt-16">
-          <h2 class="text-2xl font-black leading-tight mb-1 font-display text-foreground">Who's <em class="italic" :style="{ color: accent }">going</em></h2>
-          <div
-            class="rounded-2xl border-2 border-dashed p-6 text-center"
-            style="border-color:color-mix(in srgb, var(--wd-brown-900) 15%, transparent); background:rgba(255,255,255,0.5);"
-          >
-            <Users class="w-8 h-8 mx-auto mb-3" :style="{ color: accent }" />
-            <p class="text-base font-bold mb-1 font-display text-foreground">Planning to go?</p>
-            <p class="text-sm mb-4 max-w-sm mx-auto" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">
-              Mark yourself as going so other dancers know you'll be there.
-            </p>
-            <Button
-              type="button"
-              :variant="picked ? 'pill' : 'outline-pill'"
-              :accent="buttonAccent"
-              class="px-5"
-              :aria-pressed="picked"
-              @click="onPick"
-            >
-              <component :is="picked ? Check : Plus" aria-hidden="true" /> {{ picked ? 'Going!' : 'I\'m going' }}
-            </Button>
-          </div>
+        <!-- Shall we dance? — who's going, then swipe to meet them -->
+        <section id="discover" class="scroll-mt-16">
+          <h2 class="text-2xl font-black leading-tight mb-1 font-display text-foreground">Shall we <em class="italic" :style="{ color: accent }">dance?</em></h2>
+          <p class="text-sm mb-4 text-muted-foreground">See who's going, then swipe to meet the dancers you'd like to dance with.</p>
+          <GoingSection ref="goingSectionRef" item-type="event" :item-id="ev.id" :accent-color="accent" class="mb-6" />
+          <DiscoverDancers
+            :festival-slug="ev.id"
+            item-type="event"
+            :extra-cards="swipeCards"
+            :workshops="[]"
+            :plan-ids="noPlan"
+            :is-signed-in="isSignedIn"
+            @sign-in="onSignIn"
+            @onboarding-complete="onOnboardingComplete"
+          />
         </section>
 
         <!-- Lineup -->
@@ -314,6 +331,6 @@ useHead(() => ({
 
     <SiteFooter />
 
-    <SignUpModal v-model:open="showSignUp" action="plan" />
+    <SignUpModal v-model:open="showSignUp" :action="signUpAction" :prefill="signUpPrefill" />
   </div>
 </template>

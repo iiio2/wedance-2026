@@ -512,8 +512,6 @@ const freemiumState = ref<FreemiumState>({
   verifiedTicketHolder: false,
   paymentUrl: 'https://buy.stripe.com/placeholder',
 })
-const freeSpotsLeft = computed(() => Math.max(0, freemiumState.value.maxFreeSpots - freemiumState.value.totalSignups))
-const showSocialPaywall = ref(false)
 
 async function loadFreemiumStatus() {
   try {
@@ -530,55 +528,13 @@ async function loadFreemiumStatus() {
   }
 }
 
+// Rides, dinners and activities are free: signing in is the only gate.
 function tryUnlockSocialActivity(action: () => void) {
   if (!isSignedIn.value) {
     onSignIn('social')
     return
   }
-
-  if (freemiumState.value.userUnlocked) {
-    action()
-    return
-  }
-
-  if (freemiumState.value.totalSignups < freemiumState.value.maxFreeSpots) {
-    // Optimistic UI update
-    freemiumState.value.totalSignups++
-    freemiumState.value.userUnlocked = true
-    // Persist to backend
-    $trpc.festivalSignup.join.mutate({ festivalSlug: festival.slug }).then((result: any) => {
-      if (result.alreadyJoined) {
-        freemiumState.value.totalSignups--
-      }
-    }).catch((e: any) => {
-      console.warn('Failed to join festival:', e.message)
-      freemiumState.value.totalSignups--
-      freemiumState.value.userUnlocked = false
-    })
-    action()
-    return
-  }
-
-  showSocialPaywall.value = true
-}
-
-const paymentLoading = ref(false)
-async function startCheckout() {
-  paymentLoading.value = true
-  try {
-    const result = await $trpc.festivalSignup.createCheckoutSession.mutate({ festivalSlug: festival.slug })
-    if (result.checkoutUrl) {
-      sessionStorage.setItem('wedance_checkout', JSON.stringify({
-        festivalName: festival.name,
-        ticketName: 'Social Activities Unlock',
-        amount: 1,
-      }))
-      window.location.href = result.checkoutUrl
-    }
-  } catch (e: any) {
-    console.error('Checkout failed:', e.message)
-    paymentLoading.value = false
-  }
+  action()
 }
 
 // Extra cards (dinner, activity, onboarding) interleaved into the swipe deck
@@ -674,7 +630,7 @@ const { setCartCount } = useCart()
 watch(() => plan.value.size, (n) => setCartCount(n), { immediate: true })
 
 // Navigation — only show sections that have content for this festival.
-const allSections = ['about', 'going', 'discover', 'activities', 'lineup', 'schedule', 'tickets', 'venue'] as const
+const allSections = ['about', 'discover', 'activities', 'lineup', 'schedule', 'tickets', 'venue'] as const
 const sections = computed(() =>
   allSections.filter((s) => {
     if (s === 'schedule') return workshops.length > 0
@@ -685,7 +641,6 @@ const sections = computed(() =>
 )
 const sectionLabels: Record<string, string> = {
   'about': 'About',
-  'going': 'Who\'s going',
   'discover': 'Shall we dance?',
   'activities': 'Activities',
   'lineup': 'Lineup',
@@ -1089,41 +1044,26 @@ useHead({
           <AboutTab :festival="festival" />
         </section>
 
-        <section id="going" class="scroll-mt-16">
-          <h2 class="text-2xl font-black leading-tight mb-1" style="color:var(--wd-brown-900);">Who's <em class="italic" style="color:var(--wd-red-600);">going</em></h2>
-          <p class="text-sm mb-4" style="color:var(--wd-brown-700); font-family:var(--wd-font-sans);">See who else is planning to be there — mark yourself as going so others see you too.</p>
-          <FestivalFriends :festival-slug="festival.slug" :accent-color="festival.accentColor" class="mb-6" />
-          <GoingSection ref="goingSectionRef" :festival-slug="festival.slug" :accent-color="festival.accentColor" />
+        <!-- Who's going lives here: the faces first, then swipe to meet them. -->
+        <section id="discover" class="scroll-mt-16">
+          <h2 class="text-2xl font-black leading-tight mb-1 text-foreground">Shall we <em class="italic text-primary">dance?</em></h2>
+          <p class="text-sm mb-4 text-muted-foreground font-sans">See who's going, then swipe to meet dancers, join group dinners and activities around the {{ kind }}.</p>
+          <GoingSection ref="goingSectionRef" :festival-slug="festival.slug" :accent-color="festival.accentColor" class="mb-6" />
           <!-- Verified ticket holders: the TicketTailor claim flow exists for Charanga only (/charanga/claim). -->
-          <div v-if="festival.slug === 'charanga-habanera-munich-2026'" class="mt-6">
+          <div v-if="festival.slug === 'charanga-habanera-munich-2026'" class="mb-6">
             <h3 class="mb-3 text-lg font-bold font-display">Verified attendees</h3>
             <AttendeeRoster :festival-slug="festival.slug" />
           </div>
-        </section>
-
-        <section id="discover" class="scroll-mt-16">
-          <div class="flex items-center gap-2 mb-1">
-            <h2 class="text-2xl font-black leading-tight text-foreground">Shall we <em class="italic text-primary">dance?</em></h2>
-            <span v-if="!isSignedIn && freeSpotsLeft > 0" class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full" :style="{ background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: CHIP.green }">
-              {{ freeSpotsLeft }} free {{ freeSpotsLeft === 1 ? 'spot' : 'spots' }} left
-            </span>
-            <span v-else-if="!isSignedIn" class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full" :style="{ background: 'color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent)', color: CHIP.amber }">
-              From &euro;1
-            </span>
-          </div>
-          <p class="text-sm mb-4 text-muted-foreground font-sans">Swipe to discover dancers, group dinners, and activities happening around the festival.</p>
           <DiscoverDancers
             :festival-slug="festival.slug"
             :extra-cards="extraSwipeCards"
             :workshops="workshops"
             :plan-ids="planIds"
             :is-signed-in="isSignedIn"
-            :freemium-state="freemiumState"
             @sign-in="onSignIn"
             @onboarding-complete="onOnboardingComplete"
             @join-dinner="joinDinner"
             @join-activity="joinActivity"
-            @show-paywall="showSocialPaywall = true"
           />
         </section>
 
@@ -1785,40 +1725,6 @@ useHead({
       :festival-slug="festival.slug"
     />
 
-    <Teleport to="body">
-      <div
-        v-if="showSocialPaywall"
-        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
-        @click.self="showSocialPaywall = false"
-      >
-        <div class="bg-background rounded-lg p-6 mx-4 max-w-sm space-y-4">
-          <div class="text-center space-y-2">
-            <Sparkles class="w-8 h-8 text-primary mx-auto" />
-            <h3 class="text-sm font-semibold">Unlock social activities</h3>
-            <p class="text-xs text-muted-foreground">
-              All {{ freemiumState.maxFreeSpots }} free spots have been claimed. Unlock rides, dinners, and activities for just &euro;1.
-            </p>
-          </div>
-          <Button
-            class="w-full"
-            size="sm"
-            :disabled="paymentLoading"
-            @click="startCheckout"
-          >
-            {{ paymentLoading ? 'Redirecting...' : 'Unlock for €1' }}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            class="w-full text-xs text-muted-foreground hover:text-foreground"
-            @click="showSocialPaywall = false"
-          >
-            Maybe later
-          </Button>
-        </div>
-      </div>
-    </Teleport>
 
     <ClientOnly>
       <section id="reviews" class="max-w-4xl mx-auto px-4 pb-10 scroll-mt-16">
