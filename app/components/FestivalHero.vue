@@ -20,6 +20,9 @@ const props = withDefaults(defineProps<{
   picked?: boolean
   // Pre-formatted date line (events pass wall-clock time in the event's zone).
   dateLabel?: string
+  // Venue address + Google Maps link (events pass these from the synced data).
+  venueAddress?: string
+  mapUrl?: string
 }>(), { reviewTargetType: 'festival', entityLabel: 'festival', ctaAnchor: '#discover' })
 
 defineEmits<{ pick: [] }>()
@@ -135,6 +138,11 @@ const rays = Array.from({ length: 24 }, (_, i) => {
             class="mt-2 text-sm sm:text-base italic font-display text-muted-foreground"
           >
             {{ dateRange }} <span class="text-secondary">·</span> {{ festival.venue.name }}
+            <template v-if="venueAddress">
+              <span class="text-secondary">·</span>
+              <a v-if="mapUrl" :href="mapUrl" target="_blank" rel="noopener noreferrer" class="underline hover:text-foreground">{{ venueAddress }}</a>
+              <span v-else>{{ venueAddress }}</span>
+            </template>
           </p>
 
           <!-- Meta: attendees + socials -->

@@ -971,7 +971,7 @@ useHead({
     </div>
 
     <div ref="heroRef">
-      <FestivalHero :festival="heroFestival" :picked="yearPlanIds.has(festival.slug)" @pick="onPick" />
+      <FestivalHero :festival="heroFestival" :picked="yearPlanIds.has(festival.slug)" :venue-address="festival.venue?.address" :map-url="festival.venue?.coordinates?.lat != null ? `https://www.google.com/maps/search/?api=1&query=${festival.venue.coordinates.lat},${festival.venue.coordinates.lng}` : (festival.venue?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(festival.venue.address)}` : undefined)" @pick="onPick" />
     </div>
 
     <!-- Section anchor nav — V3 restyled. Festival identity slides in on
