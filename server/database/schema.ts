@@ -496,6 +496,28 @@ export const festivalSubmissions = pgTable('festival_submissions', {
   createdAt: timestamp('created_at').defaultNow(),
 })
 
+// --- Organizer subscriptions (RAZ-106) ----------------------------------------
+// An organizer profile can hold one active annual subscription plan.
+// The Network plan (€199/year) covers unlimited events under a single annual
+// price.  Stripe runs the billing; this table mirrors the subscription state so
+// entitlement checks stay inside the DB without a Stripe API call.
+export const organizerSubscriptions = pgTable('organizer_subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  dancerId: uuid('dancer_id').notNull().references(() => dancers.id),
+  plan: text('plan').notNull().$type<'network'>(),
+  status: text('status').notNull().$type<'active' | 'past_due' | 'canceled' | 'unpaid'>().default('active'),
+  stripeCustomerId: text('stripe_customer_id'),
+  stripeSubscriptionId: text('stripe_subscription_id').unique(),
+  currentPeriodStart: timestamp('current_period_start'),
+  currentPeriodEnd: timestamp('current_period_end'),
+  canceledAt: timestamp('canceled_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  index('org_sub_profile_idx').on(t.profileId),
+  index('org_sub_dancer_idx').on(t.dancerId),
+])
+
 // --- Moderator elections (community governance for free/OpenAir commons) ------
 // Epic G800 (WED-152): a free space's moderator is elected annually. Candidates
 // self-nominate and propose the guidelines the space runs by; the community votes

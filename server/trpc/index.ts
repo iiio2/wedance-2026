@@ -34,6 +34,7 @@ import { businessPostsRouter } from './routers/businessPosts'
 import { businessLooksRouter } from './routers/businessLooks'
 import { businessTeamRouter } from './routers/businessTeam'
 import { waveRouter } from './routers/wave'
+import { organizerSubscriptionRouter } from './routers/organizerSubscription'
 
 export const appRouter = router({
   auth: authRouter,
@@ -71,6 +72,7 @@ export const appRouter = router({
   businessTeam: businessTeamRouter,
   roommate: roommateRouter,
   wave: waveRouter,
+  organizerSubscription: organizerSubscriptionRouter,
 })
 
 export type AppRouter = typeof appRouter

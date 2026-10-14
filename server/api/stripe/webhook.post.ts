@@ -1,7 +1,7 @@
 import Stripe from 'stripe'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { useDb } from '../../utils/db'
-import { festivals, festivalSignups, dancers } from '../../database/schema'
+import { festivals, festivalSignups, dancers, organizerSubscriptions } from '../../database/schema'
 import { sendTicketConfirmationEmail } from '../../utils/email'
 import { completeReferral, expireReferral } from './webhook.lib'
 
@@ -137,6 +137,76 @@ export default defineEventHandler(async (event) => {
         console.error('Stripe webhook: referral expiration failed:', refErr)
       }
     }
+  }
+
+  // --- Organizer subscription lifecycle (RAZ-106) ---
+
+  if (stripeEvent.type === 'checkout.session.completed') {
+    const session = stripeEvent.data.object as Stripe.Checkout.Session
+    if (session.mode === 'subscription' && session.metadata?.plan === 'network') {
+      const profileId = session.metadata.profileId
+      const dancerId = session.metadata.dancerId
+      const subscriptionId = typeof session.subscription === 'string'
+        ? session.subscription
+        : (session.subscription as Stripe.Subscription | null)?.id
+
+      if (profileId && dancerId && subscriptionId) {
+        const db = useDb()
+        const sub = await stripe.subscriptions.retrieve(subscriptionId)
+
+        try {
+          await db.insert(organizerSubscriptions).values({
+            profileId,
+            dancerId,
+            plan: 'network',
+            status: 'active',
+            stripeCustomerId: typeof sub.customer === 'string' ? sub.customer : sub.customer?.id ?? null,
+            stripeSubscriptionId: sub.id,
+            currentPeriodStart: new Date(sub.current_period_start * 1000),
+            currentPeriodEnd: new Date(sub.current_period_end * 1000),
+          })
+        } catch (e: any) {
+          // Idempotent: ignore duplicate on stripe_subscription_id unique constraint
+          if (!(e.message?.includes('unique') || e.message?.includes('duplicate') || e.cause?.code === '23505')) {
+            throw e
+          }
+        }
+      }
+    }
+  }
+
+  if (stripeEvent.type === 'customer.subscription.updated') {
+    const sub = stripeEvent.data.object as Stripe.Subscription
+    const db = useDb()
+
+    const status = sub.status === 'active' ? 'active'
+      : sub.status === 'past_due' ? 'past_due'
+        : sub.status === 'unpaid' ? 'unpaid'
+          : sub.status === 'canceled' ? 'canceled'
+            : null
+
+    if (status) {
+      await db.update(organizerSubscriptions)
+        .set({
+          status,
+          currentPeriodStart: new Date(sub.current_period_start * 1000),
+          currentPeriodEnd: new Date(sub.current_period_end * 1000),
+          canceledAt: sub.canceled_at ? new Date(sub.canceled_at * 1000) : null,
+        })
+        .where(eq(organizerSubscriptions.stripeSubscriptionId, sub.id))
+    }
+  }
+
+  if (stripeEvent.type === 'customer.subscription.deleted') {
+    const sub = stripeEvent.data.object as Stripe.Subscription
+    const db = useDb()
+
+    await db.update(organizerSubscriptions)
+      .set({
+        status: 'canceled',
+        canceledAt: sub.canceled_at ? new Date(sub.canceled_at * 1000) : new Date(),
+      })
+      .where(eq(organizerSubscriptions.stripeSubscriptionId, sub.id))
   }
 
   return { received: true }

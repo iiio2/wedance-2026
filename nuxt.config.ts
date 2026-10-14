@@ -94,6 +94,7 @@ export default defineNuxtConfig({
           : 'http://localhost:3000'),
     stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    stripeNetworkPriceId: process.env.STRIPE_NETWORK_PRICE_ID || '',
     tickettailorWebhookSecret: process.env.TICKETTAILOR_WEBHOOK_SECRET || '',
     // Event flyers (business mode): Gemini paints the poster and reads it back.
     geminiApiKey: process.env.GEMINI_API_KEY || '',

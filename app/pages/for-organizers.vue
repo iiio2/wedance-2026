@@ -12,7 +12,7 @@
  * door claims until those are live. Numbers come from events.stats, live.
  * Example flyers are real ones kept by organizers on WeDance.
  */
-import { ArrowRight, CalendarSearch, MapPin, UserCheck, Sparkles, Palette, Check, Mail, Wand2, CalendarDays, Users, Share2, Map, Ticket, QrCode, Wallet } from 'lucide-vue-next'
+import { ArrowRight, CalendarSearch, MapPin, UserCheck, Sparkles, Palette, Check, Mail, Wand2, CalendarDays, Users, Share2, Map, Ticket, QrCode, Wallet, Crown, Infinity, BarChart3, Star, Headphones } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
 
 definePageMeta({ layout: false })
@@ -66,6 +66,17 @@ const ticketingMail = 'mailto:hello@wedance.vip?subject=' + encodeURIComponent('
 const applyTicketing = () => useTrack().track('organizer_cta_click', { surface: 'for-organizers', kind: 'ticketing' })
 const start = () => useTrack().track('organizer_cta_click', { surface: 'for-organizers' })
 const startFestival = () => useTrack().track('organizer_cta_click', { surface: 'for-organizers', kind: 'festival' })
+
+// Network plan (RAZ-106): €199/year for organizers running multiple events.
+const NETWORK_BENEFITS = [
+  { icon: Infinity, text: 'Unlimited events per year' },
+  { icon: Sparkles, text: 'AI-painted flyers and content plan for every event' },
+  { icon: BarChart3, text: 'Cross-event audience insights' },
+  { icon: Star, text: 'Featured in the Year Planner' },
+  { icon: Headphones, text: 'Dedicated account manager' },
+]
+const networkMail = 'mailto:hello@wedance.vip?subject=' + encodeURIComponent('WeDance Network plan') + '&body=' + encodeURIComponent('Organization:\nEvents per year:\nWhat you run:\n')
+const networkCta = () => useTrack().track('organizer_cta_click', { surface: 'for-organizers', kind: 'network' })
 </script>
 
 <template>
@@ -196,6 +207,32 @@ const startFestival = () => useTrack().track('organizer_cta_click', { surface: '
             <NuxtLink to="/business/events/new?type=Festival" @click="startFestival">List your festival <ArrowRight aria-hidden="true" /></NuxtLink>
           </Button>
           <NuxtLink :to="EXAMPLE" class="text-sm font-bold text-secondary hover:underline">See one: ¡Menéate Viena! →</NuxtLink>
+        </div>
+      </div>
+    </section>
+
+    <!-- Network plan: annual subscription for multi-event organizers (RAZ-106) -->
+    <section id="network" class="max-w-5xl mx-auto px-4 pb-12 scroll-mt-20">
+      <div class="rounded-2xl border-2 bg-white p-6 sm:p-8" :style="{ borderColor: WD.green600 + '55' }">
+        <div class="flex flex-wrap items-center gap-2 text-sm font-bold uppercase tracking-widest font-sans" :style="{ color: WD.green600 }">
+          <Crown class="w-4 h-4" aria-hidden="true" /> Network
+          <span class="rounded-full px-2 py-0.5 text-eyebrow tracking-wider text-white" :style="{ background: WD.green600 }">€199 / year</span>
+        </div>
+        <h2 class="mt-2 text-3xl leading-tight">One price for all your events.</h2>
+        <p class="mt-2 max-w-2xl text-sm sm:text-base text-muted-foreground font-sans">
+          Running more than one night? The Network plan covers every event you put on WeDance for a year, instead of paying per event.
+        </p>
+        <ul class="mt-6 space-y-3">
+          <li v-for="b in NETWORK_BENEFITS" :key="b.text" class="flex items-start gap-3">
+            <component :is="b.icon" class="mt-0.5 w-5 h-5 shrink-0" :style="{ color: WD.green600, strokeWidth: 1.5 }" aria-hidden="true" />
+            <span class="text-sm font-sans text-foreground">{{ b.text }}</span>
+          </li>
+        </ul>
+        <div class="mt-6 flex flex-wrap items-center gap-4 font-sans">
+          <Button as-child variant="cta" class="h-auto min-h-11 whitespace-normal px-6 py-2.5">
+            <a :href="networkMail" @click="networkCta">Talk to us <ArrowRight aria-hidden="true" /></a>
+          </Button>
+          <p class="text-xs text-muted-foreground">Or start with one event free and upgrade later.</p>
         </div>
       </div>
     </section>
