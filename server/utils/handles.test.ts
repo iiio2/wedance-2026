@@ -27,5 +27,8 @@ describe('picking a handle', () => {
     expect(handleSlug('Kulturzentrum Giesinger Bahnhof')).toBe('kulturzentrum-giesinger-bahnhof')
     expect(handleSlug('Arnulfstraße 195')).toBe('arnulfstrasse-195')
     expect(handleSlug('Alösha')).toBe('alosha')
+    expect(handleSlug('Niranjan 9876543210')).toBe('niranjan')
+    expect(handleSlug('01772359159')).toBe('')
+    expect(handleSlug('Zentnerstraße 39, 80798')).toBe('zentnerstrasse-39-80798')
   })
 })

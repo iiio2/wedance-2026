@@ -15,6 +15,8 @@ const MARKS = /[̀-ͯ]/g
 export const RESERVED = ['admin', 'administrator', 'api', 'app', 'artist', 'artists', 'auth', 'booking-terms', 'business', 'charanga', 'cities', 'city', 'confirm', 'dancer', 'dancers', 'docs', 'elections', 'event', 'events', 'festival', 'festivals', 'find-your-dance', 'for-events', 'for-organizers', 'for-sponsors', 'for-venues', 'gigs', 'help', 'imprint', 'login', 'logout', 'me', 'moderator', 'my-plan', 'my-year', 'null', 'onboarding', 'organizer', 'organizers', 'press', 'privacy-policy', 'profile', 'profiles', 'root', 'settings', 'signin', 'signup', 'sketches', 'staff', 'support', 'system', 'team', 'terms', 'u', 'undefined', 'user', 'venue', 'venues', 'wedance', 'www']
 export function handleSlug(s: string, max = 40) {
   return s.toLowerCase().replace(/ß/g, 'ss').normalize('NFKD').replace(MARKS, '')
+    // A run of 6+ digits in a name is likely a phone number: never in a public URL.
+    .replace(/\d{6,}/g, ' ')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, max).replace(/-+$/, '')
 }
 
