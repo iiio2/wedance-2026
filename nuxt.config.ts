@@ -45,6 +45,8 @@ export default defineNuxtConfig({
     '/architecture/**': { redirect: { to: '/docs/architecture/**', statusCode: 301 } },
     // The old festival wizard: festivals are made in the event editor now.
     '/organizers/create': { redirect: { to: '/business/events/new?type=Festival', statusCode: 301 } },
+    // One page for organizers: the festival pitch lives on /for-organizers#festivals.
+    '/organizers': { redirect: { to: '/for-organizers#festivals', statusCode: 301 } },
     // Auth-gated pages: all data is client-only (localStorage + TRPC behind
     // session cookie). SSR renders empty stats → hydration mismatch → Vue
     // fails to reconcile the DOM, so the user sees stale/empty data until a

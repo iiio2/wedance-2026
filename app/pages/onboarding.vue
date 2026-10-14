@@ -41,7 +41,7 @@ const PERSONAS: Persona[] = [
   { key: 'festivals', emoji: '✈️', label: 'Travel to festivals', blurb: 'Plan your festival year and see who\'s going.', landing: '/festivals', collects: { styles: true, role: true } },
   { key: 'learn', emoji: '🎓', label: 'Learn a dance', blurb: 'Start or level up — find your dance and classes.', landing: '/find-your-dance', collects: {} },
   { key: 'perform', emoji: '🎧', label: 'Perform / DJ', blurb: 'Get booked and find gigs.', landing: '/artists', collects: {} },
-  { key: 'organize', emoji: '📣', label: 'Run events', blurb: 'Fill your floor — list socials and classes.', landing: '/organizers', collects: {} },
+  { key: 'organize', emoji: '📣', label: 'Run events', blurb: 'Fill your floor — list socials and classes.', landing: '/for-organizers', collects: {} },
 ]
 
 

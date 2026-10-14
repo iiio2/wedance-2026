@@ -6,11 +6,13 @@
  * works: when, where, artists, posts. Self-serve: the button creates the event.
  *
  * Positioned distinct from /for-events (we run the whole night for you).
+ * Also the festival pitch: /organizers (the old festival-only page, with
+ * pricing tiers that had no billing behind them) redirects here.
  * Only claims the product backs (content-publishing rule): no ticketing or
  * door claims until those are live. Numbers come from events.stats, live.
  * Example flyers are real ones kept by organizers on WeDance.
  */
-import { ArrowRight, CalendarSearch, MapPin, UserCheck, Sparkles, Palette, Check, Mail, Wand2 } from 'lucide-vue-next'
+import { ArrowRight, CalendarSearch, MapPin, UserCheck, Sparkles, Palette, Check, Mail, Wand2, CalendarDays, Users, Share2, Map } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
 
 definePageMeta({ layout: false })
@@ -43,7 +45,17 @@ const STEPS = [
   { icon: Sparkles, title: 'Promote it', detail: 'Draft your content plan in one click. Each post is painted when you ask for it, every word read back and checked, with the caption written.' },
 ]
 const tones = [WD.red600, WD.cyan600, WD.amber500, WD.green600]
+
+// A festival's own page: what dancers do on it (all live on festival pages).
+const FESTIVAL = [
+  { icon: CalendarDays, title: 'A programme they plan', detail: 'Workshops by day, filtered by style and level. Dancers pick theirs, and you see how many are going to each one.' },
+  { icon: Users, title: 'Who’s going, and partners', detail: 'Dancers see who else is coming and ask each other for a dance before the doors open.' },
+  { icon: Share2, title: 'Plans they share', detail: 'A dancer’s plan goes to friends with your festival front and centre.' },
+  { icon: Map, title: 'On their festival year', detail: 'Dancers plan their year of festivals on WeDance. Yours is on that calendar.' },
+]
+const EXAMPLE = '/events/meneate-viena-2026'
 const start = () => useTrack().track('organizer_cta_click', { surface: 'for-organizers' })
+const startFestival = () => useTrack().track('organizer_cta_click', { surface: 'for-organizers', kind: 'festival' })
 </script>
 
 <template>
@@ -125,6 +137,30 @@ const start = () => useTrack().track('organizer_cta_click', { surface: 'for-orga
         </div>
       </div>
       <p class="mt-6 text-sm text-muted-foreground font-sans">And dancers find it: your event goes on its own page and on your city’s calendar, where dancers plan their week.</p>
+    </section>
+
+    <!-- Festivals: the page itself does the selling -->
+    <section id="festivals" class="max-w-5xl mx-auto px-4 pb-12 scroll-mt-20">
+      <div class="rounded-2xl border bg-white p-6 sm:p-8">
+        <div class="text-sm font-bold uppercase tracking-widest text-secondary font-sans">Running a festival?</div>
+        <h2 class="mt-2 text-3xl leading-tight">Your festival gets a page dancers plan on.</h2>
+        <p class="mt-2 max-w-2xl text-sm sm:text-base text-muted-foreground font-sans">Add your passes, line-up and programme by day in the same editor. Dancers start planning weeks before the doors open.</p>
+        <ul class="mt-6 grid gap-4 sm:grid-cols-2">
+          <li v-for="f in FESTIVAL" :key="f.title" class="flex items-start gap-3">
+            <component :is="f.icon" class="mt-0.5 w-5 h-5 shrink-0 text-primary" style="stroke-width:1.5;" aria-hidden="true" />
+            <div>
+              <p class="font-bold text-foreground">{{ f.title }}</p>
+              <p class="mt-0.5 text-sm text-muted-foreground font-sans">{{ f.detail }}</p>
+            </div>
+          </li>
+        </ul>
+        <div class="mt-6 flex flex-wrap items-center gap-4 font-sans">
+          <Button as-child variant="cta" class="h-auto min-h-11 whitespace-normal px-6 py-2.5">
+            <NuxtLink to="/business/events/new?type=Festival" @click="startFestival">List your festival <ArrowRight aria-hidden="true" /></NuxtLink>
+          </Button>
+          <NuxtLink :to="EXAMPLE" class="text-sm font-bold text-secondary hover:underline">See one: ¡Menéate Viena! →</NuxtLink>
+        </div>
+      </div>
     </section>
 
     <!-- CTA -->
