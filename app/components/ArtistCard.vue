@@ -80,7 +80,7 @@ const langText = computed(() => accentText(props.accent, 0.078))
         v-if="artist.photo && !imgError"
         :src="artist.photo"
         :alt="artist.name"
-        class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+        class="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.04]"
         @error="imgError = true"
       >
       <div
