@@ -214,15 +214,10 @@ useHead(() => ({
       <!-- Header -->
       <section class="max-w-2xl mx-auto px-4 pt-12 pb-6">
         <div class="rounded-2xl overflow-hidden bg-white border" style="border-color:color-mix(in srgb, var(--wd-red-600) 20%, transparent); box-shadow: 0 1px 0 color-mix(in srgb, var(--wd-red-600) 13.3%, transparent), 0 10px 28px rgba(59,31,18,0.06);">
-          <!-- Artist: big hero photo — dancers remember faces, not names -->
-          <template v-if="profile.type === 'artist'">
-            <img v-if="profile.photo" :src="profile.photo" :alt="profile.name" class="w-full aspect-[4/5] sm:aspect-[3/2] object-cover object-top" />
-            <div v-else class="w-full aspect-[4/5] sm:aspect-[3/2] flex items-center justify-center text-6xl font-bold text-white" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));">{{ initials }}</div>
-          </template>
-          <div v-else class="h-2" style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500));" />
+          <div class="h-2" style="background:linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500));" />
           <div class="p-6 sm:p-8">
             <div class="flex items-start gap-5">
-              <div v-if="profile.type !== 'artist'" class="shrink-0">
+              <div class="shrink-0">
                 <img v-if="profile.photo" :src="profile.photo" :alt="profile.name" class="w-20 h-20 rounded-full object-cover" style="border:2px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent);">
                 <div v-else class="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));">{{ initials }}</div>
               </div>
