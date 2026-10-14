@@ -38,7 +38,8 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{ select: [] }>()
-const profileHref = computed(() => `/artists/${props.artist.id}`)
+// Line-up ids are profile handles: the profile lives at /@handle.
+const profileHref = computed(() => `/@${props.artist.id}`)
 
 const imgError = ref(false)
 const initials = computed(() =>

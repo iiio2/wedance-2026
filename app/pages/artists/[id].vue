@@ -10,7 +10,14 @@ import { WD } from '~/lib/brand'
 import { mixHex, readableOn } from '~/lib/contrast'
 import { festivalPath } from '#shared/utils/eventSlug'
 
-definePageMeta({ layout: false })
+definePageMeta({
+  layout: false,
+  // Real artists live at /@handle: old /artists/<handle> links go there.
+  middleware: (to) => {
+    const id = to.params.id as string
+    if (!findArtist(id)) return navigateTo(`/@${encodeURIComponent(id)}`, { redirectCode: 301, replace: true })
+  },
+})
 
 // Accent text on its own '18' tint (chips), darkened just enough for 4.5:1.
 const chipInk = (c: string) => readableOn(c, mixHex(c, WD.cream, 0.094))
