@@ -14,7 +14,7 @@
 import { venueTypeLabel, amenityLabel } from '#shared/types/venueDetails'
 import { eventLocalDate, eventLocalTime } from '#shared/utils/eventTime'
 import { bookingRequestSchema } from '#shared/validation'
-import { MapPin, Instagram, Youtube, Globe, Facebook, LayoutGrid, ArrowLeft, Check, Calendar, ScrollText, ShieldCheck, Trees, Plus, Heart } from 'lucide-vue-next'
+import { MapPin, Instagram, Youtube, Globe, Facebook, LayoutGrid, ArrowLeft, Check, Calendar, ScrollText, ShieldCheck, Trees, Plus, Heart, Send } from 'lucide-vue-next'
 import { eventPath } from '#shared/utils/eventSlug'
 
 definePageMeta({ layout: false })
@@ -103,6 +103,11 @@ async function toggleFollow() {
 }
 
 const profile = computed(() => data.value?.profile ?? null)
+
+// --- Book them (anyone, no account) on /@handle/book: artists, and venues
+// without bookable spaces (those use the space request below).
+const canBook = computed(() => !!profile.value && (profile.value.type === 'artist' || (profile.value.type === 'venue' && !(data.value?.spaces ?? []).length)))
+const bookName = computed(() => profile.value?.type === 'artist' ? profile.value.name.split(/\s+/)[0] : 'this venue')
 const spaces = computed(() => data.value?.spaces ?? [])
 const isFree = computed(() => profile.value?.bookingModel === 'free')
 const spaceName = (id: string) => spaces.value.find((s: any) => s.id === id)?.name ?? 'Area'
@@ -239,8 +244,12 @@ useHead(() => ({
             <div v-if="profile.socials?.length" class="mt-4 flex items-center gap-2">
               <a v-for="s in profile.socials" :key="s.platform" :href="s.url" target="_blank" rel="noopener" class="inline-flex items-center justify-center w-9 h-9 rounded-full text-primary" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);" :aria-label="s.platform"><component :is="socialIcon[s.platform] || Globe" class="w-4 h-4" /></a>
             </div>
-            <div v-if="profile.type === 'artist'" class="mt-4 flex items-center gap-3">
+            <div v-if="canBook || profile.type === 'artist'" class="mt-4 flex flex-wrap items-center gap-3">
+              <Button v-if="canBook" variant="cta" size="pill-sm" as-child>
+                <NuxtLink :to="`/@${profile.username}/book`"><Send class="w-3.5 h-3.5" aria-hidden="true" /> Book {{ bookName }}</NuxtLink>
+              </Button>
               <Button
+                v-if="profile.type === 'artist'"
                 :variant="following ? 'pill' : 'soft'"
                 size="pill-sm"
                 :disabled="followBusy"
@@ -250,7 +259,7 @@ useHead(() => ({
                 <Heart class="w-3.5 h-3.5" :class="following ? 'fill-white' : ''" aria-hidden="true" />
                 {{ following ? 'Following' : 'Follow' }}
               </Button>
-              <span v-if="followerCount" class="text-xs text-muted-foreground font-sans">
+              <span v-if="profile.type === 'artist' && followerCount" class="text-xs text-muted-foreground font-sans">
                 {{ followerCount }} follower{{ followerCount === 1 ? '' : 's' }}
               </span>
             </div>

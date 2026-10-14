@@ -229,3 +229,45 @@ export async function sendInviteEmail(params: {
     </div>`,
   })
 }
+
+/**
+ * Someone asked to book an artist or venue from their WeDance page. Sent to
+ * the page's team (else its private booking email, else WeDance to pass on).
+ * Reply-To is the asker, so answering is just replying. Logged in local dev.
+ */
+export async function sendBookingInquiryEmail(params: {
+  to: string
+  name: string
+  profileName: string
+  forward: boolean
+  from: { name: string; email: string; organization?: string | null }
+  lines: string[]
+  message: string
+  link: string
+}) {
+  const config = useRuntimeConfig()
+  const subject = `${params.from.name} wants to book ${params.profileName}`
+  if (!config.resendApiKey) {
+    console.log(`\n✉️  ${params.to}: ${subject} (reply to ${params.from.email}) → ${params.link}\n`)
+    return
+  }
+  const lines = params.lines.map(l => `<li>${escapeHtml(l)}</li>`).join('')
+  const who = params.from.organization ? `${params.from.name} (${params.from.organization})` : params.from.name
+  await getResend().emails.send({
+    from: config.resendFromEmail || 'WeDance <noreply@wedance.vip>',
+    to: params.to,
+    replyTo: params.from.email,
+    subject,
+    html: `<div style="font-family: sans-serif; max-width: 460px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #333;">Hey ${escapeHtml(params.name)}!</h2>
+      <p><strong>${escapeHtml(who)}</strong> wants to book <strong>${escapeHtml(params.profileName)}</strong> through WeDance.</p>
+      ${lines ? `<ul style="color: #555; padding-left: 18px;">${lines}</ul>` : ''}
+      <p style="white-space: pre-line; border-left: 3px solid #ddd; padding-left: 12px; color: #333;">${escapeHtml(params.message)}</p>
+      <p>Reply to this email to answer ${escapeHtml(params.from.name)} directly (${escapeHtml(params.from.email)}).</p>
+      <a href="${params.link}" style="display: inline-block; background: #000; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Open on WeDance</a>
+      <p style="color: #888; font-size: 13px; margin-top: 20px;">${params.forward
+        ? `Nobody runs ${escapeHtml(params.profileName)} on WeDance yet: pass this on to them.`
+        : `You get this because you run ${escapeHtml(params.profileName)} on WeDance. It’s also under “Needs you” on your Business home.`}</p>
+    </div>`,
+  })
+}

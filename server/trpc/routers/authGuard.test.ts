@@ -26,6 +26,7 @@ const PUBLIC_MUTATIONS_ALLOW_LIST: Record<string, string> = {
   'auth.login': 'unauthenticated by definition — email+password sign-in',
   'auth.register': 'unauthenticated by definition — account creation',
   'booking.request': 'public booking form — guests can request without an account',
+  'inquiries.send': 'book an artist or venue from their page or /@handle/book link — no account; honeypot + per-day limits',
   'cityVideo.vote': 'anonymous community voting on city videos',
   'cityVideo.submit': 'anonymous video submission (moderated via admin)',
   'cityVideo.battleVote': 'anonymous battle voting on city videos',

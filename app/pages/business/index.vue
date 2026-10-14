@@ -29,7 +29,7 @@ async function load() {
 onMounted(load)
 
 const toneOf: Record<string, 'warning' | 'info' | 'danger' | 'neutral'> = { draft: 'warning', missing: 'warning', claim: 'neutral', join: 'info' }
-const kindLabel: Record<string, string> = { draft: 'Draft', missing: 'Missing details', claim: 'Claim', join: 'Join request' }
+const kindLabel: Record<string, string> = { draft: 'Draft', missing: 'Missing details', claim: 'Claim', join: 'Join request', booking: 'Booking' }
 
 function dayLabel(iso: string | Date, tz: string | null) {
   const zone = tz || 'Europe/Berlin'

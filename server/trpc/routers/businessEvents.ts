@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { eq, and, or, gte, lt, inArray, desc, asc, sql } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure, publicProcedure } from '../trpc'
-import { events, profiles, profileMembers, profileClaims, cities, profileSuggestions } from '../../database/schema'
+import { events, profiles, profileMembers, profileClaims, cities, profileSuggestions, bookingInquiries } from '../../database/schema'
 import { slugify, randomSuffix } from '../../utils/slug'
 import { resolveTimezone } from '../../utils/v3EventSync'
 import { zonedToUtc, eventLocalDate, eventLocalTime, eventLocalWeekday } from '../../../shared/utils/eventTime'
@@ -545,6 +545,17 @@ export const businessEventsRouter = router({
         .groupBy(profiles.username, profiles.name)
       for (const g of sugg) {
         needs.push({ kind: 'suggestions', tone: 'info', title: `${g.n} ${g.n === 1 ? 'change' : 'changes'} suggested for ${g.name}`, detail: 'An organizer added photos, a video or your name for their event. Approve or turn them down.', to: `/confirm/@${g.username}` })
+      }
+    }
+
+    // People asking to book a page I manage (from its page or its /book link).
+    if (mine.length) {
+      const asks = await ctx.db.select({ username: profiles.username, name: profiles.name, n: sql<number>`count(*)::int`, first: sql<string>`min(${bookingInquiries.name})` })
+        .from(bookingInquiries).innerJoin(profiles, eq(profiles.id, bookingInquiries.profileId))
+        .where(and(inArray(bookingInquiries.profileId, mine.map((p: any) => p.id)), eq(bookingInquiries.status, 'new')))
+        .groupBy(profiles.username, profiles.name)
+      for (const g of asks) {
+        needs.push({ kind: 'booking', tone: 'info', title: g.n === 1 ? `${g.first} wants to book ${g.name}` : `${g.n} people want to book ${g.name}`, detail: 'Answer them by email, then mark it answered.', to: `/business/profiles/${g.username}/bookings` })
       }
     }
 

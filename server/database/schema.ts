@@ -999,3 +999,28 @@ export const profileInvites = pgTable('profile_invites', {
   uniqueIndex('profile_invites_token_uidx').on(t.token),
   uniqueIndex('profile_invites_event_profile_uidx').on(t.eventId, t.profileId),
 ])
+
+// Booking inquiries (migration 0039): anyone asks to book an artist or venue
+// from their page, no account needed. The page's team answers by email.
+export const bookingInquiries = pgTable('booking_inquiries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  requesterId: uuid('requester_id').references(() => dancers.id, { onDelete: 'set null' }),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  organization: text('organization'),
+  what: text('what').notNull(),
+  eventDate: date('event_date'),
+  city: text('city'),
+  guests: integer('guests'),
+  budget: text('budget'),
+  message: text('message').notNull(),
+  status: text('status').notNull().default('new').$type<'new' | 'answered' | 'declined'>(),
+  // How many of the team were emailed (0 = nobody runs the page: WeDance forwards it).
+  notified: integer('notified').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  answeredAt: timestamp('answered_at'),
+}, (t) => [
+  index('booking_inquiries_profile_idx').on(t.profileId, t.createdAt),
+  index('booking_inquiries_email_idx').on(t.email, t.createdAt),
+])
