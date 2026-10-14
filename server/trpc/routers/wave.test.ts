@@ -63,14 +63,12 @@ vi.mock('drizzle-orm', async (importOriginal) => {
     }
   }
 
-  // Case-insensitive equality — enough for the city match (no wildcards used).
-  const ilike = (col: any, val: string) => {
+  const isNotNull = (col: any) => {
     const jsKey = col?.name ? snakeToCamel(col.name) : undefined
-    return (row: Record<string, any>) =>
-      !!jsKey && String(row[jsKey] ?? '').toLowerCase() === String(val).toLowerCase()
+    return (row: Record<string, any>) => !!jsKey && row[jsKey] != null
   }
 
-  return { ...real, eq, and, ilike, inArray, ne }
+  return { ...real, eq, and, inArray, isNotNull, ne }
 })
 
 // ---------- FakeDb ----------
@@ -191,9 +189,9 @@ describe('wave router (RAZ-82)', () => {
     waveRows = []
     planItemRows = []
     dancerRows = [
-      { id: 'a0000000-0000-4000-a000-000000000001', name: 'Alice', photo: null, city: 'Munich', username: 'alice', danceStyles: ['Salsa'], danceLevels: { Salsa: 'Intermediate' }, role: 'follow', instagram: 'alice_dance', bio: 'I love salsa', profilePublic: true },
-      { id: 'b0000000-0000-4000-b000-000000000002', name: 'Bob', photo: null, city: 'Berlin', username: 'bob', danceStyles: ['Bachata'], danceLevels: { Bachata: 'Advanced' }, role: 'lead', instagram: null, bio: null, profilePublic: true },
-      { id: 'c0000000-0000-4000-b000-000000000003', name: 'Carol', photo: null, city: 'Munich', username: 'carol', danceStyles: ['Kizomba'], danceLevels: {}, role: 'follow', instagram: null, bio: null, profilePublic: false },
+      { id: 'a0000000-0000-4000-a000-000000000001', name: 'Alice', photo: 'https://img.test/alice.jpg', city: 'Munich', username: 'alice', danceStyles: ['Salsa'], danceLevels: { Salsa: 'Intermediate' }, role: 'follow', instagram: 'alice_dance', bio: 'I love salsa', profilePublic: true },
+      { id: 'b0000000-0000-4000-b000-000000000002', name: 'Bob', photo: 'https://img.test/bob.jpg', city: 'Berlin', username: 'bob', danceStyles: ['Bachata'], danceLevels: { Bachata: 'Advanced' }, role: 'lead', instagram: null, bio: null, profilePublic: true },
+      { id: 'c0000000-0000-4000-b000-000000000003', name: 'Carol', photo: 'https://img.test/carol.jpg', city: 'Munich', username: 'carol', danceStyles: ['Kizomba'], danceLevels: {}, role: 'follow', instagram: null, bio: null, profilePublic: false },
     ]
   })
 
@@ -337,20 +335,14 @@ describe('wave router (RAZ-82)', () => {
       expect(pool.map(d => d.id)).toEqual([BOB])
     })
 
-    it('fills the deck with public dancers from the city when few are going', async () => {
-      dancerRows.push({ id: 'd0000000-0000-4000-b000-000000000004', name: 'Dan', photo: null, city: 'munich', username: 'dan', danceStyles: ['Timba'], danceLevels: {}, role: 'lead', bio: null, profilePublic: true })
-      addPlanItem(BOB) // Bob (Berlin) is going and sharing
+    it('leaves out dancers without a photo', async () => {
+      dancerRows.push({ id: 'e0000000-0000-4000-b000-000000000005', name: 'Eve', photo: null, city: 'Munich', username: 'eve', danceStyles: [], danceLevels: {}, role: 'follow', bio: null, profilePublic: true })
+      dancerRows.push({ id: 'f0000000-0000-4000-b000-000000000006', name: 'Fay', photo: '', city: 'Munich', username: 'fay', danceStyles: [], danceLevels: {}, role: 'follow', bio: null, profilePublic: true })
+      addPlanItem('e0000000-0000-4000-b000-000000000005') // going, but no photo
 
       const caller = makeCaller(db, ALICE)
-      const pool = await caller.wave.discoverPool({ festivalSlug: 'fest-1', city: 'Munich' })
-      // Going first, then locals; never me (Alice) or private Carol
-      expect(pool.map(d => [d.name, d.going])).toEqual([['Bob', true], ['Dan', false]])
-    })
-
-    it('does not add local dancers without a city', async () => {
-      dancerRows.push({ id: 'd0000000-0000-4000-b000-000000000004', name: 'Dan', photo: null, city: 'Munich', username: 'dan', danceStyles: [], danceLevels: {}, role: 'lead', bio: null, profilePublic: true })
-      const caller = makeCaller(db, ALICE)
-      expect(await caller.wave.discoverPool({ festivalSlug: 'fest-1' })).toEqual([])
+      const pool = await caller.wave.discoverPool({ festivalSlug: 'fest-1' })
+      expect(pool.map(d => d.name)).toEqual([])
     })
 
     it('excludes dancers the caller already swiped on', async () => {
@@ -385,7 +377,7 @@ describe('wave router (RAZ-82)', () => {
       dancerRows.push({
         id: 'd0000000-0000-4000-d000-000000000004',
         name: 'Dave',
-        photo: null,
+        photo: 'https://img.test/dave.jpg',
         city: 'Hamburg',
         username: 'dave',
         danceStyles: ['Salsa'],

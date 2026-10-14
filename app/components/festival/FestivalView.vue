@@ -1045,7 +1045,6 @@ useHead({
           <p class="text-sm mb-4 text-muted-foreground font-sans">Swipe to discover dancers, group dinners, and activities happening around the {{ kind }}.</p>
           <DiscoverDancers
             :festival-slug="festival.slug"
-            :city="festival.city"
             :extra-cards="extraSwipeCards"
             :workshops="workshops"
             :plan-ids="planIds"

@@ -11,8 +11,6 @@ const props = withDefaults(defineProps<{
   festivalSlug: string
   /** Whose "going" list feeds the deck: a festival's or a plain event's. */
   itemType?: 'festival' | 'event'
-  /** The event's city: its public dancers fill the deck when few are going. */
-  city?: string
   /** Extra non-dancer cards (dinners, activities, onboarding) interleaved into the deck */
   extraCards?: SwipeCard[]
   workshops: Workshop[]
@@ -47,7 +45,7 @@ async function loadPool() {
   poolLoading.value = true
   try {
     const [pool, friends, incoming] = await Promise.all([
-      $trpc.wave.discoverPool.query({ festivalSlug: props.festivalSlug, itemType: props.itemType, city: props.city || undefined }),
+      $trpc.wave.discoverPool.query({ festivalSlug: props.festivalSlug, itemType: props.itemType }),
       $trpc.wave.friends.query({ festivalSlug: props.festivalSlug }),
       $trpc.wave.incomingCount.query({ festivalSlug: props.festivalSlug }),
     ])
@@ -59,9 +57,8 @@ async function loadPool() {
       styles: d.styles,
       workshopIds: [],
       bio: d.bio ?? '',
-      going: d.going,
-      city: d.city ?? undefined,
     }))
+    checkPhotos(poolDancers.value)
     matchedFriends.value = friends.map(d => ({
       id: d.dancerId,
       name: d.name,
@@ -88,10 +85,27 @@ watch(() => props.isSignedIn, loadPool)
 const liked = ref(new Set<string>())
 const passed = ref(new Set<string>())
 
+// A card is a photo: one that fails to load (404, not an image) drops out
+// of the deck. Preloaded so a broken card is gone before it's shown; the
+// card's own @error catches anything the preload missed.
+const brokenPhotos = ref(new Set<string>())
+function markBroken(id: string) {
+  if (!brokenPhotos.value.has(id)) brokenPhotos.value = new Set([...brokenPhotos.value, id])
+}
+function checkPhotos(list: DiscoverDancer[]) {
+  if (!import.meta.client) return
+  for (const d of list) {
+    if (!d.photo) { markBroken(d.id); continue }
+    const img = new Image()
+    img.onerror = () => markBroken(d.id)
+    img.src = d.photo
+  }
+}
+
 // Merged deck: dancer cards from the pool + extra cards (dinners, activities, onboarding)
 const allCards = computed<SwipeCard[]>(() => {
   const dancers: SwipeCard[] = poolDancers.value
-    .filter(d => !liked.value.has(d.id) && !passed.value.has(d.id))
+    .filter(d => !liked.value.has(d.id) && !passed.value.has(d.id) && !brokenPhotos.value.has(d.id))
     .map(d => ({ ...d, cardType: 'dancer' as const }))
   const extras = props.extraCards ?? []
 
@@ -593,6 +607,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
               :src="currentDancer.photo"
               :alt="currentDancer.name"
               class="w-full h-full object-cover"
+              @error="markBroken(currentDancer.id)"
             />
             <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             <div class="absolute bottom-0 left-0 right-0 p-3 text-white space-y-2">
@@ -606,9 +621,6 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
                     📹 Videographer · &euro;{{ currentDancer.hourlyRate }}/h
                   </Badge>
                 </div>
-                <p v-if="currentDancer.going || currentDancer.city || city" class="text-eyebrow font-bold uppercase tracking-wider text-white/90 mt-0.5">
-                  {{ currentDancer.going ? 'Going' : `Dances in ${currentDancer.city || city}` }}
-                </p>
                 <p class="text-xs text-white/80 mt-0.5">{{ currentDancer.bio }}</p>
               </div>
               <div class="flex flex-wrap gap-1.5">

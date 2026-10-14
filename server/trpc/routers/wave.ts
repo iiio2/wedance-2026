@@ -1,10 +1,10 @@
 import { z } from 'zod'
-import { eq, and, ilike, inArray, notInArray, ne } from 'drizzle-orm'
+import { eq, and, inArray, isNotNull, notInArray, ne } from 'drizzle-orm'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
 import { festivalWaves, dancers, planItems } from '../../database/schema'
 
-/** How many cards the deck aims for before it stops adding local dancers. */
-const POOL_FILL = 30
+/** A swipe card is a photo: dancers without one never enter the deck. */
+const hasPhoto = () => [isNotNull(dancers.photo), ne(dancers.photo, '')]
 
 export const waveRouter = router({
   /**
@@ -188,9 +188,6 @@ export const waveRouter = router({
       // events key their waves by event id).
       festivalSlug: z.string().min(1).max(120),
       itemType: z.enum(['festival', 'event']).default('festival'),
-      // Where it happens: local dancers fill the deck when few have shared
-      // they're going, so it's never empty while the city has dancers.
-      city: z.string().max(120).optional(),
     }))
     .query(async ({ ctx, input }) => {
       // 1. IDs I've already swiped on (so we exclude them from the deck)
@@ -232,27 +229,9 @@ export const waveRouter = router({
 
       // Filter out already-swiped
       const swipedSet = new Set(swipedIds)
-      const goingIds = new Set(goingRows.map(r => r.dancerId))
-      const candidateIds = [...goingIds].filter(id => !swipedSet.has(id))
-
-      // 3b. Not enough going? Fill with public dancers from the same city.
-      if (input.city && candidateIds.length < POOL_FILL) {
-        const locals = await ctx.db
-          .select({ id: dancers.id })
-          .from(dancers)
-          .where(
-            and(
-              ilike(dancers.city, input.city),
-              eq(dancers.profilePublic, true),
-              ne(dancers.id, ctx.dancerId),
-            ),
-          )
-          .limit(POOL_FILL + swipedIds.length + goingIds.size)
-        for (const l of locals) {
-          if (candidateIds.length >= POOL_FILL) break
-          if (!swipedSet.has(l.id) && !goingIds.has(l.id)) candidateIds.push(l.id)
-        }
-      }
+      const candidateIds = goingRows
+        .map(r => r.dancerId)
+        .filter(id => !swipedSet.has(id))
 
       if (candidateIds.length === 0) return []
 
@@ -274,13 +253,17 @@ export const waveRouter = router({
           and(
             inArray(dancers.id, candidateIds),
             eq(dancers.profilePublic, true),
+            ...hasPhoto(),
           ),
         )
         .limit(50)
 
-      // 5. Sort: dancers who waved at us first, then those going, then locals
-      const rank = (id: string) => (incomingIds.has(id) ? 0 : goingIds.has(id) ? 1 : 2)
-      const sorted = profiles.sort((a, b) => rank(a.id) - rank(b.id))
+      // 5. Sort: dancers who waved at us first, then the rest
+      const sorted = profiles.sort((a, b) => {
+        const aIncoming = incomingIds.has(a.id) ? 0 : 1
+        const bIncoming = incomingIds.has(b.id) ? 0 : 1
+        return aIncoming - bIncoming
+      })
 
       return sorted.map(r => {
         const styles = ((r.danceStyles as string[]) ?? [])
@@ -298,7 +281,6 @@ export const waveRouter = router({
             level: (levels[s] as 'Beginner' | 'Intermediate' | 'Advanced') || 'Beginner',
           })),
           likedMe: incomingIds.has(r.id),
-          going: goingIds.has(r.id),
         }
       })
     }),
