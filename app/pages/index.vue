@@ -433,7 +433,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
             </NuxtLink>
 
             <!-- Festival organizers -->
-            <NuxtLink to="/organizers/create" class="group rounded-2xl bg-white p-6 sm:p-7 border transition-all hover:-translate-y-1"
+            <NuxtLink to="/business/events/new?type=Festival" class="group rounded-2xl bg-white p-6 sm:p-7 border transition-all hover:-translate-y-1"
               :style="{ borderColor: 'color-mix(in srgb, var(--wd-cyan-600) 33.3%, transparent)', boxShadow: '0 1px 0 color-mix(in srgb, var(--wd-cyan-600) 13.3%, transparent), 0 12px 28px rgba(59, 31, 18, 0.06)' }">
               <div class="flex items-center justify-between mb-3">
                 <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-wd-cyan-600">Festival organizers</div>

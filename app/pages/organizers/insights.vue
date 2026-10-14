@@ -96,7 +96,7 @@ watch([isLoading, isSignedIn], ([loadingNow, signedIn]) => {
         <p class="mt-2 text-sm">
           No festivals on your account yet. Insights open once the team has onboarded the festival you listed.
         </p>
-        <NuxtLink to="/organizers/create" class="mt-4 inline-block text-sm font-bold underline text-primary">
+        <NuxtLink to="/business/events/new?type=Festival" class="mt-4 inline-block text-sm font-bold underline text-primary">
           List your festival →
         </NuxtLink>
       </div>

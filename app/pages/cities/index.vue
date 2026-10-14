@@ -214,7 +214,7 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
           <p class="text-sm mt-1 text-muted-foreground font-sans">List your event for free. Local dancers find you.</p>
         </div>
         <Button as-child variant="pill" accent="var(--wd-cyan-700)" class="px-5 shrink-0">
-          <NuxtLink to="/organizers/create">Create listing <ArrowRight aria-hidden="true" /></NuxtLink>
+          <NuxtLink to="/business/events/new?type=Festival">Create listing <ArrowRight aria-hidden="true" /></NuxtLink>
         </Button>
       </div>
     </section>

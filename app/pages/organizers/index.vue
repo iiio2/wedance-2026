@@ -138,7 +138,8 @@ const howItWorks = [
 ]
 
 
-const editorLink = (plan?: string) => ({ path: '/organizers/create', query: plan ? { plan } : {} })
+// Listing a festival = the event editor, opened on a festival (signs in first).
+const editorLink = (_plan?: string) => ({ path: '/business/events/new', query: { type: 'Festival' } })
 </script>
 
 <template>

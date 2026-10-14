@@ -192,7 +192,7 @@ const styleChips = computed(() => {
           </p>
         </div>
         <Button as-child variant="pill" accent="var(--wd-cyan-700)" class="shrink-0">
-          <NuxtLink to="/organizers/create">
+          <NuxtLink to="/business/events/new?type=Festival">
             Start listing <ArrowRight class="w-4 h-4" aria-hidden="true" />
           </NuxtLink>
         </Button>

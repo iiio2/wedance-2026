@@ -72,7 +72,7 @@ watch(prices, v => (form.price = v.map(p => p.trim()).filter(Boolean).join('\n')
 const venueManual = ref(!form.venueUsername && !!form.venueName)
 const multiDay = ref(!!form.endDate)
 const isMultiDayType = computed(() => ['Festival', 'Weekender', 'Congress'].includes(form.type))
-watch(isMultiDayType, (v) => { if (v) multiDay.value = true })
+watch(isMultiDayType, (v) => { if (v) multiDay.value = true }, { immediate: true })
 
 // Every event has the same cards; a festival's extras (logo and links, practical
 // info, passes, programme by day) go inside them. Its days come from its dates.
