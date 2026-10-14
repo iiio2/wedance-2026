@@ -17,7 +17,7 @@ export default defineConfig({
   testDir: './e2e/design',
   outputDir: './e2e/test-results/design',
   snapshotPathTemplate: '{testDir}/__screenshots__/{platform}/{arg}{ext}',
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never', outputFolder: 'playwright-report/design' }]] : 'list',
+  reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report/design' }]],
   timeout: 90_000,
   expect: {
     timeout: 15_000,
