@@ -24,7 +24,7 @@ import { LoginSchema, RecoverySchema, RegisterSchema } from '#shared/validation'
 const props = defineProps<{
   open: boolean
   action: string
-  prefill?: { name?: string; danceStyles?: string[]; role?: 'lead' | 'follow' | 'both'; city?: string }
+  prefill?: { name?: string; email?: string; danceStyles?: string[]; role?: 'lead' | 'follow' | 'both'; city?: string }
 }>()
 
 const emit = defineEmits<{
@@ -43,6 +43,7 @@ const headlines: Record<string, string> = {
   onboarding: 'Almost there! Join to start discovering',
   partner: 'Join to find a dance partner',
   social: 'Join the community',
+  booking: 'Make your WeDance account',
 }
 
 type Mode = 'login' | 'register' | 'recovery'
@@ -105,6 +106,7 @@ function resetForm() {
 function applyPrefill() {
   if (!props.prefill) return
   if (props.prefill.name) { form.name = props.prefill.name; hasPrefillName.value = true }
+  if (props.prefill.email) form.email = props.prefill.email
 }
 
 watch(() => props.open, (open) => {

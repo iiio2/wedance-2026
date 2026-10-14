@@ -240,7 +240,7 @@ export async function sendBookingInquiryEmail(params: {
   name: string
   profileName: string
   forward: boolean
-  from: { name: string; email: string; organization?: string | null }
+  from: { name: string; email: string; phone?: string | null; organization?: string | null }
   lines: string[]
   message: string
   link: string
@@ -263,7 +263,7 @@ export async function sendBookingInquiryEmail(params: {
       <p><strong>${escapeHtml(who)}</strong> wants to book <strong>${escapeHtml(params.profileName)}</strong> through WeDance.</p>
       ${lines ? `<ul style="color: #555; padding-left: 18px;">${lines}</ul>` : ''}
       <p style="white-space: pre-line; border-left: 3px solid #ddd; padding-left: 12px; color: #333;">${escapeHtml(params.message)}</p>
-      <p>Reply to this email to answer ${escapeHtml(params.from.name)} directly (${escapeHtml(params.from.email)}).</p>
+      <p>Reply to this email to answer ${escapeHtml(params.from.name)} directly (${escapeHtml(params.from.email)})${params.from.phone ? `, or call or WhatsApp them: <a href="https://wa.me/${escapeHtml(params.from.phone.replace(/[^\d+]/g, '').replace(/^00/, '+').replace(/^\+/, ''))}">${escapeHtml(params.from.phone)}</a>` : ''}.</p>
       <a href="${params.link}" style="display: inline-block; background: #000; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Open on WeDance</a>
       <p style="color: #888; font-size: 13px; margin-top: 20px;">${params.forward
         ? `Nobody runs ${escapeHtml(params.profileName)} on WeDance yet: pass this on to them.`

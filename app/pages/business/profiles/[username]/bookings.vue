@@ -4,7 +4,7 @@
  * (inquiries.forProfile), newest first. Answer by email (opens a reply), then
  * mark it answered or declined. Also the booking link to put on your own site.
  */
-import { Mail, Copy, Check, CalendarDays, MapPin, Users, Wallet, ExternalLink } from 'lucide-vue-next'
+import { Mail, Copy, Check, CalendarDays, MapPin, Users, Wallet, ExternalLink, Phone } from 'lucide-vue-next'
 
 definePageMeta({ layout: 'business' })
 const route = useRoute()
@@ -76,6 +76,8 @@ const closed = computed(() => (rows.value ?? []).filter(r => r.status !== 'new')
             <p class="mt-3 whitespace-pre-line text-sm">{{ r.message }}</p>
             <div class="mt-4 flex flex-wrap items-center gap-2">
               <Button variant="pill" size="pill-sm" as-child><a :href="reply(r)"><Mail /> Reply to {{ r.email }}</a></Button>
+              <Button v-if="r.phone" variant="outline-pill" size="pill-sm" as-child><a :href="`https://wa.me/${r.phone.replace(/[^\d+]/g, '').replace(/^00/, '+').replace(/^\+/, '')}`" target="_blank" rel="noopener"><Phone /> WhatsApp</a></Button>
+              <Button v-if="r.phone" variant="ghost" size="sm" as-child><a :href="`tel:${r.phone.replace(/[^\d+]/g, '')}`">Call {{ r.phone }}</a></Button>
               <template v-if="r.status === 'new'">
                 <Button type="button" variant="outline-pill" size="pill-sm" @click="setStatus(r, 'answered')"><Check /> Answered</Button>
                 <Button type="button" variant="ghost" size="sm" @click="setStatus(r, 'declined')">Decline</Button>

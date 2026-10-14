@@ -335,7 +335,7 @@ const hostText = computed(() => props.hosts.find(h => h.username === form.hostUs
     </section>
 
     <!-- Line-up -->
-    <section class="rounded-2xl border bg-card p-4">
+    <section id="lineup" class="scroll-mt-20 rounded-2xl border bg-card p-4">
       <h2 class="flex items-center gap-1.5 text-sm font-bold"><Users class="size-4 text-muted-foreground" aria-hidden="true" /> Line-up</h2>
       <p class="text-xs text-muted-foreground">DJs, teachers, performers. Everyone is named on the flyer. Pick the photo it uses, or “Name only”.</p>
       <BusinessLineupPicker

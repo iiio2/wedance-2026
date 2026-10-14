@@ -21,7 +21,7 @@ type Ev = Awaited<ReturnType<typeof $trpc.businessEvents.get.query>>
 const ev = ref<Ev | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
-const notice = ref<string | null>(route.query.created ? 'Event created.' : null)
+const notice = ref<string | null>(route.query.created ? 'Event created.' : route.query.added ? `@${route.query.added} is in the line-up. Send them their link below so they can confirm.` : null)
 const tab = ref<'details' | 'plan'>(route.query.tab === 'plan' ? 'plan' : 'details')
 watch(tab, t => navigateTo({ query: { ...route.query, tab: t === 'plan' ? 'plan' : undefined } }, { replace: true }))
 
@@ -34,6 +34,8 @@ async function load() {
   } finally {
     loading.value = false
   }
+  // #lineup (from an artist's booking page): the editor renders after the load.
+  if (route.hash) nextTick(() => document.querySelector(route.hash)?.scrollIntoView({ block: 'start' }))
 }
 onMounted(load)
 useHead(() => ({ title: `${ev.value?.name || 'Event'} | Business | WeDance` }))

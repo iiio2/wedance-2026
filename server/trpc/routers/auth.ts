@@ -10,7 +10,7 @@ import {
   recommendationRequests, festivalSubmissions, festivalSignups, cityVideos,
   guidelineVersions, moderatorElections, gigs, hangouts, hangoutRsvps,
   communityGroupReports, planItems, festivalRideShares,
-  festivalRoommateLookups, referrals, profiles,
+  festivalRoommateLookups, referrals, profiles, bookingInquiries,
 } from '../../database/schema'
 import { sendMagicLinkEmail, sendPasswordResetEmail } from '../../utils/email'
 import { generateUsername } from '../../utils/slug'
@@ -323,6 +323,12 @@ export const authRouter = router({
           message: 'Could not create your account. Please try again.',
         })
       }
+
+      // Booking requests they sent before they had an account become theirs.
+      try {
+        await ctx.db.update(bookingInquiries).set({ requesterId: dancer.id })
+          .where(and(eq(bookingInquiries.email, input.email), sql`${bookingInquiries.requesterId} is null`))
+      } catch (e) { console.error('[auth] linking booking requests failed', e) }
 
       return createSession(ctx.db, dancer)
     }),

@@ -1008,6 +1008,8 @@ export const bookingInquiries = pgTable('booking_inquiries', {
   requesterId: uuid('requester_id').references(() => dancers.id, { onDelete: 'set null' }),
   name: text('name').notNull(),
   email: text('email').notNull(),
+  // Optional phone / WhatsApp (migration 0040): only the team sees it.
+  phone: text('phone'),
   organization: text('organization'),
   what: text('what').notNull(),
   eventDate: date('event_date'),

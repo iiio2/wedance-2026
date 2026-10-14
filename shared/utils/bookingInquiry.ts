@@ -14,6 +14,7 @@ export const inquirySchema = z.object({
   handle: z.string().min(1).max(200),
   name: z.string().trim().min(1, 'Your name').max(120),
   email: z.string().trim().toLowerCase().email('An email they can answer'),
+  phone: z.string().trim().max(40).regex(/^[+\d][\d\s()./-]{5,}$/, 'A phone number, e.g. +49 170 1234567').optional().or(z.literal('')).default(''),
   organization: z.string().trim().max(160).optional().default(''),
   what: z.string().trim().min(1, 'What it’s for').max(60),
   eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')).default(''),
@@ -21,6 +22,8 @@ export const inquirySchema = z.object({
   guests: z.number().int().min(1).max(100_000).nullable().optional(),
   budget: z.string().trim().max(80).optional().default(''),
   message: z.string().trim().min(10, 'A few words about it').max(2000),
+  /** Send it as a page the (signed-in) asker runs. */
+  asProfile: z.string().max(200).optional(),
   // Honeypot: people never see this field; bots fill it in.
   website: z.string().max(0).optional().default(''),
 })
