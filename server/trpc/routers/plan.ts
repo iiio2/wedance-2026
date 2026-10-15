@@ -50,8 +50,6 @@ export const planRouter = router({
 
   // Basic list — only itemType + itemId. Used by the hydration plugin and
   // composables (useWeekPlan, useYearPlan) that don't need metadata.
-  // Deliberately avoids selecting the metadata column so the query works
-  // even if migration 0023 hasn't been applied yet.
   list: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db
       .select({

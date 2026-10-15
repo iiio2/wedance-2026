@@ -426,17 +426,7 @@ export async function loadExistingProfiles(db: any): Promise<{ existing: Existin
     citySlug: profiles.citySlug, photo: profiles.photo, bio: profiles.bio, styles: profiles.styles, address: profiles.address,
     socials: profiles.socials, claimed: profiles.claimed, sourceRef: profiles.sourceRef,
   }
-  let existing: ExistingProfile[]
-  try {
-    existing = await db.select(cols).from(profiles)
-  } catch (e: any) {
-    // Before migration 0022 the `source_ref` column doesn't exist — retry without
-    // it so dry-runs can still inspect the planned changes.
-    if (e?.code === '42703' || /column .* does not exist/.test(String(e?.message ?? e?.cause?.message))) {
-      const { sourceRef: _, ...safeCols } = cols
-      existing = (await db.select(safeCols).from(profiles)).map((r: any) => ({ ...r, sourceRef: null }))
-    } else throw e
-  }
+  const existing: ExistingProfile[] = await db.select(cols).from(profiles)
   const d = await db.select({ u: dancers.username }).from(dancers).where(sql`${dancers.username} IS NOT NULL`)
   return { existing, takenHandles: new Set(d.map((r: any) => String(r.u).toLowerCase())) }
 }

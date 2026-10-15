@@ -35,24 +35,9 @@ const cardColumns = {
   citySlug: events.citySlug,
 }
 
-const missingColumn = (e: any) => e?.code === '42703' || /column .* does not exist/.test(String(e?.message ?? e?.cause?.message))
-
-/**
- * Card rows for a filter. `events.artists` arrives with migration 0022; until a
- * DB has it the query retries without (artists = []), and before 0021 it
- * returns [] — so a deploy that runs ahead of the migration never blanks a page.
- */
+/** Card rows for a filter, soonest first. */
 async function selectCards(db: any, where: SQL | undefined, limit = 1000, extra: Record<string, any> = {}) {
-  const run = (cols: Record<string, any>) => db.select(cols).from(events).where(where).orderBy(asc(events.startDate)).limit(limit)
-  try {
-    return await run({ ...cardColumns, ...extra, artists: events.artists })
-  } catch (e: any) {
-    if (!missingColumn(e)) throw e
-    // Retry without the `artists` SELECT column. If this still fails (e.g. the
-    // WHERE clause references a missing column), let it throw so the caller can
-    // handle it (byProfile retries with who(false)).
-    return (await run({ ...cardColumns, ...extra })).map((r: any) => ({ ...r, artists: [] as string[] }))
-  }
+  return db.select({ ...cardColumns, ...extra, artists: events.artists }).from(events).where(where).orderBy(asc(events.startDate)).limit(limit)
 }
 
 const live = () => and(eq(events.published, true), eq(events.archived, false))
@@ -117,21 +102,14 @@ export const eventsRouter = router({
     .query(async ({ ctx, input }) => {
       const now = new Date()
       const until = new Date(now.getTime() + input.days * 86400_000)
-      const who = (withArtists: boolean) => or(
+      const who = or(
         eq(events.venueUsername, input.username),
         eq(events.organizerUsername, input.username),
-        ...(withArtists ? [
-          sql`${events.artists} @> ${JSON.stringify([input.username])}::jsonb`,
-          ...(input.name ? [sql`${events.artists} @> ${JSON.stringify([input.name])}::jsonb`] : []),
-        ] : []),
+        sql`${events.artists} @> ${JSON.stringify([input.username])}::jsonb`,
+        ...(input.name ? [sql`${events.artists} @> ${JSON.stringify([input.name])}::jsonb`] : []),
       )
       const window = and(live(), gte(events.endDate, now), lt(events.startDate, until))
-      try {
-        return await selectCards(ctx.db, and(window, who(true)), 200)
-      } catch (e: any) {
-        if (!missingColumn(e)) throw e
-        return selectCards(ctx.db, and(window, who(false)), 200)
-      }
+      return selectCards(ctx.db, and(window, who), 200)
     }),
 
   // By id; by a festival's key or a stored slug (/events/meneate-viena-2026, the

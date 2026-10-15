@@ -1,7 +1,8 @@
 ---
 title: Schema changes go through journaled, expand/contract migrations
-status: proposed
+status: accepted
 date: 2026-10-12
+accepted: 2026-10-15
 ---
 
 ## Context

@@ -60,6 +60,9 @@ export const dancers = pgTable('dancers', {
   // magic link). Ticket claiming (claim.ts) requires this to prevent an
   // attacker from registering someone else's email and grabbing their tickets.
   emailVerifiedAt: timestamp('email_verified_at'),
+  // Provenance (added by scripts/migrate/00-schema.mjs for the v4→2026 migration).
+  // { v4UserId, firebaseId, v4Email }. Rollback key: DELETE WHERE source_ref IS NOT NULL.
+  sourceRef: jsonb('source_ref').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at').defaultNow(),
 })
 
