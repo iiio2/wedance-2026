@@ -6,17 +6,15 @@
  *   1. They buy on TicketTailor → webhook stubs a `festival_signups` row with
  *      their email and `dancer_id = NULL` (PR 1).
  *   2. Confirmation email contains a link to /charanga/claim?email=<their email>.
- *   3. If signed in: auto-call claim.claimMyTicketHolderRows → success view.
- *   4. If not signed in: show a magic-link sign-in form, then ask them to
- *      come back here after signing in.
+ *   3. If not signed in: show a magic-link sign-in form (email pre-filled from
+ *      URL). The magic-link flow verifies email ownership (sets emailVerifiedAt).
+ *   4. If signed in with verified email: auto-call claimMyTicketHolderRows →
+ *      success view.
  *
- * Note on the "come back here" step: the existing magic-link flow at
- * /auth/verify hardcodes a redirect to /festivals/meneate-viena-2026 (it does
- * not honour a `redirect` query param). Adding redirect support is out of
- * scope for this PR (see ../../../server/trpc/routers/auth.ts file ownership).
- * After sign-in we instruct the user to click the email link again — when
- * they do, this page will be loaded with an active session and the mutation
- * fires automatically.
+ * Security (RAZ-323): ticket claiming requires verified email ownership.
+ * The pre-auth public getClaimStatus endpoint was removed to prevent leaking
+ * whether an email has pending tickets. Users now sign in first (which
+ * verifies their email), then claim.
  */
 import { ArrowRight, Ticket, Mail, AlertCircle } from 'lucide-vue-next'
 import { ClaimTicketSchema } from '#shared/validation'
@@ -42,14 +40,13 @@ const emailFromUrl = computed(() => {
 
 type Status =
   | { kind: 'loading' }
-  | { kind: 'pending'; festivalName: string; festivalSlug: string; email: string }
-  | { kind: 'no-ticket' }
+  | { kind: 'pending'; email: string }
+  | { kind: 'needs-verification' }
   | { kind: 'claimed'; festivals: { slug: string; name: string }[] }
-  | { kind: 'already-claimed' } // signed in but no stubs found
+  | { kind: 'already-claimed' }
   | { kind: 'error'; message: string }
 
 const status = ref<Status>({ kind: 'loading' })
-const showSignInForm = ref(false)
 const signInEmail = ref('')
 const signInError = ref('')
 const signInLoading = ref(false)
@@ -61,34 +58,29 @@ async function refreshStatus() {
 
   try {
     if (isSignedIn.value) {
-      // Signed in — claim whatever's pending and report back.
-      const result = await $trpc.claim.claimMyTicketHolderRows.mutate()
-      if (result.claimed > 0) {
-        status.value = { kind: 'claimed', festivals: result.festivals }
-      } else {
-        status.value = { kind: 'already-claimed' }
+      // Signed in — try to claim. The server checks emailVerifiedAt and
+      // returns FORBIDDEN if the email isn't verified yet.
+      try {
+        const result = await $trpc.claim.claimMyTicketHolderRows.mutate()
+        if (result.claimed > 0) {
+          status.value = { kind: 'claimed', festivals: result.festivals }
+        } else {
+          status.value = { kind: 'already-claimed' }
+        }
+      } catch (e: any) {
+        if (e?.data?.code === 'FORBIDDEN') {
+          // Email not verified — prompt them to use magic link
+          status.value = { kind: 'needs-verification' }
+        } else {
+          throw e
+        }
       }
       return
     }
 
-    // Not signed in — peek at status using the email from the URL.
-    if (emailFromUrl.value) {
-      const result = await $trpc.claim.getClaimStatus.query({ email: emailFromUrl.value })
-      if (result.pending) {
-        status.value = {
-          kind: 'pending',
-          festivalName: result.festivalName,
-          festivalSlug: result.festivalSlug,
-          email: emailFromUrl.value,
-        }
-        signInEmail.value = emailFromUrl.value
-      } else {
-        status.value = { kind: 'no-ticket' }
-      }
-    } else {
-      // No email in URL, not signed in — render a generic sign-in prompt.
-      status.value = { kind: 'pending', festivalName: '', festivalSlug: '', email: '' }
-    }
+    // Not signed in — show sign-in form with pre-filled email from URL.
+    signInEmail.value = emailFromUrl.value
+    status.value = { kind: 'pending', email: emailFromUrl.value }
   } catch (e: any) {
     status.value = { kind: 'error', message: e?.message || 'Something went wrong. Please try again.' }
   }
@@ -179,28 +171,61 @@ async function handleSignIn() {
         </div>
       </template>
 
-      <!-- No ticket found for the URL email (not signed in) -->
-      <template v-else-if="status.kind === 'no-ticket'">
+      <!-- Signed in but email not verified -->
+      <template v-else-if="status.kind === 'needs-verification'">
         <div class="space-y-5 text-center">
-          <AlertCircle class="mx-auto size-10 text-muted-foreground" />
-          <h1 class="text-xl font-semibold">We couldn't find your ticket</h1>
+          <div class="text-4xl">🔒</div>
+          <h1 class="text-xl font-semibold">Verify your email to claim your ticket</h1>
           <p class="text-sm text-muted-foreground">
-            No TicketTailor purchase is registered for this email yet.
-            If you just bought, give it a minute and refresh — webhooks land within
-            a few seconds. Otherwise, please check the email matches what you used at checkout.
+            For your security, we need to verify you own this email address before
+            linking your TicketTailor purchase. Please sign in using the magic link
+            below — this proves it's really you.
           </p>
         </div>
 
-        <div class="pt-2 text-center">
-          <a
-            href="https://buytickets.at/wedancevip/1796869"
-            target="_blank"
-            rel="noopener"
-            class="inline-flex items-center gap-1.5 text-sm underline hover:text-foreground"
-          >
-            <Ticket class="size-4" />
-            Get a Charanga ticket
-          </a>
+        <div class="rounded-lg border bg-card p-5 shadow-sm">
+          <template v-if="!signInSent">
+            <form class="space-y-4" novalidate @submit.prevent="handleSignIn">
+              <div class="space-y-2">
+                <label for="claim-email" class="text-sm font-medium">Email</label>
+                <input
+                  id="claim-email"
+                  v-model="signInEmail"
+                  type="email"
+                  placeholder="you@example.com"
+                  required
+                  autofocus
+                  class="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  v-bind="fieldAttrs('email', 'claim-email-error')"
+                >
+                <FieldError id="claim-email-error" :message="errors.email" />
+              </div>
+              <p v-if="signInError" class="text-sm text-destructive">{{ signInError }}</p>
+              <Button type="submit" class="w-full" :disabled="signInLoading">
+                {{ signInLoading ? 'Sending...' : 'Send verification link' }}
+              </Button>
+            </form>
+          </template>
+
+          <template v-else>
+            <div class="space-y-4 py-2 text-center">
+              <Mail class="mx-auto size-10 text-primary" />
+              <h2 class="text-lg font-semibold">Check your email</h2>
+              <p class="text-sm text-muted-foreground">
+                We sent a verification link to<br>
+                <span class="font-medium text-foreground">{{ signInEmail }}</span>
+              </p>
+              <div class="rounded-md bg-muted/50 p-3 text-left text-xs text-muted-foreground">
+                <p class="font-medium text-foreground">Important</p>
+                <p class="mt-1">
+                  After you sign in via the magic link, please click the
+                  <span class="font-medium">"Connect on WeDance"</span> link in your
+                  TicketTailor confirmation email again to land back on this page —
+                  we'll finish linking your ticket automatically.
+                </p>
+              </div>
+            </div>
+          </template>
         </div>
       </template>
 
@@ -214,21 +239,19 @@ async function handleSignIn() {
         </div>
       </template>
 
-      <!-- Pending: sign-in flow -->
+      <!-- Not signed in: sign-in flow -->
       <template v-else-if="status.kind === 'pending'">
         <div class="space-y-3 text-center">
           <div class="text-4xl">🎫</div>
-          <h1 class="text-2xl font-semibold">
-            <template v-if="status.festivalName">We found your ticket</template>
-            <template v-else>Connect your ticket to WeDance</template>
-          </h1>
+          <h1 class="text-2xl font-semibold">Connect your ticket to WeDance</h1>
           <p class="text-sm text-muted-foreground">
-            <template v-if="status.festivalName">
+            <template v-if="status.email">
               Sign in with <span class="font-medium text-foreground">{{ status.email }}</span>
-              to confirm your spot for <span class="font-medium text-foreground">{{ status.festivalName }}</span>.
+              to verify your email and claim your spot on the attendee roster.
             </template>
             <template v-else>
-              Sign in with the email you used at checkout to confirm your spot on the verified attendee roster.
+              Sign in with the email you used at checkout to verify your email and
+              claim your spot on the verified attendee roster.
             </template>
           </p>
         </div>

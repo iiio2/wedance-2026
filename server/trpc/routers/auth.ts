@@ -146,10 +146,13 @@ export const authRouter = router({
         })
       }
 
-      // Clear magic token (single-use)
+      // Clear magic token (single-use) and mark email as verified — the user
+      // proved ownership by clicking a link sent to this address. Ticket
+      // claiming (claim.ts) gates on emailVerifiedAt to prevent an attacker
+      // from registering someone else's email and grabbing their tickets.
       await ctx.db
         .update(dancers)
-        .set({ magicToken: null, magicTokenExpiresAt: null })
+        .set({ magicToken: null, magicTokenExpiresAt: null, emailVerifiedAt: new Date() })
         .where(eq(dancers.id, dancer.id))
 
       return createSession(ctx.db, dancer)
@@ -191,10 +194,11 @@ export const authRouter = router({
       const scrypt = new FirebaseScrypt(firebaseScryptParameters)
       const hash = await scrypt.hash(input.newPassword, salt)
 
-      // Update password and clear magic token (single-use).
+      // Update password, clear magic token (single-use), and mark email
+      // verified — the user proved ownership by clicking the reset link.
       await ctx.db
         .update(dancers)
-        .set({ salt, hash, magicToken: null, magicTokenExpiresAt: null })
+        .set({ salt, hash, magicToken: null, magicTokenExpiresAt: null, emailVerifiedAt: new Date() })
         .where(eq(dancers.id, dancer.id))
 
       return createSession(ctx.db, dancer)

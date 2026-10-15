@@ -10,20 +10,24 @@
  *
  *   1. TicketTailor confirmation email contains a "Connect on WeDance" link to
  *      `/charanga/claim`.
- *   2. The page (app/pages/charanga/claim.vue) calls `getClaimStatus` (public)
- *      to render a "we found your ticket" hint pre-auth.
- *   3. After magic-link sign-in, the page calls `claimMyTicketHolderRows`
- *      (protected) which links every matching stub row to the now-authenticated
- *      dancer.
+ *   2. The page (app/pages/charanga/claim.vue) shows a magic-link sign-in form.
+ *   3. After magic-link sign-in (which sets emailVerifiedAt, proving email
+ *      ownership), the page calls `claimMyTicketHolderRows` (protected) which
+ *      links every matching stub row to the now-authenticated dancer.
+ *
+ * Security (RAZ-323): claiming requires `emailVerifiedAt` to be set. This
+ * prevents an attacker from registering with someone else's email (via the
+ * password signup flow, which doesn't verify email) and stealing their paid
+ * tickets. Magic-link sign-in and password reset both set emailVerifiedAt
+ * because they prove the user can read mail sent to that address.
  *
  * The mutation is idempotent — calling it with no stubs returns
  * `{ claimed: 0, festivals: [] }`. Re-runs after a successful claim also return
  * 0 (the stubs no longer have `dancer_id IS NULL`).
  */
-import { z } from 'zod'
 import { eq, and, isNull, inArray } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
-import { router, publicProcedure, protectedProcedure } from '../trpc'
+import { router, protectedProcedure } from '../trpc'
 import { dancers, festivals, festivalSignups } from '../../database/schema'
 
 export const claimRouter = router({
@@ -31,16 +35,36 @@ export const claimRouter = router({
    * Find every stub row whose `tickettailor_buyer_email` matches the
    * authenticated user's email and link them to the dancer.
    *
+   * Requires `emailVerifiedAt` — the caller must have proved email ownership
+   * (magic-link sign-in or password reset) before tickets can attach to their
+   * account. This closes the vulnerability where whoever registers an email
+   * first receives that email's paid tickets.
+   *
    * Returns the list of festivals (slug + name) the user is now confirmed for.
    */
   claimMyTicketHolderRows: protectedProcedure.mutation(async ({ ctx }) => {
     const [me] = await ctx.db
-      .select({ id: dancers.id, email: dancers.email })
+      .select({
+        id: dancers.id,
+        email: dancers.email,
+        emailVerifiedAt: dancers.emailVerifiedAt,
+      })
       .from(dancers)
       .where(eq(dancers.id, ctx.dancerId))
 
     if (!me) {
       throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Dancer not found' })
+    }
+
+    // Gate: email must be verified before tickets can attach. An unverified
+    // account may have been created with someone else's email via password
+    // registration — granting them another person's paid tickets would be a
+    // security breach.
+    if (!me.emailVerifiedAt) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Please verify your email first. Sign in via the magic link we sent to your email address.',
+      })
     }
 
     const email = me.email.toLowerCase().trim()
@@ -96,20 +120,31 @@ export const claimRouter = router({
   }),
 
   /**
-   * Public lookup used by the claim page when the user arrives via the
-   * confirmation email but is not yet signed in. Tells us whether *any* stub
-   * row exists for the supplied email so we can render the right copy.
+   * Protected lookup: tells the signed-in user whether they have any
+   * unclaimed TicketTailor stubs for their verified email.
+   *
+   * Changed from public to protected in RAZ-323: the old public endpoint
+   * leaked whether an email had pending tickets (ADR-003 finding). Now
+   * requires authentication and uses the session's own email.
    */
-  getClaimStatus: publicProcedure
-    .input(z.object({
-      email: z.string().email().optional(),
-    }))
-    .query(async ({ ctx, input }) => {
-      if (!input.email) {
+  getClaimStatus: protectedProcedure
+    .query(async ({ ctx }) => {
+      const [me] = await ctx.db
+        .select({ email: dancers.email, emailVerifiedAt: dancers.emailVerifiedAt })
+        .from(dancers)
+        .where(eq(dancers.id, ctx.dancerId))
+
+      if (!me) {
         return { pending: false as const }
       }
 
-      const email = input.email.toLowerCase().trim()
+      // If email isn't verified, don't reveal whether tickets exist — the
+      // account may not legitimately own this email address.
+      if (!me.emailVerifiedAt) {
+        return { pending: false as const, needsVerification: true as const }
+      }
+
+      const email = me.email.toLowerCase().trim()
 
       const [stub] = await ctx.db
         .select({ festivalId: festivalSignups.festivalId })

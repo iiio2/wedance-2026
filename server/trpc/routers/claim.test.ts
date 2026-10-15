@@ -6,6 +6,10 @@
  * a live Neon connection. The fake covers the drizzle-orm shapes the router
  * actually uses: select/from/where, update/set/where, plus eq/and/isNull and
  * inArray predicates.
+ *
+ * RAZ-323: tests now cover the emailVerifiedAt gate on ticket claiming, the
+ * protected getClaimStatus endpoint, and the security scenario where an
+ * attacker registers with someone else's email to steal their tickets.
  */
 import { describe, it, expect, vi } from 'vitest'
 import { dancers, festivals, festivalSignups } from '../../database/schema'
@@ -67,10 +71,20 @@ class FakeDb {
     return fid
   }
 
-  seedDancer(email: string, id?: string) {
+  /** Seed a dancer. Pass emailVerifiedAt to simulate a verified account. */
+  seedDancer(email: string, id?: string, opts: { emailVerifiedAt?: Date | null } = {}) {
     const did = id ?? 'dancer-' + email
-    this.dancers.push({ id: did, email })
+    this.dancers.push({
+      id: did,
+      email,
+      emailVerifiedAt: 'emailVerifiedAt' in opts ? opts.emailVerifiedAt : new Date(), // verified by default
+    })
     return did
+  }
+
+  /** Seed a dancer with NO email verification (simulates password-only signup). */
+  seedUnverifiedDancer(email: string, id?: string) {
+    return this.seedDancer(email, id, { emailVerifiedAt: null })
   }
 
   seedStubSignup(festivalId: string, buyerEmail: string, opts: Partial<FakeRow> = {}) {
@@ -104,11 +118,6 @@ class FakeDb {
     return id
   }
 
-  // The router uses these shapes:
-  //   db.select({...}).from(table).where(filter)             — array
-  //   db.select({...}).from(table).where(filter).limit(N)    — array (used in getClaimStatus)
-  //   db.update(table).set(patch).where(filter)              — void
-
   select(_columns: any) {
     return {
       from: (table: any) => {
@@ -116,7 +125,6 @@ class FakeDb {
         const buildResult = (filter: FilterFn) => {
           const rows = rowsForTable().filter(filter)
           const promise: any = Promise.resolve(rows)
-          // Mimic drizzle's chainable .limit(): returns a thenable filtered to N.
           promise.limit = (n: number) => Promise.resolve(rows.slice(0, n))
           return promise
         }
@@ -147,16 +155,6 @@ class FakeDb {
     throw new Error('unexpected table in FakeDb')
   }
 }
-
-// drizzle-orm's chained `.where(...).limit(n)` needs an awaitable that exposes
-// `.limit`. The FakeDb above returns a Promise with a `.limit` property, but
-// drizzle's real query builder returns the limited rows directly when you
-// `.limit().then(...)`. Our select() is wired to support both:
-//   - `await q` resolves to the unfiltered (just-where'd) rows
-//   - `await q.limit(n)` resolves to the first n
-//
-// The router only uses .limit(1) once (getClaimStatus). All other calls await
-// the where directly.
 
 function createCaller(db: any, opts: { dancerId?: string; isAdmin?: boolean } = {}) {
   return appRouter.createCaller({
@@ -228,14 +226,12 @@ describe('claim.claimMyTicketHolderRows', () => {
     expect(result.festivals).toHaveLength(2)
     const slugs = result.festivals.map(f => f.slug).sort()
     expect(slugs).toEqual(['charanga-habanera-munich-2026', 'cuban-fire-munich-2026'])
-    // Both stubs now point at the dancer.
     expect(db.signups.every(s => s.dancerId === dancerId)).toBe(true)
   })
 
   it('email lookup is case-insensitive (stubs stored lowercase, dancer email mixed-case)', async () => {
     const db = new FakeDb()
     const festivalId = db.seedFestival(CHARANGA_SLUG, CHARANGA_NAME)
-    // dancer email stored mixed-case; webhook stores buyer email lowercased.
     const dancerId = db.seedDancer('Buyer@Example.COM')
     db.seedStubSignup(festivalId, 'buyer@example.com')
 
@@ -246,16 +242,11 @@ describe('claim.claimMyTicketHolderRows', () => {
   })
 
   it('skips stubs for festivals where the dancer already has a signup row', async () => {
-    // Edge case: same buyer free-joined the festival before buying a ticket.
-    // The free join created a (festival_id, dancer_id) row; the webhook then
-    // landed a stub. Linking the stub naively would violate the unique
-    // constraint. We skip those stubs (the existing row remains; PR 1's
-    // promote-existing path already covers same-email-known-dancer cases).
     const db = new FakeDb()
     const festivalId = db.seedFestival(CHARANGA_SLUG, CHARANGA_NAME)
     const dancerId = db.seedDancer('overlap@example.com')
-    db.seedLinkedSignup(festivalId, dancerId) // existing free signup
-    db.seedStubSignup(festivalId, 'overlap@example.com') // stub from webhook
+    db.seedLinkedSignup(festivalId, dancerId)
+    db.seedStubSignup(festivalId, 'overlap@example.com')
 
     const caller = createCaller(db as any, { dancerId })
     const result = await caller.claim.claimMyTicketHolderRows()
@@ -269,34 +260,95 @@ describe('claim.claimMyTicketHolderRows', () => {
     const caller = createCaller(db as any, {})
     await expect(caller.claim.claimMyTicketHolderRows()).rejects.toThrow(/Not signed in/)
   })
-})
 
-// ---------- getClaimStatus ----------
+  // ---------- RAZ-323: email verification gate ----------
 
-describe('claim.getClaimStatus', () => {
-  it('returns pending:false when no email provided', async () => {
-    const db = new FakeDb()
-    const caller = createCaller(db as any)
-    const result = await caller.claim.getClaimStatus({})
-    expect(result).toEqual({ pending: false })
-  })
-
-  it('returns pending:false when the email has no matching stub', async () => {
-    const db = new FakeDb()
-    db.seedFestival(CHARANGA_SLUG, CHARANGA_NAME)
-    const caller = createCaller(db as any)
-
-    const result = await caller.claim.getClaimStatus({ email: 'noone@example.com' })
-    expect(result).toEqual({ pending: false })
-  })
-
-  it('returns pending:true with festival info when a stub exists for the email', async () => {
+  it('rejects an unverified email — prevents ticket theft via password-only signup', async () => {
+    // Attack scenario: Eve registers with alice@example.com via the password
+    // signup (no email verification). Alice's TicketTailor ticket stub exists.
+    // Eve tries to claim → must be rejected.
     const db = new FakeDb()
     const festivalId = db.seedFestival(CHARANGA_SLUG, CHARANGA_NAME)
+    const eveDancerId = db.seedUnverifiedDancer('alice@example.com', 'eve-id')
+    db.seedStubSignup(festivalId, 'alice@example.com')
+
+    const caller = createCaller(db as any, { dancerId: eveDancerId })
+    await expect(caller.claim.claimMyTicketHolderRows()).rejects.toThrow(/verify your email/)
+
+    // Stub must remain unclaimed.
+    const stub = db.signups.find(s => s.tickettailorBuyerEmail === 'alice@example.com')
+    expect(stub?.dancerId).toBeNull()
+  })
+
+  it('allows a verified email to claim tickets after magic-link sign-in', async () => {
+    // Normal flow: buyer signs in via magic link (emailVerifiedAt is set),
+    // then claims their ticket.
+    const db = new FakeDb()
+    const festivalId = db.seedFestival(CHARANGA_SLUG, CHARANGA_NAME)
+    const dancerId = db.seedDancer('real-buyer@example.com', undefined, {
+      emailVerifiedAt: new Date(),
+    })
+    db.seedStubSignup(festivalId, 'real-buyer@example.com')
+
+    const caller = createCaller(db as any, { dancerId })
+    const result = await caller.claim.claimMyTicketHolderRows()
+
+    expect(result.claimed).toBe(1)
+    expect(result.festivals).toEqual([{ slug: CHARANGA_SLUG, name: CHARANGA_NAME }])
+  })
+
+  it('attacker cannot claim after legitimate owner — idempotent guard', async () => {
+    // Alice (verified) claims her ticket. Eve (also verified, same email —
+    // hypothetically, e.g. if Alice deleted and Eve re-registered) tries to
+    // claim the same stub. The stub is already linked, so Eve gets 0.
+    const db = new FakeDb()
+    const festivalId = db.seedFestival(CHARANGA_SLUG, CHARANGA_NAME)
+    const aliceId = db.seedDancer('shared@example.com', 'alice')
+    db.seedStubSignup(festivalId, 'shared@example.com')
+
+    const aliceCaller = createCaller(db as any, { dancerId: aliceId })
+    const aliceResult = await aliceCaller.claim.claimMyTicketHolderRows()
+    expect(aliceResult.claimed).toBe(1)
+
+    // Now Eve tries (different dancer id, same email).
+    const eveId = db.seedDancer('shared@example.com', 'eve')
+    const eveCaller = createCaller(db as any, { dancerId: eveId })
+    const eveResult = await eveCaller.claim.claimMyTicketHolderRows()
+    expect(eveResult.claimed).toBe(0)
+
+    // Stub still belongs to Alice.
+    const stub = db.signups[0]
+    expect(stub.dancerId).toBe(aliceId)
+  })
+})
+
+// ---------- getClaimStatus (now protected, RAZ-323) ----------
+
+describe('claim.getClaimStatus', () => {
+  it('rejects unauthenticated callers', async () => {
+    const db = new FakeDb()
+    const caller = createCaller(db as any, {})
+    await expect(caller.claim.getClaimStatus()).rejects.toThrow(/Not signed in/)
+  })
+
+  it('returns pending:false when the verified user has no matching stub', async () => {
+    const db = new FakeDb()
+    db.seedFestival(CHARANGA_SLUG, CHARANGA_NAME)
+    const dancerId = db.seedDancer('noone@example.com')
+
+    const caller = createCaller(db as any, { dancerId })
+    const result = await caller.claim.getClaimStatus()
+    expect(result).toEqual({ pending: false })
+  })
+
+  it('returns pending:true with festival info when a verified user has a stub', async () => {
+    const db = new FakeDb()
+    const festivalId = db.seedFestival(CHARANGA_SLUG, CHARANGA_NAME)
+    const dancerId = db.seedDancer('pending@example.com')
     db.seedStubSignup(festivalId, 'pending@example.com')
 
-    const caller = createCaller(db as any)
-    const result = await caller.claim.getClaimStatus({ email: 'pending@example.com' })
+    const caller = createCaller(db as any, { dancerId })
+    const result = await caller.claim.getClaimStatus()
 
     expect(result).toEqual({
       pending: true,
@@ -305,22 +357,25 @@ describe('claim.getClaimStatus', () => {
     })
   })
 
-  it('email lookup is case-insensitive (URL email may be capitalised)', async () => {
+  it('returns needsVerification for an unverified account (no info leak)', async () => {
     const db = new FakeDb()
     const festivalId = db.seedFestival(CHARANGA_SLUG, CHARANGA_NAME)
-    db.seedStubSignup(festivalId, 'mixed@example.com')
+    const dancerId = db.seedUnverifiedDancer('unverified@example.com')
+    db.seedStubSignup(festivalId, 'unverified@example.com')
 
-    const caller = createCaller(db as any)
-    const result = await caller.claim.getClaimStatus({ email: 'Mixed@Example.COM' })
+    const caller = createCaller(db as any, { dancerId })
+    const result = await caller.claim.getClaimStatus()
 
-    expect(result.pending).toBe(true)
+    // Must NOT reveal that tickets exist — returns pending:false with a hint.
+    expect(result.pending).toBe(false)
+    expect((result as any).needsVerification).toBe(true)
+    expect((result as any).festivalSlug).toBeUndefined()
   })
 
   it('does not flag emails that are already linked (dancer_id IS NOT NULL)', async () => {
     const db = new FakeDb()
     const festivalId = db.seedFestival(CHARANGA_SLUG, CHARANGA_NAME)
     const dancerId = db.seedDancer('claimed@example.com')
-    // Already-claimed row: stub email present but dancerId set.
     db.signups.push({
       id: 'sig-claimed',
       festivalId,
@@ -331,8 +386,8 @@ describe('claim.getClaimStatus', () => {
       verifiedAt: new Date(),
     })
 
-    const caller = createCaller(db as any)
-    const result = await caller.claim.getClaimStatus({ email: 'claimed@example.com' })
+    const caller = createCaller(db as any, { dancerId })
+    const result = await caller.claim.getClaimStatus()
 
     expect(result).toEqual({ pending: false })
   })

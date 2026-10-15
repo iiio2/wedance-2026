@@ -42,6 +42,10 @@ export const dancers = pgTable('dancers', {
   onboardedAt: timestamp('onboarded_at'),
   magicToken: text('magic_token'),
   magicTokenExpiresAt: timestamp('magic_token_expires_at'),
+  // Set when the dancer proves they own the email address (e.g. by clicking a
+  // magic link). Ticket claiming (claim.ts) requires this to prevent an
+  // attacker from registering someone else's email and grabbing their tickets.
+  emailVerifiedAt: timestamp('email_verified_at'),
   createdAt: timestamp('created_at').defaultNow(),
 })
 
