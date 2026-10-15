@@ -732,6 +732,82 @@ export const planItems = pgTable(
   ],
 )
 
+// ---------------------------------------------------------------------------
+// Attendances (ADR-008, migration 0044). One row per dancer per event: replaces
+// the festival/event rows of `plan_items` (Going clicks) and `festival_signups`
+// (ticket holders). Status ladder: interested → going → ticket_holder. One
+// visibility setting replaces both `plan_items.share_going` and
+// `festival_signups.roster_visibility`. Default visibility = hidden (opt-in).
+//
+// Phase 4 expand step: this table is created alongside the old tables. New
+// Going clicks dual-write here and to `plan_items`; the old reads stay on
+// `plan_items`/`festival_signups` until the switch step. `order_id` is nullable
+// and has no FK yet (the `orders` table ships in Phase 3 Step 22).
+// ---------------------------------------------------------------------------
+export const attendances = pgTable('attendances', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  // Nullable for unclaimed ticket-holder stubs (buyer hasn't signed in yet).
+  dancerId: uuid('dancer_id').references(() => dancers.id, { onDelete: 'cascade' }),
+  // For stubs: the buyer's email until they claim. CHECK enforces at least one.
+  buyerEmail: text('buyer_email'),
+  // Status ladder: interested → going → ticket_holder. Only a paid/verified
+  // order sets ticket_holder. Cancelling "going" never removes a ticket.
+  status: text('status').notNull().$type<'interested' | 'going' | 'ticket_holder'>(),
+  // How the attendance was created.
+  source: text('source').notNull().default('click').$type<'click' | 'free_pass' | 'social_pass' | 'stripe' | 'tickettailor' | 'claim'>(),
+  // Links to the order that proves the ticket. Nullable; no FK until the
+  // orders table exists (Phase 3 Step 22).
+  orderId: uuid('order_id'),
+  // One visibility setting: hidden (default, opt-in), public_minimal (name +
+  // city), public_full (+ photo). Replaces both share_going and roster_visibility.
+  visibility: text('visibility').notNull().default('hidden').$type<'hidden' | 'public_minimal' | 'public_full'>(),
+  // Partner matching (was localStorage). Nullable = not set.
+  partnerStatus: text('partner_status').$type<'looking' | 'found'>(),
+  // Logistics timestamps (were localStorage toggles).
+  travelBookedAt: timestamp('travel_booked_at'),
+  stayBookedAt: timestamp('stay_booked_at'),
+  vacationBookedAt: timestamp('vacation_booked_at'),
+  // Organiser door flow.
+  checkedInAt: timestamp('checked_in_at'),
+  // Set when verified via TicketTailor webhook or Stripe payment confirmation.
+  verifiedAt: timestamp('verified_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => [
+  // One attendance per dancer per event.
+  unique('attendances_event_dancer').on(t.eventId, t.dancerId),
+  // One unclaimed stub per email per event (stubs have dancer_id NULL).
+  uniqueIndex('attendances_event_email_uidx')
+    .on(t.eventId, sql`lower(${t.buyerEmail})`)
+    .where(sql`${t.dancerId} IS NULL`),
+  // Public list query: events with visible attendees.
+  index('attendances_event_status_idx')
+    .on(t.eventId, t.status)
+    .where(sql`${t.visibility} <> 'hidden'`),
+  // My attendance lookups.
+  index('attendances_dancer_idx').on(t.dancerId),
+])
+
+// ---------------------------------------------------------------------------
+// Dancer goals (ADR-009, migration 0044). Goals were stored as plan_items with
+// item_type='goal' and the goal itself in metadata. Now they have their own
+// table with typed columns.
+// ---------------------------------------------------------------------------
+export const dancerGoals = pgTable('dancer_goals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dancerId: uuid('dancer_id').notNull().references(() => dancers.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(),
+  title: text('title').notNull(),
+  target: text('target'),
+  periodYear: integer('period_year'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => [
+  index('dancer_goals_dancer_idx').on(t.dancerId),
+])
+
 export const hangoutRsvps = pgTable('hangout_rsvps', {
   id: uuid('id').primaryKey().defaultRandom(),
   hangoutId: uuid('hangout_id').notNull().references(() => hangouts.id),

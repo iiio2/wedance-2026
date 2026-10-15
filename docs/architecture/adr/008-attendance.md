@@ -1,7 +1,8 @@
 ---
 title: One attendance record — interested, going, ticket holder — with one visibility rule
-status: proposed
+status: accepted
 date: 2026-10-12
+decided: 2026-10-15
 ---
 
 ## Context
@@ -104,13 +105,25 @@ erDiagram
   }
 ```
 
+## Open questions — decided
+
+- **Default visibility for new attendances (RAZ-313):** `hidden`. A new "Going"
+  click is hidden until the dancer opts in to the public list. This matches
+  today's `share_going` default and avoids "fake friends" on the roster. The UI
+  prompts the dancer to opt in after the click. Decided 2026-10-15.
+- **Public faces — verified ticket holders only? (RAZ-314):** No. Both `going`
+  and `ticket_holder` attendees appear in the public list when they opt in.
+  Ticket holders carry a "verified" badge so the page never presents clicks as
+  tickets. Decided 2026-10-15.
+- **City battles and giveaways (RAZ-317):** Kept. They are not removed in the
+  contract step. Decided 2026-10-12.
+
 ## Consequences
 
 - One number per event for "going" and one for "verified", everywhere.
 - Organiser insights and the public roster finally describe the same people.
-- The default visibility for new attendances is a product decision (see open
-  questions); this ADR recommends `hidden` (today's `share_going` default), with
-  an explicit prompt after the click.
+- The default visibility for new attendances is `hidden` (opt-in), with an
+  explicit prompt after the click (RAZ-313).
 - The two existing opt-in UIs (RAZ-115 and the ticket roster) collapse into one
   control.
 

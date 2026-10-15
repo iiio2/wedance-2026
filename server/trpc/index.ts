@@ -36,6 +36,7 @@ import { businessTeamRouter } from './routers/businessTeam'
 import { businessNetworkRouter } from './routers/businessNetwork'
 import { waveRouter } from './routers/wave'
 import { organizerSubscriptionRouter } from './routers/organizerSubscription'
+import { attendanceRouter } from './routers/attendance'
 
 export const appRouter = router({
   auth: authRouter,
@@ -75,6 +76,7 @@ export const appRouter = router({
   roommate: roommateRouter,
   wave: waveRouter,
   organizerSubscription: organizerSubscriptionRouter,
+  attendance: attendanceRouter,
 })
 
 export type AppRouter = typeof appRouter

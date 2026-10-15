@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { eq, and, ne, sql, inArray, gte, lt, asc, ilike, isNotNull } from 'drizzle-orm'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
-import { planItems, dancers, festivals, festivalSignups, events } from '../../database/schema'
+import { planItems, dancers, festivals, festivalSignups, events, attendances, dancerGoals } from '../../database/schema'
 import { getReferralDiscountPercent, getEarlyBirdInfo } from '../../utils/ticket-prices'
 import { eventPath } from '../../../shared/utils/eventSlug'
 import { festivalPath } from '../../../shared/utils/eventSlug'
@@ -96,6 +96,63 @@ export const planRouter = router({
         .insert(planItems)
         .values(values)
         .onConflictDoNothing()
+
+      // Phase 4 dual-write: also write to the new typed tables so they
+      // accumulate data for the switch step. Best-effort — failures here
+      // don't block the plan_items write.
+      try {
+        if (input.itemType === 'event') {
+          // itemId is an event UUID.
+          await ctx.db
+            .insert(attendances)
+            .values({
+              eventId: input.itemId,
+              dancerId: ctx.dancerId,
+              status: 'going',
+              source: 'click',
+              visibility: 'hidden',
+            })
+            .onConflictDoNothing()
+        } else if (input.itemType === 'festival') {
+          // itemId is a festival slug. Look up the matching event by slug
+          // or festival JSONB key.
+          const [ev] = await ctx.db
+            .select({ id: events.id })
+            .from(events)
+            .where(sql`${events.slug} = ${input.itemId} OR ${events.festival}->>'key' = ${input.itemId}`)
+            .limit(1)
+          if (ev) {
+            await ctx.db
+              .insert(attendances)
+              .values({
+                eventId: ev.id,
+                dancerId: ctx.dancerId,
+                status: 'going',
+                source: 'click',
+                visibility: 'hidden',
+              })
+              .onConflictDoNothing()
+          }
+        } else if (input.itemType === 'goal') {
+          // Dual-write to dancer_goals.
+          const meta = input.metadata ?? {}
+          await ctx.db
+            .insert(dancerGoals)
+            .values({
+              id: input.itemId,
+              dancerId: ctx.dancerId,
+              kind: meta.kind ?? 'custom',
+              title: meta.title ?? input.itemId,
+              target: meta.target,
+              periodYear: meta.periodYear ? parseInt(meta.periodYear) : undefined,
+              metadata: meta,
+            })
+            .onConflictDoNothing()
+        }
+      } catch {
+        // Best-effort: the attendances table may not exist yet in
+        // production (migration not yet applied). Swallow the error.
+      }
     }),
 
   updateMetadata: protectedProcedure
@@ -136,6 +193,49 @@ export const planRouter = router({
             eq(planItems.itemId, input.itemId),
           ),
         )
+
+      // Phase 4 dual-write: also remove from the new typed tables.
+      try {
+        if (input.itemType === 'event') {
+          await ctx.db
+            .delete(attendances)
+            .where(
+              and(
+                eq(attendances.eventId, input.itemId),
+                eq(attendances.dancerId, ctx.dancerId),
+                ne(attendances.status, 'ticket_holder'),
+              ),
+            )
+        } else if (input.itemType === 'festival') {
+          const [ev] = await ctx.db
+            .select({ id: events.id })
+            .from(events)
+            .where(sql`${events.slug} = ${input.itemId} OR ${events.festival}->>'key' = ${input.itemId}`)
+            .limit(1)
+          if (ev) {
+            await ctx.db
+              .delete(attendances)
+              .where(
+                and(
+                  eq(attendances.eventId, ev.id),
+                  eq(attendances.dancerId, ctx.dancerId),
+                  ne(attendances.status, 'ticket_holder'),
+                ),
+              )
+          }
+        } else if (input.itemType === 'goal') {
+          await ctx.db
+            .delete(dancerGoals)
+            .where(
+              and(
+                eq(dancerGoals.id, input.itemId),
+                eq(dancerGoals.dancerId, ctx.dancerId),
+              ),
+            )
+        }
+      } catch {
+        // Best-effort: swallow if tables don't exist yet.
+      }
     }),
 
   /**

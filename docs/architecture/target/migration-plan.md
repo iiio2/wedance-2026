@@ -389,16 +389,26 @@ approves it.
 
 ## Phase 4 — Attendance, plans and contract
 
+> **Open questions decided (2026-10-15):** RAZ-313 (default visibility = hidden,
+> opt-in), RAZ-314 (both going and ticket_holder shown, verified badge
+> distinguishes them), RAZ-317 (city battles and giveaways kept — not removed in
+> step 27). The expand step (tables + dual-write + attendance router) ships ahead
+> of the full backfill; the backfill and table renames wait for Phase 3.
+
 ### Step 24 · One attendance record — L
 
-- **Scope:** ADR-008. `attendances`; backfill from `plan_items` (festival/event)
-  and `festival_signups`; one public rule; waves, ride shares and roommate
-  requests move to `event_id` and are renamed; logistics toggles move from
-  localStorage (imported on the dancer's next visit).
-- **Tables:** attendances (new), waves, ride_shares, roommate_requests.
+- **Scope:** ADR-008 (accepted). `attendances`; backfill from `plan_items`
+  (festival/event) and `festival_signups`; one public rule; waves, ride shares
+  and roommate requests move to `event_id` and are renamed; logistics toggles
+  move from localStorage (imported on the dancer's next visit).
+- **Tables:** attendances (new), dancer_goals (new), waves, ride_shares,
+  roommate_requests.
+- **Expand (ships first):** create `attendances` and `dancer_goals` tables;
+  `plan.add`/`plan.remove` dual-write to the new tables; new `attendance.*`
+  router for direct use. Old reads unchanged.
 - **Backfill:** merge per (dancer, event), higher status and more private
   visibility win; booking-id plan rows map via `booking_requests.event_id`, the
-  rest go to a report table.
+  rest go to a report table. *Blocked on Phase 3 Step 19 (festivals → events).*
 - **Risk:** medium — public lists change (some faces disappear if the visibility
   default is `hidden`).
 - **Rollback:** reads fall back to `plan_items`/`festival_signups` until step 27.
@@ -432,7 +442,9 @@ approves it.
 - **Scope:** drop `plan_items`, `festival_signups`, `festivals`, the production-only
   v4 `follows`, and every column marked "removed" in the data model, after their
   switch steps have run for at least a week and the reports are empty or accepted.
-- **Tables:** as listed.
+  City battles, giveaways and their entries are **kept** (RAZ-317 decided
+  2026-10-12).
+- **Tables:** as listed (not `city_battle_votes`, `giveaways`, `giveaway_entries`).
 - **Backfill:** none; final reconciliation queries archived in the PR.
 - **Risk:** irreversible without PITR — that is why it is last and separate.
 - **Rollback:** Neon PITR restore point taken immediately before.
