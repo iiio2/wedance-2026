@@ -8,52 +8,24 @@ date: 2026-10-12
 
 The auth layer was ported from wedance-v4 for continuity (FirebaseScrypt hashes
 verify unchanged — `docs/data-migration-plan.md` §0). The port kept v4's weak
-spots and added a few. Evidence, without exploitation detail:
+spots and added a few. The seven areas below are tracked in the current-state
+review (findings #1, #2, #6, #8, #9, #23, #26); exploit-level detail is withheld
+until each fix ships.
 
-- **Secrets stored in plaintext.** `dancers.magic_token` (`schema.ts:41`) and
-  `sessions.token` (`schema.ts:49`) hold the bearer secrets themselves; the request
-  context compares them directly (`server/trpc/context.ts:32-40`). A read-only
-  database leak (backup, log, a preview deploy — see ADR-001) is an account
-  takeover for every active session.
-- **Magic-link requests change existing accounts.** `auth.requestMagicLink` is
-  public and upserts on email, overwriting `name`, `dance_styles`, `role` and
-  `city` of an existing dancer before anyone proves they own the address
-  (`routers/auth.ts:73-96`).
-- **Email is trusted but never verified.** `auth.register` creates a password
-  account for any address without confirmation (`auth.ts:248-325`), yet the email
-  is treated as proof of identity: the TicketTailor webhook links paid orders to
-  the dancer with that email (`api/webhooks/tickettailor.lib.ts:137-142`) and
-  `claim.claimMyTicketHolderRows` hands ticket rows to whoever is signed in with a
-  matching email (`routers/claim.ts:46-57`). There is no `email_verified_at`.
-- **Login and reset share one token.** Any magic token can also set a new password
-  (`auth.ts:161-200`); there is no purpose on the token.
-- **Salts come from `Math.random`.** `auth.ts:189`, `274`, `350` build the salt from
-  a few digits of `Math.random()` — not a CSPRNG, low entropy.
-- **Sessions are client-owned.** The session token lives in a cookie written by
-  client-side JavaScript (`app/plugins/01.trpc.ts:22-26`), so it cannot be
-  `HttpOnly` and any XSS can read it. Signing out only clears the browser
-  (`app/composables/useAuth.ts:349-350`); there is no server-side sign-out in
-  `authRouter`, and neither `resetPassword` nor `changePassword` revokes existing
-  sessions (`auth.ts:194-199`, `352`).
-- **Unauthenticated upload.** `POST /api/media/image` accepts any multipart file
-  from anyone and stores it on Cloudinary with no size or type check
-  (`server/api/media/image.post.ts:4-38`; tracked as RAZ-288).
-- **No rate limits on public writes.** `auth.login`, `auth.requestMagicLink`
-  (sends email), `feedback.report` (accepts a 6.5 MB screenshot and files a Linear
-  issue, `feedback.ts:169`), `feedback.inquiry`, `booking.request`,
-  `festival.submitDraft`, `giveaway.enter` and `cityVideo.submit` are public
-  mutations with no throttling.
-- **PII in public responses.**
-  - `gigs.list` returns whole rows including `contact_email` (`gigs.ts:20-41`).
-  - `booking.scheduleForProfile` and `booking.getEvent` return the requester's
-    name and private message (`booking.ts:72`, `130-131`).
-  - `rideShare.list` and `roommate.list` list dancers regardless of
-    `profile_public` (`rideShare.ts:18-42`, `roommate.ts:31-53`).
-  - `plan.discover` shows which festivals other dancers plan even when they did
-    not opt in to being listed (`plan.ts:563-646` has no `share_going` filter,
-    unlike `goingList` at `177`).
-  - `claim.getClaimStatus` tells anyone whether an email address holds a ticket
-    (`claim.ts:103-140`).
+- **Secrets stored in plaintext.** Session and magic-link tokens are stored
+  unhashed; a database leak yields live credentials.
+- **Magic-link requests can modify existing accounts** before ownership is proven.
+- **Email is trusted but never verified.** Registration and ticket-claiming treat
+  email as proof of identity with no confirmation step.
+- **Login and reset share one token** with no purpose field.
+- **Salts use insufficient entropy** (not a CSPRNG).
+- **Sessions are client-owned.** Cookie flags, server-side revocation, and
+  credential-change invalidation are missing.
+- **Public write endpoints lack validation and rate limiting.** Upload, login,
+  feedback, and booking mutations accept unbounded input from unauthenticated
+  callers.
+- **PII in public responses.** Several API endpoints return data beyond what the
+  caller should see, including contact details and privacy-gated fields.
 
 ## Options
 
