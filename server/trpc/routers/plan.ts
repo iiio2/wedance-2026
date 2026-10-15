@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { eq, and, ne, sql, inArray, gte, lt, asc, ilike } from 'drizzle-orm'
+import { eq, and, ne, sql, inArray, gte, lt, asc, ilike, isNotNull } from 'drizzle-orm'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
 import { planItems, dancers, festivals, festivalSignups, events } from '../../database/schema'
 import { getReferralDiscountPercent, getEarlyBirdInfo } from '../../utils/ticket-prices'
@@ -139,12 +139,15 @@ export const planRouter = router({
     }),
 
   /**
-   * Public list of dancers who marked "Going" for a festival or event.
+   * Public list of dancers visible on a festival or event page.
    *
-   * Returns name + photo + city + username for public profiles, capped
-   * at 50.  Used by the festivals listing (avatar stack), the festival
-   * detail page ("Who's going" section), and event detail pages so
-   * visitors can see real people before they book.
+   * For **festivals**: returns verified ticket holders only (RAZ-314,
+   * "no fake friends" — RAZ-83). Queries `festival_signups` joined with
+   * `dancers`; the dancer must have `verified_ticket_holder = true`,
+   * `roster_visibility != 'hidden'`, and `profile_public = true`.
+   *
+   * For **events**: returns dancers who opted in via `share_going` on
+   * their plan item, with `profile_public = true` (unchanged behaviour).
    *
    * Accepts either `festivalSlug` (legacy shorthand for itemType=festival)
    * or the generic `itemType` + `itemId` pair.
@@ -162,6 +165,46 @@ export const planRouter = router({
       const type = input.itemType ?? 'festival'
       const id = input.itemId ?? input.festivalSlug!
 
+      // --- Festivals: verified ticket holders only (RAZ-314) ---
+      if (type === 'festival') {
+        const [festival] = await ctx.db
+          .select({ id: festivals.id })
+          .from(festivals)
+          .where(eq(festivals.slug, id))
+
+        if (!festival) return []
+
+        const rows = await ctx.db
+          .select({
+            dancerId: festivalSignups.dancerId,
+            name: dancers.name,
+            photo: dancers.photo,
+            city: dancers.city,
+            username: dancers.username,
+          })
+          .from(festivalSignups)
+          .innerJoin(dancers, eq(festivalSignups.dancerId, dancers.id))
+          .where(
+            and(
+              eq(festivalSignups.festivalId, festival.id),
+              eq(festivalSignups.verifiedTicketHolder, true),
+              isNotNull(festivalSignups.dancerId),
+              ne(festivalSignups.rosterVisibility, 'hidden'),
+              eq(dancers.profilePublic, true),
+            ),
+          )
+          .limit(50)
+
+        return rows.map(r => ({
+          dancerId: r.dancerId!,
+          name: r.name,
+          photo: r.photo,
+          city: r.city,
+          username: r.username,
+        }))
+      }
+
+      // --- Events: opt-in share_going (unchanged) ---
       const rows = await ctx.db
         .select({
           dancerId: planItems.dancerId,
