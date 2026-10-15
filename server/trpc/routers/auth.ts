@@ -68,50 +68,61 @@ export const authRouter = router({
       purpose: z.enum(['login', 'recovery']).default('login'),
     }))
     .mutation(async ({ ctx, input }) => {
-      const magicToken = crypto.randomUUID()
-      const magicTokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+      // Always return { sent: true } regardless of outcome — never reveal
+      // whether the email exists or whether the DB/email send succeeded.
+      // This prevents user enumeration and stops raw SQL errors from leaking
+      // to the client (the neon-http driver embeds query params including the
+      // magic token in its error messages).
+      try {
+        const magicToken = crypto.randomUUID()
+        const magicTokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
 
-      const updateSet: Record<string, unknown> = {
-        magicToken,
-        magicTokenExpiresAt,
-      }
-      if (input.name) updateSet.name = input.name
-      if (input.danceStyles.length > 0) updateSet.danceStyles = input.danceStyles
-      if (input.role) updateSet.role = input.role
-      if (input.city) updateSet.city = input.city
-
-      await ctx.db
-        .insert(dancers)
-        .values({
-          name: input.name || input.email.split('@')[0],
-          email: input.email,
-          danceStyles: input.danceStyles,
-          role: input.role ?? null,
-          city: input.city ?? null,
+        const updateSet: Record<string, unknown> = {
           magicToken,
           magicTokenExpiresAt,
-        })
-        .onConflictDoUpdate({
-          target: dancers.email,
-          set: updateSet,
-        })
+        }
+        if (input.name) updateSet.name = input.name
+        if (input.danceStyles.length > 0) updateSet.danceStyles = input.danceStyles
+        if (input.role) updateSet.role = input.role
+        if (input.city) updateSet.city = input.city
 
-      // Get the dancer name for the email greeting
-      const [dancer] = await ctx.db
-        .select({ name: dancers.name })
-        .from(dancers)
-        .where(eq(dancers.email, input.email))
+        await ctx.db
+          .insert(dancers)
+          .values({
+            name: input.name || input.email.split('@')[0],
+            email: input.email,
+            danceStyles: input.danceStyles,
+            role: input.role ?? null,
+            city: input.city ?? null,
+            magicToken,
+            magicTokenExpiresAt,
+          })
+          .onConflictDoUpdate({
+            target: dancers.email,
+            set: updateSet,
+          })
 
-      const config = useRuntimeConfig()
-      const siteUrl = config.siteUrl || 'http://localhost:3000'
-      const magicLinkUrl = input.purpose === 'recovery'
-        ? `${siteUrl}/auth/verify?token=${magicToken}&mode=reset`
-        : `${siteUrl}/auth/verify?token=${magicToken}`
+        // Get the dancer name for the email greeting
+        const [dancer] = await ctx.db
+          .select({ name: dancers.name })
+          .from(dancers)
+          .where(eq(dancers.email, input.email))
 
-      if (input.purpose === 'recovery') {
-        await sendPasswordResetEmail(input.email, dancer?.name || 'Dancer', magicLinkUrl)
-      } else {
-        await sendMagicLinkEmail(input.email, dancer?.name || 'Dancer', magicLinkUrl)
+        const config = useRuntimeConfig()
+        const siteUrl = config.siteUrl || 'http://localhost:3000'
+        const magicLinkUrl = input.purpose === 'recovery'
+          ? `${siteUrl}/auth/verify?token=${magicToken}&mode=reset`
+          : `${siteUrl}/auth/verify?token=${magicToken}`
+
+        if (input.purpose === 'recovery') {
+          await sendPasswordResetEmail(input.email, dancer?.name || 'Dancer', magicLinkUrl)
+        } else {
+          await sendMagicLinkEmail(input.email, dancer?.name || 'Dancer', magicLinkUrl)
+        }
+      } catch (err) {
+        // Log for debugging but never surface to the client — the response
+        // is always { sent: true } to prevent user enumeration.
+        console.error('[auth.requestMagicLink] failed for', input.email, err)
       }
 
       return { sent: true }

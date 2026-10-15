@@ -8,7 +8,7 @@
  * in beforeAll; any non-empty signer key works for the round-trip since verify
  * uses the same params that hash used.
  */
-import { describe, it, expect, vi, beforeAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import {
   dancers, sessions, electionVotes, electionVoteHistory, electionCandidates,
   moderatorElections, festivalSignups, cityVideos, videoVotes, cityBattleVotes,
@@ -59,6 +59,17 @@ vi.mock('drizzle-orm', async () => {
 
   return { eq, and, or, gt, sql }
 })
+
+// Mock email sending so requestMagicLink doesn't need a real mailer.
+const mockSendMagicLink = vi.fn().mockResolvedValue(undefined)
+const mockSendPasswordReset = vi.fn().mockResolvedValue(undefined)
+vi.mock('../../utils/email', () => ({
+  sendMagicLinkEmail: (...args: any[]) => mockSendMagicLink(...args),
+  sendPasswordResetEmail: (...args: any[]) => mockSendPasswordReset(...args),
+}))
+
+// Mock Nuxt's useRuntimeConfig (auto-imported in the auth router).
+vi.stubGlobal('useRuntimeConfig', () => ({ siteUrl: 'http://localhost:3000' }))
 
 import { appRouter } from '../index'
 
@@ -144,20 +155,57 @@ class FakeDb {
   }
 
   insert(table: any) {
+    const self = this
     return {
       values: (row: FakeRow) => {
-        // Emulate the unique constraint on dancers.email: throw a Postgres
-        // 23505-shaped error the router's catch block understands.
-        if (table === dancers && this.dancers.some(d => d.email === row.email)) {
-          const err: any = new Error('duplicate key value violates unique constraint')
-          err.code = '23505'
-          throw err
+        // Lazy: don't execute until we know which chain method (.returning,
+        // .onConflictDoUpdate, or bare await) the caller uses.
+        const doPlainInsert = () => {
+          if (table === dancers && self.dancers.some(d => d.email === row.email)) {
+            const err: any = new Error('duplicate key value violates unique constraint')
+            err.code = '23505'
+            throw err
+          }
+          const id = row.id ?? (table === dancers ? 'dancer-' : 'session-') + self.tableFor(table).length
+          const inserted = { id, ...row }
+          self.tableFor(table).push(inserted)
+          return inserted
         }
-        const id = row.id ?? (table === dancers ? 'dancer-' : 'session-') + this.tableFor(table).length
-        const inserted = { id, ...row }
-        this.tableFor(table).push(inserted)
-        const chain: any = Promise.resolve(undefined)
-        chain.returning = (_cols: any) => Promise.resolve([inserted])
+
+        // Build a thenable that also exposes .returning() and .onConflictDoUpdate().
+        // Whichever is called first determines the execution path.
+        let executed = false
+        let insertedRow: FakeRow | undefined
+        const ensurePlainInsert = () => {
+          if (!executed) { executed = true; insertedRow = doPlainInsert() }
+          return insertedRow!
+        }
+
+        const chain: any = {
+          then(onFulfilled?: any, onRejected?: any) {
+            try { ensurePlainInsert() } catch (e) { return Promise.reject(e).then(onFulfilled, onRejected) }
+            return Promise.resolve(undefined).then(onFulfilled, onRejected)
+          },
+          returning(_cols: any) {
+            return { then(onFulfilled?: any, onRejected?: any) {
+              try { const row = ensurePlainInsert(); return Promise.resolve([row]).then(onFulfilled, onRejected) }
+              catch (e) { return Promise.reject(e).then(onFulfilled, onRejected) }
+            } }
+          },
+          onConflictDoUpdate({ set }: { target?: any; set: FakeRow }) {
+            executed = true
+            if (table === dancers) {
+              const existing = self.dancers.find(d => d.email === row.email)
+              if (existing) {
+                Object.assign(existing, set)
+                return Promise.resolve(undefined)
+              }
+            }
+            const id = row.id ?? (table === dancers ? 'dancer-' : 'session-') + self.tableFor(table).length
+            self.tableFor(table).push({ id, ...row })
+            return Promise.resolve(undefined)
+          },
+        }
         return chain
       },
     }
@@ -590,6 +638,86 @@ describe('auth.resetPassword', () => {
     // Can now log in with the new password.
     const loginResult = await createCaller(db).auth.login({ email: 'nopass@example.com', password: 'myfirstpw' })
     expect(loginResult.name).toBe('No Pass')
+  })
+})
+
+// ---------- requestMagicLink (recovery / login) ----------
+
+describe('auth.requestMagicLink', () => {
+  beforeEach(() => {
+    mockSendMagicLink.mockClear()
+    mockSendPasswordReset.mockClear()
+  })
+
+  it('sends a recovery email for an existing dancer', async () => {
+    const db = new FakeDb()
+    db.seedDancer({ email: 'exists@example.com', name: 'Existing User' })
+    const caller = createCaller(db)
+
+    const result = await caller.auth.requestMagicLink({
+      email: 'exists@example.com',
+      purpose: 'recovery',
+    })
+
+    expect(result).toEqual({ sent: true })
+    expect(mockSendPasswordReset).toHaveBeenCalledOnce()
+    expect(mockSendPasswordReset.mock.calls[0][0]).toBe('exists@example.com')
+    // Magic token was written to the existing dancer row.
+    expect(db.dancers[0].magicToken).toBeTruthy()
+  })
+
+  it('returns { sent: true } for an unknown email (no user enumeration)', async () => {
+    const db = new FakeDb()
+    const caller = createCaller(db)
+
+    const result = await caller.auth.requestMagicLink({
+      email: 'ghost@example.com',
+      purpose: 'recovery',
+    })
+
+    // Always succeeds — never reveals whether the email exists.
+    expect(result).toEqual({ sent: true })
+  })
+
+  it('never exposes raw DB errors to the client (RAZ-413)', async () => {
+    // Simulate a DB failure — e.g. a missing column, connection error, or
+    // constraint violation. The handler must swallow the error and return
+    // { sent: true } so no SQL or params leak to the caller.
+    const db = new FakeDb()
+    const originalInsert = db.insert.bind(db)
+    db.insert = (table: any) => {
+      if (table === dancers) {
+        return {
+          values: () => ({
+            onConflictDoUpdate: () => { throw new Error('Failed query: insert into "dancers" ... params: [secret-token]') },
+          }),
+        } as any
+      }
+      return originalInsert(table)
+    }
+    const caller = createCaller(db)
+
+    // Must NOT throw — the raw "Failed query" error stays server-side.
+    const result = await caller.auth.requestMagicLink({
+      email: 'crash@example.com',
+      purpose: 'recovery',
+    })
+    expect(result).toEqual({ sent: true })
+    // Email was never sent because the DB call failed before it.
+    expect(mockSendPasswordReset).not.toHaveBeenCalled()
+  })
+
+  it('never exposes email-send errors to the client', async () => {
+    const db = new FakeDb()
+    db.seedDancer({ email: 'maildown@example.com', name: 'Mail Down' })
+    mockSendPasswordReset.mockRejectedValueOnce(new Error('SMTP connection refused'))
+    const caller = createCaller(db)
+
+    const result = await caller.auth.requestMagicLink({
+      email: 'maildown@example.com',
+      purpose: 'recovery',
+    })
+    expect(result).toEqual({ sent: true })
   })
 })
 
