@@ -43,13 +43,13 @@ export const DOMAINS: Domain[] = [
     id: 'directory',
     title: 'Profiles & cities',
     summary: 'Venue / artist / organiser profiles under /@handle, canonical cities, follows and the per-city community-group directory.',
-    tables: ['profiles', 'profileMembers', 'profileClaims', 'profileAccessLog', 'profileSuggestions', 'profileInvites', 'artistFollows', 'organizerSubscriptions', 'networkLinks', 'cities', 'communityGroups', 'communityGroupReports'],
+    tables: ['profiles', 'profileMembers', 'profileClaims', 'profileAccessLog', 'profileSuggestions', 'profileInvites', 'follows', 'legacyFollows', 'profileAffiliations', 'handles', 'organizerSubscriptions', 'networkLinks', 'cities', 'communityGroups', 'communityGroupReports'],
   },
   {
     id: 'booking',
     title: 'Venue booking & governance',
     summary: 'Bookable spaces, availability and booking requests, plus moderator elections and guideline versions for free community spaces.',
-    tables: ['bookableSpaces', 'availabilitySlots', 'bookingRequests', 'bookingInquiries', 'moderatorElections', 'electionCandidates', 'electionVotes', 'electionVoteHistory', 'guidelineVersions'],
+    tables: ['bookableSpaces', 'availabilitySlots', 'bookingRequests', 'bookingInquiries', 'moderatorElections', 'electionCandidates', 'electionVotes', 'electionVoteHistory', 'guidelineVersions', 'inboundRequests', 'deliveries'],
   },
   {
     id: 'engagement',

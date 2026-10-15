@@ -4,6 +4,7 @@ import { alias } from 'drizzle-orm/pg-core'
 import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
 import { bookableSpaces, bookingRequests, profiles, availabilitySlots, dancers } from '../../database/schema'
+import { requireProfileRole } from '../../utils/profileAccess'
 
 // Validates a HH:MM string has realistic hour (00–23) and minute (00–59).
 const timeString = z.string().regex(/^\d{2}:\d{2}$/).refine((v) => {
@@ -11,27 +12,15 @@ const timeString = z.string().regex(/^\d{2}:\d{2}$/).refine((v) => {
   return h >= 0 && h <= 23 && m >= 0 && m <= 59
 }, { message: 'Invalid time — hours must be 00–23, minutes 00–59' })
 
-// Only an admin or the space's elected moderator may manage availability.
-// Always verifies the space exists, even for admins.
+// Only an admin or a team member (owner/editor/moderator) may manage availability.
+// Step 13 (ADR-004): uses membership check instead of moderatorHandle string comparison.
 async function requireSpaceOwner(ctx: any, spaceId: string) {
   const [space] = await ctx.db
     .select({ profileId: bookableSpaces.profileId })
     .from(bookableSpaces)
     .where(eq(bookableSpaces.id, spaceId))
   if (!space) throw new TRPCError({ code: 'NOT_FOUND', message: 'Space not found.' })
-  if (ctx.isAdmin) return
-  const [profile] = await ctx.db
-    .select({ moderatorHandle: profiles.moderatorHandle })
-    .from(profiles)
-    .where(eq(profiles.id, space.profileId))
-  const [d] = await ctx.db
-    .select({ username: dancers.username })
-    .from(dancers)
-    .where(eq(dancers.id, ctx.dancerId))
-  const handle = (profile?.moderatorHandle || '').replace(/^@/, '')
-  if (!handle || !d?.username || handle !== d.username) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Only an admin or the space moderator can manage availability.' })
-  }
+  await requireProfileRole(ctx, space.profileId, 'moderator')
 }
 
 // Parse a YYYY-MM-DD string as a UTC date to get a stable weekday regardless of

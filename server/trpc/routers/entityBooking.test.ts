@@ -2,7 +2,7 @@
  * Hermetic tests for the entity (pro profiles) + booking routers.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { profiles, bookableSpaces, bookingRequests, availabilitySlots, dancers } from '../../database/schema'
+import { profiles, profileMembers, bookableSpaces, bookingRequests, availabilitySlots, dancers } from '../../database/schema'
 
 type FilterFn = (row: Record<string, any>) => boolean
 
@@ -20,6 +20,7 @@ import { appRouter } from '../index'
 interface Row { [k: string]: any }
 class FakeDb {
   profiles: Row[] = []
+  profileMembers: Row[] = []
   bookableSpaces: Row[] = []
   bookingRequests: Row[] = []
   availabilitySlots: Row[] = []
@@ -51,6 +52,7 @@ class FakeDb {
   transaction(fn: (tx: FakeDb) => Promise<void>) { return fn(this) }
   private tableFor(t: any): Row[] {
     if (t === profiles) return this.profiles
+    if (t === profileMembers) return this.profileMembers
     if (t === bookableSpaces) return this.bookableSpaces
     if (t === bookingRequests) return this.bookingRequests
     if (t === availabilitySlots) return this.availabilitySlots

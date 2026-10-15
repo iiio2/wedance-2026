@@ -5,6 +5,7 @@ import { router, publicProcedure, protectedProcedure } from '../trpc'
 import {
   dancers,
   profiles,
+  profileMembers,
   bookingRequests,
   moderatorElections,
   electionCandidates,
@@ -12,6 +13,7 @@ import {
   electionVoteHistory,
   guidelineVersions,
 } from '../../database/schema'
+import { requireProfileRole } from '../../utils/profileAccess'
 
 /**
  * Moderator elections — community governance for free/OpenAir commons (epic G800,
@@ -40,23 +42,11 @@ async function requireEligibleDancer(ctx: any) {
   return d
 }
 
-// Only an admin or the space's current elected moderator may run an election
-// (open / advance / close / moderate bookings). Governance of who-can-call is
-// itself a follow-up; this is the safe MVP gate.
+// Only an admin or a team member (owner/editor/moderator) may run an election
+// or moderate bookings. Step 13 (ADR-004): uses membership check.
 async function requireSpaceSteward(ctx: any, profileId: string) {
   if (ctx.isAdmin) return
-  const [p] = await ctx.db
-    .select({ moderatorHandle: profiles.moderatorHandle })
-    .from(profiles)
-    .where(eq(profiles.id, profileId))
-  const [d] = await ctx.db
-    .select({ username: dancers.username })
-    .from(dancers)
-    .where(eq(dancers.id, ctx.dancerId))
-  const handle = (p?.moderatorHandle || '').replace(/^@/, '')
-  if (!handle || !d?.username || handle !== d.username) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Only an admin or the current moderator can run this election.' })
-  }
+  await requireProfileRole(ctx, profileId, 'moderator')
 }
 
 function addYear(iso: string) {
@@ -361,6 +351,28 @@ export const electionRouter = router({
             guidelines: winner.guidelines,
             termStart: election.termStart,
             termEnd: election.termEnd,
+          })
+
+        // Step 13 (ADR-004): grant a moderator membership to the winner so
+        // requireProfileRole('moderator') works for the booking queue.
+        await ctx.db
+          .insert(profileMembers)
+          .values({
+            profileId: election.profileId,
+            dancerId: winner.dancerId,
+            role: 'moderator',
+            title: 'Elected Moderator',
+            termStart: election.termStart,
+            termEnd: election.termEnd,
+          })
+          .onConflictDoUpdate({
+            target: [profileMembers.profileId, profileMembers.dancerId],
+            set: {
+              role: 'moderator',
+              title: 'Elected Moderator',
+              termStart: election.termStart,
+              termEnd: election.termEnd,
+            },
           })
       }
 

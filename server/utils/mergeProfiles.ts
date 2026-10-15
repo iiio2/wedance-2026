@@ -202,11 +202,11 @@ export async function mergeProfile(db: any, from: { id: string; username: string
   await moveHandleRefs(db, from.username, to.username, count)
   count('events.host', (await q(sql`update events set host_profile_id = ${to.id} where host_profile_id = ${from.id} returning id`)).length)
   // Rows with a unique (…, profile) pair: drop the copy's where the one that stays has its own.
-  count('artist_follows', (await q(sql`delete from artist_follows f where f.profile_id = ${from.id} and exists (select 1 from artist_follows g where g.profile_id = ${to.id} and g.dancer_id = f.dancer_id) returning f.id`)).length)
+  count('follows', (await q(sql`delete from follows f where f.profile_id = ${from.id} and exists (select 1 from follows g where g.profile_id = ${to.id} and g.dancer_id = f.dancer_id) returning f.id`)).length)
   count('profile_invites', (await q(sql`delete from profile_invites i where i.profile_id = ${from.id} and exists (select 1 from profile_invites j where j.profile_id = ${to.id} and j.event_id = i.event_id) returning i.id`)).length)
   count('profile_members', (await q(sql`delete from profile_members m where m.profile_id = ${from.id} and exists (select 1 from profile_members n where n.profile_id = ${to.id} and n.dancer_id = m.dancer_id) returning m.id`)).length)
   for (const [table, col] of [
-    ['artist_follows', 'profile_id'], ['bookable_spaces', 'profile_id'], ['booking_requests', 'profile_id'], ['booking_requests', 'organizer_id'],
+    ['follows', 'profile_id'], ['bookable_spaces', 'profile_id'], ['booking_requests', 'profile_id'], ['booking_requests', 'organizer_id'],
     ['brand_looks', 'profile_id'], ['guideline_versions', 'profile_id'], ['moderator_elections', 'profile_id'], ['profile_access_log', 'profile_id'],
     ['profile_claims', 'profile_id'], ['profile_invites', 'profile_id'], ['profile_members', 'profile_id'], ['profile_suggestions', 'profile_id'],
   ] as const) {

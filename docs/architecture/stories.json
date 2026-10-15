@@ -167,7 +167,7 @@
       "story": "As a dancer, I want to follow teachers, DJs, and performers, so that I can keep track of them across festivals and cities.",
       "status": "built",
       "tables": [
-        "artistFollows",
+        "follows",
         "events",
         "profiles"
       ],

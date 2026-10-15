@@ -64,7 +64,7 @@ if (WRITE) {
     events: await q(sql`select id, venue_username, organizer_username, host_profile_id, artists, flyer_options, festival from events
       where venue_username in (${inHandles}) or organizer_username in (${inHandles}) or host_profile_id in (${inIds}) or artists::jsonb ?| array[${inHandles}]`),
   }
-  for (const t of ['artist_follows', 'bookable_spaces', 'brand_looks', 'guideline_versions', 'moderator_elections', 'profile_access_log', 'profile_claims', 'profile_invites', 'profile_members', 'profile_suggestions']) {
+  for (const t of ['follows', 'bookable_spaces', 'brand_looks', 'guideline_versions', 'moderator_elections', 'profile_access_log', 'profile_claims', 'profile_invites', 'profile_members', 'profile_suggestions']) {
     backup[t] = await q(sql`select * from ${sql.identifier(t)} where profile_id in (${inIds})`)
   }
   backup.booking_requests = await q(sql`select * from booking_requests where profile_id in (${inIds}) or organizer_id in (${inIds})`)

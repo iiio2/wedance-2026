@@ -10,7 +10,7 @@ import { profiles, profileMembers, profileAccessLog } from '../database/schema'
  * change goes through logAccess so a reclaim dispute can be judged on facts.
  */
 
-export type Role = 'owner' | 'editor'
+export type Role = 'owner' | 'editor' | 'moderator'
 export type Db = any
 
 export async function profileByHandle(db: Db, username: string) {
@@ -58,6 +58,25 @@ export async function grant(db: Db, profileId: string, dancerId: string, role: R
     })
   // Managed now: keep the v3 sync off this profile.
   await db.update(profiles).set({ claimed: true }).where(eq(profiles.id, profileId))
+}
+
+/**
+ * Step 13 (ADR-004): require the caller to hold a specific role (or higher)
+ * on a profile. Role hierarchy: owner > editor > moderator. Admins bypass.
+ * Replaces the old moderatorHandle string comparison in booking/elections.
+ */
+const roleRank: Record<Role, number> = { owner: 3, editor: 2, moderator: 1 }
+
+export async function requireProfileRole(
+  ctx: { db: Db; dancerId: string; isAdmin?: boolean },
+  profileId: string,
+  minimumRole: Role,
+) {
+  if (ctx.isAdmin) return
+  const m = await membershipOf(ctx.db, profileId, ctx.dancerId)
+  if (!m || roleRank[m.role as Role] < roleRank[minimumRole]) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: `Requires ${minimumRole} role or higher on this profile.` })
+  }
 }
 
 export async function logAccess(db: Db, entry: {

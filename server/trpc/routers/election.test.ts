@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import {
-  dancers, profiles,
+  dancers, profiles, profileMembers,
   moderatorElections, electionCandidates, electionVotes, electionVoteHistory, guidelineVersions,
 } from '../../database/schema'
 
@@ -45,6 +45,7 @@ class Q {
 class FakeDb {
   dancers: Row[] = []
   profiles: Row[] = []
+  profileMembers: Row[] = []
   moderatorElections: Row[] = []
   electionCandidates: Row[] = []
   electionVotes: Row[] = []
@@ -60,6 +61,8 @@ class FakeDb {
       this.tableFor(t).push(rec)
       const chain: any = Promise.resolve(undefined)
       chain.returning = () => Promise.resolve([rec])
+      chain.onConflictDoUpdate = () => chain
+      chain.onConflictDoNothing = () => chain
       return chain
     } }
   }
@@ -72,6 +75,7 @@ class FakeDb {
   private tableFor(t: any): Row[] {
     if (t === dancers) return this.dancers
     if (t === profiles) return this.profiles
+    if (t === profileMembers) return this.profileMembers
     if (t === moderatorElections) return this.moderatorElections
     if (t === electionCandidates) return this.electionCandidates
     if (t === electionVotes) return this.electionVotes
