@@ -5,6 +5,7 @@
   "license": "AGPL-3.0-only",
   "scripts": {
     "build": "nuxt build",
+    "vercel-build": "npx tsx scripts/db-push-production.ts && nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",

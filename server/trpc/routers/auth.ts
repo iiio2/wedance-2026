@@ -86,21 +86,28 @@ export const authRouter = router({
         if (input.role) updateSet.role = input.role
         if (input.city) updateSet.city = input.city
 
-        await ctx.db
-          .insert(dancers)
-          .values({
-            name: input.name || input.email.split('@')[0],
-            email: input.email,
-            danceStyles: input.danceStyles,
-            role: input.role ?? null,
-            city: input.city ?? null,
-            magicToken,
-            magicTokenExpiresAt,
-          })
-          .onConflictDoUpdate({
-            target: dancers.email,
-            set: updateSet,
-          })
+        // Upsert: create new user or update existing user's magic token.
+        try {
+          await ctx.db
+            .insert(dancers)
+            .values({
+              name: input.name || input.email.split('@')[0],
+              email: input.email,
+              danceStyles: input.danceStyles,
+              role: input.role ?? null,
+              city: input.city ?? null,
+              magicToken,
+              magicTokenExpiresAt,
+            })
+            .onConflictDoUpdate({
+              target: dancers.email,
+              set: updateSet,
+            })
+        } catch (dbErr) {
+          console.error('[auth.requestMagicLink] DB upsert failed for', input.email, dbErr)
+          // Bail — without a stored token the email link would be dead anyway.
+          return { sent: true }
+        }
 
         // Get the dancer name for the email greeting
         const [dancer] = await ctx.db
@@ -114,15 +121,18 @@ export const authRouter = router({
           ? `${siteUrl}/auth/verify?token=${magicToken}&mode=reset`
           : `${siteUrl}/auth/verify?token=${magicToken}`
 
-        if (input.purpose === 'recovery') {
-          await sendPasswordResetEmail(input.email, dancer?.name || 'Dancer', magicLinkUrl)
-        } else {
-          await sendMagicLinkEmail(input.email, dancer?.name || 'Dancer', magicLinkUrl)
+        try {
+          if (input.purpose === 'recovery') {
+            await sendPasswordResetEmail(input.email, dancer?.name || 'Dancer', magicLinkUrl)
+          } else {
+            await sendMagicLinkEmail(input.email, dancer?.name || 'Dancer', magicLinkUrl)
+          }
+        } catch (emailErr) {
+          console.error('[auth.requestMagicLink] email send failed for', input.email, emailErr)
         }
       } catch (err) {
-        // Log for debugging but never surface to the client — the response
-        // is always { sent: true } to prevent user enumeration.
-        console.error('[auth.requestMagicLink] failed for', input.email, err)
+        // Catch-all for unexpected errors — never surface to the client.
+        console.error('[auth.requestMagicLink] unexpected error for', input.email, err)
       }
 
       return { sent: true }
