@@ -566,7 +566,7 @@ export const businessEventsRouter = router({
       .where(and(eq(profileClaims.dancerId, ctx.dancerId), inArray(profileClaims.status, ['pending', 'rejected'])))
     for (const c of claims) {
       needs.push(c.status === 'pending'
-        ? { kind: 'claim', tone: 'neutral', title: `Claim for ${c.name} is waiting for review`, detail: 'We check every claim by hand.', to: '/business/profiles' }
+        ? { kind: 'claim', tone: 'neutral', title: `Claim for ${c.name} is waiting for review`, detail: 'We check every claim by hand.', to: '/business/network' }
         : { kind: 'claim', tone: 'danger', title: `Claim for ${c.name} wasn’t approved`, detail: 'Send a new request with proof we can check.', to: `/business/claim?profile=${c.username}` })
     }
 
@@ -589,7 +589,7 @@ export const businessEventsRouter = router({
         .where(and(inArray(bookingInquiries.profileId, mine.map((p: any) => p.id)), eq(bookingInquiries.status, 'new')))
         .groupBy(profiles.username, profiles.name)
       for (const g of asks) {
-        needs.push({ kind: 'booking', tone: 'info', title: g.n === 1 ? `${g.first} wants to book ${g.name}` : `${g.n} people want to book ${g.name}`, detail: 'Answer them by email, then mark it answered.', to: `/business/profiles/${g.username}/bookings` })
+        needs.push({ kind: 'booking', tone: 'info', title: g.n === 1 ? `${g.first} wants to book ${g.name}` : `${g.n} people want to book ${g.name}`, detail: 'Answer them by email, then mark it answered.', to: `/business/network/${g.username}/bookings` })
       }
     }
 
@@ -604,7 +604,7 @@ export const businessEventsRouter = router({
     }
 
     for (const j of await joinRequestsForOwner(ctx.db, ctx.dancerId)) {
-      needs.push({ kind: 'join', tone: 'info', title: `${j.dancerName} wants to join ${j.profileName}`, detail: `As ${j.requestedRole}${j.title ? ` · ${j.title}` : ''}. Approve or decline.`, to: `/business/profiles/${j.profileUsername}/team` })
+      needs.push({ kind: 'join', tone: 'info', title: `${j.dancerName} wants to join ${j.profileName}`, detail: `As ${j.requestedRole}${j.title ? ` · ${j.title}` : ''}. Approve or decline.`, to: `/business/network/${j.profileUsername}/team` })
     }
 
     const hosted = mine.length

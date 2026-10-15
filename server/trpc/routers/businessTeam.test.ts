@@ -41,7 +41,7 @@ describe.skipIf(!DATABASE_URL)('businessTeam router', () => {
 
     // Javier sees it in his inbox and on the team page; WeDance admins don't get joins.
     const inbox = await as(ids.javier).businessEvents.inbox()
-    expect(inbox.needs.some((n: any) => n.kind === 'join' && n.to === `/business/profiles/${username}/team`)).toBe(true)
+    expect(inbox.needs.some((n: any) => n.kind === 'join' && n.to === `/business/network/${username}/team`)).toBe(true)
     expect((await admin().business.listClaims()).some((c: any) => c.profileUsername === username)).toBe(false)
 
     const team = await as(ids.javier).businessTeam.team({ username })

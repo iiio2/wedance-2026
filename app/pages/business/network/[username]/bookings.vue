@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * /business/profiles/<username>/bookings — people who asked to book this page
+ * /business/network/<username>/bookings — people who asked to book this page
  * (inquiries.forProfile), newest first. Answer by email (opens a reply), then
  * mark it answered or declined. Also the booking link to put on your own site.
  */
@@ -42,7 +42,7 @@ const closed = computed(() => (rows.value ?? []).filter(r => r.status !== 'new')
 
 <template>
   <div>
-    <AdminPageHeader eyebrow="Business" title="Bookings" :description="`People who asked to book @${username}.`" :back="{ to: `/business/profiles/${username}`, label: 'Profile' }" />
+    <AdminPageHeader eyebrow="Business" title="Bookings" :description="`People who asked to book @${username}.`" :back="{ to: `/business/network/${username}`, label: 'Profile' }" />
 
     <!-- The booking link -->
     <section class="mt-6 rounded-2xl border bg-card p-5 shadow-wd-card">

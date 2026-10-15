@@ -378,6 +378,21 @@ export const profileMembers = pgTable('profile_members', {
   index('profile_members_dancer_idx').on(t.dancerId),
 ])
 
+// Business "Network" curation (migration 0042, RAZ-408). The network itself is
+// derived from shared events; a row here means a page's team ADDED someone by
+// hand or HID a derived contact. One row per (my page, their page).
+export const networkLinks = pgTable('network_links', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  otherProfileId: uuid('other_profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().$type<'added' | 'hidden'>(),
+  createdBy: uuid('created_by').references(() => dancers.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  unique('network_links_pair').on(t.profileId, t.otherProfileId),
+  index('network_links_profile_idx').on(t.profileId),
+])
+
 // "This is me / my venue" requests for existing profiles. An admin approves
 // (→ profile_members owner row + profiles.claimed) or rejects.
 export const profileClaims = pgTable('profile_claims', {

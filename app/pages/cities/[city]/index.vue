@@ -957,7 +957,7 @@ onMounted(() => {
         <NuxtLink
           v-if="weekCount > 0"
           to="/my-plan"
-          class="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full text-white text-sm font-bold shadow-wd-float transition-all"
+          class="fixed bottom-[calc(1.25rem+var(--wd-tabbar-h,0px))] right-5 z-40 inline-flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full text-white text-sm font-bold shadow-wd-float transition-all"
           :style="{ background: accent }"
         >
           <span

@@ -47,6 +47,9 @@ export default defineNuxtConfig({
     '/organizers/create': { redirect: { to: '/business/events/new?type=Festival', statusCode: 301 } },
     // One page for organizers: the festival pitch lives on /for-organizers#festivals.
     '/organizers': { redirect: { to: '/for-organizers#festivals', statusCode: 301 } },
+    // Business "My profiles" became "Network" (2026-10-15); keep old links and emails working.
+    '/business/profiles': { redirect: { to: '/business/network', statusCode: 301 } },
+    '/business/profiles/**': { redirect: { to: '/business/network/**', statusCode: 301 } },
     // Auth-gated pages: all data is client-only (localStorage + TRPC behind
     // session cookie). SSR renders empty stats → hydration mismatch → Vue
     // fails to reconcile the DOM, so the user sees stale/empty data until a

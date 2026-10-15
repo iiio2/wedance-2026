@@ -237,7 +237,7 @@ const fmtDate = (d: string | Date | null, tz?: string | null) => d ? new Date(d)
           <p v-else class="mt-1 text-sm text-muted-foreground">Your page is up to date{{ data.event ? ` and ${data.event.host?.name || 'the organizer'} can use it for ${data.event.name}` : '' }}.</p>
           <div class="mt-5 flex flex-wrap justify-center gap-2">
             <Button variant="pill" as-child><NuxtLink :to="`/@${data.profile.username}`">See your page</NuxtLink></Button>
-            <Button v-if="isSignedIn" variant="outline-pill" as-child><NuxtLink :to="`/business/profiles/${data.profile.username}`">Manage it in Business</NuxtLink></Button>
+            <Button v-if="isSignedIn" variant="outline-pill" as-child><NuxtLink :to="`/business/network/${data.profile.username}`">Manage it in Business</NuxtLink></Button>
           </div>
         </section>
 

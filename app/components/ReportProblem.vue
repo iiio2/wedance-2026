@@ -211,7 +211,7 @@ async function submit() {
   <!-- Floating trigger (bottom-left to stay clear of the plan/cart sidebar) -->
   <Button
     :loading="capturing"
-    class="fixed left-4 bottom-4 z-40 h-auto gap-2 rounded-full pl-3 pr-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-foreground hover:bg-foreground/90 shadow-[0_4px_14px_rgba(59,31,13,0.35)]"
+    class="fixed left-4 bottom-[calc(1rem+var(--wd-tabbar-h,0px))] z-40 h-auto gap-2 rounded-full pl-3 pr-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-foreground hover:bg-foreground/90 shadow-[0_4px_14px_rgba(59,31,13,0.35)]"
     aria-label="Report a problem"
     @click="openReport"
   >

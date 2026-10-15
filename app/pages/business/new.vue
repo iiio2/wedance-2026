@@ -75,7 +75,7 @@ async function submit() {
       instagram: igHandle.value || undefined,
       handle: form.handle.trim() || undefined,
     })
-    await navigateTo(next || `/business/profiles/${username}`)
+    await navigateTo(next || `/business/network/${username}`)
   } catch (e: any) {
     error.value = e?.message || 'Could not create the profile.'
   } finally {

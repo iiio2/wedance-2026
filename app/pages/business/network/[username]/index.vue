@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * /business/profiles/<handle> — edit a profile you manage: details, photos (one is the main
+ * /business/network/<handle> — edit a profile you manage: details, photos (one is the main
  * photo used on cards and flyers), links, and venue details for venues.
  */
 import { ExternalLink, Star, Trash2, Check, Users, Palette, Inbox } from 'lucide-vue-next'
@@ -146,16 +146,16 @@ const photoHint = computed(() => loaded.value?.type === 'artist'
         :eyebrow="typeLabel[loaded.type] || 'Profile'"
         :title="loaded.name"
         :description="`@${loaded.username}`"
-        :back="{ to: '/business/profiles', label: 'My profiles' }"
+        :back="{ to: '/business/network', label: 'Network' }"
       >
         <Button v-if="loaded.type !== 'organizer'" variant="outline-pill" size="pill-sm" as-child>
-          <NuxtLink :to="`/business/profiles/${loaded.username}/bookings`"><Inbox /> Bookings</NuxtLink>
+          <NuxtLink :to="`/business/network/${loaded.username}/bookings`"><Inbox /> Bookings</NuxtLink>
         </Button>
         <Button variant="outline-pill" size="pill-sm" as-child>
-          <NuxtLink :to="`/business/profiles/${loaded.username}/team`"><Users /> Team</NuxtLink>
+          <NuxtLink :to="`/business/network/${loaded.username}/team`"><Users /> Team</NuxtLink>
         </Button>
         <Button variant="outline-pill" size="pill-sm" as-child>
-          <NuxtLink :to="`/business/profiles/${loaded.username}/styles`"><Palette /> Flyer styles</NuxtLink>
+          <NuxtLink :to="`/business/network/${loaded.username}/styles`"><Palette /> Flyer styles</NuxtLink>
         </Button>
         <Button variant="outline-pill" size="pill-sm" as-child>
           <NuxtLink :to="`/@${loaded.username}`" target="_blank"><ExternalLink /> View page</NuxtLink>

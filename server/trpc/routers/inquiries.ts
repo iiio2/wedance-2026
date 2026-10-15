@@ -101,7 +101,7 @@ export const inquiriesRouter = router({
           to: m.email, name: m.name, profileName: p.name, forward,
           from: { name: input.name, email: input.email, phone: input.phone || null, organization: as?.name || input.organization || null },
           lines, message: input.message,
-          link: forward ? `${site}/@${p.username}` : `${site}/business/profiles/${p.username}/bookings`,
+          link: forward ? `${site}/@${p.username}` : `${site}/business/network/${p.username}/bookings`,
         })
       } catch (e) { console.error('[inquiries] email failed', e) }
     }

@@ -148,7 +148,9 @@ When('I click "Sign in" in the header', async ({ page }) => {
 })
 
 When('I click "Sign out" in the header', async ({ page }) => {
-  await page.locator('header').getByRole('button', { name: 'Sign out' }).click()
+  // Sign out lives in the account menu (desktop header).
+  await page.locator('header').getByRole('button', { name: 'Account menu' }).click()
+  await page.locator('header').getByRole('menuitem', { name: 'Sign out' }).click()
   // Wait for the sign-out confirmation dialog.
   await expect(page.locator('[role="dialog"]')).toBeVisible()
 })
@@ -292,9 +294,9 @@ When('I click the "Going?" button', async ({ page }) => {
 // ── Assertions ──────────────────────────────────────────────────────
 
 Then('I should be signed in', async ({ page }) => {
-  // The header shows "Sign out" when signed in.
+  // The header shows the account menu when signed in.
   await expect(
-    page.locator('header').getByRole('button', { name: 'Sign out' }),
+    page.locator('header').getByRole('button', { name: 'Account menu' }),
   ).toBeVisible({ timeout: 15_000 })
 })
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * /business/profiles/<handle>/team — who manages this profile. Owners approve
+ * /business/network/<handle>/team — who manages this profile. Owners approve
  * join requests, change roles and titles, remove people, and see the history.
  * Everyone on the team can leave (except the last owner). WeDance admins can
  * release the page: everyone leaves, so its owner can claim it.
@@ -69,7 +69,7 @@ const confirmRemove = ref<string | null>(null)
 const remove = (m: Team['members'][number]) =>
   run(m.dancerId, async () => {
     await $trpc.businessTeam.removeMember.mutate({ username: username.value, dancerId: m.dancerId })
-    if (m.me) await navigateTo('/business/profiles')
+    if (m.me) await navigateTo('/business/network')
   }, m.me ? 'You left the team.' : `${m.name} was removed.`)
 
 const roleOptions = [{ label: 'Owner — edits and manages the team', value: 'owner' }, { label: 'Editor — edits the profile and events', value: 'editor' }]
@@ -87,7 +87,7 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
         :eyebrow="team.profile.name"
         title="Team"
         description="Owners edit everything and manage the team. Editors edit the profile and events."
-        :back="{ to: `/business/profiles/${team.profile.username}`, label: team.profile.name }"
+        :back="{ to: `/business/network/${team.profile.username}`, label: team.profile.name }"
       />
 
       <AdminState v-if="error" kind="error" :message="error" />

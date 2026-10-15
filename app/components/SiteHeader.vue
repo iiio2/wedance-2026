@@ -1,86 +1,117 @@
+<script lang="ts">
+// Plan counts load once per signed-in session, not on every header mount.
+let planCountsLoaded = false
+</script>
+
 <script setup lang="ts">
 /**
- * SiteHeader — the shared V3 top bar (brand + nav + auth) used on every
- * page. One place to change the nav or the sign-in affordance.
+ * SiteHeader — the shared V3 navigation used on every dancing-side page.
+ *
+ * Desktop (sm+): brand · Festivals / Cities / Artists / Find your dance ·
+ * My plan (badge) · AccountMenu (profile, year, settings, Business, sign out).
+ * Phone: slim top bar, section chips on the Explore pages, and SiteTabBar
+ * (Explore · Cities · My plan · Me). Chosen from /sketches/nav (prototype E).
+ * The Business layout uses the same AccountMenu + SiteTabBar in business mode.
  */
-const { isSignedIn, isLoading, authHint, dancerName, username, signOut } = useAuth()
-const sessionCookie = useCookie('wedance-session')
+import { CalendarDays, MapPin, Sparkles, Users, Music } from 'lucide-vue-next'
+
+const route = useRoute()
+const { isSignedIn } = useAuth()
+const { appearsSignedIn } = useAccountNav('dance')
 const showSignIn = ref(false)
-const showSignOutConfirm = ref(false)
 
-// Show signed-in UI during SSR/loading when both session + hint cookies exist,
-// so the header doesn't blink "Sign in" on page refresh.
-const appearsSignedIn = computed(() =>
-  isSignedIn.value || (isLoading.value && !!authHint.value && !!sessionCookie.value),
-)
-const displayName = computed(() =>
-  dancerName.value || authHint.value?.name || 'Profile',
-)
-const displayUsername = computed(() =>
-  username.value || authHint.value?.username || null,
-)
+// My plan badge = festivals in the year plan + events in the week plan.
+const { yearCount, loadFromDb: loadYear } = useYearPlan()
+const { weekCount, loadFromDb: loadWeek } = useWeekPlan()
+const planCount = computed(() => yearCount.value + weekCount.value)
+watch(isSignedIn, (signedIn) => {
+  if (!import.meta.client) return
+  if (!signedIn) {
+    planCountsLoaded = false
+    return
+  }
+  if (planCountsLoaded) return
+  planCountsLoaded = true
+  loadYear()
+  loadWeek()
+}, { immediate: true })
 
-function handleSignOut() {
-  signOut()
-  navigateTo('/')
-}
-
-const links = [
-  { to: '/festivals', label: 'Festivals', always: true },
-  { to: '/cities', label: 'Cities', always: true },
+const discover = [
+  { to: '/festivals', label: 'Festivals', icon: Sparkles },
+  { to: '/cities', label: 'Cities', icon: MapPin },
+  { to: '/artists', label: 'Artists', icon: Users },
+  { to: '/find-your-dance', label: 'Find your dance', icon: Music },
 ]
+const exploreChips = discover.filter(l => l.to !== '/cities')
+const EXPLORE_ROOTS = ['/festivals', '/artists', '/find-your-dance']
+
+function under(path: string) {
+  return route.path === path || route.path.startsWith(`${path}/`)
+}
+const onExploreIndex = computed(() => route.path === '/' || EXPLORE_ROOTS.includes(route.path))
+const onPlan = computed(() => under('/my-plan') || under('/my-year'))
 </script>
 
 <template>
   <header class="border-b border-border">
-    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-      <Brand />
-      <nav class="flex items-center gap-4 text-sm">
+    <div class="max-w-6xl mx-auto px-4 h-14 sm:h-16 flex items-center gap-6">
+      <Brand class="shrink-0" />
+
+      <!-- Desktop: public sections -->
+      <nav class="hidden sm:flex items-center gap-5 text-sm self-stretch" aria-label="Main">
         <NuxtLink
-          v-for="l in links"
+          v-for="l in discover"
           :key="l.to"
           :to="l.to"
-          class="italic hover:underline"
-          :class="l.always ? '' : 'hidden sm:inline'"
-        >{{ l.label }}</NuxtLink>
+          class="relative flex items-center transition-colors"
+          :class="under(l.to) ? 'text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'"
+        >
+          {{ l.label }}
+          <span v-if="under(l.to)" class="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primary" />
+        </NuxtLink>
+      </nav>
 
-        <!-- Auth -->
+      <div class="ml-auto flex items-center gap-4">
         <template v-if="appearsSignedIn">
           <NuxtLink
             to="/my-plan"
-            class="hidden sm:inline italic hover:underline"
-          >My plan</NuxtLink>
-          <NuxtLink
-            :to="displayUsername ? `/u/${displayUsername}` : '/my-plan'"
-            class="hidden sm:inline font-bold hover:underline text-foreground font-display"
-          >{{ displayName }}</NuxtLink>
-          <NuxtLink
-            to="/business"
-            class="hidden sm:inline italic hover:underline"
-          >Business</NuxtLink>
-          <NuxtLink
-            to="/settings"
-            class="hidden sm:inline italic hover:underline text-secondary"
-          >Settings</NuxtLink>
+            class="hidden sm:flex items-center gap-1.5 text-sm font-semibold transition-colors"
+            :class="onPlan ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'"
+          >
+            <CalendarDays class="w-5 h-5" />
+            My plan
+            <span
+              v-if="planCount > 0"
+              class="bg-primary text-primary-foreground text-[10px] font-bold min-w-4 h-4 rounded-full grid place-items-center px-1"
+            >{{ planCount }}</span>
+          </NuxtLink>
+          <AccountMenu mode="dance" class="hidden sm:block" />
+        </template>
+        <template v-else>
+          <NuxtLink to="/for-organizers" class="hidden sm:inline text-sm text-muted-foreground hover:text-foreground">For organizers</NuxtLink>
           <Button
             type="button"
-            variant="link"
-            class="h-auto p-0 font-normal italic text-secondary"
-            @click="showSignOutConfirm = true"
-          >Sign out</Button>
+            variant="pill"
+            size="pill-sm"
+            class="h-7 shrink-0"
+            @click="showSignIn = true"
+          >Sign in</Button>
         </template>
-        <Button
-          v-else
-          type="button"
-          variant="pill"
-          size="pill-sm"
-          class="h-7 shrink-0"
-          @click="showSignIn = true"
-        >Sign in</Button>
-      </nav>
+      </div>
     </div>
 
+    <!-- Phone: section chips on the Explore pages -->
+    <nav v-if="onExploreIndex" class="sm:hidden px-4 pb-3 flex gap-2 overflow-x-auto text-xs" aria-label="Explore">
+      <NuxtLink
+        v-for="l in exploreChips"
+        :key="l.to"
+        :to="l.to"
+        class="shrink-0 flex items-center gap-1.5 px-3 h-8 rounded-full border font-semibold"
+        :class="under(l.to) ? 'border-primary bg-primary/10 text-wd-red-800' : 'border-border text-muted-foreground'"
+      ><component :is="l.icon" class="w-3.5 h-3.5" />{{ l.label }}</NuxtLink>
+    </nav>
+
+    <SiteTabBar mode="dance" :plan-count="planCount" />
     <SignUpModal v-model:open="showSignIn" action="signin" />
-    <SignOutConfirmDialog v-model:open="showSignOutConfirm" @confirm="handleSignOut" />
   </header>
 </template>

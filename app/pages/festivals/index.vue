@@ -217,7 +217,7 @@ const styleChips = computed(() => {
         <NuxtLink
           v-if="yearCount > 0"
           to="/my-plan"
-          class="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full text-white text-sm font-bold bg-primary shadow-wd-float transition-all"
+          class="fixed bottom-[calc(1.25rem+var(--wd-tabbar-h,0px))] right-5 z-40 inline-flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full text-white text-sm font-bold bg-primary shadow-wd-float transition-all"
         >
           <span
             class="inline-flex items-center justify-center w-6 h-6 rounded-full text-meta font-black bg-white text-primary"

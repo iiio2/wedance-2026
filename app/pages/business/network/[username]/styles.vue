@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * /business/profiles/<handle>/styles — the profile's flyer styles (businessLooks):
+ * /business/network/<handle>/styles — the profile's flyer styles (businessLooks):
  * its own (read off its flyers, kept from a painting, or written here) and
  * ideas WeDance wrote for it. Each style is the prompt its flyers are painted
  * from — edit it as text — plus its colours. "Generate more styles" writes new
@@ -133,7 +133,7 @@ function addColour(id: string) {
         eyebrow="Styles"
         :title="data.profile.name"
         description="The looks your flyers are painted in. Each one is the prompt WeDance paints from: change the words, and the next flyers change."
-        :back="{ to: `/business/profiles/${data.profile.username}`, label: 'The profile' }"
+        :back="{ to: `/business/network/${data.profile.username}`, label: 'The profile' }"
       />
       <AdminState v-if="error" kind="error" :message="error" />
       <p v-if="notice" role="status" class="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-success/10 px-3 py-2 text-sm font-bold text-wd-green-700"><Check class="size-4" aria-hidden="true" /> {{ notice }}</p>

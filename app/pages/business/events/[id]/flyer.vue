@@ -540,7 +540,7 @@ const faces = computed(() => st.value?.pictured.length ?? 0)
               <p class="text-sm font-bold">Directions to paint <span class="font-normal text-muted-foreground">(up to 4 · {{ chosen.length }} picked)</span></p>
               <Button type="button" variant="outline" size="sm" :loading="generating" @click="moreIdeas"><Sparkles /> More styles</Button>
             </div>
-            <p class="text-xs text-muted-foreground">New styles are written for {{ ev.host?.name || 'you' }} from your music and the feeling, and saved to your <NuxtLink v-if="ev.host" :to="`/business/profiles/${ev.host.username}/styles`" class="font-bold text-secondary hover:underline">styles</NuxtLink><span v-else>styles</span>. Only the ones you pick are painted.</p>
+            <p class="text-xs text-muted-foreground">New styles are written for {{ ev.host?.name || 'you' }} from your music and the feeling, and saved to your <NuxtLink v-if="ev.host" :to="`/business/network/${ev.host.username}/styles`" class="font-bold text-secondary hover:underline">styles</NuxtLink><span v-else>styles</span>. Only the ones you pick are painted.</p>
             <div class="mt-2 grid gap-2 sm:grid-cols-2">
               <button
                 v-for="c in choices"

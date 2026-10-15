@@ -4,7 +4,7 @@
  * managing their profiles). Mirrors the admin layout. Gate is signed-in only;
  * every page and procedure checks profile membership itself.
  */
-import { Home, CalendarDays, UserSquare, ArrowLeft, LogIn, Eye, X } from 'lucide-vue-next'
+import { Home, CalendarDays, UserSquare, LogIn, Eye, X } from 'lucide-vue-next'
 
 const route = useRoute()
 const { $trpc } = useNuxtApp()
@@ -49,7 +49,7 @@ const switcherOptions = computed(() => [
 const nav = [
   { to: '/business', label: 'Home', icon: Home, match: (p: string) => p === '/business' },
   { to: '/business/events', label: 'Events', icon: CalendarDays, match: (p: string) => p.startsWith('/business/events') },
-  { to: '/business/profiles', label: 'Profiles', icon: UserSquare, match: (p: string) => ['/business/profiles', '/business/claim', '/business/new'].some(x => p.startsWith(x)) },
+  { to: '/business/network', label: 'Network', icon: UserSquare, match: (p: string) => ['/business/network', '/business/claim', '/business/new'].some(x => p.startsWith(x)) },
 ]
 const isActive = (item: { match: (p: string) => boolean }) => item.match(route.path)
 </script>
@@ -71,7 +71,8 @@ const isActive = (item: { match: (p: string) => boolean }) => item.match(route.p
         </Field>
       </div>
 
-      <nav class="col-span-2 flex md:flex-col gap-1 px-2 md:px-3 pb-2 md:pb-0 overflow-x-auto md:overflow-visible" aria-label="Business">
+      <!-- Phones get these as the bottom tab bar (SiteTabBar) instead. -->
+      <nav class="hidden sm:flex col-span-2 md:flex-col gap-1 px-2 md:px-3 pb-2 md:pb-0 overflow-x-auto md:overflow-visible" aria-label="Business">
         <NuxtLink
           v-for="item in nav"
           :key="item.to"
@@ -86,16 +87,13 @@ const isActive = (item: { match: (p: string) => boolean }) => item.match(route.p
           <span>{{ item.label }}</span>
         </NuxtLink>
       </nav>
-
-      <NuxtLink
-        to="/my-plan"
-        class="hidden md:flex items-center gap-1.5 mt-auto mx-6 mb-4 text-xs text-secondary hover:underline"
-      >
-        <ArrowLeft class="size-3.5" aria-hidden="true" /> Switch to dancing
-      </NuxtLink>
     </aside>
 
     <main class="flex-1 min-w-0">
+      <!-- Same account menu, same place as on the dancing side; its switch row reads "Dancing" here. -->
+      <div v-if="state === 'ok'" class="hidden sm:flex justify-end px-4 md:px-8 pt-4">
+        <AccountMenu mode="business" />
+      </div>
       <div class="max-w-4xl mx-auto px-4 py-5 md:py-8">
         <AdminState v-if="state === 'checking'" kind="loading" class="py-24" />
 
@@ -123,5 +121,7 @@ const isActive = (item: { match: (p: string) => boolean }) => item.match(route.p
         </template>
       </div>
     </main>
+
+    <SiteTabBar mode="business" />
   </div>
 </template>

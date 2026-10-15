@@ -396,3 +396,18 @@
     }
   }
 }
+
+/*
+ * Phone tab bar (SiteHeader). Pages with the tab bar get `html.has-tabbar`;
+ * --wd-tabbar-h reserves its height so content and fixed buttons
+ * (`bottom-[calc(1.25rem+var(--wd-tabbar-h,0px))]`) stay above it.
+ * 640px = Tailwind's `sm`, where the tab bar hides.
+ */
+@media (max-width: 639.98px) {
+  html.has-tabbar {
+    --wd-tabbar-h: calc(3.75rem + env(safe-area-inset-bottom));
+  }
+  html.has-tabbar body {
+    padding-bottom: var(--wd-tabbar-h);
+  }
+}

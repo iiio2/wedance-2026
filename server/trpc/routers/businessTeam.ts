@@ -28,7 +28,7 @@ export async function notifyDecision(db: any, requesterId: string, profile: { na
     const siteUrl = useRuntimeConfig().siteUrl || 'http://localhost:3000'
     await sendAccessDecisionEmail({
       to: d.email, name: d.name || 'there', profileName: profile.name, approved, role: r,
-      link: `${siteUrl}/business/profiles/${profile.username}`,
+      link: `${siteUrl}/business/network/${profile.username}`,
     })
   } catch (e: any) {
     console.warn('access decision email not sent:', e?.message)
