@@ -7,7 +7,7 @@ import { WEEKDAYS } from '../../../shared/types/venueDetails'
 import { slugify, randomSuffix } from '../../utils/slug'
 import { parseInstagramHandle, instagramUrl } from '../../../shared/utils/instagram'
 import { grant, logAccess } from '../../utils/profileAccess'
-import { notifyDecision } from './businessTeam'
+import { notifyDecision, notifyInfoRequired } from './businessTeam'
 
 /**
  * Business mode — artists, venues and organizers managing their own profile.
@@ -126,6 +126,7 @@ export const businessRouter = router({
         id: profileClaims.id,
         status: profileClaims.status,
         kind: profileClaims.kind,
+        reviewerNote: profileClaims.reviewerNote,
         createdAt: profileClaims.createdAt,
         username: profiles.username,
         name: profiles.name,
@@ -133,7 +134,7 @@ export const businessRouter = router({
       })
       .from(profileClaims)
       .innerJoin(profiles, eq(profiles.id, profileClaims.profileId))
-      .where(and(eq(profileClaims.dancerId, ctx.dancerId), inArray(profileClaims.status, ['pending', 'rejected'])))
+      .where(and(eq(profileClaims.dancerId, ctx.dancerId), inArray(profileClaims.status, ['pending', 'rejected', 'info_required'])))
       .orderBy(desc(profileClaims.createdAt))
 
     return { managed, claims }
@@ -167,7 +168,12 @@ export const businessRouter = router({
     }),
 
   requestClaim: protectedProcedure
-    .input(z.object({ username: z.string().min(1), message: z.string().trim().min(3).max(1000) }))
+    .input(z.object({
+      username: z.string().min(1),
+      message: z.string().trim().min(3).max(1000),
+      evidence: z.string().trim().max(2000).default(''),
+      evidenceType: z.enum(['domain_email', 'social_media', 'website_link', 'documentation', 'other']).default('other'),
+    }))
     .mutation(async ({ ctx, input }) => {
       const [p] = await ctx.db.select().from(profiles).where(eq(profiles.username, input.username))
       if (!p) throw new TRPCError({ code: 'NOT_FOUND', message: 'Profile not found.' })
@@ -175,13 +181,21 @@ export const businessRouter = router({
       if (m) {
         throw new TRPCError({ code: 'CONFLICT', message: 'Someone already manages this profile. Contact us if that’s wrong.' })
       }
-      // One request per person per profile; a rejected one can be re-sent.
+      // One request per person per profile; a rejected or info_required one can be re-sent.
       await ctx.db
         .insert(profileClaims)
-        .values({ profileId: p.id, dancerId: ctx.dancerId, message: input.message, kind: 'claim', requestedRole: 'owner' })
+        .values({
+          profileId: p.id, dancerId: ctx.dancerId, message: input.message,
+          evidence: input.evidence, evidenceType: input.evidenceType,
+          kind: 'claim', requestedRole: 'owner',
+        })
         .onConflictDoUpdate({
           target: [profileClaims.profileId, profileClaims.dancerId],
-          set: { message: input.message, kind: 'claim', requestedRole: 'owner', status: 'pending', createdAt: new Date(), decidedAt: null, decidedBy: null },
+          set: {
+            message: input.message, evidence: input.evidence, evidenceType: input.evidenceType,
+            kind: 'claim', requestedRole: 'owner', status: 'pending', reviewerNote: '',
+            createdAt: new Date(), decidedAt: null, decidedBy: null,
+          },
         })
       await logAccess(ctx.db, { profileId: p.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'requested', role: 'owner', note: 'claim' })
       return { requested: true }
@@ -349,6 +363,9 @@ export const businessRouter = router({
         id: profileClaims.id,
         kind: profileClaims.kind,
         message: profileClaims.message,
+        evidence: profileClaims.evidence,
+        evidenceType: profileClaims.evidenceType,
+        reviewerNote: profileClaims.reviewerNote,
         status: profileClaims.status,
         createdAt: profileClaims.createdAt,
         profileId: profiles.id,
@@ -363,7 +380,7 @@ export const businessRouter = router({
       .from(profileClaims)
       .innerJoin(profiles, eq(profiles.id, profileClaims.profileId))
       .innerJoin(dancers, eq(dancers.id, profileClaims.dancerId))
-      .where(and(eq(profileClaims.status, 'pending'), inArray(profileClaims.kind, ['claim', 'reclaim'])))
+      .where(and(inArray(profileClaims.status, ['pending', 'info_required']), inArray(profileClaims.kind, ['claim', 'reclaim'])))
       .orderBy(profileClaims.createdAt)
     // Who manages it today — what a reclaim decision is about.
     const ids = [...new Set(rows.map((r: any) => r.profileId))]
@@ -381,17 +398,39 @@ export const businessRouter = router({
       approve: z.boolean(),
       // Reclaim only: also take the current managers off the profile.
       removeOthers: z.boolean().default(false),
+      // Admin feedback — required when requesting more info, optional otherwise.
+      reviewerNote: z.string().trim().max(2000).default(''),
+      // Ask for more info instead of approving/rejecting.
+      requestInfo: z.boolean().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
       const [c] = await ctx.db.select().from(profileClaims).where(eq(profileClaims.id, input.claimId))
       if (!c) throw new TRPCError({ code: 'NOT_FOUND', message: 'Claim not found.' })
-      if (c.status !== 'pending') throw new TRPCError({ code: 'CONFLICT', message: 'This claim was already decided.' })
+      if (c.status !== 'pending' && c.status !== 'info_required') {
+        throw new TRPCError({ code: 'CONFLICT', message: 'This claim was already decided.' })
+      }
       const [p] = await ctx.db.select({ id: profiles.id, name: profiles.name, username: profiles.username }).from(profiles).where(eq(profiles.id, c.profileId))
       const role = c.kind === 'join' ? c.requestedRole : 'owner'
 
+      // Request more info: set status to info_required, don't grant access.
+      if (input.requestInfo) {
+        if (!input.reviewerNote) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Tell them what you need.' })
+        await ctx.db
+          .update(profileClaims)
+          .set({ status: 'info_required' as const, reviewerNote: input.reviewerNote, decidedBy: ctx.dancerId ?? null })
+          .where(eq(profileClaims.id, c.id))
+        await logAccess(ctx.db, { profileId: c.profileId, actorId: ctx.dancerId ?? null, subjectId: c.dancerId, action: 'rejected', role, note: 'info_required' })
+        await notifyInfoRequired(ctx.db, c.dancerId, p, input.reviewerNote)
+        return { status: 'info_required' as const }
+      }
+
       await ctx.db
         .update(profileClaims)
-        .set({ status: input.approve ? 'approved' : 'rejected', decidedAt: new Date(), decidedBy: ctx.dancerId ?? null })
+        .set({
+          status: input.approve ? 'approved' : 'rejected',
+          reviewerNote: input.reviewerNote,
+          decidedAt: new Date(), decidedBy: ctx.dancerId ?? null,
+        })
         .where(eq(profileClaims.id, c.id))
 
       if (input.approve) {

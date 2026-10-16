@@ -187,6 +187,39 @@ export async function sendAccessDecisionEmail(params: {
 }
 
 /**
+ * Business mode: tell someone their claim needs more info before we can decide.
+ * Logged instead of sent when Resend isn't configured (local dev).
+ */
+export async function sendInfoRequiredEmail(params: {
+  to: string
+  name: string
+  profileName: string
+  reviewerNote: string
+  link: string
+}) {
+  const config = useRuntimeConfig()
+  const subject = `More info needed for your ${params.profileName} claim`
+  if (!config.resendApiKey) {
+    console.log(`\n\u2709\ufe0f  ${params.to}: ${subject} \u2192 ${params.link}\n`)
+    return
+  }
+  await getResend().emails.send({
+    from: config.resendFromEmail || 'WeDance <noreply@wedance.vip>',
+    to: params.to,
+    subject,
+    html: `<div style="font-family: sans-serif; max-width: 420px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #333;">Hey ${escapeHtml(params.name)}!</h2>
+      <p>We're reviewing your request for <strong>${escapeHtml(params.profileName)}</strong> and need a bit more information:</p>
+      <blockquote style="border-left: 3px solid #ddd; margin: 16px 0; padding: 8px 16px; color: #555;">${escapeHtml(params.reviewerNote)}</blockquote>
+      <a href="${params.link}" style="display: inline-block; background: #000; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Update your request</a>
+      <p style="color: #666; font-size: 14px; margin-top: 20px;">
+        Go to your profile page on WeDance and re-submit your claim with the requested evidence.
+      </p>
+    </div>`,
+  })
+}
+
+/**
  * Business mode: an organizer asked a page someone runs on WeDance — an artist
  * to confirm they're in a line-up, or a venue to host an event. Sent to the
  * page's team when the organizer clicks "Email them". Logged in local dev.

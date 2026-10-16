@@ -426,12 +426,17 @@ export const profileClaims = pgTable('profile_claims', {
   dancerId: uuid('dancer_id').notNull().references(() => dancers.id, { onDelete: 'cascade' }),
   // How the admin can verify it's really them (e.g. "DM me from @handle").
   message: text('message').notNull().default(''),
-  status: text('status').notNull().default('pending').$type<'pending' | 'approved' | 'rejected'>(),
+  status: text('status').notNull().default('pending').$type<'pending' | 'approved' | 'rejected' | 'info_required'>(),
   // 0027: claim = nobody manages it (admin decides) · join = ask the owners for a
   // role · reclaim = "it's mine, someone else has it" (admin decides, never the owners).
   kind: text('kind').notNull().default('claim').$type<'claim' | 'join' | 'reclaim'>(),
   requestedRole: text('requested_role').notNull().default('owner').$type<'owner' | 'editor'>(),
   title: text('title'),
+  // 0042: structured evidence — URLs, links, documentation for verification.
+  evidence: text('evidence').notNull().default(''),
+  evidenceType: text('evidence_type').notNull().default('other').$type<'domain_email' | 'social_media' | 'website_link' | 'documentation' | 'other'>(),
+  // 0042: admin feedback to the claimant (used with info_required status).
+  reviewerNote: text('reviewer_note').notNull().default(''),
   decidedBy: uuid('decided_by').references(() => dancers.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow(),
   decidedAt: timestamp('decided_at'),

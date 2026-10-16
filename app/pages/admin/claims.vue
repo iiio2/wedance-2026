@@ -3,7 +3,7 @@
  * /admin/claims — review "this is me" requests for artist / venue / organizer
  * profiles. Approve → the requester manages the profile (business mode).
  */
-import { Check, X, RotateCcw, ExternalLink } from 'lucide-vue-next'
+import { Check, X, RotateCcw, ExternalLink, MessageSquare, Link as LinkIcon } from 'lucide-vue-next'
 
 definePageMeta({ layout: 'admin' })
 useHead({ title: 'Admin: Profile claims | WeDance' })
@@ -30,12 +30,19 @@ onMounted(load)
 
 // Reclaim: also take the current managers off (the admin decides each time).
 const removeOthers = reactive<Record<string, boolean>>({})
+// Reviewer notes per claim (for approve/reject/info-required).
+const reviewerNotes = reactive<Record<string, string>>({})
+// Which claim has the "request info" form open.
+const infoFormOpen = ref<string | null>(null)
 
 async function decide(c: Claim, approve: boolean) {
   busyId.value = c.id
   error.value = null
   try {
-    await $trpc.business.decideClaim.mutate({ claimId: c.id, approve, removeOthers: !!removeOthers[c.id] })
+    await $trpc.business.decideClaim.mutate({
+      claimId: c.id, approve, removeOthers: !!removeOthers[c.id],
+      reviewerNote: reviewerNotes[c.id] || '',
+    })
     items.value = items.value.filter(x => x.id !== c.id)
   } catch (e: any) {
     error.value = e?.message || 'Could not update that claim.'
@@ -44,7 +51,30 @@ async function decide(c: Claim, approve: boolean) {
   }
 }
 
+async function requestInfo(c: Claim) {
+  const note = reviewerNotes[c.id]?.trim()
+  if (!note) { error.value = 'Tell them what you need before requesting more info.'; return }
+  busyId.value = c.id
+  error.value = null
+  try {
+    await $trpc.business.decideClaim.mutate({
+      claimId: c.id, approve: false, requestInfo: true,
+      reviewerNote: note,
+    })
+    items.value = items.value.filter(x => x.id !== c.id)
+  } catch (e: any) {
+    error.value = e?.message || 'Could not request more info.'
+  } finally {
+    busyId.value = null
+    infoFormOpen.value = null
+  }
+}
+
 const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', organizer: 'Organizer', promoter: 'Promoter' }
+const evidenceTypeLabel: Record<string, string> = {
+  domain_email: 'Email from org domain', social_media: 'Social media', website_link: 'Website link',
+  documentation: 'Documentation', other: 'Other',
+}
 const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '')
 </script>
 
@@ -63,7 +93,9 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
     <div v-else class="mt-6 grid gap-3">
       <div v-for="c in items" :key="c.id" class="rounded-2xl border bg-card p-4 shadow-wd-card">
         <div class="flex flex-wrap items-center gap-2">
-          <AdminStatus :tone="c.kind === 'reclaim' ? 'danger' : 'neutral'">{{ c.kind === 'reclaim' ? 'Reclaim' : 'Claim' }}</AdminStatus>
+          <AdminStatus :tone="c.kind === 'reclaim' ? 'danger' : c.status === 'info_required' ? 'warning' : 'neutral'">
+            {{ c.status === 'info_required' ? 'Needs more info' : c.kind === 'reclaim' ? 'Reclaim' : 'Claim' }}
+          </AdminStatus>
           <AdminStatus>{{ typeLabel[c.profileType] || c.profileType }}</AdminStatus>
           <span class="text-xs text-muted-foreground">{{ fmt(c.createdAt) }}</span>
         </div>
@@ -74,6 +106,22 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
           Requested by {{ c.dancerName }} · {{ c.dancerEmail }}<template v-if="c.dancerInstagram"> · {{ c.dancerInstagram }}</template>
         </p>
         <p class="mt-2 rounded-xl bg-muted p-3 text-sm whitespace-pre-line">{{ c.message }}</p>
+
+        <!-- Evidence section -->
+        <div v-if="c.evidence" class="mt-2 rounded-xl bg-muted/50 border border-input p-3 text-sm">
+          <div class="flex items-center gap-2 text-muted-foreground mb-1">
+            <LinkIcon class="size-3.5" aria-hidden="true" />
+            <span class="font-medium">{{ evidenceTypeLabel[c.evidenceType] || 'Evidence' }}</span>
+          </div>
+          <p class="whitespace-pre-line break-all">{{ c.evidence }}</p>
+        </div>
+
+        <!-- Previous reviewer note (if info was already requested once) -->
+        <div v-if="c.reviewerNote" class="mt-2 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3 text-sm">
+          <p class="text-muted-foreground text-xs font-medium mb-1">Previous reviewer note</p>
+          <p class="whitespace-pre-line">{{ c.reviewerNote }}</p>
+        </div>
+
         <div v-if="c.managers.length" class="mt-2 text-sm">
           <p class="text-muted-foreground">Managed today by:
             <span v-for="(m, i) in c.managers" :key="m.email" class="text-foreground">{{ i ? ', ' : '' }}{{ m.name }} ({{ m.role }}, {{ m.email }})</span>
@@ -82,12 +130,29 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
             <Checkbox :model-value="!!removeOthers[c.id]" @update:model-value="v => (removeOthers[c.id] = !!v)" /> On approve, remove them from the profile
           </label>
         </div>
-        <div class="mt-3 flex gap-2">
+
+        <!-- Reviewer note input (for request-info form or optional note on approve/reject) -->
+        <div v-if="infoFormOpen === c.id" class="mt-3 border-t pt-3">
+          <Field :id="`note-${c.id}`" label="What do you need?" hint="The claimant will see this and get an email.">
+            <Textarea v-model="reviewerNotes[c.id]" :rows="2" placeholder="e.g. Please send a DM from the venue's Instagram account so we can confirm." />
+          </Field>
+          <div class="mt-2 flex gap-2">
+            <Button variant="pill" size="pill-sm" :loading="busyId === c.id" @click="requestInfo(c)">
+              <MessageSquare /> Send &amp; request info
+            </Button>
+            <Button variant="outline-pill" size="pill-sm" @click="infoFormOpen = null">Cancel</Button>
+          </div>
+        </div>
+
+        <div v-else class="mt-3 flex flex-wrap gap-2">
           <Button variant="pill" size="pill-sm" :loading="busyId === c.id" @click="decide(c, true)">
             <Check /> Approve
           </Button>
           <Button variant="outline-pill" size="pill-sm" :disabled="busyId === c.id" @click="decide(c, false)">
             <X /> Reject
+          </Button>
+          <Button variant="outline-pill" size="pill-sm" :disabled="busyId === c.id" @click="infoFormOpen = c.id; reviewerNotes[c.id] = reviewerNotes[c.id] || ''">
+            <MessageSquare /> Need more info
           </Button>
         </div>
       </div>

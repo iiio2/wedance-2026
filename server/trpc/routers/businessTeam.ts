@@ -5,7 +5,7 @@ import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure, adminProcedure } from '../trpc'
 import { profiles, profileMembers, profileClaims, profileAccessLog, dancers } from '../../database/schema'
 import { profileByHandle, membershipOf, requireOwner, keepAnOwner, grant, logAccess } from '../../utils/profileAccess'
-import { sendAccessDecisionEmail } from '../../utils/email'
+import { sendAccessDecisionEmail, sendInfoRequiredEmail } from '../../utils/email'
 
 /**
  * Business mode — teams. Who may join a profile, with which role, and who decides:
@@ -32,6 +32,21 @@ export async function notifyDecision(db: any, requesterId: string, profile: { na
     })
   } catch (e: any) {
     console.warn('access decision email not sent:', e?.message)
+  }
+}
+
+// Best-effort: ask the claimant for more info. Never undoes a decision on failure.
+export async function notifyInfoRequired(db: any, requesterId: string, profile: { name: string; username: string }, reviewerNote: string) {
+  try {
+    const [d] = await db.select({ email: dancers.email, name: dancers.name }).from(dancers).where(eq(dancers.id, requesterId))
+    if (!d) return
+    const siteUrl = useRuntimeConfig().siteUrl || 'http://localhost:3000'
+    await sendInfoRequiredEmail({
+      to: d.email, name: d.name || 'there', profileName: profile.name,
+      reviewerNote, link: `${siteUrl}/business/claim?profile=${profile.username}`,
+    })
+  } catch (e: any) {
+    console.warn('info-required email not sent:', e?.message)
   }
 }
 
@@ -62,6 +77,8 @@ export const businessTeamRouter = router({
       role: role.default('editor'),
       title,
       message: z.string().trim().min(3, 'Tell us who you are and how we can check it.').max(1000),
+      evidence: z.string().trim().max(2000).default(''),
+      evidenceType: z.enum(['domain_email', 'social_media', 'website_link', 'documentation', 'other']).default('other'),
     }))
     .mutation(async ({ ctx, input }) => {
       const p = await profileByHandle(ctx.db, input.username)
@@ -74,7 +91,11 @@ export const businessTeamRouter = router({
         throw new TRPCError({ code: 'CONFLICT', message: 'Someone already manages this profile. Ask to join the team, or tell us it’s yours.' })
       }
       const requestedRole = kind === 'join' ? input.role : 'owner'
-      const values = { kind, requestedRole, title: input.title ?? null, message: input.message, status: 'pending' as const, createdAt: new Date(), decidedAt: null, decidedBy: null }
+      const values = {
+        kind, requestedRole, title: input.title ?? null, message: input.message,
+        evidence: input.evidence, evidenceType: input.evidenceType,
+        status: 'pending' as const, reviewerNote: '', createdAt: new Date(), decidedAt: null, decidedBy: null,
+      }
       await ctx.db.insert(profileClaims)
         .values({ profileId: p.id, dancerId: ctx.dancerId, ...values })
         .onConflictDoUpdate({ target: [profileClaims.profileId, profileClaims.dancerId], set: values })

@@ -333,13 +333,23 @@ async function add(username: string) {
       <section v-if="data.claims.length" class="mt-10">
         <h2 class="text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Your requests</h2>
         <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
-          <div v-for="c in data.claims" :key="c.id" class="flex items-center gap-3 rounded-2xl border bg-card p-4">
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-bold truncate">{{ c.name }}</p>
-              <p class="text-xs text-muted-foreground">@{{ c.username }}</p>
+          <div v-for="c in data.claims" :key="c.id" class="rounded-2xl border bg-card p-4">
+            <div class="flex items-center gap-3">
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold truncate">{{ c.name }}</p>
+                <p class="text-xs text-muted-foreground">@{{ c.username }}</p>
+              </div>
+              <AdminStatus v-if="c.status === 'pending'" tone="warning">{{ c.kind === 'join' ? 'Waiting for the owners' : 'Waiting for WeDance' }}</AdminStatus>
+              <AdminStatus v-else-if="c.status === 'info_required'" tone="warning">More info needed</AdminStatus>
+              <AdminStatus v-else tone="danger">Not approved</AdminStatus>
             </div>
-            <AdminStatus v-if="c.status === 'pending'" tone="warning">{{ c.kind === 'join' ? 'Waiting for the owners' : 'Waiting for WeDance' }}</AdminStatus>
-            <AdminStatus v-else tone="danger">Not approved</AdminStatus>
+            <div v-if="c.status === 'info_required' && c.reviewerNote" class="mt-2 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3 text-sm">
+              <p class="text-muted-foreground text-xs font-medium mb-1">WeDance asked:</p>
+              <p class="whitespace-pre-line">{{ c.reviewerNote }}</p>
+              <NuxtLink :to="`/business/claim?profile=${c.username}`" class="mt-2 inline-block text-xs font-medium text-secondary hover:underline">
+                Update your claim &rarr;
+              </NuxtLink>
+            </div>
           </div>
         </div>
         <p class="mt-2 text-xs text-muted-foreground">WeDance reviews claims by hand; join requests go to the page’s owners.</p>

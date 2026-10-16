@@ -42,6 +42,8 @@ onMounted(() => { if (q.value) runSearch() })
 const openFor = ref<string | null>(null)
 const mode = ref<'claim' | 'join' | 'reclaim'>('claim')
 const message = ref('')
+const evidence = ref('')
+const evidenceType = ref<'domain_email' | 'social_media' | 'website_link' | 'documentation' | 'other'>('other')
 const role = ref<'editor' | 'owner'>('editor')
 const title = ref('')
 const messageError = ref<string | undefined>()
@@ -49,10 +51,20 @@ const sending = ref(false)
 // Handle → what was sent, for the confirmation badge.
 const sent = ref(new Map<string, 'owners' | 'wedance'>())
 
+const evidenceTypeOptions = [
+  { label: "Email from your organisation's domain", value: 'domain_email' },
+  { label: 'Social media (Instagram DM, Facebook page)', value: 'social_media' },
+  { label: 'Official website link', value: 'website_link' },
+  { label: 'Other documentation', value: 'documentation' },
+  { label: 'Other', value: 'other' },
+]
+
 function start(username: string, m: 'claim' | 'join' | 'reclaim') {
   openFor.value = username
   mode.value = m
   message.value = ''
+  evidence.value = ''
+  evidenceType.value = 'other'
   title.value = ''
   role.value = 'editor'
   messageError.value = undefined
@@ -64,6 +76,7 @@ async function send(username: string) {
   try {
     const res = await $trpc.businessTeam.requestAccess.mutate({
       username, kind: mode.value, role: role.value, title: title.value.trim() || null, message: message.value,
+      evidence: evidence.value, evidenceType: evidenceType.value,
     })
     sent.value = new Map(sent.value).set(username, res.reviewer)
     openFor.value = null
@@ -151,6 +164,14 @@ const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', or
           <Field :id="`claim-${r.username}`" :label="formCopy[mode].label" :hint="formCopy[mode].hint" :error="messageError">
             <Textarea v-model="message" :rows="3" />
           </Field>
+          <div v-if="mode !== 'join'" class="mt-3 grid gap-3 sm:grid-cols-2">
+            <Field :id="`etype-${r.username}`" label="Evidence type" hint="How can we verify your relationship?">
+              <Select v-model="evidenceType" :options="evidenceTypeOptions" />
+            </Field>
+            <Field :id="`evidence-${r.username}`" label="Evidence link or detail" optional hint="URL to your official page, email domain, or other proof.">
+              <Input v-model="evidence" placeholder="https://…" />
+            </Field>
+          </div>
           <div class="mt-3 flex gap-2">
             <Button type="submit" variant="pill" :loading="sending">{{ mode === 'join' ? 'Ask to join' : 'Send request' }}</Button>
             <Button type="button" variant="outline-pill" @click="openFor = null">Cancel</Button>
