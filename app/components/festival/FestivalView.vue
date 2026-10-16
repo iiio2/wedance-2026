@@ -522,7 +522,7 @@ function joinActivity(id: string) {
 }
 
 // Ride shares — persisted in database
-const { rideShares, loadRideShares, postRide: doPostRide } = useRideShares(festival.slug)
+const { rideShares, rideError, loadRideShares, postRide: doPostRide } = useRideShares(festival.slug)
 
 function postRide(ride: { type: 'offering' | 'looking'; originCity: string; date: string; seats?: number; contactLink?: string }) {
   if (!isSignedIn.value) {
@@ -534,7 +534,7 @@ function postRide(ride: { type: 'offering' | 'looking'; originCity: string; date
 }
 
 // Roommate toggle — persisted in database
-const { lookingForRoommate, roommateOthers, loadRoommateStatus, toggleRoommate: doToggleRoommate } = useRoommates(festival.slug)
+const { lookingForRoommate, roommateOthers, roommateError, loadRoommateStatus, toggleRoommate: doToggleRoommate } = useRoommates(festival.slug)
 
 // Hotel search fallback URL for when no roommates are found
 const hotelSearchUrl = computed(() => {
@@ -1100,6 +1100,7 @@ useHead({
           <p class="text-sm mb-4 text-muted-foreground font-sans">Swipe to discover dancers, group dinners, and activities happening around the {{ kind }}.</p>
           <DiscoverDancers
             :festival-slug="festival.slug"
+            :entity-label="kind"
             :extra-cards="extraSwipeCards"
             :workshops="workshops"
             :plan-ids="planIds"
@@ -1125,6 +1126,8 @@ useHead({
             :extra-activities="extraActivities"
             :looking-for-roommate="lookingForRoommate"
             :roommate-others="roommateOthers"
+            :ride-error="rideError"
+            :roommate-error="roommateError"
             :hotel-search-url="hotelSearchUrl"
             :is-signed-in="isSignedIn"
             @join-dinner="joinDinner"

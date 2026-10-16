@@ -284,6 +284,7 @@ useHead(() => ({
           <DiscoverDancers
             :festival-slug="ev.id"
             item-type="event"
+            :entity-label="(ev.eventType || 'event').toLowerCase()"
             :extra-cards="swipeCards"
             :workshops="[]"
             :plan-ids="noPlan"

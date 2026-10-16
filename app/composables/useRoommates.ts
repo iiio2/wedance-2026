@@ -9,6 +9,8 @@ export function useRoommates(festivalSlug: string) {
   const { $trpc } = useNuxtApp()
   const lookingForRoommate = ref(false)
   const roommateOthers = ref<RoommateEntry[]>([])
+  // Shown under the toggle: a failed toggle must not silently flip back (RAZ-438).
+  const roommateError = ref('')
 
   async function loadRoommateStatus() {
     try {
@@ -23,6 +25,7 @@ export function useRoommates(festivalSlug: string) {
   async function toggleRoommate() {
     const prev = lookingForRoommate.value
     lookingForRoommate.value = !prev
+    roommateError.value = ''
     try {
       const result = await $trpc.roommate.toggle.mutate({ festivalSlug })
       lookingForRoommate.value = result.looking
@@ -32,8 +35,9 @@ export function useRoommates(festivalSlug: string) {
     } catch (e) {
       lookingForRoommate.value = prev
       console.warn('Failed to toggle roommate:', e)
+      roommateError.value = 'Could not save that. Please try again.'
     }
   }
 
-  return { lookingForRoommate, roommateOthers, loadRoommateStatus, toggleRoommate }
+  return { lookingForRoommate, roommateOthers, roommateError, loadRoommateStatus, toggleRoommate }
 }

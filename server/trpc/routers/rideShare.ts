@@ -2,7 +2,8 @@ import { z } from 'zod'
 import { eq, and } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
-import { festivalRideShares, festivals, dancers } from '../../database/schema'
+import { festivalRideShares, dancers } from '../../database/schema'
+import { findFestivalId, ensureFestivalId } from '../../utils/festivalRow'
 
 const CONTACT_LINK_PATTERN = /^https?:\/\/(wa\.me|chat\.whatsapp\.com|t\.me|telegram\.me)\//i
 
@@ -10,12 +11,9 @@ export const rideShareRouter = router({
   list: publicProcedure
     .input(z.object({ festivalSlug: z.string() }))
     .query(async ({ ctx, input }) => {
-      const [festival] = await ctx.db
-        .select({ id: festivals.id })
-        .from(festivals)
-        .where(eq(festivals.slug, input.festivalSlug))
+      const festivalId = await findFestivalId(ctx.db, input.festivalSlug)
 
-      if (!festival) return []
+      if (!festivalId) return []
 
       const rows = await ctx.db
         .select({
@@ -31,7 +29,7 @@ export const rideShareRouter = router({
         })
         .from(festivalRideShares)
         .innerJoin(dancers, eq(festivalRideShares.dancerId, dancers.id))
-        .where(eq(festivalRideShares.festivalId, festival.id))
+        .where(eq(festivalRideShares.festivalId, festivalId))
 
       const isAuthenticated = !!ctx.dancerId
 
@@ -58,12 +56,9 @@ export const rideShareRouter = router({
       contactLink: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const [festival] = await ctx.db
-        .select({ id: festivals.id })
-        .from(festivals)
-        .where(eq(festivals.slug, input.festivalSlug))
+      const festivalId = await ensureFestivalId(ctx.db, input.festivalSlug)
 
-      if (!festival) throw new TRPCError({ code: 'NOT_FOUND', message: 'Festival not found' })
+      if (!festivalId) throw new TRPCError({ code: 'NOT_FOUND', message: 'Festival not found' })
 
       // Validate contact link if provided
       const contactLink = input.contactLink?.trim() || null
@@ -79,7 +74,7 @@ export const rideShareRouter = router({
         .select({ id: festivalRideShares.id })
         .from(festivalRideShares)
         .where(and(
-          eq(festivalRideShares.festivalId, festival.id),
+          eq(festivalRideShares.festivalId, festivalId),
           eq(festivalRideShares.dancerId, ctx.dancerId),
         ))
 
@@ -99,7 +94,7 @@ export const rideShareRouter = router({
       }
 
       await ctx.db.insert(festivalRideShares).values({
-        festivalId: festival.id,
+        festivalId,
         dancerId: ctx.dancerId,
         type: input.type,
         originCity: input.originCity,
@@ -114,17 +109,14 @@ export const rideShareRouter = router({
   delete: protectedProcedure
     .input(z.object({ festivalSlug: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const [festival] = await ctx.db
-        .select({ id: festivals.id })
-        .from(festivals)
-        .where(eq(festivals.slug, input.festivalSlug))
+      const festivalId = await findFestivalId(ctx.db, input.festivalSlug)
 
-      if (!festival) throw new TRPCError({ code: 'NOT_FOUND', message: 'Festival not found' })
+      if (!festivalId) throw new TRPCError({ code: 'NOT_FOUND', message: 'Festival not found' })
 
       await ctx.db
         .delete(festivalRideShares)
         .where(and(
-          eq(festivalRideShares.festivalId, festival.id),
+          eq(festivalRideShares.festivalId, festivalId),
           eq(festivalRideShares.dancerId, ctx.dancerId),
         ))
 

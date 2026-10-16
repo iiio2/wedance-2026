@@ -3,6 +3,8 @@ import type { RideShare } from '~/types/festival'
 export function useRideShares(festivalSlug: string) {
   const { $trpc } = useNuxtApp()
   const rideShares = ref<RideShare[]>([])
+  // Shown under the ride form: a failed post must never look like success (RAZ-437).
+  const rideError = ref('')
 
   async function loadRideShares() {
     try {
@@ -24,6 +26,7 @@ export function useRideShares(festivalSlug: string) {
   }
 
   async function postRide(ride: { type: 'offering' | 'looking'; originCity: string; date: string; seats?: number; contactLink?: string }) {
+    rideError.value = ''
     try {
       await $trpc.rideShare.create.mutate({
         festivalSlug,
@@ -34,8 +37,9 @@ export function useRideShares(festivalSlug: string) {
         contactLink: ride.contactLink,
       })
       await loadRideShares()
-    } catch (e) {
+    } catch (e: any) {
       console.warn('Failed to post ride:', e)
+      rideError.value = e?.message && e?.data?.code === 'BAD_REQUEST' ? e.message : 'Could not post your ride. Please try again.'
     }
   }
 
@@ -50,5 +54,5 @@ export function useRideShares(festivalSlug: string) {
     }
   }
 
-  return { rideShares, loadRideShares, postRide, deleteRide }
+  return { rideShares, rideError, loadRideShares, postRide, deleteRide }
 }

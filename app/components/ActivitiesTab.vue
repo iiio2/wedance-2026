@@ -22,6 +22,10 @@ const props = defineProps<{
   roommateOthers: RoommateEntry[]
   hotelSearchUrl?: string
   isSignedIn: boolean
+  /** Why the last ride post failed (empty = fine). */
+  rideError?: string
+  /** Why the last roommate toggle failed (empty = fine). */
+  roommateError?: string
 }>()
 
 const emit = defineEmits<{
@@ -171,6 +175,7 @@ function badgeFor(key: string): string | null {
               Post my ride
             </Button>
           </div>
+          <p v-if="rideError" role="alert" class="text-xs font-sans text-destructive">{{ rideError }}</p>
         </div>
         <div v-else class="rounded-xl border p-3 text-center" style="border-color:color-mix(in srgb, var(--wd-brown-900) 8.2%, transparent); background:color-mix(in srgb, var(--wd-brown-900) 2%, transparent);">
           <p class="text-sm mb-2 font-sans text-muted-foreground">Sign in to share or find a ride</p>
@@ -230,6 +235,7 @@ function badgeFor(key: string): string | null {
           <p v-if="lookingForRoommate" class="text-xs font-sans text-muted-foreground">
             Other attendees looking for roommates will see you. Share your plan to connect.
           </p>
+          <p v-if="roommateError" role="alert" class="text-xs font-sans text-destructive">{{ roommateError }}</p>
         </div>
 
         <!-- Others looking for roommates -->

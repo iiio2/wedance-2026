@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { DiscoverDancer, DanceListEntry, DanceEndorsement, Workshop, SwipeCard, SwipeCardDinner, SwipeCardActivity, SwipeCardOnboardingDanceCard, SwipeCardOnboardingProfile, DanceRole } from '~/types/festival'
-import { Heart, X, Sparkles, Check, ChevronDown, ChevronUp, RotateCcw, Star, MessageCircle, UtensilsCrossed, Compass, Camera } from 'lucide-vue-next'
+import { Heart, X, Sparkles, Check, ChevronDown, ChevronUp, RotateCcw, Star, MessageCircle, UtensilsCrossed, Compass, Camera, Users, Share2 } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 import { chilis } from '~/lib/levels'
@@ -16,7 +16,9 @@ const props = withDefaults(defineProps<{
   workshops: Workshop[]
   planIds: Set<string>
   isSignedIn: boolean
-}>(), { itemType: 'festival' })
+  /** "festival", "weekender", "event"… — the wording of the empty state. */
+  entityLabel?: string
+}>(), { itemType: 'festival', entityLabel: 'event' })
 
 const emit = defineEmits<{
   'sign-in': [action?: string]
@@ -77,6 +79,63 @@ async function loadPool() {
 }
 
 onMounted(loadPool)
+
+// --- Empty deck (RAZ-440) ---
+// The deck only holds dancers who are going AND chose to be seen (plan_items
+// share_going, off by default), with a public profile and a photo. Until
+// someone does that the deck is empty, which used to render nothing at all.
+// The empty state says why and lets the dancer be the first one in it.
+const { yearPlanIds, loadFromDb: reloadYearPlan } = useYearPlan()
+const { weekPlanIds, loadFromDb: reloadWeekPlan } = useWeekPlan()
+const isGoing = computed(() => props.itemType === 'festival'
+  ? yearPlanIds.value.has(props.festivalSlug)
+  : weekPlanIds.value.has(props.festivalSlug))
+const visible = ref(false)
+const joining = ref(false)
+const joinError = ref('')
+const linkCopied = ref(false)
+
+const deckEmpty = computed(() => props.isSignedIn && !poolLoading.value
+  && poolDancers.value.length === 0 && !(props.extraCards?.length))
+
+async function loadVisible() {
+  if (!props.isSignedIn || !props.festivalSlug || !isGoing.value) { visible.value = false; return }
+  try {
+    visible.value = (await $trpc.plan.getShareGoing.query({ itemType: props.itemType, itemId: props.festivalSlug })).share
+  } catch { /* stays off */ }
+}
+watch([deckEmpty, isGoing], ([empty]) => { if (empty) loadVisible() }, { immediate: true })
+
+/** Mark going (if not yet) and switch on "show me", so others find you here. */
+async function joinDeck() {
+  if (joining.value) return
+  joining.value = true
+  joinError.value = ''
+  try {
+    if (!isGoing.value) {
+      await $trpc.plan.add.mutate({ itemType: props.itemType, itemId: props.festivalSlug })
+      await (props.itemType === 'festival' ? reloadYearPlan() : reloadWeekPlan())
+    }
+    await $trpc.plan.setShareGoing.mutate({ itemType: props.itemType, itemId: props.festivalSlug, share: true })
+    visible.value = true
+  } catch {
+    joinError.value = 'Could not save that. Please try again.'
+  } finally {
+    joining.value = false
+  }
+}
+
+async function inviteFriends() {
+  const url = window.location.href.split('#')[0]
+  try {
+    if (navigator.share) await navigator.share({ url, title: document.title })
+    else {
+      await navigator.clipboard.writeText(url)
+      linkCopied.value = true
+      setTimeout(() => { linkCopied.value = false }, 2500)
+    }
+  } catch { /* share sheet dismissed */ }
+}
 watch(() => props.festivalSlug, loadPool)
 watch(() => props.isSignedIn, loadPool)
 
@@ -989,5 +1048,27 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
         </div>
       </div>
     </template>
+
+    <!-- Empty deck: nobody going has chosen to be seen yet (RAZ-440) -->
+    <div v-else-if="deckEmpty" data-testid="discover-empty" class="rounded-2xl border border-dashed border-border p-6 text-center space-y-3 font-sans">
+      <Users class="w-8 h-8 text-muted-foreground mx-auto" aria-hidden="true" />
+      <template v-if="isGoing && visible">
+        <p class="text-base font-bold text-foreground">You're in the deck</p>
+        <p class="text-sm text-muted-foreground max-w-sm mx-auto">Nobody else going has joined it yet. Dancers who do will show up here, and they'll see you too.</p>
+      </template>
+      <template v-else>
+        <p class="text-base font-bold text-foreground">No dancers in the deck yet</p>
+        <p class="text-sm text-muted-foreground max-w-sm mx-auto">The deck shows dancers who are going to this {{ entityLabel }} and chose to be seen. Be the first, and others will find you here.</p>
+      </template>
+      <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
+        <Button v-if="!(isGoing && visible)" type="button" variant="pill" size="pill-sm" :disabled="joining" @click="joinDeck">
+          <Check aria-hidden="true" /> {{ isGoing ? 'Show me in the deck' : "I'm going, show me" }}
+        </Button>
+        <Button type="button" variant="outline-pill" size="pill-sm" @click="inviteFriends">
+          <Share2 aria-hidden="true" /> {{ linkCopied ? 'Link copied' : 'Invite friends' }}
+        </Button>
+      </div>
+      <p v-if="joinError" role="alert" class="text-xs text-destructive">{{ joinError }}</p>
+    </div>
   </div>
 </template>

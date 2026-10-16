@@ -2,18 +2,16 @@ import { z } from 'zod'
 import { eq, and, ne } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
-import { festivalRoommateLookups, festivals, dancers } from '../../database/schema'
+import { festivalRoommateLookups, dancers } from '../../database/schema'
+import { findFestivalId, ensureFestivalId } from '../../utils/festivalRow'
 
 export const roommateRouter = router({
   list: publicProcedure
     .input(z.object({ festivalSlug: z.string() }))
     .query(async ({ ctx, input }) => {
-      const [festival] = await ctx.db
-        .select({ id: festivals.id })
-        .from(festivals)
-        .where(eq(festivals.slug, input.festivalSlug))
+      const festivalId = await findFestivalId(ctx.db, input.festivalSlug)
 
-      if (!festival) return { looking: false, others: [] }
+      if (!festivalId) return { looking: false, others: [] }
 
       let looking = false
 
@@ -22,7 +20,7 @@ export const roommateRouter = router({
           .select({ id: festivalRoommateLookups.id })
           .from(festivalRoommateLookups)
           .where(and(
-            eq(festivalRoommateLookups.festivalId, festival.id),
+            eq(festivalRoommateLookups.festivalId, festivalId),
             eq(festivalRoommateLookups.dancerId, ctx.dancerId),
           ))
         looking = !!own
@@ -41,14 +39,14 @@ export const roommateRouter = router({
             .from(festivalRoommateLookups)
             .innerJoin(dancers, eq(festivalRoommateLookups.dancerId, dancers.id))
             .where(and(
-              eq(festivalRoommateLookups.festivalId, festival.id),
+              eq(festivalRoommateLookups.festivalId, festivalId),
               ne(festivalRoommateLookups.dancerId, ctx.dancerId),
             ))
         : ctx.db
             .select(selectFields)
             .from(festivalRoommateLookups)
             .innerJoin(dancers, eq(festivalRoommateLookups.dancerId, dancers.id))
-            .where(eq(festivalRoommateLookups.festivalId, festival.id))
+            .where(eq(festivalRoommateLookups.festivalId, festivalId))
 
       const others = await othersQuery
 
@@ -58,18 +56,15 @@ export const roommateRouter = router({
   toggle: protectedProcedure
     .input(z.object({ festivalSlug: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const [festival] = await ctx.db
-        .select({ id: festivals.id })
-        .from(festivals)
-        .where(eq(festivals.slug, input.festivalSlug))
+      const festivalId = await ensureFestivalId(ctx.db, input.festivalSlug)
 
-      if (!festival) throw new TRPCError({ code: 'NOT_FOUND', message: 'Festival not found' })
+      if (!festivalId) throw new TRPCError({ code: 'NOT_FOUND', message: 'Festival not found' })
 
       const [existing] = await ctx.db
         .select({ id: festivalRoommateLookups.id })
         .from(festivalRoommateLookups)
         .where(and(
-          eq(festivalRoommateLookups.festivalId, festival.id),
+          eq(festivalRoommateLookups.festivalId, festivalId),
           eq(festivalRoommateLookups.dancerId, ctx.dancerId),
         ))
 
@@ -81,7 +76,7 @@ export const roommateRouter = router({
       }
 
       await ctx.db.insert(festivalRoommateLookups).values({
-        festivalId: festival.id,
+        festivalId,
         dancerId: ctx.dancerId,
       })
 
