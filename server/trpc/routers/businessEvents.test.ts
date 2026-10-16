@@ -112,6 +112,9 @@ describe.skipIf(!DATABASE_URL)('businessEvents router', () => {
     const [copy] = await db.select().from(schema.events).where(eq(schema.events.id, created[0].id))
     expect(copy.festival.sessions[0].date).toBe('2026-10-29')
     expect(copy.festival.sessions[1].date).toBe('2026-10-29')
+    // Each copy gets a unique festival key (DB has a unique index on it).
+    expect(copy.festival.key).not.toBe(`test-${tag}`)
+    expect(copy.festival.key).toBe(copy.slug)
   })
 
   it('adds an artist from an Instagram link once, then reuses them', async () => {

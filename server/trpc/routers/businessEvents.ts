@@ -394,10 +394,12 @@ export const businessEventsRouter = router({
       const { id: _i, slug: _s, sourceId: _si, createdAt: _c, syncedAt: _y, editedAt: _ea, editedBy: _eb, ...copy } = ev
       const rows = Array.from({ length: input.weeks }, (_, i) => {
         const shift = (i + 1) * 7 * 86400_000
+        const slug = `${slugify(ev.name ?? 'event')}-${randomSuffix(5)}`
+        const shifted = shiftFestivalSessions(ev.festival, shift)
         return {
           ...copy,
           seriesId,
-          slug: `${slugify(ev.name ?? 'event')}-${randomSuffix(5)}`,
+          slug,
           // A caption is written for one date; each copy writes its own.
           caption: null,
           // Same wall-clock time a week later: re-derive in the event's zone so
@@ -406,8 +408,9 @@ export const businessEventsRouter = router({
           endDate: ev.endDate
             ? zonedToUtc(eventLocalDate(new Date(new Date(ev.endDate).getTime() + shift), ev.timezone), eventLocalTime(ev.endDate, ev.timezone), ev.timezone)
             : null,
-          // Shift festival session dates when the event carries a festival agenda.
-          festival: shiftFestivalSessions(ev.festival, shift),
+          // Shift festival session dates and assign a fresh key (the DB has a
+          // unique index on festival->>'key').
+          festival: shifted ? { ...shifted, key: slug } : null,
           updatedAt: new Date(),
         }
       })
