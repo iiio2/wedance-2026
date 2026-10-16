@@ -3,8 +3,8 @@ import type { Festival, Teacher, Workshop } from '~/types/festival'
 export const mockFestival: Festival = {
   name: 'Salsa Open Berlin 2026',
   slug: 'salsa-open-berlin-2026',
-  startDate: '2026-10-19',
-  endDate: '2026-10-21',
+  startDate: '2026-06-11',
+  endDate: '2026-06-14',
   description:
     'Three days of non-stop Salsa and Bachata in the heart of Berlin. Join 500+ dancers from across Europe for workshops with world-class instructors, social dancing until sunrise, and an unforgettable festival experience at the iconic Alte Münze venue.',
   logo: 'https://ui-avatars.com/api/?name=SOB&size=80&background=e11d48&color=fff&bold=true&rounded=true',

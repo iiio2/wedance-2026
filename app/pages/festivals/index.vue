@@ -9,6 +9,8 @@
  *
  * RAZ-105: data now fetched from /api/festivals (DB-driven, SSR) instead
  * of hardcoded mock imports. Past festivals filtered server-side.
+ * Since 2026-10-16 the rows are festival events (ADR-006): the wedance.vip
+ * mirror plus festivals listed on WeDance, each with its own plan reference.
  */
 import { DANCE_STYLES, findDanceStyle, matchesDanceStyleQuery, sortDanceStyles } from '#shared/dance-styles'
 import {
@@ -18,29 +20,7 @@ import {
 import { Button } from '~/components/ui/button'
 import { Field } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
-
-interface GoingAvatar {
-  name: string
-  photo: string | null
-}
-
-interface FestivalRow {
-  slug: string
-  name: string
-  startDate: string | null
-  endDate: string | null
-  city: string | null
-  country: string | null
-  description: string | null
-  styles: string[]
-  logo: string | null
-  accentColor: string | null
-  ticketUrl: string | null
-  signupCount: number
-  publicGoingCount: number
-  goingAvatars: GoingAvatar[]
-}
-
+import type { FestivalRow } from '~~/server/api/festivals.get'
 
 definePageMeta({ layout: false })
 
@@ -54,17 +34,25 @@ useHead({
 // Year plan — sidebar retired; picks now surface via the floating
 // nudge pill and the full view lives on /my-plan.
 const { yearPlanIds, toggleFestival, yearCount } = useYearPlan()
+const { weekPlanIds, toggleEvent } = useWeekPlan()
+
+// "Going?" stores what the festival's own page stores: its key in the year
+// plan, or — a festival event without festival details — its id in the week plan.
+function isPicked(f: FestivalRow) {
+  return f.planType === 'festival' ? yearPlanIds.value.has(f.planId) : weekPlanIds.value.has(f.planId)
+}
 
 // Auth gate — "Going?" requires sign-in
 const { isSignedIn } = useAuth()
 const showSignUp = ref(false)
 
-function onPick(slug: string) {
+function onPick(f: FestivalRow) {
   if (!isSignedIn.value) {
     showSignUp.value = true
     return
   }
-  toggleFestival(slug)
+  if (f.planType === 'festival') toggleFestival(f.planId)
+  else toggleEvent(f.planId)
 }
 
 // Festivals from DB (SSR — no spinner). Past festivals already excluded
@@ -170,10 +158,10 @@ const styleChips = computed(() => {
       <div v-else class="grid gap-4">
         <FestivalCard
           v-for="f in filteredFestivals"
-          :key="f.slug"
+          :key="f.href"
           :festival="f"
-          :picked="yearPlanIds.has(f.slug)"
-          @pick="onPick(f.slug)"
+          :picked="isPicked(f)"
+          @pick="onPick(f)"
         />
       </div>
     </section>

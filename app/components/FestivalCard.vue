@@ -2,7 +2,7 @@
 /**
  * Festival card — the /festivals listing row (anatomy: /docs/design/patterns/cards).
  *
- *   <FestivalCard :festival="f" :picked="yearPlanIds.has(f.slug)" @pick="onPick(f.slug)" />
+ *   <FestivalCard :festival="f" :picked="isPicked(f)" @pick="onPick(f)" />
  *
  * Stretched link: the title is the only <a>; its ::after covers the card so the
  * whole surface navigates, while the "Going?" button sits above it (relative z-10).
@@ -13,10 +13,10 @@ import { daysUntil } from '#shared/utils/festivalDateFormatter'
 import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
 import { readableAccent } from '~/lib/accent'
-import { festivalPath } from '#shared/utils/eventSlug'
 
 export interface FestivalCardData {
-  slug: string
+  /** The festival's page, /events/<name>-<short id>. */
+  href: string
   name: string
   startDate: string | null
   endDate: string | null
@@ -53,11 +53,13 @@ const location = computed(() => [props.festival.city, props.festival.country].fi
 const dateRange = computed(() => {
   const { startDate, endDate } = props.festival
   if (!startDate || !endDate) return ''
+  // Date-only strings parse as UTC midnight — read them back in UTC too, or a
+  // viewer west of UTC sees the day before (and SSR, in UTC, disagrees).
   const s = new Date(startDate)
   const e = new Date(endDate)
-  const short = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  if (s.getMonth() === e.getMonth()) return `${short(s)}–${e.getDate()}, ${e.getFullYear()}`
-  return `${short(s)} – ${short(e)}, ${e.getFullYear()}`
+  const short = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  if (s.getUTCMonth() === e.getUTCMonth()) return `${short(s)}–${e.getUTCDate()}, ${e.getUTCFullYear()}`
+  return `${short(s)} – ${short(e)}, ${e.getUTCFullYear()}`
 })
 </script>
 
@@ -89,7 +91,7 @@ const dateRange = computed(() => {
         <div class="flex-1 min-w-0">
           <div class="flex items-start justify-between gap-2">
             <h3 class="font-bold text-lg leading-tight text-foreground">
-              <NuxtLink :to="`${festivalPath(festival.slug)}`" class="outline-none after:absolute after:inset-0">
+              <NuxtLink :to="festival.href" class="outline-none after:absolute after:inset-0">
                 {{ festival.name }}
               </NuxtLink>
             </h3>

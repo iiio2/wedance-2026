@@ -3,8 +3,8 @@ import type { Festival, Teacher, Workshop } from '~/types/festival'
 export const mockFestival: Festival = {
   name: 'Caribbean Urban Fire',
   slug: 'caribbean-urban-fire-munich-2026',
-  startDate: '2026-10-21',
-  endDate: '2026-10-22',
+  startDate: '2026-03-21',
+  endDate: '2026-03-22',
   description:
     'Caribbean Urban Fire brings Amado Art and Dance Gods Company to Munich for a weekend of Salsa, Reparto, Hip Hop fusion, and Bachata Caribeña workshops.',
   logo: '',

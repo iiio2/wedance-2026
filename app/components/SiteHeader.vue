@@ -1,8 +1,3 @@
-<script lang="ts">
-// Plan counts load once per signed-in session, not on every header mount.
-let planCountsLoaded = false
-</script>
-
 <script setup lang="ts">
 /**
  * SiteHeader — the shared V3 navigation used on every dancing-side page.
@@ -16,25 +11,15 @@ let planCountsLoaded = false
 import { CalendarDays, MapPin, Sparkles, Users, Music } from 'lucide-vue-next'
 
 const route = useRoute()
-const { isSignedIn } = useAuth()
 const { appearsSignedIn } = useAccountNav('dance')
 const showSignIn = ref(false)
 
 // My plan badge = festivals in the year plan + events in the week plan.
-const { yearCount, loadFromDb: loadYear } = useYearPlan()
-const { weekCount, loadFromDb: loadWeek } = useWeekPlan()
+// Loaded by plugins/04.plan.client.ts after hydration, so SSR and the
+// client's first render agree (both 0).
+const { yearCount } = useYearPlan()
+const { weekCount } = useWeekPlan()
 const planCount = computed(() => yearCount.value + weekCount.value)
-watch(isSignedIn, (signedIn) => {
-  if (!import.meta.client) return
-  if (!signedIn) {
-    planCountsLoaded = false
-    return
-  }
-  if (planCountsLoaded) return
-  planCountsLoaded = true
-  loadYear()
-  loadWeek()
-}, { immediate: true })
 
 const discover = [
   { to: '/festivals', label: 'Festivals', icon: Sparkles },
