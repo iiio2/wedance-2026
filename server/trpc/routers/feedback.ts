@@ -10,7 +10,8 @@ import { dancers } from '../../database/schema'
  * free-text description plus a rich context bundle (URL, route, device, recent
  * client console errors, Sentry replay link, etc.) and an optional html2canvas
  * screenshot. This mutation files it as an issue in Linear team WED with the
- * `user-report` label, in the team's triage state, and embeds the screenshot
+ * `user-report` label, in the team's triage state and the WeDance Support
+ * project, and embeds the screenshot
  * inline via Linear's file upload.
  *
  * User identity (id / email / name) is taken from the *server-trusted* session,
@@ -22,6 +23,8 @@ import { dancers } from '../../database/schema'
 
 // Wedance (WED) team — same id wedance-org/api/comment.js files objections into.
 const TEAM_ID = '9fc5052b-a799-4b60-99b5-300512ddd275'
+// "WeDance Support" project — every problem report lands here (RAZ-425).
+const SUPPORT_PROJECT_ID = 'ff24241d-28fe-4f2e-92c2-b220340dbe18'
 const LABEL_NAME = 'user-report'
 const LABEL_COLOR = '#eb5757'
 
@@ -228,6 +231,7 @@ export const feedbackRouter = router({
       const [labelId, stateId] = await Promise.all([ensureLabelId(), triageStateId()])
       const issueInput: Record<string, unknown> = {
         teamId: TEAM_ID,
+        projectId: SUPPORT_PROJECT_ID,
         title,
         description: lines.join('\n'),
         priority: 3,
