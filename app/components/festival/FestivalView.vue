@@ -95,6 +95,43 @@ const sharerPlan = computed(() => {
   return [] as { workshopId: string; role: DanceRole | null; partnerStatus: string }[]
 })
 
+// Add-friend on a shared plan = follow the sharer's dancer (mutual follow =
+// friends, RAZ-319). Logged-out visitors sign up first; the follow runs once
+// they're signed in.
+const sharerDancerId = computed(() => decodedShare.value?.dancerId ?? null)
+const friendAdded = ref(false)
+const friendPending = ref(false)
+const pendingFriendAfterSignIn = ref(false)
+const canAddFriend = computed(() => {
+  if (!isSignedIn.value) return true
+  return !!sharerDancerId.value && sharerDancerId.value !== myDancerId.value
+})
+
+async function followSharer() {
+  const target = sharerDancerId.value
+  if (!target || target === myDancerId.value || friendAdded.value) return
+  friendPending.value = true
+  try {
+    const already = await $trpc.follow.isFollowingDancer.query({ targetDancerId: target })
+    if (!already) await $trpc.follow.toggleDancer.mutate({ targetDancerId: target })
+    friendAdded.value = true
+  } catch (e) {
+    console.error('[shared-plan] add friend failed', e)
+  } finally {
+    friendPending.value = false
+  }
+}
+
+function onAddFriend() {
+  useTrack().track('shared_plan_signup', { surface: 'festival', slug: festival.slug, sharer: sharer.value.name })
+  if (!isSignedIn.value) {
+    pendingFriendAfterSignIn.value = true
+    onSignIn('friend')
+    return
+  }
+  followSharer()
+}
+
 function onCreatePlan() {
   router.replace({ query: {} })
 }
@@ -115,7 +152,22 @@ const days = [...new Set(workshops.map((w) => w.day))]
 const styles = [...new Set(workshops.map((w) => w.style))]
 
 // Auth state (needed early for workshop persistence)
-const { isSignedIn, danceStyles: myDanceStyles, role: myRole, city: myCity, onboardedAt, completeOnboarding, updateProfile } = useAuth()
+const { isSignedIn, dancerId: myDancerId, danceStyles: myDanceStyles, role: myRole, city: myCity, onboardedAt, completeOnboarding, updateProfile } = useAuth()
+
+if (import.meta.client && sharerDancerId.value) {
+  // Show "Following" straight away for someone who already follows the sharer.
+  watch(isSignedIn, async (signed) => {
+    if (!signed || !sharerDancerId.value || sharerDancerId.value === myDancerId.value) return
+    if (pendingFriendAfterSignIn.value) {
+      pendingFriendAfterSignIn.value = false
+      followSharer()
+      return
+    }
+    try {
+      friendAdded.value = await $trpc.follow.isFollowingDancer.query({ targetDancerId: sharerDancerId.value })
+    } catch { /* not critical */ }
+  }, { immediate: true })
+}
 
 // Plan state
 const plan = ref(new Map<string, PlanEntry>())
@@ -950,9 +1002,12 @@ useHead({
     :sharer-plan="sharerPlan"
     :has-referral="hasReferral"
     :referral-info="referralInfo"
+    :can-add-friend="canAddFriend"
+    :friend-added="friendAdded"
+    :friend-pending="friendPending"
     @create-plan="onCreatePlan"
     @be-partner="onBePartner"
-    @add-friend="() => { useTrack().track('shared_plan_signup', { surface: 'festival', slug: festival.slug, sharer: sharer.name }); onSignIn('friend') }"
+    @add-friend="onAddFriend"
     @sign-in="onSignIn"
   />
 
@@ -1427,8 +1482,6 @@ useHead({
       @add-partner="addPartner"
     />
 
-    <SignUpModal v-model:open="showSignUp" :action="signUpAction" :prefill="signUpPrefill" />
-
     <!-- WeDance ticket checkout — buying happens here, on WeDance. -->
     <Teleport to="body">
       <Transition
@@ -1728,4 +1781,8 @@ useHead({
 
     <SiteFooter />
   </div>
+
+  <!-- Outside the v-if/v-else so the shared-plan view (Add friend / Be their
+       partner) can open it too — it used to mount only on the normal page. -->
+  <SignUpModal v-model:open="showSignUp" :action="signUpAction" :prefill="signUpPrefill" />
 </template>

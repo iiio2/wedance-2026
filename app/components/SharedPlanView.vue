@@ -12,6 +12,11 @@ const props = defineProps<{
   sharerPlan: { workshopId: string; role: DanceRole | null; partnerStatus: string }[]
   hasReferral: boolean
   referralInfo?: { referrerName: string; discountPercent: number } | null
+  /** Hide the button when there is nobody to add (own plan, or a signed-in
+   *  visitor on an old link that doesn't carry the sharer's id). */
+  canAddFriend?: boolean
+  friendAdded?: boolean
+  friendPending?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -21,11 +26,9 @@ const emit = defineEmits<{
   'sign-in': []
 }>()
 
-const friendAdded = ref(false)
-
 function addFriend() {
-  // Don't claim success locally — the parent owns the real action (sign up to
-  // connect). friendAdded flips only once that actually completes.
+  // Don't claim success locally — the parent owns the real action (sign up,
+  // then follow). The friendAdded prop flips only once that completes.
   emit('add-friend')
 }
 
@@ -86,23 +89,22 @@ const roleLabel: Record<DanceRole, string> = { lead: 'Lead', follow: 'Follow' }
 
       <!-- Add friend button -->
       <Button
-        v-if="!friendAdded"
+        v-if="canAddFriend !== false && !friendAdded"
         variant="outline"
         class="mx-auto"
+        :disabled="friendPending"
         @click="addFriend"
       >
         <UserPlus class="w-4 h-4 mr-2" />
         Add {{ sharer.name }} as friend
       </Button>
-      <Button
-        v-else
-        variant="outline"
-        class="mx-auto"
-        disabled
-      >
-        <Check class="w-4 h-4 mr-2" />
-        Friend added
-      </Button>
+      <div v-else-if="friendAdded" class="space-y-1">
+        <Button variant="outline" class="mx-auto" disabled>
+          <Check class="w-4 h-4 mr-2" />
+          Following {{ sharer.name }}
+        </Button>
+        <p class="text-xs text-muted-foreground">You're friends once {{ sharer.name }} adds you back.</p>
+      </div>
     </div>
 
     <!-- Referral discount -->

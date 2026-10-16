@@ -10,6 +10,9 @@ export interface SharePayload {
   n: string
   /** Sharer's dance role */
   r: DanceRole
+  /** Sharer's dancer id, so a signed-in visitor can add them as a friend.
+   *  Optional — links shared before it existed don't carry it. */
+  d?: string
   /** Workshop entries: id, role shorthand, partner-status shorthand */
   w: { i: string; r: 'l' | 'f' | ''; p: 'wp' | 'lk' | 's' }[]
 }
@@ -27,10 +30,12 @@ export function useSharePlan() {
     name: string,
     role: DanceRole,
     plan: Map<string, PlanEntry>,
+    dancerId?: string | null,
   ): string {
     const payload: SharePayload = {
       n: name,
       r: role,
+      ...(dancerId ? { d: dancerId } : {}),
       w: [...plan.values()].map((e) => ({
         i: e.workshopId,
         r: ROLE_SHORT[e.role ?? ''] ?? '',
@@ -51,6 +56,7 @@ export function useSharePlan() {
   function decode(encoded: string): {
     name: string
     role: DanceRole
+    dancerId: string | null
     plan: { workshopId: string; role: DanceRole | null; partnerStatus: string }[]
   } | null {
     try {
@@ -66,6 +72,7 @@ export function useSharePlan() {
       return {
         name: payload.n,
         role: payload.r,
+        dancerId: typeof payload.d === 'string' ? payload.d : null,
         plan: payload.w.map((e) => ({
           workshopId: e.i,
           role: ROLE_LONG[e.r] ?? null,
@@ -85,8 +92,9 @@ export function useSharePlan() {
     name: string,
     role: DanceRole,
     plan: Map<string, PlanEntry>,
+    dancerId?: string | null,
   ): string {
-    const token = encode(name, role, plan)
+    const token = encode(name, role, plan, dancerId)
     const base = import.meta.client ? window.location.origin : ''
     return `${base}${festivalPath(festivalSlug)}?invite=${token}`
   }

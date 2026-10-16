@@ -28,7 +28,7 @@ const { buildShareUrl } = useSharePlan()
 const shareUrl = computed(() => {
   const name = dancerName.value || 'A dancer'
   const danceRole = (role.value === 'lead' || role.value === 'follow') ? role.value : 'follow'
-  return buildShareUrl(props.festivalSlug, name, danceRole as DanceRole, props.plan)
+  return buildShareUrl(props.festivalSlug, name, danceRole as DanceRole, props.plan, dancerId.value)
 })
 
 const baseUrl = computed(() => {
