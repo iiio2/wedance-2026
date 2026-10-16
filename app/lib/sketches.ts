@@ -47,8 +47,10 @@ export const SKETCHES: Sketch[] = [
     requestedBy: 'Alösha',
     builtBy: 'Agent (Claude)',
     created: '2026-10-16',
-    status: 'deciding',
+    status: 'decided',
+    decision: 'C — vertical swipe feed (Reels-style)',
     ticket: linear('RAZ-416', 'ux-decision-city-battle-ux-and-placement'),
+    story: [linear('RAZ-427', 'city-battle-vertical-swipe-feed-reels-style')],
   },
   {
     slug: 'nav',
