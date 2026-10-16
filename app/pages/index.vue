@@ -125,11 +125,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
 <template>
   <div
     class="min-h-screen relative overflow-x-hidden text-foreground font-sans"
-    style="background:
-        radial-gradient(ellipse at 20% 0%, rgba(251, 146, 60, 0.18), transparent 50%),
-        radial-gradient(ellipse at 90% 30%, rgba(220, 38, 38, 0.10), transparent 50%),
-        radial-gradient(ellipse at 50% 100%, rgba(22, 163, 74, 0.08), transparent 50%),
-        var(--wd-cream);"
+    style="background:radial-gradient(ellipse at 20% 0%, rgba(251, 146, 60, 0.18), transparent 50%), radial-gradient(ellipse at 90% 30%, rgba(220, 38, 38, 0.10), transparent 50%), radial-gradient(ellipse at 50% 100%, rgba(22, 163, 74, 0.08), transparent 50%), var(--wd-cream);"
   >
     <!-- Subtle paper texture overlay -->
     <div

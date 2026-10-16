@@ -72,3 +72,18 @@ export function zonedToUtc(date: string, time: string, tz = DEFAULT_TZ): Date {
   guess = asUtc - offsetAt(guess)
   return new Date(guess)
 }
+
+/**
+ * Start of the current dance night in `tz`: today at `rolloverHour` local, or
+ * yesterday's when it's still before then. Nights run past midnight, so a 02:30
+ * bar hop still belongs to the evening it was posted in.
+ */
+export function nightStart(now: Date = new Date(), tz = DEFAULT_TZ, rolloverHour = 6): Date {
+  const p = parts(now, tz)
+  let date = `${p.year}-${p.month}-${p.day}`
+  if (Number(p.hour) % 24 < rolloverHour) {
+    const prev = new Date(Date.UTC(+p.year, +p.month - 1, +p.day - 1))
+    date = prev.toISOString().slice(0, 10)
+  }
+  return zonedToUtc(date, `${String(rolloverHour).padStart(2, '0')}:00`, tz)
+}

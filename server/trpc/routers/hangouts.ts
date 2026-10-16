@@ -1,20 +1,30 @@
 import { z } from 'zod'
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, and, desc, gte } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
-import { hangouts, hangoutRsvps, dancers } from '../../database/schema'
+import { hangouts, hangoutRsvps, dancers, cities } from '../../database/schema'
+import { resolveTimezone } from '../../utils/v3EventSync'
+import { nightStart } from '../../../shared/utils/eventTime'
 
 /**
  * Hangouts — spontaneous activities where dancers can mark they're out.
- * Hangouts persist until the creator manually closes them.
+ * A hangout belongs to the night it was posted: it shows until 06:00 local
+ * time in its city the next morning, or until the creator closes it.
  */
 export const hangoutsRouter = router({
-  // List active hangouts for a city (persist until manually closed)
+  // List tonight's active hangouts for a city
   listTonight: publicProcedure
     .input(z.object({
       citySlug: z.string(),
     }))
     .query(async ({ ctx, input }) => {
+      const [city] = await ctx.db
+        .select({ countryCode: cities.countryCode, lng: cities.lng })
+        .from(cities)
+        .where(eq(cities.slug, input.citySlug))
+        .limit(1)
+      const since = nightStart(new Date(), city ? resolveTimezone(city.countryCode, city.lng) : undefined)
+
       const rows = await ctx.db
         .select({
           id: hangouts.id,
@@ -33,6 +43,7 @@ export const hangoutsRouter = router({
           and(
             eq(hangouts.citySlug, input.citySlug),
             eq(hangouts.status, 'active'),
+            gte(hangouts.createdAt, since),
           ),
         )
         .orderBy(desc(hangouts.createdAt))
