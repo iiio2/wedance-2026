@@ -40,6 +40,17 @@ const pr = (n: number): SketchLink => ({ label: `PR #${n}`, url: `https://github
 
 export const SKETCHES: Sketch[] = [
   {
+    slug: 'report',
+    title: 'Report a problem → co-creation widget',
+    what: 'Three directions for turning the bug-only "Report a problem" button into a co-creation hub: hub with two paths, tabbed dialog, or unified form with type chips and a pipeline preview.',
+    why: 'People clicking "Report a problem" only see a bug form. They should also learn they can share ideas and co-create the product — agents sketch it, email options, they pick, we ship.',
+    requestedBy: 'Alösha',
+    builtBy: 'Agent (Claude)',
+    created: '2026-10-16',
+    status: 'deciding',
+    ticket: linear('RAZ-426', 'when-people-click-on-report-a-problem-we-would-like-to-introduce-them'),
+  },
+  {
     slug: 'battle',
     title: 'City Battle — UX and placement',
     what: 'Four directions for the video battle plus a recommended hybrid: fix in place, monthly season under Explore, vertical swipe feed, home team on the city page.',
