@@ -6,6 +6,8 @@ import { hangouts, hangoutRsvps, dancers, cities } from '../../database/schema'
 import { resolveTimezone } from '../../utils/v3EventSync'
 import { nightStart } from '../../../shared/utils/eventTime'
 
+const hangoutKind = z.enum(['dinner', 'bar', 'ride', 'floor', 'coffee'])
+
 /**
  * Hangouts — spontaneous activities where dancers can mark they're out.
  * A hangout belongs to the night it was posted: it shows until 06:00 local
@@ -36,6 +38,7 @@ export const hangoutsRouter = router({
           peopleCount: hangouts.peopleCount,
           status: hangouts.status,
           dancerId: hangouts.dancerId,
+          eventId: hangouts.eventId,
           createdAt: hangouts.createdAt,
         })
         .from(hangouts)
@@ -73,15 +76,60 @@ export const hangoutsRouter = router({
       return withRsvps
     }),
 
+  // List active hangouts linked to a specific event
+  listByEvent: publicProcedure
+    .input(z.object({ eventId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const rows = await ctx.db
+        .select({
+          id: hangouts.id,
+          kind: hangouts.kind,
+          title: hangouts.title,
+          time: hangouts.time,
+          venue: hangouts.venue,
+          host: hangouts.host,
+          peopleCount: hangouts.peopleCount,
+          status: hangouts.status,
+          dancerId: hangouts.dancerId,
+          eventId: hangouts.eventId,
+          createdAt: hangouts.createdAt,
+        })
+        .from(hangouts)
+        .where(
+          and(
+            eq(hangouts.eventId, input.eventId),
+            eq(hangouts.status, 'active'),
+          ),
+        )
+        .orderBy(desc(hangouts.createdAt))
+
+      const withRsvps = await Promise.all(
+        rows.map(async (h) => {
+          const rsvps = await ctx.db
+            .select({ dancerId: hangoutRsvps.dancerId })
+            .from(hangoutRsvps)
+            .where(eq(hangoutRsvps.hangoutId, h.id))
+          return {
+            ...h,
+            rsvpCount: rsvps.length,
+            rsvps: rsvps.map(r => r.dancerId),
+          }
+        }),
+      )
+
+      return withRsvps
+    }),
+
   // Create a new hangout (authenticated only)
   create: protectedProcedure
     .input(z.object({
-      kind: z.enum(['dinner', 'bar', 'ride', 'floor']),
+      kind: hangoutKind,
       title: z.string().min(1),
       time: z.string().regex(/^\d{2}:\d{2}$/),
       venue: z.string().optional(),
       host: z.string().optional(),
       citySlug: z.string().min(1),
+      eventId: z.string().uuid().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       // Resolve host name from the creator's profile when not supplied
@@ -105,6 +153,7 @@ export const hangoutsRouter = router({
             venue: input.venue,
             host,
             citySlug: input.citySlug,
+            eventId: input.eventId,
             peopleCount: 1,
             dancerId: ctx.dancerId,
             status: 'active',

@@ -5,7 +5,20 @@
  */
 import type { RideShare, GroupDinner, ExtraActivity } from '~/types/festival'
 import type { RoommateEntry } from '~/composables/useRoommates'
-import { Car, BedDouble, UtensilsCrossed, Compass, ChevronDown, Check, MessageCircle, MapPin, ExternalLink } from 'lucide-vue-next'
+import { Car, BedDouble, UtensilsCrossed, Compass, ChevronDown, Check, MessageCircle, MapPin, ExternalLink, Coffee, GlassWater, MoonStar, X, Plus } from 'lucide-vue-next'
+
+export type HangoutKind = 'dinner' | 'bar' | 'ride' | 'floor' | 'coffee'
+export interface EventHangout {
+  id: string
+  kind: HangoutKind
+  title: string
+  time: string
+  host?: string
+  venue?: string
+  rsvpCount: number
+  going: boolean
+  mine: boolean
+}
 import { RidePostSchema } from '#shared/validation'
 import { WD } from '~/lib/brand'
 import { accentText, readableAccent } from '~/lib/accent'
@@ -18,6 +31,7 @@ const props = defineProps<{
   rideShares: RideShare[]
   groupDinners: GroupDinner[]
   extraActivities: ExtraActivity[]
+  hangouts: EventHangout[]
   lookingForRoommate: boolean
   roommateOthers: RoommateEntry[]
   hotelSearchUrl?: string
@@ -33,6 +47,9 @@ const emit = defineEmits<{
   'join-activity': [id: string]
   'post-ride': [ride: { type: 'offering' | 'looking'; originCity: string; date: string; seats?: number; contactLink?: string }]
   'toggle-roommate': []
+  'create-hangout': [hangout: { kind: HangoutKind; title: string; time: string; venue?: string }]
+  'toggle-hangout': [id: string]
+  'close-hangout': [id: string]
   'sign-in': []
 }>()
 
@@ -71,7 +88,34 @@ function submitRide() {
   rideMode.value = null
 }
 
-const totalEvents = computed(() => props.groupDinners.length + props.extraActivities.length)
+const totalEvents = computed(() => props.groupDinners.length + props.extraActivities.length + props.hangouts.length)
+
+// Hangout creation form
+const showHangoutForm = ref(false)
+const newHangout = ref<{ kind: HangoutKind; title: string; time: string; venue: string }>({ kind: 'dinner', title: '', time: '20:00', venue: '' })
+function submitHangout() {
+  if (!newHangout.value.title.trim()) return
+  emit('create-hangout', {
+    kind: newHangout.value.kind,
+    title: newHangout.value.title.trim(),
+    time: newHangout.value.time,
+    venue: newHangout.value.venue.trim() || undefined,
+  })
+  newHangout.value = { kind: 'dinner', title: '', time: '20:00', venue: '' }
+  showHangoutForm.value = false
+}
+
+const hangoutKindColors: Record<HangoutKind, string> = {
+  dinner: WD.amber500,
+  coffee: WD.green600,
+  bar: WD.purple500,
+  ride: WD.cyan600,
+  floor: WD.red600,
+}
+const hangoutKindIcon = (kind: HangoutKind) => {
+  const map: Record<HangoutKind, any> = { dinner: UtensilsCrossed, coffee: Coffee, bar: GlassWater, ride: Car, floor: MoonStar }
+  return map[kind] ?? Compass
+}
 
 // Button accents that reach 4.5:1 with white (the raw purple/amber don't).
 const PURPLE = readableAccent(WD.purple500)
@@ -263,6 +307,91 @@ function badgeFor(key: string): string | null {
 
       <!-- DINNERS & ACTIVITIES -->
       <div v-if="sec.key === 'dinners' && expandedSections.has('dinners')" class="px-4 pb-4 grid gap-4">
+        <!-- Hangout creation (signed-in users) -->
+        <div v-if="isSignedIn && !showHangoutForm" class="flex justify-end">
+          <Button type="button" variant="outline-pill" size="pill-sm" :accent="AMBER" class="gap-1" @click="showHangoutForm = true">
+            <Plus class="w-3 h-3" aria-hidden="true" /> Add activity
+          </Button>
+        </div>
+        <div v-else-if="!isSignedIn" class="rounded-xl border p-3 text-center" style="border-color:color-mix(in srgb, var(--wd-brown-900) 8.2%, transparent); background:color-mix(in srgb, var(--wd-brown-900) 2%, transparent);">
+          <p class="text-sm mb-2 font-sans text-muted-foreground">Sign in to add a dinner, coffee or activity</p>
+          <Button type="button" variant="pill" size="pill-sm" :accent="AMBER" @click="emit('sign-in')">Sign in</Button>
+        </div>
+
+        <!-- Hangout creation form -->
+        <div v-if="showHangoutForm" class="rounded-xl border p-3 grid gap-3" style="border-color:color-mix(in srgb, var(--wd-brown-900) 8.2%, transparent); background:color-mix(in srgb, var(--wd-brown-900) 2%, transparent);">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold font-sans text-foreground">New activity</span>
+            <button type="button" class="text-secondary hover:text-foreground" @click="showHangoutForm = false"><X class="w-4 h-4" /></button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="k in (['dinner', 'coffee', 'bar', 'ride', 'floor'] as const)"
+              :key="k"
+              type="button"
+              class="text-xs font-bold px-3 py-1.5 rounded-full capitalize"
+              :aria-pressed="newHangout.kind === k"
+              :style="newHangout.kind === k
+                ? { background: hangoutKindColors[k], color: 'white' }
+                : { background: 'transparent', color: hangoutKindColors[k], border: '1.5px solid ' + hangoutKindColors[k] + '55' }"
+              @click="newHangout.kind = k"
+            >{{ k }}</button>
+          </div>
+          <Field id="activity-title" label="What's the plan?">
+            <Input v-model="newHangout.title" size="sm" placeholder="e.g. Dinner before the social" />
+          </Field>
+          <div class="grid grid-cols-[110px_minmax(0,1fr)] gap-2">
+            <Field id="activity-time" label="Time">
+              <Input v-model="newHangout.time" type="time" size="sm" />
+            </Field>
+            <Field id="activity-venue" label="Where?" optional>
+              <Input v-model="newHangout.venue" size="sm" placeholder="Venue or address" />
+            </Field>
+          </div>
+          <Button type="button" variant="pill" size="pill-sm" :accent="AMBER" class="w-full" :disabled="!newHangout.title.trim()" @click="submitHangout">
+            Post activity
+          </Button>
+        </div>
+
+        <!-- Existing hangouts list -->
+        <div v-if="hangouts.length" class="grid gap-2.5">
+          <div
+            v-for="h in hangouts"
+            :key="h.id"
+            class="rounded-xl border p-3 grid gap-1.5"
+            style="border-color:color-mix(in srgb, var(--wd-brown-900) 8.2%, transparent);"
+          >
+            <div class="flex items-center gap-2">
+              <component :is="hangoutKindIcon(h.kind)" class="w-4 h-4 shrink-0" :style="{ color: hangoutKindColors[h.kind] }" />
+              <span class="flex-1 text-sm font-bold text-foreground">{{ h.title }}</span>
+              <span class="text-tag font-bold px-1.5 py-0.5 rounded-full text-muted-foreground" style="background:color-mix(in srgb, var(--wd-brown-900) 3.9%, transparent);">
+                {{ h.rsvpCount }} in
+              </span>
+            </div>
+            <p class="text-xs font-sans text-muted-foreground">
+              {{ h.time }}<span v-if="h.venue"> · {{ h.venue }}</span><span v-if="h.host"> · {{ h.host }}</span>
+            </p>
+            <div class="flex items-center gap-2">
+              <Button
+                v-if="!h.going"
+                type="button" variant="outline-pill" size="pill-sm" :accent="AMBER" class="flex-1"
+                @click="emit('toggle-hangout', h.id)"
+              >Join</Button>
+              <Button
+                v-else
+                type="button" variant="outline-pill" size="pill-sm" accent="var(--wd-green-700)" class="flex-1 gap-1"
+                @click="emit('toggle-hangout', h.id)"
+              ><Check class="w-3 h-3" /> Going</Button>
+              <button
+                v-if="h.mine"
+                type="button"
+                class="text-xs text-secondary hover:text-foreground"
+                @click="emit('close-hangout', h.id)"
+              >Close</button>
+            </div>
+          </div>
+        </div>
+
         <div v-if="groupDinners.length" class="grid gap-2.5">
           <p class="text-xs font-sans text-muted-foreground">
             Join a group dinner with fellow dancers — meet new friends over a meal.

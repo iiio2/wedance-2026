@@ -1189,7 +1189,7 @@ function toggleSocialRsvp(id: string) {
 // TONIGHT · spontaneous evening — dinners, bar hops, rides.
 // -----------------------------------------------------------------------
 type Hangout = {
-  id: string; kind: 'dinner' | 'bar' | 'ride' | 'floor'
+  id: string; kind: 'dinner' | 'bar' | 'ride' | 'floor' | 'coffee'
   title: string; time: string; host?: string; venue?: string
   people: number; going: boolean
   color: string; mine: boolean
@@ -1198,6 +1198,7 @@ type Hangout = {
 // Color map for hangout kinds
 const hangoutColors: Record<string, string> = {
   dinner: WD.amber500,
+  coffee: WD.green600,
   floor: WD.red600,
   bar: WD.purple500,
   ride: WD.cyan600,
@@ -1271,11 +1272,11 @@ async function toggleHangout(id: string) {
     hangoutError.value = `Could not toggle RSVP: ${error?.message || 'unknown error'}`
   }
 }
-const hangoutIcon = (kind: Hangout['kind']) => kind === 'dinner' ? UtensilsCrossed : kind === 'bar' ? GlassWater : kind === 'ride' ? Car : MoonStar
+const hangoutIcon = (kind: Hangout['kind']) => kind === 'dinner' ? UtensilsCrossed : kind === 'coffee' ? Coffee : kind === 'bar' ? GlassWater : kind === 'ride' ? Car : MoonStar
 
 // Create-hangout form state
 const showHangoutForm = ref(false)
-const newHangout = ref({ kind: 'dinner' as 'dinner' | 'bar' | 'ride' | 'floor', title: '', time: '20:00', venue: '' })
+const newHangout = ref({ kind: 'dinner' as 'dinner' | 'bar' | 'ride' | 'floor' | 'coffee', title: '', time: '20:00', venue: '' })
 const creatingHangout = ref(false)
 const hangoutError = ref('')
 
@@ -2707,7 +2708,7 @@ function cardSummary(f: CatalogueEntry) {
         <div v-if="showHangoutForm" class="rounded-2xl bg-white border p-4 mb-4" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
           <div class="flex flex-wrap gap-2 mb-3">
             <button
-              v-for="k in (['dinner', 'bar', 'ride', 'floor'] as const)"
+              v-for="k in (['dinner', 'coffee', 'bar', 'ride', 'floor'] as const)"
               :key="k"
               type="button"
               class="text-xs font-bold px-3 py-1.5 rounded-full capitalize"

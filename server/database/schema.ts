@@ -701,12 +701,13 @@ export const gigs = pgTable('gigs', {
 // ---------------------------------------------------------------------------
 export const hangouts = pgTable('hangouts', {
   id: uuid('id').primaryKey().defaultRandom(),
-  kind: text('kind').notNull().$type<'dinner' | 'bar' | 'ride' | 'floor'>(),
+  kind: text('kind').notNull().$type<'dinner' | 'bar' | 'ride' | 'floor' | 'coffee'>(),
   title: text('title').notNull(),
   time: text('time').notNull(), // 'HH:MM' format
   venue: text('venue'),
   host: text('host'),
   citySlug: text('city_slug').notNull(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }),
   peopleCount: integer('people_count').default(0),
   status: text('status').notNull().default('active').$type<'active' | 'closed'>(),
   dancerId: uuid('dancer_id').notNull().references(() => dancers.id),

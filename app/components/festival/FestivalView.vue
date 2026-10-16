@@ -463,6 +463,7 @@ onMounted(async () => {
   loadDinners()
   loadRideShares()
   loadRoommateStatus()
+  loadEventHangouts()
   await loadFreemiumStatus()
 
   // Handle redirect back from Stripe Checkout
@@ -519,6 +520,53 @@ function joinActivity(id: string) {
       a.participantCount++
     }
   })
+}
+
+// Event-linked hangouts (user-created dinners, coffee, bars, etc.)
+import type { EventHangout, HangoutKind } from '~/components/ActivitiesTab.vue'
+const eventHangouts = ref<EventHangout[]>([])
+
+async function loadEventHangouts() {
+  try {
+    const result = await $trpc.hangouts.listByEvent.query({ eventId: data.eventId })
+    const currentDancerId = myDancerId.value
+    eventHangouts.value = (result as any[]).map((h: any) => ({
+      id: h.id,
+      kind: h.kind as HangoutKind,
+      title: h.title,
+      time: h.time,
+      host: h.host ?? undefined,
+      venue: h.venue ?? undefined,
+      rsvpCount: h.rsvpCount ?? 0,
+      going: h.rsvps?.includes(currentDancerId) ?? false,
+      mine: h.dancerId === currentDancerId,
+    }))
+  } catch (e) {
+    console.error('[FestivalView] Failed to load event hangouts:', e)
+  }
+}
+
+async function createEventHangout(hangout: { kind: HangoutKind; title: string; time: string; venue?: string }) {
+  const citySlug = festival.venue?.city?.toLowerCase().replace(/\s+/g, '-') || 'unknown'
+  await $trpc.hangouts.create.mutate({
+    kind: hangout.kind,
+    title: hangout.title,
+    time: hangout.time,
+    venue: hangout.venue,
+    citySlug,
+    eventId: data.eventId,
+  })
+  await loadEventHangouts()
+}
+
+async function toggleEventHangout(id: string) {
+  await $trpc.hangouts.toggleRsvp.mutate({ hangoutId: id })
+  await loadEventHangouts()
+}
+
+async function closeEventHangout(id: string) {
+  await $trpc.hangouts.close.mutate({ id })
+  await loadEventHangouts()
 }
 
 // Ride shares — persisted in database
@@ -637,6 +685,7 @@ function onSignedIn() {
   loadDinners()
   loadRideShares()
   loadRoommateStatus()
+  loadEventHangouts()
   loadFreemiumStatus()
 }
 
@@ -1124,6 +1173,7 @@ useHead({
             :ride-shares="rideShares"
             :group-dinners="groupDinners"
             :extra-activities="extraActivities"
+            :hangouts="eventHangouts"
             :looking-for-roommate="lookingForRoommate"
             :roommate-others="roommateOthers"
             :ride-error="rideError"
@@ -1134,6 +1184,9 @@ useHead({
             @join-activity="joinActivity"
             @post-ride="postRide"
             @toggle-roommate="toggleRoommate"
+            @create-hangout="createEventHangout"
+            @toggle-hangout="toggleEventHangout"
+            @close-hangout="closeEventHangout"
             @sign-in="onSignIn"
           />
         </section>
