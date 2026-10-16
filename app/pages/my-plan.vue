@@ -257,11 +257,14 @@ const picked = computed(() => {
   // DB data wins when slugs overlap; mock-only slugs still in yearPlanIds
   // are included as fallback (they exist in the plan but not yet in the
   // festivals table — e.g. hand-seeded mock entries).
-  const dbSlugs = new Set(dbFestivals.value.map(f => f.slug))
+  // Filter both sources by effectivePickIds so local removals are
+  // reflected immediately (RAZ-285).
+  const fromDb = dbFestivals.value.filter(f => effectivePickIds.value.has(f.slug))
+  const dbSlugs = new Set(fromDb.map(f => f.slug))
   const fromMock = catalogue
     .filter(f => effectivePickIds.value.has(f.slug) && !dbSlugs.has(f.slug))
 
-  return [...dbFestivals.value, ...fromMock]
+  return [...fromDb, ...fromMock]
     .sort((a, b) => a.startDate.localeCompare(b.startDate))
 })
 
@@ -1159,9 +1162,17 @@ const socials = ref<Social[]>(isPreviewInitial ? previewSocials : [])
 
 // Trigger auto-fill when user lands on my-plan for the first time after onboarding.
 // Must be placed after courses + socials refs to avoid TDZ errors in production builds.
+// The flag prevents auto-fill from re-triggering after the user manually removes
+// all plan items (RAZ-285).
+const autoFillDone = ref(false)
 watch([isSignedIn, onboardedAtReal, yearPlanIds], () => {
+  if (autoFillDone.value) return
   if (isSignedIn.value && onboardedAtReal.value && yearPlanIds.value.size === 0 && courses.value.length === 0 && socials.value.length === 0) {
+    autoFillDone.value = true
     nextTick(() => autoFillPlan())
+  } else if (yearPlanIds.value.size > 0 || courses.value.length > 0 || socials.value.length > 0) {
+    // Plan already has items (loaded from DB or just added) — suppress future auto-fills.
+    autoFillDone.value = true
   }
 }, { immediate: true })
 
