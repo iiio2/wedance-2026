@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toMs, mapStyles, parseVenue, cityFromAddress, buildCityIndex, resolveCity, resolveTimezone, mapV3Event, learnPlaceLocalities, decodeValue } from './v3EventSync'
+import { toMs, mapStyles, parseVenue, cityFromAddress, buildCityIndex, resolveCity, resolveTimezone, mapV3Event, learnPlaceLocalities, decodeValue, seriesKey, dedupeKey, selectRows, type MappedEvent } from './v3EventSync'
 
 const MUNICH = 'ChIJ2V-Mo_l1nkcRfZixfUq4DAE'
 const NOW = Date.parse('2026-10-04T00:00:00Z')
@@ -120,5 +120,53 @@ describe('mapV3Event', () => {
 describe('decodeValue (Firestore REST)', () => {
   it('decodes nested typed values', () => {
     expect(decodeValue({ mapValue: { fields: { a: { integerValue: '5' }, b: { arrayValue: { values: [{ stringValue: 'x' }] } }, c: { nullValue: null } } } })).toEqual({ a: 5, b: ['x'], c: null })
+  })
+})
+
+describe('selectRows (RAZ-412: archived events must not come back, no duplicates)', () => {
+  const row = (sourceId: string, over: Partial<MappedEvent> = {}): MappedEvent => {
+    const r = mapV3Event({ ...base, id: sourceId }, ctx)
+    if (!r.ok) throw new Error(r.reason)
+    return { ...r.row, ...over }
+  }
+
+  it('reads the series from v3 seriesId or the seed id', () => {
+    expect(seriesKey('seed-salsa-from-zero-thursday-20261015')).toBe('seed:salsa-from-zero-thursday')
+    expect(seriesKey('abc', 'S1')).toBe('series:S1')
+    expect(seriesKey('nNRBbAh5cJwSqczw90ZK')).toBeNull()
+  })
+
+  it('keeps a person-archived event out, but lets a sync-archived one come back', () => {
+    const { rows, skipped } = selectRows(
+      [row('a'), row('b', { startDate: new Date('2026-10-11T18:00:00Z') })],
+      [{ sourceId: 'a', archived: true, editedAt: new Date() }, { sourceId: 'b', archived: true, editedAt: null }],
+    )
+    expect(rows.map(r => r.sourceId)).toEqual(['b'])
+    expect(skipped).toEqual(['dismissed'])
+  })
+
+  it('keeps every new date of a series archived "with every date" out', () => {
+    const { rows, skipped } = selectRows(
+      [row('seed-sfz-thu-20261105', { startDate: new Date('2026-11-05T19:00:00Z') }), row('seed-other-20261105')],
+      [{ sourceId: 'seed-sfz-thu-20261015', archived: true, editedAt: new Date(), sourceRef: { dismissed: 'series' } }],
+    )
+    expect(rows.map(r => r.sourceId)).toEqual(['seed-other-20261105'])
+    expect(skipped).toEqual(['dismissed-series'])
+  })
+
+  it('archiving one date of a series leaves the other dates alone', () => {
+    const { rows } = selectRows(
+      [row('seed-sfz-thu-20261022')],
+      [{ sourceId: 'seed-sfz-thu-20261015', archived: true, editedAt: new Date(), sourceRef: {} }],
+    )
+    expect(rows).toHaveLength(1)
+  })
+
+  it('collapses two v3 posts for the same night, keeping the one already synced', () => {
+    const { rows, skipped } = selectRows([row('zzz'), row('aaa', { name: 'Salsa  social!' })], [{ sourceId: 'zzz', archived: false }])
+    expect(rows.map(r => r.sourceId)).toEqual(['zzz'])
+    expect(skipped).toEqual(['duplicate'])
+    expect(dedupeKey(row('x'))).toBe(dedupeKey(row('y', { name: 'SALSA SOCIAL' })))
+    expect(dedupeKey(row('x'))).not.toBe(dedupeKey(row('y', { startDate: new Date('2026-10-17T18:00:00Z') })))
   })
 })

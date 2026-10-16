@@ -363,6 +363,26 @@ function linkedPeople(
   }
 }
 
+/**
+ * The recurring series a synced event belongs to, or null for a one-off. v3's
+ * own `seriesId` wins; the seeding bot's deterministic ids (`seed-<slug>-<yyyymmdd>`)
+ * carry the series in the id itself.
+ */
+export function seriesKey(sourceId: string | null | undefined, seriesId?: string | null): string | null {
+  if (seriesId) return `series:${seriesId}`
+  const m = /^seed-(.+)-\d{8}$/.exec(sourceId ?? '')
+  return m ? `seed:${m[1]}` : null
+}
+
+/** Same night, same name, same place — v3 sometimes holds one event as two posts. */
+export function dedupeKey(r: Pick<MappedEvent, 'name' | 'startDate' | 'venueName' | 'venueAddress' | 'venueLat' | 'venueLng'>): string {
+  const norm = (s: string | null | undefined) => (s ?? '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '')
+  const place = r.venueLat != null && r.venueLng != null
+    ? `${r.venueLat.toFixed(3)},${r.venueLng.toFixed(3)}`
+    : norm(r.venueName) || norm(r.venueAddress)
+  return `${norm(r.name)}|${r.startDate.getTime()}|${place}`
+}
+
 /** Locality per city place id, learned from the events that do carry a full venue. */
 export function learnPlaceLocalities(docs: V3Doc[]): Map<string, string> {
   const votes = new Map<string, Map<string, number>>()
@@ -479,6 +499,46 @@ const same = (a: unknown, b: unknown) =>
     ? new Date(a as any).getTime() === new Date(b as any).getTime()
     : JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 
+/**
+ * Which mapped v3 events the sync may write, given the rows already in the DB.
+ *  - archived by a person (editedAt set) → never brought back ('dismissed');
+ *  - archived by a person "with every future date" (sourceRef.dismissed = 'series')
+ *    → the series' new dates are kept out too ('dismissed-series');
+ *  - two v3 posts for the same night → one row ('duplicate'), preferring the one
+ *    already in the DB so its id and edits stay.
+ * Rows the sync archived itself (gone from v3, editedAt null) may come back.
+ */
+export function selectRows(mapped: MappedEvent[], existing: any[]): { rows: MappedEvent[]; skipped: string[] } {
+  const dismissedIds = new Set<string>()
+  const dismissedSeries = new Set<string>()
+  for (const e of existing) {
+    if (!e.archived || !e.editedAt) continue
+    dismissedIds.add(e.sourceId)
+    const key = e.sourceRef?.dismissed === 'series' ? seriesKey(e.sourceId, e.seriesId) : null
+    if (key) dismissedSeries.add(key)
+  }
+  const inDb = new Set(existing.map((e: any) => e.sourceId))
+  const skipped: string[] = []
+  const candidates: MappedEvent[] = []
+  for (const r of mapped) {
+    if (dismissedIds.has(r.sourceId)) { skipped.push('dismissed'); continue }
+    const key = seriesKey(r.sourceId, r.seriesId)
+    if (key && dismissedSeries.has(key)) { skipped.push('dismissed-series'); continue }
+    candidates.push(r)
+  }
+  // Already-synced rows first, then by id, so the same post wins on every run.
+  candidates.sort((a, b) => Number(inDb.has(b.sourceId)) - Number(inDb.has(a.sourceId)) || a.sourceId.localeCompare(b.sourceId))
+  const seen = new Set<string>()
+  const rows: MappedEvent[] = []
+  for (const r of candidates) {
+    const k = dedupeKey(r)
+    if (seen.has(k)) { skipped.push('duplicate'); continue }
+    seen.add(k)
+    rows.push(r)
+  }
+  return { rows, skipped }
+}
+
 /** Applies migration 0021 (idempotent). */
 export async function ensureEventsSchema(db: any, migrationSql: string) {
   for (const stmt of migrationSql.split(';').map(s => s.replace(/^\s*--.*$/gm, '').trim()).filter(Boolean)) {
@@ -508,15 +568,13 @@ export async function syncV3Events(opts: {
   const placeLocality = learnPlaceLocalities(docs)
 
   const summary: SyncSummary = { mode: write ? 'write' : 'dry-run', fetched: docs.length, eligible: 0, created: 0, updated: 0, unchanged: 0, archived: 0, skipped: {}, byCity: {}, unmappedStyles: {}, schemaReady: true }
-  const rows: MappedEvent[] = []
+  const skip = (reason: string) => { summary.skipped[reason] = (summary.skipped[reason] ?? 0) + 1 }
+  const mapped: { row: MappedEvent; unmappedStyles: string[] }[] = []
   for (const d of docs) {
     const r = mapV3Event(d, { now, cityIndex, placeLocality, knownProfiles, links: opts.links })
-    if (!r.ok) { summary.skipped[r.reason] = (summary.skipped[r.reason] ?? 0) + 1; continue }
-    rows.push(r.row)
-    summary.byCity[r.row.citySlug!] = (summary.byCity[r.row.citySlug!] ?? 0) + 1
-    for (const u of r.unmappedStyles) summary.unmappedStyles[u] = (summary.unmappedStyles[u] ?? 0) + 1
+    if (!r.ok) { skip(r.reason); continue }
+    mapped.push({ row: r.row, unmappedStyles: r.unmappedStyles })
   }
-  summary.eligible = rows.length
 
   // Existing synced rows (tolerate a DB that hasn't had migration 0021 yet — dry-run only).
   let existing: any[] = []
@@ -536,6 +594,16 @@ export async function syncV3Events(opts: {
   }
   const bySource = new Map(existing.map((r: any) => [r.sourceId, r]))
   const syncedAt = new Date(now)
+
+  const { rows, skipped } = selectRows(mapped.map(m => m.row), existing)
+  for (const reason of skipped) skip(reason)
+  const kept = new Set(rows)
+  for (const m of mapped) {
+    if (!kept.has(m.row)) continue
+    summary.byCity[m.row.citySlug!] = (summary.byCity[m.row.citySlug!] ?? 0) + 1
+    for (const u of m.unmappedStyles) summary.unmappedStyles[u] = (summary.unmappedStyles[u] ?? 0) + 1
+  }
+  summary.eligible = rows.length
 
   const toWrite: MappedEvent[] = []
   for (const r of rows) {

@@ -1,10 +1,10 @@
 import { z } from 'zod'
-import { eq, and, or, gte, lt, inArray, desc, asc, sql } from 'drizzle-orm'
+import { eq, and, or, gte, lt, inArray, isNull, desc, asc, sql } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure, publicProcedure } from '../trpc'
 import { events, profiles, profileMembers, profileClaims, cities, profileSuggestions, bookingInquiries } from '../../database/schema'
 import { slugify, randomSuffix } from '../../utils/slug'
-import { resolveTimezone } from '../../utils/v3EventSync'
+import { resolveTimezone, seriesKey } from '../../utils/v3EventSync'
 import { zonedToUtc, eventLocalDate, eventLocalTime, eventLocalWeekday } from '../../../shared/utils/eventTime'
 import { requireMember, linksInstagram } from './business'
 import { parseInstagramHandle, handleFromInstagram, instagramUrl } from '../../../shared/utils/instagram'
@@ -315,6 +315,8 @@ export const businessEventsRouter = router({
         host: host ? { username: host.username, name: host.name, type: host.type } : null,
         // Synced from wedance.vip and not saved here yet: the first save takes it over.
         synced: !ev.hostProfileId,
+        // A synced weekly date: archiving can take the whole series off.
+        recurring: !ev.hostProfileId && !!seriesKey(ev.sourceId, ev.seriesId),
         archived: !!ev.archived,
         editedAt: ev.editedAt as Date | null,
         name: ev.name ?? '',
@@ -428,12 +430,27 @@ export const businessEventsRouter = router({
       return { restored: true }
     }),
 
+  // A person's decision: editedAt marks it, so the v3 sync never brings it back.
+  // `series` (synced recurring events) also archives the dates still to come and
+  // keeps new ones out (sourceRef.dismissed = 'series', read by selectRows).
   archive: protectedProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string().uuid(), series: z.boolean().optional() }))
     .mutation(async ({ ctx, input }) => {
       const ev = await requireEventManager(ctx, input.id)
-      await ctx.db.update(events).set({ archived: true, published: false, updatedAt: new Date() }).where(eq(events.id, ev.id))
-      return { archived: true }
+      const now = new Date()
+      const stamp = { archived: true, published: false, updatedAt: now, editedAt: now, editedBy: ctx.dancerId }
+      const key = !ev.hostProfileId && ev.source ? seriesKey(ev.sourceId, ev.seriesId) : null
+      if (!input.series || !key) {
+        await ctx.db.update(events).set(stamp).where(eq(events.id, ev.id))
+        return { archived: 1 }
+      }
+      const siblings = await ctx.db.select({ id: events.id, sourceId: events.sourceId, seriesId: events.seriesId, sourceRef: events.sourceRef }).from(events)
+        .where(and(eq(events.source, ev.source), isNull(events.hostProfileId), or(eq(events.id, ev.id), gte(events.startDate, now))))
+      const dates = siblings.filter((s: any) => s.id === ev.id || seriesKey(s.sourceId, s.seriesId) === key)
+      for (const s of dates) {
+        await ctx.db.update(events).set({ ...stamp, sourceRef: { ...(s.sourceRef ?? {}), dismissed: 'series' } }).where(eq(events.id, s.id))
+      }
+      return { archived: dates.length }
     }),
 
   // The line-up's names and photos, for picking each artist's flyer photo.

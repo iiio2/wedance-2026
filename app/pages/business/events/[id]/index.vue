@@ -196,10 +196,10 @@ async function restore() {
 }
 const confirmArchive = ref(false)
 const archiving = ref(false)
-async function archive() {
+async function archive(series = false) {
   archiving.value = true
   try {
-    await $trpc.businessEvents.archive.mutate({ id: id.value })
+    await $trpc.businessEvents.archive.mutate({ id: id.value, series })
     await navigateTo('/business/events')
   } catch (e: any) {
     error.value = e?.message || 'Could not archive the event.'
@@ -306,7 +306,11 @@ async function archive() {
           <Button v-if="!confirmArchive" type="button" variant="destructive" size="sm" class="mt-3" @click="confirmArchive = true"><Archive /> Archive event</Button>
           <div v-else class="mt-3 flex flex-wrap items-center gap-2">
             <span class="text-sm font-bold">Archive “{{ ev.name }}”?</span>
-            <Button type="button" variant="destructive" size="sm" :loading="archiving" @click="archive">Yes, archive</Button>
+            <template v-if="ev.recurring">
+              <Button type="button" variant="destructive" size="sm" :loading="archiving" @click="archive(false)">Only this date</Button>
+              <Button type="button" variant="destructive" size="sm" :loading="archiving" @click="archive(true)">Every date</Button>
+            </template>
+            <Button v-else type="button" variant="destructive" size="sm" :loading="archiving" @click="archive(false)">Yes, archive</Button>
             <Button type="button" variant="ghost" size="sm" @click="confirmArchive = false">Keep it</Button>
           </div>
           </template>
