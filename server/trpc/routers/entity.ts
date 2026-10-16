@@ -1,7 +1,7 @@
 import { z } from 'zod'
-import { eq, and, sql } from 'drizzle-orm'
-import { router, publicProcedure } from '../trpc'
-import { profiles, bookableSpaces } from '../../database/schema'
+import { eq, and, sql, inArray } from 'drizzle-orm'
+import { router, publicProcedure, protectedProcedure } from '../trpc'
+import { profiles, bookableSpaces, networkLinks, bookingInquiries, follows, profileMembers } from '../../database/schema'
 
 /**
  * Professional profiles (venue / artist / organizer) resolved by handle for the
@@ -85,12 +85,12 @@ export const entityRouter = router({
         .where(and(eq(profiles.citySlug, input.citySlug), eq(profiles.status, 'visible')))
       const city = rows.find(r => r.city)?.city ?? null
       const pick = (t: string) => rows.filter(r => r.type === t).map(({ username, name, photo, styles }) => ({ username, name, photo, styles: styles ?? [] }))
-      return { city, citySlug: input.citySlug, venues: pick('venue'), artists: pick('artist'), organizers: pick('organizer') }
+      return { city, citySlug: input.citySlug, venues: pick('venue'), artists: pick('artist'), organizers: pick('organizer'), promoters: pick('promoter') }
     }),
 
   // Bookable venues in a city — surfaced on the city page.
   listByCity: publicProcedure
-    .input(z.object({ citySlug: z.string().min(1), type: z.enum(['venue', 'artist', 'organizer']).default('venue') }))
+    .input(z.object({ citySlug: z.string().min(1), type: z.enum(['venue', 'artist', 'organizer', 'promoter']).default('venue') }))
     .query(async ({ ctx, input }) => {
       const rows = await ctx.db
         .select({
@@ -214,6 +214,91 @@ export const entityRouter = router({
           claimed: p.claimed ?? false,
         },
         spaces,
+      }
+    }),
+
+  /**
+   * Promoter roster — artist profiles the promoter has added to their network.
+   * Public: anyone viewing /@promoterHandle sees the roster.
+   */
+  promoterRoster: publicProcedure
+    .input(z.object({ profileId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const artists = await ctx.db
+        .select({
+          username: profiles.username,
+          name: profiles.name,
+          photo: profiles.photo,
+          styles: profiles.styles,
+          bio: profiles.bio,
+          type: profiles.type,
+        })
+        .from(networkLinks)
+        .innerJoin(profiles, eq(profiles.id, networkLinks.otherProfileId))
+        .where(and(
+          eq(networkLinks.profileId, input.profileId),
+          eq(networkLinks.status, 'added'),
+          eq(profiles.type, 'artist'),
+          eq(profiles.status, 'visible'),
+        ))
+      return artists
+    }),
+
+  /**
+   * Promoter dashboard data — booking requests + follower count + roster count.
+   * Protected: only the promoter's team sees this.
+   */
+  promoterDashboard: protectedProcedure
+    .input(z.object({ profileId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      // Verify the caller manages this profile.
+      const [member] = await ctx.db
+        .select({ id: profileMembers.id })
+        .from(profileMembers)
+        .where(and(
+          eq(profileMembers.profileId, input.profileId),
+          eq(profileMembers.dancerId, ctx.dancerId),
+        ))
+      if (!member) return null
+
+      const [inquiries, followerRows, rosterRows] = await Promise.all([
+        ctx.db
+          .select({
+            id: bookingInquiries.id,
+            name: bookingInquiries.name,
+            email: bookingInquiries.email,
+            what: bookingInquiries.what,
+            city: bookingInquiries.city,
+            eventDate: bookingInquiries.eventDate,
+            guests: bookingInquiries.guests,
+            budget: bookingInquiries.budget,
+            message: bookingInquiries.message,
+            status: bookingInquiries.status,
+            createdAt: bookingInquiries.createdAt,
+          })
+          .from(bookingInquiries)
+          .where(eq(bookingInquiries.profileId, input.profileId))
+          .orderBy(sql`${bookingInquiries.createdAt} desc`)
+          .limit(20),
+        ctx.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(follows)
+          .where(eq(follows.profileId, input.profileId)),
+        ctx.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(networkLinks)
+          .innerJoin(profiles, eq(profiles.id, networkLinks.otherProfileId))
+          .where(and(
+            eq(networkLinks.profileId, input.profileId),
+            eq(networkLinks.status, 'added'),
+            eq(profiles.type, 'artist'),
+          )),
+      ])
+
+      return {
+        inquiries,
+        followerCount: followerRows[0]?.count ?? 0,
+        rosterCount: rosterRows[0]?.count ?? 0,
       }
     }),
 })

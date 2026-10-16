@@ -4,10 +4,11 @@
  */
 import { z } from 'zod'
 
-export const INQUIRY_WHAT: Record<'artist' | 'venue' | 'organizer', string[]> = {
+export const INQUIRY_WHAT: Record<'artist' | 'venue' | 'organizer' | 'promoter', string[]> = {
   artist: ['Workshop or class', 'Show', 'DJ set', 'Festival', 'Party', 'Private event', 'Something else'],
   venue: ['Party', 'Workshop or class', 'Festival', 'Private event', 'Something else'],
   organizer: ['Collaboration', 'Event for us', 'Something else'],
+  promoter: ['Book an artist', 'Tour booking', 'Festival slot', 'Collaboration', 'Something else'],
 }
 
 export const inquirySchema = z.object({

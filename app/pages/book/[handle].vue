@@ -47,7 +47,7 @@ onMounted(async () => {
 })
 
 // Venues with bookable spaces take requests on their page's calendar.
-const bookable = computed(() => !!profile.value && (profile.value.type === 'artist' || (profile.value.type === 'venue' && !spaces.value.length)))
+const bookable = computed(() => !!profile.value && (profile.value.type === 'artist' || profile.value.type === 'promoter' || (profile.value.type === 'venue' && !spaces.value.length)))
 const firstName = computed(() => profile.value?.type === 'artist' ? profile.value.name.split(/\s+/)[0] : profile.value?.name)
 // The shortcuts: only for an artist, only for someone who runs an event page.
 const canPlan = computed(() => profile.value?.type === 'artist' && !!me.value?.profiles.length)

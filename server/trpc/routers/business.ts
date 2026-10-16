@@ -22,7 +22,7 @@ import { notifyDecision } from './businessTeam'
  * "managed": 226 v4 imports carry claimed=true from v4 with no 2026 manager.
  */
 
-const PROFILE_TYPES = ['artist', 'venue', 'organizer'] as const
+const PROFILE_TYPES = ['artist', 'venue', 'organizer', 'promoter'] as const
 
 const editableFields = {
   name: z.string().trim().min(1).max(120),

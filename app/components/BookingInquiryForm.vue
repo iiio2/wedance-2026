@@ -35,7 +35,7 @@ const done = ref<null | 'team' | 'wedance'>(null)
 
 function again() { Object.assign(form, blank()); done.value = null }
 
-const options = computed(() => INQUIRY_WHAT[props.profile.type as 'artist' | 'venue' | 'organizer'] ?? INQUIRY_WHAT.artist)
+const options = computed(() => INQUIRY_WHAT[props.profile.type as 'artist' | 'venue' | 'organizer' | 'promoter'] ?? INQUIRY_WHAT.artist)
 const firstName = computed(() => props.profile.type === 'artist' ? props.profile.name.split(/\s+/)[0] : props.profile.name)
 const today = new Date().toISOString().slice(0, 10)
 

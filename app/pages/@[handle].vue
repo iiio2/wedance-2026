@@ -159,7 +159,8 @@ const directionsUrl = computed(() => {
   return p.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.address)}` : ''
 })
 
-const typeLabel: Record<string, string> = { venue: 'Venue', artist: 'Artist', organizer: 'Organizer' }
+const typeLabel: Record<string, string> = { venue: 'Venue', artist: 'Artist', organizer: 'Organizer', promoter: 'Promoter' }
+const isPromoter = computed(() => profile.value?.type === 'promoter')
 const socialIcon: Record<string, any> = { instagram: Instagram, youtube: Youtube, facebook: Facebook, website: Globe }
 const langLabel: Record<string, string> = { en: 'English', es: 'Spanish', de: 'German', fr: 'French', pt: 'Portuguese', it: 'Italian', ru: 'Russian', hu: 'Hungarian', sl: 'Slovenian' }
 const initials = computed(() => {
@@ -260,12 +261,12 @@ useHead(() => ({
             <div v-if="profile.socials?.length" class="mt-4 flex items-center gap-2">
               <a v-for="s in profile.socials" :key="s.platform" :href="s.url" target="_blank" rel="noopener" class="inline-flex items-center justify-center w-9 h-9 rounded-full text-primary" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);" :aria-label="s.platform"><component :is="socialIcon[s.platform] || Globe" class="w-4 h-4" /></a>
             </div>
-            <div v-if="canBook || profile.type === 'artist'" class="mt-4 flex flex-wrap items-center gap-3">
-              <Button v-if="canBook" variant="cta" size="pill-sm" as-child>
+            <div v-if="canBook || profile.type === 'artist' || isPromoter" class="mt-4 flex flex-wrap items-center gap-3">
+              <Button v-if="canBook && !isPromoter" variant="cta" size="pill-sm" as-child>
                 <NuxtLink :to="`/@${profile.username}/book`"><Send class="w-3.5 h-3.5" aria-hidden="true" /> Book {{ bookName }}</NuxtLink>
               </Button>
               <Button
-                v-if="profile.type === 'artist'"
+                v-if="profile.type === 'artist' || isPromoter"
                 :variant="following ? 'pill' : 'soft'"
                 size="pill-sm"
                 :disabled="followBusy"
@@ -275,7 +276,7 @@ useHead(() => ({
                 <Heart class="w-3.5 h-3.5" :class="following ? 'fill-white' : ''" aria-hidden="true" />
                 {{ following ? 'Following' : 'Follow' }}
               </Button>
-              <span v-if="profile.type === 'artist' && followerCount" class="text-xs text-muted-foreground font-sans">
+              <span v-if="(profile.type === 'artist' || isPromoter) && followerCount" class="text-xs text-muted-foreground font-sans">
                 {{ followerCount }} follower{{ followerCount === 1 ? '' : 's' }}
               </span>
             </div>
@@ -294,6 +295,11 @@ useHead(() => ({
         </div>
       </section>
 
+      <!-- ══════ Promoter: tabbed layout ══════ -->
+      <PromoterProfile v-if="isPromoter" :profile="profile" :can-manage="canManage" />
+
+      <!-- ══════ Non-promoter: existing sections ══════ -->
+      <template v-else>
       <!-- The venue: kind, size, amenities, opening hours -->
       <section v-if="hasVenueFacts" class="max-w-2xl mx-auto px-4 pb-6 font-sans">
         <div class="rounded-2xl border bg-card p-5">
@@ -349,6 +355,7 @@ useHead(() => ({
       <section class="max-w-2xl mx-auto px-4 pb-16">
         <ReviewsSection :target-type="profile.type" :target-slug="profile.username" :target-name="profile.name" :city-slug="profile.citySlug || undefined" />
       </section>
+      </template>
     </template>
     </main>
 

@@ -327,7 +327,7 @@ export const recommendationRequests = pgTable('recommendation_requests', {
 export const profiles = pgTable('profiles', {
   id: uuid('id').primaryKey().defaultRandom(),
   username: text('username').notNull().unique(),
-  type: text('type').notNull().$type<'venue' | 'artist' | 'organizer'>(),
+  type: text('type').notNull().$type<'venue' | 'artist' | 'organizer' | 'promoter'>(),
   name: text('name').notNull(),
   city: text('city'),
   citySlug: text('city_slug'),
