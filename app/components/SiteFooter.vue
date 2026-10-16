@@ -39,7 +39,10 @@ const year = 2026
 
 <template>
   <footer class="border-t mt-8 border-border bg-wd-cream/60">
-    <div class="max-w-6xl mx-auto px-4 py-12">
+    <!-- pb-24 clears the floating "Talk to us" button (ReportProblem, bottom-left on every
+         page) so the last footer row is never hidden under it; the phone tab bar is
+         already reserved by html.has-tabbar body padding (tailwind.css). -->
+    <div class="max-w-6xl mx-auto px-4 pt-12 pb-24">
       <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
         <!-- Brand + tagline -->
         <div class="lg:col-span-2">
@@ -76,6 +79,7 @@ const year = 2026
         <NuxtLink to="/privacy-policy" class="text-xs hover:underline text-muted-foreground font-sans">Privacy Policy</NuxtLink>
         <NuxtLink to="/terms" class="text-xs hover:underline text-muted-foreground font-sans">Terms</NuxtLink>
         <NuxtLink to="/booking-terms" class="text-xs hover:underline text-muted-foreground font-sans">Booking Terms</NuxtLink>
+        <NuxtLink to="/whats-new" class="text-xs hover:underline text-muted-foreground font-sans">What’s new</NuxtLink>
       </div>
 
       <!-- Bottom bar -->

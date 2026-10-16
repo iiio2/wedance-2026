@@ -43,14 +43,14 @@ const track = (name: string, entry: string) => useTrack().track(name, { surface:
     <SiteHeader />
     <main>
       <!-- HERO -->
-      <section class="max-w-3xl mx-auto px-4 pt-14 pb-8">
+      <section class="max-w-3xl mx-auto px-4 pt-10 sm:pt-14 pb-8">
         <div class="inline-flex items-center gap-1.5 text-sm tracking-widest uppercase mb-3 text-secondary font-sans">
           <Sparkles class="w-4 h-4" aria-hidden="true" /> Product updates
         </div>
         <h1 class="text-5xl sm:text-6xl leading-[0.95] text-foreground">
           What’s new on <em class="italic text-primary">WeDance.</em>
         </h1>
-        <p class="mt-6 text-base sm:text-lg leading-relaxed max-w-xl text-muted-foreground font-sans">
+        <p class="mt-4 sm:mt-6 text-base sm:text-lg leading-relaxed max-w-xl text-muted-foreground font-sans">
           What we shipped, newest first. Try it, then tell us what breaks — that’s how it gets good.
         </p>
       </section>
@@ -63,12 +63,27 @@ const track = (name: string, entry: string) => useTrack().track(name, { surface:
             <span class="hidden sm:block absolute -left-[41px] top-1.5 size-4 rounded-full border-4 border-background bg-primary" aria-hidden="true" />
 
             <article class="rounded-2xl border border-border bg-card shadow-wd-card overflow-hidden">
+              <header class="px-6 pt-6 pb-5 sm:px-8 sm:pt-8">
+                <div class="flex flex-wrap items-center gap-2 font-sans">
+                  <time :datetime="e.date" class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">
+                    {{ formatWhatsNewDate(e.date) }}
+                  </time>
+                  <span
+                    v-if="e.tag"
+                    class="rounded-full bg-primary px-2.5 py-0.5 text-eyebrow font-bold uppercase tracking-widest text-primary-foreground shadow-wd-lip"
+                  >{{ e.tag }}</span>
+                </div>
+                <h2 class="mt-2 text-3xl sm:text-4xl leading-tight text-foreground">
+                  <a :href="`#${e.id}`" class="hover:underline decoration-primary/40 underline-offset-4">{{ e.title }}</a>
+                </h2>
+              </header>
+
               <a
                 v-if="e.image && e.instagram"
                 :href="e.instagram"
                 target="_blank"
                 rel="noopener"
-                class="group block border-b border-border bg-wd-cream"
+                class="group block border-y border-border bg-wd-cream"
                 :aria-label="`${e.title} — view the post on Instagram (opens in a new tab)`"
                 @click="track('whats_new_image_click', e.id)"
               >
@@ -87,24 +102,12 @@ const track = (name: string, entry: string) => useTrack().track(name, { surface:
                 :alt="e.image.alt"
                 width="1080"
                 height="1080"
-                class="aspect-square w-full object-cover border-b border-border"
+                class="aspect-square w-full object-cover border-y border-border"
                 loading="lazy"
               >
 
-              <div class="p-6 sm:p-8">
-                <div class="flex flex-wrap items-center gap-2 font-sans">
-                  <time :datetime="e.date" class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">
-                    {{ formatWhatsNewDate(e.date) }}
-                  </time>
-                  <span
-                    v-if="e.tag"
-                    class="rounded-full bg-primary px-2.5 py-0.5 text-eyebrow font-bold uppercase tracking-widest text-primary-foreground shadow-wd-lip"
-                  >{{ e.tag }}</span>
-                </div>
-                <h2 class="mt-3 text-3xl sm:text-4xl leading-tight text-foreground">
-                  <a :href="`#${e.id}`" class="hover:underline decoration-primary/40 underline-offset-4">{{ e.title }}</a>
-                </h2>
-                <p class="mt-3 text-base leading-relaxed text-muted-foreground font-sans">{{ e.description }}</p>
+              <div class="px-6 pt-5 pb-6 sm:px-8 sm:pb-8">
+                <p class="text-base leading-relaxed text-muted-foreground font-sans">{{ e.description }}</p>
 
                 <div v-if="e.cta || e.instagram" class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
                   <Button v-if="e.cta" as-child variant="pill" size="pill-sm" class="font-sans">
