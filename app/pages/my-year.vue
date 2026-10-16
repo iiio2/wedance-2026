@@ -208,6 +208,8 @@ const sharer = computed(() => {
 const stats = computed(() => {
   const fests = myFestivals.value
   const countries = [...new Set(fests.map((f) => f.country).filter(Boolean))]
+  const cities = [...new Set(fests.map((f) => f.location).filter(Boolean))]
+
   const styleMap = new Map<string, number>()
   for (const f of fests) {
     for (const s of f.styles) {
@@ -220,16 +222,74 @@ const stats = computed(() => {
     .slice(0, 5)
     .map(([style, count]) => ({ style, percent: Math.round((count / total) * 100) }))
 
+  // Total dance days (sum of festival durations)
+  let totalDanceDays = 0
+  for (const f of fests) {
+    if (f.startDate && f.endDate) {
+      const start = new Date(f.startDate)
+      const end = new Date(f.endDate)
+      totalDanceDays += Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1)
+    }
+  }
+
+  // Unique friends across all festivals
+  const friendNames = new Set<string>()
+  for (const f of fests) {
+    for (const fr of f.friendsGoing) {
+      friendNames.add(fr.name)
+    }
+  }
+
+  // Tickets purchased
+  const ticketsPurchased = fests.filter((f) => f.ticketStatus === 'purchased').length
+
+  // Busiest month
+  const monthCounts = new Map<string, number>()
+  for (const f of fests) {
+    if (f.startDate) {
+      const month = new Date(f.startDate).toLocaleString('en', { month: 'long' })
+      monthCounts.set(month, (monthCounts.get(month) ?? 0) + 1)
+    }
+  }
+  const busiestMonth = [...monthCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
+
+  // Festival season span
+  let festivalSeason = ''
+  if (fests.length > 0) {
+    const sorted = [...fests].sort((a, b) => a.startDate.localeCompare(b.startDate))
+    const firstMonth = new Date(sorted[0].startDate).toLocaleString('en', { month: 'short' })
+    const lastMonth = new Date(sorted[sorted.length - 1].startDate).toLocaleString('en', { month: 'short' })
+    festivalSeason = firstMonth === lastMonth ? firstMonth : `${firstMonth} – ${lastMonth}`
+  }
+
+  // Achievements
+  const achievements: { id: string; label: string; icon: string }[] = []
+  if (countries.length >= 3) achievements.push({ id: 'globe-trotter', label: 'Globe Trotter', icon: '🌍' })
+  if (fests.length >= 5) achievements.push({ id: 'festival-addict', label: 'Festival Addict', icon: '🎪' })
+  if (totalDanceDays >= 20) achievements.push({ id: 'marathon-dancer', label: 'Marathon Dancer', icon: '💃' })
+  if (styleMap.size >= 4) achievements.push({ id: 'style-explorer', label: 'Style Explorer', icon: '🎨' })
+  if (ticketsPurchased >= 3) achievements.push({ id: 'early-bird', label: 'Ticket Collector', icon: '🎟️' })
+  if (friendNames.size >= 5) achievements.push({ id: 'social-butterfly', label: 'Social Butterfly', icon: '🦋' })
+  if (fests.length >= 10) achievements.push({ id: 'unstoppable', label: 'Unstoppable', icon: '🔥' })
+  if (cities.length >= 5) achievements.push({ id: 'city-hopper', label: 'City Hopper', icon: '✈️' })
+
   return {
     totalFestivals: fests.length,
     totalWorkshops: fests.reduce((sum, f) => sum + f.workshopCount, 0),
     countries,
+    cities,
     topStyles,
     partnerMatchRate: fests.length === 0
       ? 0
       : Math.round(
           (fests.filter((f) => progressStore.value[f.slug]?.partnerFound).length / fests.length) * 100,
         ),
+    totalDanceDays,
+    totalFriends: friendNames.size,
+    ticketsPurchased,
+    busiestMonth,
+    festivalSeason,
+    achievements,
   }
 })
 

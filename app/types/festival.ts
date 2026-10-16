@@ -212,8 +212,15 @@ export interface YearStats {
   totalFestivals: number
   totalWorkshops: number
   countries: string[]
+  cities: string[]
   topStyles: { style: string; percent: number }[]
   partnerMatchRate: number
+  totalDanceDays: number
+  totalFriends: number
+  ticketsPurchased: number
+  busiestMonth: string
+  festivalSeason: string
+  achievements: { id: string; label: string; icon: string }[]
 }
 
 export interface RideShare {

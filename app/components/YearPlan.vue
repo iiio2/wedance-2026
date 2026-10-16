@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { YearPlanFestival, YearStats } from '~/types/festival'
-import { Calendar, MapPin, Users, Ticket, Clock, ChevronRight, Share2, Sparkles, ExternalLink } from 'lucide-vue-next'
+import { Calendar, MapPin, Users, Ticket, Clock, ChevronRight, Share2, Sparkles, ExternalLink, Trophy, Globe, Music, Flame } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
 
 const props = defineProps<{
@@ -77,13 +77,129 @@ const ticketStatusClass: Record<string, string> = {
       <div>
         <h1 class="text-2xl sm:text-3xl leading-tight font-display text-foreground">My 2026 Dance Year</h1>
         <p class="text-sm mt-1 text-secondary">
-          {{ stats.totalFestivals }} festivals · {{ stats.totalWorkshops }} workshops · {{ stats.countries.length }} {{ stats.countries.length === 1 ? 'country' : 'countries' }}
+          Your year in dance, unwrapped
         </p>
       </div>
       <Button variant="outline-pill" size="pill-sm" @click="emit('share')">
         <Share2 class="size-3.5" aria-hidden="true" />
         Share
       </Button>
+    </div>
+
+    <!-- ═══ WRAPPED HERO — Big numbers ═══ -->
+    <div v-if="festivals.length > 0" class="rounded-2xl overflow-hidden" style="background: linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500), var(--wd-amber-600));">
+      <div class="px-5 py-6 sm:px-8 sm:py-8 space-y-6">
+        <!-- Primary stat grid -->
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem;">
+          <div class="text-center">
+            <p class="text-5xl sm:text-6xl font-black font-display text-white leading-none">{{ stats.totalFestivals }}</p>
+            <p class="text-xs sm:text-sm uppercase tracking-[0.2em] text-white/70 mt-1">Festivals</p>
+          </div>
+          <div class="text-center">
+            <p class="text-5xl sm:text-6xl font-black font-display text-white leading-none">{{ stats.totalDanceDays }}</p>
+            <p class="text-xs sm:text-sm uppercase tracking-[0.2em] text-white/70 mt-1">Dance Days</p>
+          </div>
+          <div class="text-center">
+            <p class="text-5xl sm:text-6xl font-black font-display text-white leading-none">{{ stats.cities.length }}</p>
+            <p class="text-xs sm:text-sm uppercase tracking-[0.2em] text-white/70 mt-1">Cities</p>
+          </div>
+          <div class="text-center">
+            <p class="text-5xl sm:text-6xl font-black font-display text-white leading-none">{{ stats.countries.length }}</p>
+            <p class="text-xs sm:text-sm uppercase tracking-[0.2em] text-white/70 mt-1">{{ stats.countries.length === 1 ? 'Country' : 'Countries' }}</p>
+          </div>
+        </div>
+
+        <!-- Secondary stats row -->
+        <div class="flex items-center justify-center gap-4 flex-wrap">
+          <div v-if="stats.totalWorkshops > 0" class="flex items-center gap-1.5 rounded-full px-3 py-1" style="background: rgba(255,255,255,0.15);">
+            <Music class="w-3.5 h-3.5 text-white/80" />
+            <span class="text-sm font-bold text-white">{{ stats.totalWorkshops }} workshops</span>
+          </div>
+          <div v-if="stats.totalFriends > 0" class="flex items-center gap-1.5 rounded-full px-3 py-1" style="background: rgba(255,255,255,0.15);">
+            <Users class="w-3.5 h-3.5 text-white/80" />
+            <span class="text-sm font-bold text-white">{{ stats.totalFriends }} friends going</span>
+          </div>
+          <div v-if="stats.ticketsPurchased > 0" class="flex items-center gap-1.5 rounded-full px-3 py-1" style="background: rgba(255,255,255,0.15);">
+            <Ticket class="w-3.5 h-3.5 text-white/80" />
+            <span class="text-sm font-bold text-white">{{ stats.ticketsPurchased }} tickets</span>
+          </div>
+        </div>
+
+        <!-- Festival season -->
+        <div v-if="stats.festivalSeason" class="text-center">
+          <p class="text-xs uppercase tracking-[0.15em] text-white/50">Festival season</p>
+          <p class="text-lg font-bold font-display text-white">{{ stats.festivalSeason }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Achievements ═══ -->
+    <div v-if="stats.achievements.length > 0" class="space-y-3">
+      <div class="flex items-center gap-2">
+        <Trophy class="w-4 h-4 text-secondary" />
+        <h2 class="text-sm font-bold text-secondary font-display">Achievements unlocked</h2>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <div
+          v-for="a in stats.achievements"
+          :key="a.id"
+          class="inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-sm font-bold font-display"
+          style="border-color:color-mix(in srgb, var(--wd-amber-500) 40%, transparent); background:rgba(245, 158, 11, 0.08);"
+        >
+          <span>{{ a.icon }}</span>
+          <span class="text-foreground">{{ a.label }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Dance style breakdown ═══ -->
+    <div v-if="stats.topStyles.length > 0" class="rounded-xl border-2 border-dashed p-5 space-y-4" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(255,255,255,0.7);">
+      <h2 class="text-base font-bold font-display text-foreground">Your dance DNA</h2>
+
+      <div class="space-y-2.5">
+        <div v-for="(entry, i) in stats.topStyles" :key="entry.style" class="flex items-center gap-3">
+          <span class="text-sm font-bold w-20 shrink-0 text-foreground font-display">{{ entry.style }}</span>
+          <div class="flex-1 h-3 rounded-full overflow-hidden" style="background:color-mix(in srgb, var(--wd-brown-900) 8.2%, transparent);">
+            <div
+              class="h-full rounded-full transition-all duration-700"
+              :style="{
+                width: entry.percent + '%',
+                background: i === 0
+                  ? 'linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500))'
+                  : i === 1
+                    ? 'linear-gradient(135deg, var(--wd-orange-500), var(--wd-amber-500))'
+                    : 'var(--wd-amber-500)'
+              }"
+            />
+          </div>
+          <span class="text-sm font-bold w-10 text-right text-secondary">{{ entry.percent }}%</span>
+        </div>
+      </div>
+
+      <!-- Countries & busiest month -->
+      <div class="flex flex-col gap-2 pt-2 border-t" style="border-color:color-mix(in srgb, var(--wd-brown-900) 8.2%, transparent);">
+        <div v-if="stats.countries.length > 0" class="flex items-center justify-between text-xs">
+          <span class="text-secondary flex items-center gap-1.5">
+            <Globe class="w-3.5 h-3.5" />
+            Dancing in
+          </span>
+          <span class="font-bold text-foreground">{{ stats.countries.join(', ') }}</span>
+        </div>
+        <div v-if="stats.busiestMonth" class="flex items-center justify-between text-xs">
+          <span class="text-secondary flex items-center gap-1.5">
+            <Flame class="w-3.5 h-3.5" />
+            Busiest month
+          </span>
+          <span class="font-bold text-foreground">{{ stats.busiestMonth }}</span>
+        </div>
+        <div v-if="stats.partnerMatchRate > 0" class="flex items-center justify-between text-xs">
+          <span class="text-secondary flex items-center gap-1.5">
+            <Users class="w-3.5 h-3.5" />
+            Partner match rate
+          </span>
+          <span class="font-bold text-foreground">{{ stats.partnerMatchRate }}%</span>
+        </div>
+      </div>
     </div>
 
     <!-- Ticket deadline alerts -->
@@ -121,8 +237,10 @@ const ticketStatusClass: Record<string, string> = {
       </div>
     </div>
 
-    <!-- Festival timeline -->
-    <div class="space-y-6">
+    <!-- ═══ Festival timeline ═══ -->
+    <div v-if="festivals.length > 0" class="space-y-6">
+      <h2 class="text-lg font-bold font-display text-foreground">Your festivals</h2>
+
       <div v-for="[month, monthFestivals] in groupedByMonth" :key="month">
         <p class="text-eyebrow uppercase tracking-[0.2em] font-bold mb-3 text-secondary">{{ month }}</p>
 
@@ -310,7 +428,7 @@ const ticketStatusClass: Record<string, string> = {
 
     <!-- Empty state: no festivals yet -->
     <div
-      v-else-if="festivals.length === 0"
+      v-if="festivals.length === 0 && suggestions.length === 0"
       class="rounded-xl border-2 border-dashed border-primary/25 bg-white/80 p-6 text-center space-y-3"
     >
       <Sparkles class="w-8 h-8 mx-auto text-primary" aria-hidden="true" />
@@ -321,47 +439,6 @@ const ticketStatusClass: Record<string, string> = {
       <Button as-child variant="cta" size="lg">
         <NuxtLink to="/festivals">Explore festivals</NuxtLink>
       </Button>
-    </div>
-
-    <!-- Year stats -->
-    <div v-if="festivals.length > 0" class="rounded-xl border-2 border-dashed p-5 space-y-4" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent); background:rgba(255,255,255,0.7);">
-      <h3 class="text-base font-bold font-display text-foreground">My Year in Numbers</h3>
-
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
-        <div>
-          <p class="text-3xl font-black font-display text-primary">{{ stats.totalFestivals }}</p>
-          <p class="text-eyebrow uppercase tracking-[0.2em] text-secondary">Festivals</p>
-        </div>
-        <div>
-          <p class="text-3xl font-black font-display text-wd-green-600">{{ stats.totalWorkshops }}</p>
-          <p class="text-eyebrow uppercase tracking-[0.2em] text-secondary">Workshops</p>
-        </div>
-        <div>
-          <p class="text-3xl font-black font-display text-wd-cyan-600">{{ stats.countries.length }}</p>
-          <p class="text-eyebrow uppercase tracking-[0.2em] text-secondary">Countries</p>
-        </div>
-      </div>
-
-      <!-- Style breakdown -->
-      <div class="space-y-1.5">
-        <p class="text-xs font-bold text-secondary">Dance styles</p>
-        <div v-for="entry in stats.topStyles" :key="entry.style" class="flex items-center gap-2">
-          <span class="text-xs w-16 shrink-0 text-muted-foreground font-sans">{{ entry.style }}</span>
-          <div class="flex-1 h-2 rounded-full overflow-hidden" style="background:color-mix(in srgb, var(--wd-brown-900) 8.2%, transparent);">
-            <div
-              class="h-full rounded-full"
-              :style="{ width: entry.percent + '%', background: 'linear-gradient(135deg, var(--wd-red-600), var(--wd-orange-500))' }"
-            />
-          </div>
-          <span class="text-eyebrow w-8 text-right text-secondary">{{ entry.percent }}%</span>
-        </div>
-      </div>
-
-      <!-- Partner match rate -->
-      <div class="flex items-center justify-between text-xs">
-        <span class="text-secondary">Partner match rate</span>
-        <span class="font-bold text-foreground">{{ stats.partnerMatchRate }}%</span>
-      </div>
     </div>
 
     <!-- Not signed in CTA -->
