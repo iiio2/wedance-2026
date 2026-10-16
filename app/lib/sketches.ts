@@ -40,6 +40,17 @@ const pr = (n: number): SketchLink => ({ label: `PR #${n}`, url: `https://github
 
 export const SKETCHES: Sketch[] = [
   {
+    slug: 'promoter',
+    title: 'Promoter page that beats Linktree',
+    what: 'Three directions for a promoter/agency profile, using Hummo Productions as the real case: tour-first, roster-first, or tabs (Concerts · Artists · Book) with a promoter view showing sync, clicks per city, auto IG stories and booking requests.',
+    why: 'Hummo sends fans to a Linktree of 10 flat links while their WeDance page says "No upcoming events". The page should be good enough to send them so they switch on the spot.',
+    requestedBy: 'Alösha',
+    builtBy: 'Agent (Claude)',
+    created: '2026-10-16',
+    status: 'deciding',
+    ticket: linear('RAZ-435', 'ux-decision-promoter-page-that-beats-linktree-hummo-productions'),
+  },
+  {
     slug: 'report',
     title: 'Report a problem → co-creation widget',
     what: 'Three directions for turning the bug-only "Report a problem" button into a co-creation hub: hub with two paths, tabbed dialog, or unified form with type chips and a pipeline preview.',
