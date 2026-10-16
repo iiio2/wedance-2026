@@ -251,7 +251,7 @@ useHead(() => ({
               <div v-if="profile.address" class="flex items-start gap-1 mt-2 text-xs text-muted-foreground font-sans"><MapPin class="w-3 h-3 mt-0.5 shrink-0 text-secondary" /> <span>{{ profile.address }}<a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener noreferrer" class="ml-1.5 font-bold underline text-primary">Map</a></span></div>
               <NuxtLink v-if="profile.citySlug && profile.city" :to="`/cities/${profile.citySlug}`" class="inline-block mt-1 text-xs font-bold hover:underline text-secondary font-sans">{{ profile.city }} →</NuxtLink>
             </div>
-            <p v-if="profile.bio" class="mt-5 text-sm leading-relaxed text-muted-foreground font-sans">{{ profile.bio }}</p>
+            <BioText v-if="profile.bio" :text="profile.bio" class="mt-5 text-sm leading-relaxed text-muted-foreground font-sans" />
             <DanceStyleChips :styles="profile.styles || []" class="mt-3 gap-1.5" />
             <div v-if="profile.languages?.length" class="mt-2 flex flex-wrap items-center gap-1.5">
               <span class="text-eyebrow uppercase tracking-wider text-secondary font-sans">Speaks</span>

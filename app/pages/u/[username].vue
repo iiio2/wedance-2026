@@ -169,7 +169,7 @@ useHead(() => ({
           </div>
 
           <!-- Bio -->
-          <p v-if="profile?.bio" class="mt-5 text-sm leading-relaxed text-muted-foreground font-sans">{{ profile.bio }}</p>
+          <BioText v-if="profile?.bio" :text="profile.bio" class="mt-5 text-sm leading-relaxed text-muted-foreground font-sans" />
 
           <!-- Social links -->
           <div v-if="igUrl || ytUrl || siteUrl" class="mt-4 flex items-center gap-2">

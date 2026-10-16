@@ -82,9 +82,7 @@ function toEmbedUrl(url: string): string {
           </Button>
         </div>
 
-        <p v-if="teacher.bio" class="mt-2 text-sm leading-relaxed font-sans text-muted-foreground">
-          {{ teacher.bio }}
-        </p>
+        <BioText v-if="teacher.bio" :text="teacher.bio" class="mt-2 text-sm leading-relaxed font-sans text-muted-foreground" />
 
         <div class="mt-3 flex items-center gap-4">
           <div v-if="teacher.socialLinks?.length" class="flex items-center gap-3">
