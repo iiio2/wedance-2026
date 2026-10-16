@@ -29,6 +29,7 @@ const columns = [
       { to: '/for-venues', label: 'For venues' },
       { to: '/for-sponsors', label: 'For sponsors' },
       { to: '/press', label: 'Press' },
+      { to: '/whats-new', label: 'What’s new' },
     ],
   },
 ]
