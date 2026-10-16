@@ -47,8 +47,10 @@ export const SKETCHES: Sketch[] = [
     requestedBy: 'Alösha',
     builtBy: 'Agent (Claude)',
     created: '2026-10-16',
-    status: 'deciding',
+    status: 'decided',
+    decision: 'A — Hub with two paths',
     ticket: linear('RAZ-426', 'when-people-click-on-report-a-problem-we-would-like-to-introduce-them'),
+    story: [pr(356)],
   },
   {
     slug: 'battle',

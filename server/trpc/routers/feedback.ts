@@ -27,6 +27,8 @@ const TEAM_ID = '9fc5052b-a799-4b60-99b5-300512ddd275'
 const SUPPORT_PROJECT_ID = 'ff24241d-28fe-4f2e-92c2-b220340dbe18'
 const LABEL_NAME = 'user-report'
 const LABEL_COLOR = '#eb5757'
+const IDEA_LABEL_NAME = 'user-idea'
+const IDEA_LABEL_COLOR = '#f5a623'
 
 const ContextSchema = z.object({
   url: z.string().max(2000).optional(),
@@ -60,14 +62,14 @@ async function linear<T = any>(query: string, variables: Record<string, unknown>
   return j.data as T
 }
 
-// Find (or create) the `user-report` label on the team, return its id.
-async function ensureLabelId(): Promise<string | null> {
+// Find (or create) a label on the team, return its id.
+async function ensureLabelId(name: string = LABEL_NAME, color: string = LABEL_COLOR): Promise<string | null> {
   try {
-    const q = `query($t:String!){ team(id:$t){ labels(filter:{name:{eq:"${LABEL_NAME}"}}){ nodes{ id } } } }`
+    const q = `query($t:String!){ team(id:$t){ labels(filter:{name:{eq:"${name}"}}){ nodes{ id } } } }`
     const d = await linear<{ team: { labels: { nodes: { id: string }[] } } }>(q, { t: TEAM_ID })
     const existing = d.team.labels.nodes[0]
     if (existing) return existing.id
-    const m = `mutation($t:String!){ issueLabelCreate(input:{name:"${LABEL_NAME}",color:"${LABEL_COLOR}",teamId:$t}){ issueLabel{ id } } }`
+    const m = `mutation($t:String!){ issueLabelCreate(input:{name:"${name}",color:"${color}",teamId:$t}){ issueLabel{ id } } }`
     const c = await linear<{ issueLabelCreate: { issueLabel: { id: string } } }>(m, { t: TEAM_ID })
     return c.issueLabelCreate.issueLabel.id
   } catch {
@@ -165,6 +167,7 @@ export const feedbackRouter = router({
   report: publicProcedure
     .input(
       z.object({
+        type: z.enum(['bug', 'idea']).default('bug'),
         description: z.string().min(1, 'Please describe the problem').max(5000),
         email: z.string().email().optional().or(z.literal('')),
         context: ContextSchema.optional(),
@@ -173,6 +176,8 @@ export const feedbackRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const isIdea = input.type === 'idea'
+
       // Server-trusted reporter identity from the session (never the client).
       let reporter = 'Anonymous visitor'
       let reporterEmail = (input.email || '').trim()
@@ -189,7 +194,7 @@ export const feedbackRouter = router({
 
       const c = input.context ?? {}
       const desc = input.description.trim()
-      const title = `🐞 ${desc.slice(0, 70)}${desc.length > 70 ? '…' : ''}`
+      const title = `${isIdea ? '💡' : '🐞'} ${desc.slice(0, 70)}${desc.length > 70 ? '…' : ''}`
 
       // Upload screenshot first so we can embed it inline in the description.
       const assetUrl = input.screenshot ? await uploadScreenshot(input.screenshot) : null
@@ -198,7 +203,7 @@ export const feedbackRouter = router({
         desc,
         '',
         '---',
-        `**Reported by:** ${reporter}${reporterEmail ? ` · ${reporterEmail}` : ''}${ctx.dancerId ? ` · dancer \`${ctx.dancerId}\`` : ' · not signed in'}`,
+        `**${isIdea ? 'Submitted' : 'Reported'} by:** ${reporter}${reporterEmail ? ` · ${reporterEmail}` : ''}${ctx.dancerId ? ` · dancer \`${ctx.dancerId}\`` : ' · not signed in'}`,
       ]
       if (c.url) lines.push(`**Page:** ${c.url}`)
       if (c.routePath) lines.push(`**Route:** \`${c.routePath}\``)
@@ -226,15 +231,19 @@ export const feedbackRouter = router({
 
       if (assetUrl) lines.push('', '**Screenshot:**', '', `![screenshot](${assetUrl})`)
 
-      lines.push('', '---', '_Filed automatically from the “Report a problem” widget on 2026.wedance.vip._')
+      const widgetName = isIdea ? 'Share an idea' : 'Report a problem'
+      lines.push('', '---', `_Filed automatically from the “${widgetName}” widget on 2026.wedance.vip._`)
 
-      const [labelId, stateId] = await Promise.all([ensureLabelId(), triageStateId()])
+      const [labelId, stateId] = await Promise.all([
+        ensureLabelId(isIdea ? IDEA_LABEL_NAME : LABEL_NAME, isIdea ? IDEA_LABEL_COLOR : LABEL_COLOR),
+        triageStateId(),
+      ])
       const issueInput: Record<string, unknown> = {
         teamId: TEAM_ID,
         projectId: SUPPORT_PROJECT_ID,
         title,
         description: lines.join('\n'),
-        priority: 3,
+        priority: isIdea ? 4 : 3,
       }
       if (labelId) issueInput.labelIds = [labelId]
       if (stateId) issueInput.stateId = stateId
