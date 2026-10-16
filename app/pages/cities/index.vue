@@ -6,7 +6,7 @@
  * Intent from /find-your-dance (?style=Salsa, ?taster=1) is carried through to
  * the city page so its style filter / taster-class section pick it up.
  */
-import { Search, MapPin, ArrowRight, Users } from 'lucide-vue-next'
+import { Search, MapPin, ArrowRight, Users, Swords } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Field } from '~/components/ui/field'
 import { CityCombobox, type CityOption } from '~/components/ui/city-combobox'
@@ -123,10 +123,25 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
       <WaveDivider />
     </section>
 
-    <!-- City-vs-city video battle — right after the hero, but hidden while searching
-         so results appear immediately under the search box — and for visitors arriving with a
-         taster/style intent, who came to pick a city. Renders only when ≥2 cities have a winner. -->
-    <div v-if="!searchQuery.trim() && !taster && !style" id="battle"><CityFight /></div>
+    <!-- City Battle CTA — links to the full-screen /battle feed -->
+    <section v-if="!searchQuery.trim() && !taster && !style" class="max-w-4xl mx-auto px-4 py-6">
+      <NuxtLink
+        to="/battle"
+        class="group flex items-center justify-between gap-4 rounded-2xl p-5 sm:p-6 bg-wd-brown-900 text-white transition-all hover:scale-[1.01]"
+        style="box-shadow: 0 8px 22px rgba(59,31,18,0.15);"
+      >
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+            <Swords class="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <div class="font-bold text-lg font-display">City Battle</div>
+            <div class="text-sm text-white/60 font-sans">Which city dances best? Watch &amp; vote.</div>
+          </div>
+        </div>
+        <ArrowRight class="w-5 h-5 text-white/40 group-hover:text-white transition-colors shrink-0" />
+      </NuxtLink>
+    </section>
 
     <!-- City grid -->
     <section class="max-w-4xl mx-auto px-4 pb-12">
