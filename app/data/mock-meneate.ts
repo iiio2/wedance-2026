@@ -3,8 +3,8 @@ import type { Festival, Teacher, Workshop } from '~/types/festival'
 export const mockFestival: Festival = {
   name: '¡Menéate Viena! 2026',
   slug: 'meneate-viena-2026',
-  startDate: '2026-11-26',
-  endDate: '2026-11-29',
+  startDate: '2026-03-26',
+  endDate: '2026-03-29',
   description:
     'The Afrocuban Dance Festival in Vienna. We move Vienna – ¡Menéate Viena! is an international Afrocuban dance festival. The four-day event offers everything that makes the Cuban dance heart jump with joy: Timba, Salsa, Son, Casino, Rumba, Afro, Reggaeton. Workshops and parties, international and local artists & DJs, moving locations and great views. ¡Prepárate, Apúntate, Menéate!',
   logo: 'https://firebasestorage.googleapis.com/v0/b/wedance-4abe3.appspot.com/o/media%2FtvR012ArEpQhCJdPHh6G7sLuqoO2%2F39830bdd-95dd-48e8-9495-15000390c615?alt=media&token=65affea4-baea-4c3f-a373-6ed40b1ff099',

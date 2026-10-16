@@ -18,8 +18,8 @@ let festivalPath: string | null = null
 test.beforeAll(async ({ request }) => {
   const res = await request.get('/api/festivals')
   if (res.ok()) {
-    const list = await res.json() as { slug: string }[]
-    festivalPath = list[0] ? `/festivals/${list[0].slug}` : null
+    const list = await res.json() as { href: string }[]
+    festivalPath = list[0]?.href ?? null
   }
 })
 

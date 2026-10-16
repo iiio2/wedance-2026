@@ -3,8 +3,8 @@ import type { Festival, Teacher, Workshop } from '~/types/festival'
 export const mockFestival: Festival = {
   name: 'Cuban Fire in Munich',
   slug: 'cuban-fire-munich-2026',
-  startDate: '2026-10-14',
-  endDate: '2026-10-15',
+  startDate: '2026-03-14',
+  endDate: '2026-03-15',
   description:
     'No Excuses. Just Learn & Dance. Cuban Fire brings Addy Mendoza to Munich for an intensive weekend of Salsa, Timba, Son Cubano, and Rumba workshops, capped off with a sizzling Timba Party on Saturday night.',
   logo: '',
