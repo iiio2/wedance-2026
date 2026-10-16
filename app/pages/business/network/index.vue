@@ -49,7 +49,7 @@ async function loadNetwork() {
 onMounted(() => { load(); loadNetwork() })
 watch(businessProfile, loadNetwork)
 
-const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', organizer: 'Organizer' }
+const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', organizer: 'Organizer', promoter: 'Promoter' }
 
 // The switcher may point at one page; "Your pages" always lists them all.
 const pageNames = computed(() => new Map((data.value?.managed ?? []).map(p => [p.username, p.name])))

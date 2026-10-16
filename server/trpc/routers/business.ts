@@ -25,6 +25,7 @@ import { notifyDecision } from './businessTeam'
 const PROFILE_TYPES = ['artist', 'venue', 'organizer', 'promoter'] as const
 
 const editableFields = {
+  type: z.enum(PROFILE_TYPES),
   name: z.string().trim().min(1).max(120),
   bio: z.string().max(4000),
   city: z.string().trim().max(120),

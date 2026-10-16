@@ -99,6 +99,7 @@ async function save() {
     ]
     await $trpc.business.update.mutate({
       username: username.value,
+      type: profileType.value as any,
       name: form.name,
       city: form.city,
       bio: form.bio,
@@ -130,7 +131,15 @@ async function save() {
   }
 }
 
-const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', organizer: 'Organizer' }
+const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', organizer: 'Organizer', promoter: 'Promoter' }
+const profileTypes = [
+  { value: 'artist', label: 'Artist' },
+  { value: 'venue', label: 'Venue' },
+  { value: 'organizer', label: 'Organizer' },
+  { value: 'promoter', label: 'Promoter' },
+]
+const profileType = ref('')
+watch(() => loaded.value?.type, (t) => { if (t) profileType.value = t }, { immediate: true })
 const photoHint = computed(() => loaded.value?.type === 'artist'
   ? 'Organizers can use your main photo on line-ups and event flyers. Upload a sharp, well-lit photo.'
   : 'The main photo appears on your page and in listings.')
@@ -143,7 +152,7 @@ const photoHint = computed(() => loaded.value?.type === 'artist'
 
     <template v-else>
       <AdminPageHeader
-        :eyebrow="typeLabel[loaded.type] || 'Profile'"
+        :eyebrow="typeLabel[profileType] || 'Profile'"
         :title="loaded.name"
         :description="`@${loaded.username}`"
         :back="{ to: '/business/network', label: 'Network' }"
@@ -168,6 +177,9 @@ const photoHint = computed(() => loaded.value?.type === 'artist'
         <section class="mt-6 rounded-2xl border bg-card p-5 shadow-wd-card">
           <h2 class="text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Details</h2>
           <div class="mt-4 grid gap-4 sm:grid-cols-2">
+            <Field id="edit-type" label="Type">
+              <Select v-model="profileType" :options="profileTypes.map(t => ({ label: t.label, value: t.value }))" />
+            </Field>
             <Field id="edit-name" label="Name" :error="nameError">
               <Input v-model="form.name" />
             </Field>

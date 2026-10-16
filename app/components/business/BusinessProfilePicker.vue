@@ -14,7 +14,7 @@ import type { PropType } from 'vue'
 import { X, Instagram, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps({
-  type: { type: String as PropType<'artist' | 'venue' | 'organizer'>, required: true },
+  type: { type: String as PropType<'artist' | 'venue' | 'organizer' | 'promoter'>, required: true },
   multiple: { type: Boolean, default: false },
   placeholder: { type: String, default: 'Search by name or @handle' },
   /** Hide the chips of who's picked (BusinessLineupPicker lists them itself). */

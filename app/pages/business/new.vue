@@ -20,6 +20,7 @@ const types = [
   { value: 'artist', label: 'Artist', hint: 'Teacher, performer, DJ, musician' },
   { value: 'venue', label: 'Venue', hint: 'Club, bar, studio, outdoor spot' },
   { value: 'organizer', label: 'Organizer', hint: 'Parties, festivals, workshops' },
+  { value: 'promoter', label: 'Promoter', hint: 'Shows, management, booking agency' },
 ] as const
 // ?instagram=… (from "Import from Instagram" on Find my profile) and ?type=… pre-fill the form.
 // ?next=/business/… returns there once it's made (e.g. back to the new event).
@@ -27,7 +28,7 @@ const route = useRoute()
 const qType = String(route.query.type ?? '')
 const next = typeof route.query.next === 'string' && /^\/business\/[^/]/.test(route.query.next) && !route.query.next.startsWith('//') ? route.query.next : ''
 const form = reactive({
-  type: (['artist', 'venue', 'organizer'].includes(qType) ? qType : 'artist') as 'artist' | 'venue' | 'organizer',
+  type: (['artist', 'venue', 'organizer', 'promoter'].includes(qType) ? qType : 'artist') as 'artist' | 'venue' | 'organizer' | 'promoter',
   instagram: String(route.query.instagram ?? ''),
   name: '', city: '', handle: '',
 })
@@ -83,7 +84,7 @@ async function submit() {
   }
 }
 
-const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', organizer: 'Organizer' }
+const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', organizer: 'Organizer', promoter: 'Promoter' }
 </script>
 
 <template>

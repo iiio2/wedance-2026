@@ -88,7 +88,7 @@ const igHandle = computed(() => {
 const igMatched = computed(() => results.value.some(r => r.linksInstagram))
 const importTo = computed(() => ({ path: '/business/new', query: { instagram: `https://instagram.com/${igHandle.value}` } }))
 
-const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', organizer: 'Organizer' }
+const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', organizer: 'Organizer', promoter: 'Promoter' }
 </script>
 
 <template>
