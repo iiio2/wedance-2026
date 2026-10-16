@@ -95,7 +95,7 @@ const joining = ref(false)
 const joinError = ref('')
 const linkCopied = ref(false)
 
-const deckEmpty = computed(() => props.isSignedIn && !poolLoading.value
+const deckEmpty = computed(() => !poolLoading.value
   && poolDancers.value.length === 0 && !(props.extraCards?.length))
 
 async function loadVisible() {
@@ -1049,6 +1049,11 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
       </div>
     </template>
 
+    <!-- Loading: pool fetch in progress (signed-in, no extra cards to show meanwhile) -->
+    <div v-else-if="poolLoading" class="flex justify-center py-8">
+      <div class="w-7 h-7 rounded-full border-2 animate-spin border-muted-foreground/20 border-t-muted-foreground" role="status" aria-label="Loading dancers" />
+    </div>
+
     <!-- Empty deck: nobody going has chosen to be seen yet (RAZ-440) -->
     <div v-else-if="deckEmpty" data-testid="discover-empty" class="rounded-2xl border border-dashed border-border p-6 text-center space-y-3 font-sans">
       <Users class="w-8 h-8 text-muted-foreground mx-auto" aria-hidden="true" />
@@ -1061,7 +1066,10 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
         <p class="text-sm text-muted-foreground max-w-sm mx-auto">The deck shows dancers who are going to this {{ entityLabel }} and chose to be seen. Be the first, and others will find you here.</p>
       </template>
       <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
-        <Button v-if="!(isGoing && visible)" type="button" variant="pill" size="pill-sm" :disabled="joining" @click="joinDeck">
+        <Button v-if="!isSignedIn" type="button" variant="pill" size="pill-sm" @click="emit('sign-in', 'plan')">
+          <Check aria-hidden="true" /> Sign up to join
+        </Button>
+        <Button v-else-if="!(isGoing && visible)" type="button" variant="pill" size="pill-sm" :disabled="joining" @click="joinDeck">
           <Check aria-hidden="true" /> {{ isGoing ? 'Show me in the deck' : "I'm going, show me" }}
         </Button>
         <Button type="button" variant="outline-pill" size="pill-sm" @click="inviteFriends">
