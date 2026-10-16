@@ -10,6 +10,7 @@ import {
   findDanceStyle,
   matchesDanceStyleQuery,
 } from '#shared/dance-styles'
+import { danceStyleChipClass, danceStyleMoreClass } from './chip-classes'
 
 /**
  * DanceStylePicker — choose the dances someone does (or a festival teaches).
@@ -139,9 +140,9 @@ async function collapse() {
   document.getElementById(listId)?.querySelector<HTMLElement>('[data-test="dsp-show-all"]')?.focus()
 }
 
-const chipClass = 'px-3 py-1.5 text-xs uppercase tracking-wider'
+const chipClass = danceStyleChipClass
 /** The disclosure button: dashed outline, so it never reads as a style. */
-const moreClass = 'inline-flex items-center rounded-full font-bold border border-dashed border-input bg-card text-foreground hover:border-foreground/40 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50'
+const moreClass = danceStyleMoreClass
 </script>
 
 <template>

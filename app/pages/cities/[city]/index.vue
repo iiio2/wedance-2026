@@ -20,7 +20,7 @@ import { eventLocalDate, eventLocalTime, eventLocalWeekday, formatEventWhen } fr
 import { isFreePrice, isTasterCandidate } from '#shared/utils/taster'
 import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
-import { mixHex, readableOn } from '~/lib/contrast'
+import { readableOn } from '~/lib/contrast'
 import { eventPath } from '#shared/utils/eventSlug'
 
 definePageMeta({ layout: false })
@@ -407,14 +407,12 @@ function scrollToAskLocals() {
 
 // Accent text darkened just enough for 4.5:1 — on white / cream, or on its own '18' tint (chips).
 const ink = (c: string, bg = '#fff') => readableOn(c, bg)
-const chipInk = (c: string) => readableOn(c, mixHex(c, '#fff', 0.094))
 
 function clearFilters() {
   selectedStyle.value = ''
   clearPersonFilter()
 }
 
-const styleChipColors = [WD.red600, WD.cyan600, WD.green600, WD.purple500, WD.amber500, WD.pink500, WD.violet600]
 
 // --- City video competition + giveaways (O-009) ---------------------------
 // All client-fetched: the tRPC client uses a relative URL that throws under
@@ -506,7 +504,7 @@ onMounted(() => {
       </div>
 
       <div class="relative max-w-4xl mx-auto px-4 pt-5 pb-2">
-        <StyleFilter :styles="city.styles" v-model="selectedStyle" :accents="styleChipColors" />
+        <DanceStyleFilter v-model="selectedStyle" :styles="city.styles" />
       </div>
 
       <WaveDivider class="h-10 -mb-px" />
@@ -536,7 +534,7 @@ onMounted(() => {
         </p>
 
         <!-- Style filter chips (V3 warm palette) -->
-        <StyleFilter :styles="city.styles" v-model="selectedStyle" :accents="styleChipColors" class="mt-6" />
+        <DanceStyleFilter v-model="selectedStyle" :styles="city.styles" class="mt-6" />
       </div>
 
       <!-- Wave divider -->
@@ -914,16 +912,7 @@ onMounted(() => {
                       <span class="truncate">{{ f.venueName }}</span>
                     </span>
                   </div>
-                  <div class="flex flex-wrap gap-1.5 mt-3">
-                    <span
-                      v-for="style in f.styles.slice(0, 4)"
-                      :key="style"
-                      class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider"
-                      :style="{ background: f.accentColor + '18', color: chipInk(f.accentColor) }"
-                    >
-                      {{ style }}
-                    </span>
-                  </div>
+                  <DanceStyleChips :styles="f.styles" :max="4" class="gap-1.5 mt-3" />
                 </div>
                 <ArrowRight class="w-4 h-4 mt-1.5 shrink-0 transition-transform group-hover:translate-x-1" :style="{ color: f.accentColor }" />
               </div>

@@ -252,9 +252,7 @@ useHead(() => ({
               <NuxtLink v-if="profile.citySlug && profile.city" :to="`/cities/${profile.citySlug}`" class="inline-block mt-1 text-xs font-bold hover:underline text-secondary font-sans">{{ profile.city }} →</NuxtLink>
             </div>
             <p v-if="profile.bio" class="mt-5 text-sm leading-relaxed text-muted-foreground font-sans">{{ profile.bio }}</p>
-            <div v-if="profile.styles?.length" class="mt-3 flex flex-wrap gap-1.5">
-              <span v-for="st in profile.styles" :key="st" class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider text-primary font-sans" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);">{{ st }}</span>
-            </div>
+            <DanceStyleChips :styles="profile.styles || []" class="mt-3 gap-1.5" />
             <div v-if="profile.languages?.length" class="mt-2 flex flex-wrap items-center gap-1.5">
               <span class="text-eyebrow uppercase tracking-wider text-secondary font-sans">Speaks</span>
               <span v-for="lang in profile.languages" :key="lang" class="text-eyebrow font-bold tracking-wide px-1.5 py-0.5 rounded font-sans bg-wd-cyan-600/8 text-wd-cyan-700">{{ langLabel[lang] || lang.toUpperCase() }}</span>

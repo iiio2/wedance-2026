@@ -137,7 +137,7 @@ const styleChips = computed(() => {
               />
             </div>
           </Field>
-          <StyleFilter :styles="styleChips" v-model="searchQuery" class="mt-4" />
+          <DanceStyleFilter v-model="searchQuery" :styles="styleChips" class="mt-4 justify-center" />
         </div>
       </div>
 

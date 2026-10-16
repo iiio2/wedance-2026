@@ -197,12 +197,7 @@ function eventHref(e: CityEvent): string | undefined {
               >
                 {{ typeStyle[e.type as EventType]?.label ?? e.type }}
               </span>
-              <span
-                class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                :style="{ background: styleAccent(e.style) + '18', color: chipInk(styleAccent(e.style)) }"
-              >
-                {{ e.style }}
-              </span>
+              <DanceStyleChips v-if="e.style" :styles="[e.style]" />
             </div>
             <h4 class="text-sm sm:text-base font-bold leading-tight mt-1 break-words group-hover:underline text-foreground">
               <NuxtLink v-if="eventHref(e)" :to="eventHref(e)" class="outline-none after:absolute after:inset-0 after:rounded-xl">{{ e.name }}</NuxtLink>

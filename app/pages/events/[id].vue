@@ -254,7 +254,7 @@ useHead(() => ({
           <img v-if="ev.cover" :src="ev.cover" :alt="ev.title" class="w-full max-h-[28rem] object-contain rounded-2xl mb-4 bg-wd-brown-900/[3.9%]" loading="lazy">
           <div class="flex flex-wrap items-center gap-2 mb-4">
             <span v-if="ev.eventType" class="text-eyebrow font-black uppercase tracking-widest px-2 py-1 rounded bg-secondary/[9.4%] text-secondary">{{ ev.eventType }}</span>
-            <span v-for="s in (ev.styles || [])" :key="s" class="text-eyebrow font-bold uppercase tracking-wider px-2 py-1 rounded-full" :style="{ background: accent + '14', color: chipInk(accent) }">{{ s }}</span>
+            <DanceStyleChips :styles="ev.styles || []" size="md" class="gap-2" />
           </div>
           <ul class="space-y-1.5 text-sm mb-4 text-foreground">
             <li v-if="ev.price" class="flex items-start gap-2"><Euro class="w-4 h-4 mt-0.5 shrink-0 text-secondary" /> <span class="whitespace-pre-line">{{ ev.price }}</span></li>

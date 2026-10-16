@@ -287,9 +287,7 @@ const fmtDate = (d: string | Date | null, tz?: string | null) => d ? new Date(d)
             <p v-if="data.event.host" class="mt-1 flex items-start gap-1.5 text-sm"><Users class="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               <span>Organized by <NuxtLink v-if="data.event.host.username" :to="`/@${data.event.host.username}`" target="_blank" class="font-bold hover:underline">{{ data.event.host.name }}</NuxtLink><span v-else class="font-bold">{{ data.event.host.name }}</span><template v-if="data.event.host.instagram"> · <a :href="data.event.host.instagram" target="_blank" rel="noopener" class="hover:underline">Instagram</a></template></span>
             </p>
-            <div v-if="data.event.styles.length" class="mt-2 flex flex-wrap gap-1">
-              <span v-for="st in data.event.styles" :key="st" class="rounded-full bg-muted px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider">{{ st }}</span>
-            </div>
+            <DanceStyleChips :styles="data.event.styles" class="mt-2" />
             <p v-if="data.event.description" class="mt-3 line-clamp-4 text-sm text-muted-foreground">{{ data.event.description }}</p>
             <p v-if="data.event.stats.workshops || data.event.stats.parties || data.event.stats.planning" class="mt-2 text-xs text-muted-foreground">
               {{ [data.event.stats.workshops && `${data.event.stats.workshops} workshops`, data.event.stats.parties && `${data.event.stats.parties} parties`, data.event.stats.planning && `${data.event.stats.planning} dancers planning to come`].filter(Boolean).join(' · ') }}

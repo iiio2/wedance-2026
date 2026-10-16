@@ -7,11 +7,7 @@
  */
 import type { Teacher } from '~/types/festival'
 import { Instagram, Youtube, Globe, ArrowRight, X } from 'lucide-vue-next'
-import { WD } from '~/lib/brand'
-import { accentText } from '~/lib/accent'
 import { Button } from '~/components/ui/button'
-
-const STYLE_ACCENTS = [WD.red600, WD.cyan600, WD.green600, WD.purple500, WD.amber500]
 
 const props = defineProps<{
   teacher: Teacher
@@ -72,17 +68,7 @@ function toEmbedUrl(url: string): string {
             <h3 class="text-xl font-black leading-tight font-display text-foreground">
               {{ teacher.name }}
             </h3>
-            <p v-if="teacher.styles.length" class="mt-1 flex flex-wrap gap-1.5">
-              <span
-                v-for="(s, i) in teacher.styles"
-                :key="s"
-                class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                :style="{
-                  background: STYLE_ACCENTS[i % 5] + '18',
-                  color: accentText(STYLE_ACCENTS[i % 5]!),
-                }"
-              >{{ s }}</span>
-            </p>
+            <DanceStyleChips :styles="teacher.styles" class="mt-1 gap-1.5" />
           </div>
           <Button
             type="button"

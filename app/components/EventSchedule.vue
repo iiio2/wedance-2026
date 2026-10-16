@@ -77,7 +77,7 @@ const groups = computed(() => {
         <div class="flex-1 min-w-0 font-sans">
           <div class="flex items-center flex-wrap gap-1.5">
             <span v-if="e.eventType" class="text-tag font-black uppercase tracking-widest px-1.5 py-0.5 rounded" :style="{ background: (typeColor[e.eventType] || WD.brown700) + '18', color: chipInk(typeColor[e.eventType] || WD.brown700) }">{{ e.eventType }}</span>
-            <span v-for="st in (e.styles || [])" :key="st" class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" :style="{ background: accent(st) + '18', color: chipInk(accent(st)) }">{{ st }}</span>
+            <DanceStyleChips :styles="e.styles || []" />
             <span v-if="e.status && e.status !== 'accepted'" class="text-tag uppercase tracking-wider font-bold rounded-full px-1.5 py-0.5 bg-warning/[9.4%] text-wd-amber-700">Proposed</span>
           </div>
           <h4 class="text-sm sm:text-base font-bold leading-tight mt-1 text-foreground">

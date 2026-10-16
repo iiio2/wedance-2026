@@ -12,7 +12,7 @@ import { Calendar, MapPin, Users } from 'lucide-vue-next'
 import { daysUntil } from '#shared/utils/festivalDateFormatter'
 import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
-import { accentText, readableAccent } from '~/lib/accent'
+import { readableAccent } from '~/lib/accent'
 import { festivalPath } from '#shared/utils/eventSlug'
 
 export interface FestivalCardData {
@@ -42,8 +42,6 @@ const props = withDefaults(defineProps<{
 defineEmits<{ pick: [] }>()
 
 const accent = computed(() => props.festival.accentColor || WD.amber600)
-// Chip text on its own 9 % tint, darkened only when the accent is too light for 4.5:1.
-const chipText = computed(() => accentText(accent.value))
 const buttonAccent = computed(() => readableAccent(accent.value))
 
 function initials(name: string) {
@@ -117,19 +115,7 @@ const dateRange = computed(() => {
           </div>
 
           <!-- Styles -->
-          <div class="flex flex-wrap gap-1.5 mt-3">
-            <span
-              v-for="style in festival.styles.slice(0, maxStyles)"
-              :key="style"
-              class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider"
-              :style="{ background: accent + '18', color: chipText }"
-            >
-              {{ style }}
-            </span>
-            <span v-if="festival.styles.length > maxStyles" class="px-2 py-0.5 rounded-full text-eyebrow text-secondary">
-              +{{ festival.styles.length - maxStyles }}
-            </span>
-          </div>
+          <DanceStyleChips :styles="festival.styles" :max="maxStyles" class="gap-1.5 mt-3" />
 
           <!-- Stats row -->
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs font-sans text-muted-foreground">

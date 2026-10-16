@@ -57,7 +57,6 @@ const NuxtLinkComponent = resolveComponent('NuxtLink')
 const rootTag = computed(() => (props.selectable ? 'div' : NuxtLinkComponent))
 
 // Accent text on its own tint, darkened only when the accent is too light for 4.5:1.
-const chipText = computed(() => accentText(props.accent))
 const langText = computed(() => accentText(props.accent, 0.078))
 </script>
 
@@ -145,14 +144,7 @@ const langText = computed(() => accentText(props.accent, 0.078))
         </span>
       </div>
 
-      <div v-if="artist.styles.length" class="mt-2 flex flex-wrap gap-1">
-        <span
-          v-for="s in artist.styles.slice(0, 3)"
-          :key="s"
-          class="text-tag font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
-          :style="{ background: accent + '18', color: chipText }"
-        >{{ s }}</span>
-      </div>
+      <DanceStyleChips :styles="artist.styles" :max="3" class="mt-2" />
 
       <p
         v-if="showBio && artist.bio"

@@ -92,9 +92,7 @@ useHead(() => ({
           <div class="min-w-0">
             <p class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary font-sans">{{ profile.type === 'venue' ? 'Venue' : 'Artist' }}<template v-if="profile.city"> · {{ profile.city }}</template></p>
             <h1 class="text-3xl leading-tight">Book {{ profile.name }}</h1>
-            <div v-if="profile.styles?.length" class="mt-1 flex flex-wrap gap-1.5">
-              <span v-for="st in profile.styles.slice(0, 5)" :key="st" class="px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider text-primary font-sans" style="background:color-mix(in srgb, var(--wd-red-600) 7.8%, transparent);">{{ st }}</span>
-            </div>
+            <DanceStyleChips :styles="profile.styles || []" :max="5" class="mt-1 gap-1.5" />
           </div>
         </NuxtLink>
         <p class="mt-5 text-sm text-muted-foreground font-sans">Tell {{ firstName }} what you have in mind. They get it by email and answer you directly.<template v-if="!isSignedIn"> No account needed.</template></p>

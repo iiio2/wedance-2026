@@ -10,6 +10,7 @@ const goal = ref<string[]>([])
 const festival = ref<string[]>(['Timba'])
 const legacy = ref<string[]>(['Bachata', 'Afro-Cuban', 'Pole fusion'])
 const invalidValue = ref<string[]>([])
+const filterStyle = ref('Bachata')
 
 const codeBasic = `<Field label="Which dances?" optional>
   <DanceStylePicker v-model="form.danceStyles" />
@@ -23,6 +24,9 @@ const codeOptions = `<!-- only what this festival teaches, no search for a short
 <DanceStylePicker v-model="picked" :options="festival.styles" />`
 
 const codeChips = `<DanceStyleChips :styles="artist.styles" :max="3" />`
+
+const codeFilter = `<!-- single-select filter: tap again to clear, v-model is '' when off -->
+<DanceStyleFilter v-model="selectedStyle" :styles="city.styles" />`
 
 const codeData = `import { findDanceStyle, sortDanceStyles, canonicalDanceStyle } from '#shared/dance-styles'
 
@@ -40,6 +44,12 @@ const pickerProps = [
   { name: 'label', type: 'string', default: '"Dance styles"', description: 'Accessible name of the chip group. The Field label names the search box.' },
   { name: 'placeholder', type: 'string', description: 'Search box placeholder.' },
   { name: 'disabled · invalid', type: 'boolean', default: 'false', description: 'Also read from a surrounding Field.' },
+]
+const filterProps = [
+  { name: 'v-model', type: 'string', default: "''", description: 'The active style, emitted as passed in `styles`; empty when cleared. Alias-aware: “salsa” keeps Salsa on.' },
+  { name: 'styles', type: 'string[]', description: 'Styles to offer (e.g. what a city’s events have); sorted by popularity, aliases de-duplicated.' },
+  { name: 'lead', type: 'number', default: '3', description: 'How many show before “+N more” (the active style always stays visible).' },
+  { name: 'label', type: 'string', default: '"Filter by dance style"', description: 'Accessible name of the chip group.' },
 ]
 const chipProps = [
   { name: 'styles', type: 'string[]', description: 'Stored style values; sorted by popularity, aliases shown by canonical name.' },
@@ -102,6 +112,15 @@ const chipProps = [
       </div>
     </DesignSection>
 
+    <DesignSection id="filter" title="Filter row" lead="DanceStyleFilter is the single-select row on filter surfaces (city pages, festivals) — the picker's chips without search or families.">
+      <DesignExample :code="codeFilter">
+        <div class="w-full max-w-xl" data-test="demo-filter">
+          <DanceStyleFilter v-model="filterStyle" :styles="['Kizomba', 'Salsa', 'Bachata', 'Zouk', 'Tango', 'Casino']" />
+          <p class="text-xs text-muted-foreground mt-3">Value: <code class="font-mono">{{ JSON.stringify(filterStyle) }}</code></p>
+        </div>
+      </DesignExample>
+    </DesignSection>
+
     <DesignSection id="chips" title="Read-only chips" lead="DanceStyleChips shows stored styles on cards and profiles, tinted by family.">
       <DesignExample :code="codeChips">
         <div class="space-y-2">
@@ -141,6 +160,8 @@ const chipProps = [
       <div class="space-y-4">
         <h3 class="text-sm font-bold">DanceStylePicker</h3>
         <DesignProps :rows="pickerProps" />
+        <h3 class="text-sm font-bold">DanceStyleFilter</h3>
+        <DesignProps :rows="filterProps" />
         <h3 class="text-sm font-bold">DanceStyleChips</h3>
         <DesignProps :rows="chipProps" />
       </div>
