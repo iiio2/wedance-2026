@@ -11,6 +11,10 @@ export function useYearPlan() {
         for (const r of rows) {
           if (r.itemType === 'festival') ids.add(r.itemId)
         }
+        // Merge: preserve any optimistic adds that the user triggered
+        // while this query was in flight (race between initial load and
+        // a fast "Going?" tap).
+        for (const id of yearPlanIds.value) ids.add(id)
         yearPlanIds.value = ids
       })
       .catch((err) => {
@@ -32,6 +36,10 @@ export function useYearPlan() {
       .mutate({ itemType: 'festival', itemId: slug })
       .catch((err) => {
         console.warn('[useYearPlan] addFestival failed:', err)
+        // Rollback: the server rejected the add, so undo the optimistic update.
+        const rollback = new Set(yearPlanIds.value)
+        rollback.delete(slug)
+        yearPlanIds.value = rollback
       })
   }
 
@@ -44,6 +52,10 @@ export function useYearPlan() {
       .mutate({ itemType: 'festival', itemId: slug })
       .catch((err) => {
         console.warn('[useYearPlan] removeFestival failed:', err)
+        // Rollback: the server rejected the remove, so undo the optimistic update.
+        const rollback = new Set(yearPlanIds.value)
+        rollback.add(slug)
+        yearPlanIds.value = rollback
       })
   }
 

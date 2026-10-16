@@ -11,6 +11,10 @@ export function useWeekPlan() {
         for (const r of rows) {
           if (r.itemType === 'event') ids.add(r.itemId)
         }
+        // Merge: preserve any optimistic adds that the user triggered
+        // while this query was in flight (race between initial load and
+        // a fast "Going?" tap).
+        for (const id of weekPlanIds.value) ids.add(id)
         weekPlanIds.value = ids
       })
       .catch((err) => {
@@ -27,6 +31,10 @@ export function useWeekPlan() {
     const { $trpc } = useNuxtApp()
     $trpc.plan.add.mutate({ itemType: 'event', itemId: id }).catch((err) => {
       console.warn('[useWeekPlan] addEvent failed:', err)
+      // Rollback: the server rejected the add, so undo the optimistic update.
+      const rollback = new Set(weekPlanIds.value)
+      rollback.delete(id)
+      weekPlanIds.value = rollback
     })
   }
 
@@ -39,6 +47,10 @@ export function useWeekPlan() {
       .mutate({ itemType: 'event', itemId: id })
       .catch((err) => {
         console.warn('[useWeekPlan] removeEvent failed:', err)
+        // Rollback: the server rejected the remove, so undo the optimistic update.
+        const rollback = new Set(weekPlanIds.value)
+        rollback.add(id)
+        weekPlanIds.value = rollback
       })
   }
 
