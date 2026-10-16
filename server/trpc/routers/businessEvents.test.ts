@@ -94,6 +94,26 @@ describe.skipIf(!DATABASE_URL)('businessEvents router', () => {
     expect(copy.seriesId).toBeTruthy()
   })
 
+  it('shifts festival session dates when repeating', async () => {
+    const { upcoming } = await caller(owner).businessEvents.list({ profile: orgHandle })
+    const src = upcoming.find((e: any) => e.name === `${tag} Thursday`)!
+    // Attach festival details with session dates matching the source event.
+    await db.update(schema.events).set({
+      festival: {
+        key: `test-${tag}`,
+        sessions: [
+          { id: 's-1', date: '2026-10-22', time: '19:00', duration: 60, type: 'workshop', title: 'Warm-up', artist: '', style: 'Salsa', level: 'Beginner' },
+          { id: 's-2', date: '2026-10-22', time: '21:00', duration: 120, type: 'party', title: 'Party', artist: '', style: 'Salsa', level: 'Beginner' },
+        ],
+      },
+    }).where(eq(schema.events.id, src.id))
+    const { created } = await caller(owner).businessEvents.duplicate({ id: src.id, weeks: 1 })
+    expect(created).toHaveLength(1)
+    const [copy] = await db.select().from(schema.events).where(eq(schema.events.id, created[0].id))
+    expect(copy.festival.sessions[0].date).toBe('2026-10-29')
+    expect(copy.festival.sessions[1].date).toBe('2026-10-29')
+  })
+
   it('adds an artist from an Instagram link once, then reuses them', async () => {
     const ig = `${tag.replace(/-/g, '_')}_dj`.slice(0, 30)
     const a = await caller(owner).businessEvents.addFromInstagram({ instagram: `https://www.instagram.com/${ig}/`, type: 'artist' })

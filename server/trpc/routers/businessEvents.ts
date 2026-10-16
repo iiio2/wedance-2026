@@ -12,6 +12,7 @@ import { joinRequestsForOwner } from './businessTeam'
 import { eventPath } from '../../../shared/utils/eventSlug'
 import { flyerStatusFor } from '../../utils/flyer/paint'
 import { asksWaitingFor } from './venueAsks'
+import type { FestivalDetails } from '../../../shared/types/festivalDetails'
 
 /**
  * Business mode — events a profile runs, and the /business home inbox.
@@ -21,6 +22,19 @@ import { asksWaitingFor } from './venueAsks'
  * no host profile and stay read-only here. Organizers type local wall-clock
  * times; we store the UTC instant plus the city's IANA timezone, like the sync.
  */
+
+/** Shift every session date inside festival details by `shiftMs` milliseconds. */
+function shiftFestivalSessions(festival: FestivalDetails | null | undefined, shiftMs: number): FestivalDetails | null {
+  if (!festival) return null
+  if (!festival.sessions?.length) return festival
+  return {
+    ...festival,
+    sessions: festival.sessions.map(s => ({
+      ...s,
+      date: eventLocalDate(new Date(new Date(`${s.date}T12:00:00Z`).getTime() + shiftMs), 'UTC'),
+    })),
+  }
+}
 
 const EVENT_TYPES = ['Party', 'Workshop', 'Course', 'Festival', 'Weekender', 'Congress', 'Concert', 'Show'] as const
 const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick a date.')
@@ -373,7 +387,7 @@ export const businessEventsRouter = router({
       const ev = await requireEventManager(ctx, input.id)
       const seriesId = ev.seriesId ?? `host-${ev.id}`
       if (!ev.seriesId) await ctx.db.update(events).set({ seriesId }).where(eq(events.id, ev.id))
-      const { id: _i, slug: _s, sourceId: _si, createdAt: _c, syncedAt: _y, ...copy } = ev
+      const { id: _i, slug: _s, sourceId: _si, createdAt: _c, syncedAt: _y, editedAt: _ea, editedBy: _eb, ...copy } = ev
       const rows = Array.from({ length: input.weeks }, (_, i) => {
         const shift = (i + 1) * 7 * 86400_000
         return {
@@ -388,11 +402,18 @@ export const businessEventsRouter = router({
           endDate: ev.endDate
             ? zonedToUtc(eventLocalDate(new Date(new Date(ev.endDate).getTime() + shift), ev.timezone), eventLocalTime(ev.endDate, ev.timezone), ev.timezone)
             : null,
+          // Shift festival session dates when the event carries a festival agenda.
+          festival: shiftFestivalSessions(ev.festival, shift),
           updatedAt: new Date(),
         }
       })
-      const created = await ctx.db.insert(events).values(rows).returning({ id: events.id, startDate: events.startDate })
-      return { created }
+      try {
+        const created = await ctx.db.insert(events).values(rows).returning({ id: events.id, startDate: events.startDate })
+        return { created }
+      } catch (err) {
+        console.error('[businessEvents.duplicate] insert failed for event', input.id, err)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Could not repeat the event. Please try again.' })
+      }
     }),
 
   // Back from the archive, as a draft: publish it again when it's ready.
