@@ -219,7 +219,7 @@ async function toRow(db: any, host: { username: string; type: string } | null, i
 async function checklistFor(db: any, evs: any[]) {
   const handles = [...new Set(evs.flatMap(e => (e.artists ?? []) as string[]))]
   const artistRows = handles.length
-    ? await db.select({ username: profiles.username, photo: profiles.photo, socials: profiles.socials }).from(profiles).where(inArray(profiles.username, handles))
+    ? await db.select({ username: profiles.username, photo: profiles.photo, photos: profiles.photos, socials: profiles.socials }).from(profiles).where(inArray(profiles.username, handles))
     : []
   const byHandle = new Map<string, any>(artistRows.map((a: any) => [a.username, a]))
   return new Map(evs.map((e) => {
@@ -230,7 +230,9 @@ async function checklistFor(db: any, evs: any[]) {
     if (!(e.artists ?? []).length) missing.push('line-up')
     const noIg = (e.artists ?? []).filter((h: string) => !(byHandle.get(h)?.socials ?? []).some((s: any) => s.platform === 'instagram'))
     if (noIg.length) missing.push(`Instagram for ${noIg.map((h: string) => '@' + h).join(', ')}`)
-    const noPhoto = (e.artists ?? []).filter((h: string) => !byHandle.get(h)?.photo)
+    const eventPhotos: Record<string, string | null> = (e.flyerOptions as any)?.photos ?? {}
+    const hasPhoto = (h: string) => byHandle.get(h)?.photo || ((byHandle.get(h)?.photos ?? []) as { url: string }[]).length > 0 || (h in eventPhotos && eventPhotos[h] !== null)
+    const noPhoto = (e.artists ?? []).filter((h: string) => !hasPhoto(h))
     if (noPhoto.length) missing.push(`photo for ${noPhoto.map((h: string) => '@' + h).join(', ')}`)
     return [e.id, missing]
   }))
