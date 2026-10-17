@@ -3,7 +3,8 @@
  * SiteFooter — the shared V3 footer on every page. One place to change
  * footer links, tagline, or legal.
  */
-const { isSignedIn } = useAuth()
+// Hydration-safe (raw isSignedIn is false on the server, true on the client's first pass).
+const { appearsSignedIn } = useAccountNav('dance')
 
 const columns = [
   {
@@ -64,7 +65,7 @@ const year = 2026
             </li>
             <li v-if="col.title === 'Get booked'">
               <NuxtLink
-                v-if="isSignedIn"
+                v-if="appearsSignedIn"
                 to="/my-plan"
                 class="text-sm italic hover:underline text-muted-foreground font-display"
               >My plan</NuxtLink>

@@ -14,11 +14,17 @@ export function useAccountNav(mode: NavMode) {
 
   // Show signed-in UI during SSR/loading when both session + hint cookies exist,
   // so the header doesn't blink "Sign in" on page refresh.
+  // Until hydration is done, render only what the server saw (the cookies): the
+  // auth plugin restores name/photo/session from localStorage before mount, and
+  // showing those on the first client pass mismatched the SSR header.
+  const hydrated = useHydrated()
+  const hinted = computed(() => !!authHint.value && !!sessionCookie.value)
   const appearsSignedIn = computed(() =>
-    isSignedIn.value || (isLoading.value && !!authHint.value && !!sessionCookie.value),
+    hydrated.value ? isSignedIn.value || (isLoading.value && hinted.value) : hinted.value,
   )
-  const displayName = computed(() => dancerName.value || authHint.value?.name || 'Profile')
-  const displayUsername = computed(() => username.value || authHint.value?.username || null)
+  const displayName = computed(() => (hydrated.value && dancerName.value) || authHint.value?.name || 'Profile')
+  const displayUsername = computed(() => (hydrated.value && username.value) || authHint.value?.username || null)
+  const avatar = computed(() => (hydrated.value && photo.value) || authHint.value?.photo || null)
   const initial = computed(() => displayName.value.trim().charAt(0).toUpperCase() || '?')
   const profileTo = computed(() => displayUsername.value ? `/u/${displayUsername.value}` : '/settings')
 
@@ -47,7 +53,7 @@ export function useAccountNav(mode: NavMode) {
     displayName,
     displayUsername,
     initial,
-    photo,
+    photo: avatar,
     profileTo,
     accountLinks,
     switchLinks,

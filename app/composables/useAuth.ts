@@ -83,6 +83,8 @@ function _clearAuthCache(): void {
 interface AuthHint {
   name: string
   username: string | null
+  // Lets SSR render the avatar too; older cookies lack it.
+  photo?: string | null
 }
 
 export function useAuth() {
@@ -103,6 +105,8 @@ export function useAuth() {
       _authHint.value = {
         name: _dancerName.value,
         username: _username.value,
+        // Only short hosted URLs — a data: URL would overflow the 4 KB cookie.
+        photo: _photo.value?.startsWith('http') && _photo.value.length <= 500 ? _photo.value : null,
       }
     } else {
       _authHint.value = null

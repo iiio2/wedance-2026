@@ -6,19 +6,11 @@ const { cartCount, cartOpen, toggleCart } = useCart()
 const { yearCount, yearDrawerOpen, toggleDrawer: toggleYearDrawer } = useYearPlan()
 const { weekCount, weekDrawerOpen, toggleDrawer: toggleWeekDrawer } = useWeekPlan()
 
-const { isSignedIn, isLoading, authHint, dancerName, signOut } = useAuth()
-const sessionCookie = useCookie('wedance-session')
+const { signOut } = useAuth()
+// Hydration-safe signed-in state + name (shared with SiteHeader).
+const { appearsSignedIn, displayName } = useAccountNav('dance')
 const showSignUp = ref(false)
 const showSignOutConfirm = ref(false)
-
-// Show signed-in UI during SSR/loading when both session + hint cookies exist,
-// so the header doesn't blink "Sign in" on page refresh.
-const appearsSignedIn = computed(() =>
-  isSignedIn.value || (isLoading.value && !!authHint.value && !!sessionCookie.value),
-)
-const displayName = computed(() =>
-  dancerName.value || authHint.value?.name || 'Profile',
-)
 
 // First-visit tooltip for sidebar icon on mobile
 const showSidebarHint = ref(false)
