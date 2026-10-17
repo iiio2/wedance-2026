@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
  * PromoterProfile — the tabbed profile page for promoter-type profiles.
- * Three fan tabs (Concerts · Artists · Book) and a dashboard toggle for
- * the promoter's team. Follows Option C from the sketch at /sketches/promoter.
+ * Three tabs (Concerts · Artists · Book), following Option C from the sketch
+ * at /sketches/promoter. The team's side (booking requests, roster, team)
+ * lives under /business/network/<username>, not on the public page.
  *
  * Concerts: upcoming events from the promoter's profile (events.byProfile),
  *   with city-filter buttons and a "Not in your city?" follow prompt.
@@ -12,8 +13,7 @@
  */
 import {
   MapPin, Ticket, Calendar, Send, Heart, Check, Bell,
-  ChevronRight, ChevronLeft, Building2, Sparkles, Users,
-  BarChart3, RefreshCw, MessageCircle,
+  ChevronRight, ChevronLeft, Sparkles, MessageCircle, LayoutDashboard,
 } from 'lucide-vue-next'
 import { eventLocalDate, eventLocalTime } from '#shared/utils/eventTime'
 import { eventPath } from '#shared/utils/eventSlug'
@@ -185,90 +185,19 @@ function resetBooking() {
   Object.assign(bookForm, { city: '', month: '', size: '200–400', budget: '', name: '', email: '', message: '' })
 }
 
-// ── Dashboard ───────────────────────────────────────────────────────────
-const showDashboard = ref(false)
-const dashboard = ref<any>(null)
-const dashboardPending = ref(false)
-
-watch(showDashboard, async (v) => {
-  if (v && !dashboard.value && props.canManage) {
-    dashboardPending.value = true
-    try {
-      dashboard.value = await $trpc.entity.promoterDashboard.query({ profileId: props.profile.id })
-    } catch {}
-    dashboardPending.value = false
-  }
-})
-
 // ── Helpers ──────────────────────────────────────────────────────────────
 const initials = (name: string) => name.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('')
-function fmtDate(d: any) {
-  if (!d) return 'Date TBD'
-  try { return new Date(d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) } catch { return String(d) }
-}
 </script>
 
 <template>
   <div class="pb-8">
-    <!-- Dashboard toggle (only for managers) -->
-    <div v-if="canManage" class="max-w-2xl mx-auto px-4 pt-2 pb-1">
-      <div class="flex rounded-full border border-border p-0.5 bg-background w-fit">
-        <button
-          v-for="m in (['fan', 'promoter'] as const)" :key="m"
-          class="px-3 h-8 rounded-full text-xs font-bold transition-colors"
-          :class="(m === 'promoter') === showDashboard ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
-          @click="showDashboard = m === 'promoter'"
-        >{{ m === 'fan' ? 'Fan view' : 'Your dashboard' }}</button>
-      </div>
+    <!-- The team's side lives in /business -->
+    <div v-if="canManage" class="max-w-2xl mx-auto px-4 pt-2 pb-1 font-sans">
+      <NuxtLink :to="`/business/network/${profile.username}/bookings`" class="inline-flex items-center gap-1.5 text-xs font-bold text-wd-red-800 hover:underline">
+        <LayoutDashboard class="w-3.5 h-3.5" aria-hidden="true" /> Booking requests and roster in Business →
+      </NuxtLink>
     </div>
 
-    <!-- ══════ Promoter Dashboard ══════ -->
-    <template v-if="showDashboard && canManage">
-      <div class="max-w-2xl mx-auto px-4 py-4 space-y-4">
-        <div v-if="dashboardPending" class="text-center py-8">
-          <div class="inline-block w-6 h-6 rounded-full border-2 animate-spin" style="border-color:color-mix(in srgb, var(--wd-red-600) 20%, transparent); border-top-color:var(--wd-red-600);" />
-        </div>
-        <template v-else-if="dashboard">
-          <!-- Audience -->
-          <div class="rounded-2xl border border-border p-4">
-            <div class="flex items-center gap-2 text-sm font-bold"><Users class="w-4 h-4 text-wd-cyan-700" /> Your audience</div>
-            <p class="mt-2 text-2xl font-display">{{ dashboard.followerCount }} <span class="text-sm text-muted-foreground font-sans">follower{{ dashboard.followerCount === 1 ? '' : 's' }}</span></p>
-            <p class="mt-1 text-2xl font-display">{{ dashboard.rosterCount }} <span class="text-sm text-muted-foreground font-sans">artist{{ dashboard.rosterCount === 1 ? '' : 's' }} in roster</span></p>
-            <p class="mt-2 text-xs text-muted-foreground">People who follow your artists get notified when you add a date in their city.</p>
-          </div>
-
-          <!-- Booking requests -->
-          <div class="rounded-2xl border border-border p-4">
-            <div class="flex items-center gap-2 text-sm font-bold"><Send class="w-4 h-4 text-primary" /> Booking requests</div>
-            <div v-if="!dashboard.inquiries.length" class="mt-2 text-sm text-muted-foreground">No booking requests yet. Share your page to start receiving them.</div>
-            <ul v-else class="mt-3 space-y-2">
-              <li v-for="inq in dashboard.inquiries" :key="inq.id" class="rounded-xl bg-muted/60 p-3 text-xs">
-                <p class="font-bold">{{ inq.what }} · {{ inq.city || 'No city' }}</p>
-                <p class="text-muted-foreground mt-0.5">{{ inq.name }} · {{ inq.email }}<span v-if="inq.guests"> · {{ inq.guests }} people</span><span v-if="inq.budget"> · {{ inq.budget }}</span></p>
-                <p v-if="inq.message" class="mt-1 text-muted-foreground line-clamp-2">{{ inq.message }}</p>
-                <p class="mt-1 text-muted-foreground/60">{{ fmtDate(inq.createdAt) }} · {{ inq.status }}</p>
-              </li>
-            </ul>
-          </div>
-
-          <!-- Sync status (placeholder) -->
-          <div class="rounded-2xl border border-border p-4">
-            <div class="flex items-center gap-2 text-sm font-bold"><RefreshCw class="w-4 h-4 text-wd-green-700" /> Event sync</div>
-            <p class="mt-1 text-xs text-muted-foreground">External sync (Fourvenues, Jamboree) is coming. Events are currently managed manually or pulled from wedance.vip.</p>
-          </div>
-
-          <!-- Analytics (placeholder) -->
-          <div class="rounded-2xl border border-border p-4">
-            <div class="flex items-center gap-2 text-sm font-bold"><BarChart3 class="w-4 h-4 text-primary" /> Page analytics</div>
-            <p class="mt-1 text-xs text-muted-foreground">Detailed click and plan stats per city are coming. Your page is live and collecting data.</p>
-          </div>
-        </template>
-        <div v-else class="text-sm text-muted-foreground text-center py-8">Could not load dashboard data.</div>
-      </div>
-    </template>
-
-    <!-- ══════ Fan View (tabs) ══════ -->
-    <template v-else>
       <!-- Artist detail overlay -->
       <template v-if="openArtist">
         <div class="max-w-2xl mx-auto px-4 py-4">
@@ -432,7 +361,7 @@ function fmtDate(d: any) {
             <div v-else-if="bookStep === 1 && !bookDone" class="mt-4 font-sans">
               <p class="font-display text-xl">{{ bookArtist ? `${bookArtist.name} in your city` : 'Tell us about your event' }}</p>
               <div class="mt-3 grid gap-3 text-sm">
-                <label class="grid gap-1"><span class="text-xs font-bold text-muted-foreground">City</span><input v-model="bookForm.city" class="h-10 rounded-xl border border-border px-3 bg-background" placeholder="e.g. Munich"></label>
+                <div class="grid gap-1"><span class="text-xs font-bold text-muted-foreground">City</span><CityCombobox v-model="bookForm.city" placeholder="Where the event is" aria-label="City" /></div>
                 <label class="grid gap-1"><span class="text-xs font-bold text-muted-foreground">When</span><input v-model="bookForm.month" class="h-10 rounded-xl border border-border px-3 bg-background" placeholder="e.g. March 2027"></label>
                 <div class="grid gap-1">
                   <span class="text-xs font-bold text-muted-foreground">Expected audience</span>
@@ -470,6 +399,5 @@ function fmtDate(d: any) {
           </div>
         </div>
       </template>
-    </template>
   </div>
 </template>
