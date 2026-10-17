@@ -1,4 +1,4 @@
-import { CalendarDays, User, Settings, Briefcase, Music } from 'lucide-vue-next'
+import { CalendarDays, User, Settings, Briefcase, Music, ShieldCheck } from 'lucide-vue-next'
 
 export type NavMode = 'dance' | 'business'
 
@@ -9,7 +9,7 @@ export type NavMode = 'dance' | 'business'
  * side, "Dancing" on the business side — you leave a side the way you came in.
  */
 export function useAccountNav(mode: NavMode) {
-  const { isSignedIn, isLoading, authHint, dancerName, username, photo, signOut } = useAuth()
+  const { isSignedIn, isLoading, authHint, dancerName, username, photo, isAdmin, signOut } = useAuth()
   const sessionCookie = useCookie('wedance-session')
 
   // Show signed-in UI during SSR/loading when both session + hint cookies exist,
@@ -32,6 +32,11 @@ export function useAccountNav(mode: NavMode) {
     ? { to: '/business', label: 'Business', hint: 'Your events, venues & profiles', icon: Briefcase }
     : { to: '/my-plan', label: 'Dancing', hint: 'Festivals, cities & your plan', icon: Music }
 
+  // Admins get a way into /admin right after the mode switch, on both sides.
+  const adminLink = computed(() => isAdmin.value
+    ? { to: '/admin', label: 'Admin', hint: 'Users, claims, festivals & moderation', icon: ShieldCheck }
+    : null)
+
   function handleSignOut() {
     signOut()
     navigateTo('/')
@@ -46,6 +51,7 @@ export function useAccountNav(mode: NavMode) {
     profileTo,
     accountLinks,
     switchLink,
+    adminLink,
     handleSignOut,
   }
 }
