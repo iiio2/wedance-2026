@@ -96,6 +96,10 @@ const isActive = (item: { to: string; exact: boolean }) =>
 
     <!-- Content -->
     <main class="flex-1 min-w-0">
+      <!-- Same account menu as Dancing and Business; its switch rows lead to both. -->
+      <div v-if="state === 'ok'" class="flex justify-end px-4 md:px-8 pt-4">
+        <AccountMenu mode="admin" />
+      </div>
       <div class="max-w-4xl mx-auto px-4 py-8">
         <AdminState v-if="state === 'checking'" kind="loading" message="Checking access…" class="py-24" />
 

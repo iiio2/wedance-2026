@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<{ mode: NavMode, planCount?: number }>(),
 const route = useRoute()
 const {
   appearsSignedIn, displayName, displayUsername, initial, photo, profileTo,
-  accountLinks, switchLink, adminLink, handleSignOut,
+  accountLinks, switchLinks, handleSignOut,
 } = useAccountNav(props.mode)
 const meOpen = ref(false)
 const showSignIn = ref(false)
@@ -99,13 +99,9 @@ function askSignOut() {
           :to="l.to"
           class="flex items-center gap-3 py-3 border-b border-border/60"
         ><component :is="l.icon" class="w-5 h-5 text-muted-foreground" />{{ l.label }}</NuxtLink>
-        <NuxtLink :to="switchLink.to" class="flex items-center gap-3 py-3 border-b border-border/60">
-          <component :is="switchLink.icon" class="w-5 h-5 text-primary" />
-          <span>{{ switchLink.label }}<span class="block text-xs text-muted-foreground">{{ switchLink.hint }}</span></span>
-        </NuxtLink>
-        <NuxtLink v-if="adminLink" :to="adminLink.to" class="flex items-center gap-3 py-3 border-b border-border/60">
-          <component :is="adminLink.icon" class="w-5 h-5 text-primary" />
-          <span>{{ adminLink.label }}<span class="block text-xs text-muted-foreground">{{ adminLink.hint }}</span></span>
+        <NuxtLink v-for="l in switchLinks" :key="l.to" :to="l.to" class="flex items-center gap-3 py-3 border-b border-border/60">
+          <component :is="l.icon" class="w-5 h-5 text-primary" />
+          <span>{{ l.label }}<span class="block text-xs text-muted-foreground">{{ l.hint }}</span></span>
         </NuxtLink>
         <button type="button" class="w-full flex items-center gap-3 py-3 text-muted-foreground text-left" @click="askSignOut">
           <LogOut class="w-5 h-5" />Sign out

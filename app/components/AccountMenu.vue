@@ -10,7 +10,7 @@ import type { NavMode } from '~/composables/useAccountNav'
 const props = defineProps<{ mode: NavMode }>()
 
 const route = useRoute()
-const { displayName, initial, photo, accountLinks, switchLink, adminLink, handleSignOut } = useAccountNav(props.mode)
+const { displayName, initial, photo, accountLinks, switchLinks, handleSignOut } = useAccountNav(props.mode)
 const open = ref(false)
 const showSignOutConfirm = ref(false)
 const root = ref<HTMLElement | null>(null)
@@ -67,13 +67,9 @@ function askSignOut() {
         <component :is="l.icon" class="w-4 h-4 text-muted-foreground" />{{ l.label }}
       </NuxtLink>
       <div class="my-1 border-t border-border" />
-      <NuxtLink :to="switchLink.to" role="menuitem" class="flex items-center gap-2.5 px-3.5 py-2 hover:bg-muted">
-        <component :is="switchLink.icon" class="w-4 h-4 text-primary" />
-        <span>{{ switchLink.label }}<span class="block text-[11px] text-muted-foreground">{{ switchLink.hint }}</span></span>
-      </NuxtLink>
-      <NuxtLink v-if="adminLink" :to="adminLink.to" role="menuitem" class="flex items-center gap-2.5 px-3.5 py-2 hover:bg-muted">
-        <component :is="adminLink.icon" class="w-4 h-4 text-primary" />
-        <span>{{ adminLink.label }}<span class="block text-[11px] text-muted-foreground">{{ adminLink.hint }}</span></span>
+      <NuxtLink v-for="l in switchLinks" :key="l.to" :to="l.to" role="menuitem" class="flex items-center gap-2.5 px-3.5 py-2 hover:bg-muted">
+        <component :is="l.icon" class="w-4 h-4 text-primary" />
+        <span>{{ l.label }}<span class="block text-[11px] text-muted-foreground">{{ l.hint }}</span></span>
       </NuxtLink>
       <div class="my-1 border-t border-border" />
       <button

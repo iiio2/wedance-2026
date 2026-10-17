@@ -1,12 +1,12 @@
 import { CalendarDays, User, Settings, Briefcase, Music, ShieldCheck } from 'lucide-vue-next'
 
-export type NavMode = 'dance' | 'business'
+export type NavMode = 'dance' | 'business' | 'admin'
 
 /**
- * Account navigation shared by the dancing header (SiteHeader) and the
- * Business layout, so both sides offer the same menu in the same place.
- * The one slot that differs is the mode switch: "Business" on the dancing
- * side, "Dancing" on the business side — you leave a side the way you came in.
+ * Account navigation shared by the dancing header (SiteHeader), the Business
+ * layout and the Admin layout, so every side offers the same menu in the same
+ * place. The one slot that differs is the mode switch: it lists the other
+ * sides — Dancing, Business, and Admin for admins — never the current one.
  */
 export function useAccountNav(mode: NavMode) {
   const { isSignedIn, isLoading, authHint, dancerName, username, photo, isAdmin, signOut } = useAuth()
@@ -28,14 +28,14 @@ export function useAccountNav(mode: NavMode) {
     { to: '/settings', label: 'Settings', icon: Settings },
   ])
 
-  const switchLink = mode === 'dance'
-    ? { to: '/business', label: 'Business', hint: 'Your events, venues & profiles', icon: Briefcase }
-    : { to: '/my-plan', label: 'Dancing', hint: 'Festivals, cities & your plan', icon: Music }
-
-  // Admins get a way into /admin right after the mode switch, on both sides.
-  const adminLink = computed(() => isAdmin.value
-    ? { to: '/admin', label: 'Admin', hint: 'Users, claims, festivals & moderation', icon: ShieldCheck }
-    : null)
+  const sides = computed(() => [
+    { mode: 'dance' as const, to: '/my-plan', label: 'Dancing', hint: 'Festivals, cities & your plan', icon: Music },
+    { mode: 'business' as const, to: '/business', label: 'Business', hint: 'Your events, venues & profiles', icon: Briefcase },
+    ...(isAdmin.value
+      ? [{ mode: 'admin' as const, to: '/admin', label: 'Admin', hint: 'Users, claims, festivals & moderation', icon: ShieldCheck }]
+      : []),
+  ])
+  const switchLinks = computed(() => sides.value.filter(s => s.mode !== mode))
 
   function handleSignOut() {
     signOut()
@@ -50,8 +50,7 @@ export function useAccountNav(mode: NavMode) {
     photo,
     profileTo,
     accountLinks,
-    switchLink,
-    adminLink,
+    switchLinks,
     handleSignOut,
   }
 }
