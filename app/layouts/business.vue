@@ -4,7 +4,7 @@
  * managing their profiles). Mirrors the admin layout. Gate is signed-in only;
  * every page and procedure checks profile membership itself.
  */
-import { Home, CalendarDays, UserSquare, LogIn, Eye, X } from 'lucide-vue-next'
+import { Home, CalendarDays, UserSquare, LogIn, Eye, X, Globe, Contact } from 'lucide-vue-next'
 
 const route = useRoute()
 const { $trpc } = useNuxtApp()
@@ -46,10 +46,16 @@ const switcherOptions = computed(() => [
   ...managed.value.map(p => ({ label: p.name, value: p.username })),
 ])
 
+// /business/website, /business/network/<handle>/website (and the same for contacts).
+const siteSection = (p: string) => /^\/business(\/network\/[^/]+)?\/(website|contacts)\/?$/.exec(p)?.[2] ?? null
+
 const nav = [
   { to: '/business', label: 'Home', icon: Home, match: (p: string) => p === '/business' },
   { to: '/business/events', label: 'Events', icon: CalendarDays, match: (p: string) => p.startsWith('/business/events') },
-  { to: '/business/network', label: 'Network', icon: UserSquare, match: (p: string) => ['/business/network', '/business/claim', '/business/new'].some(x => p.startsWith(x)) },
+  { to: '/business/network', label: 'Network', icon: UserSquare, match: (p: string) => ['/business/network', '/business/claim', '/business/new'].some(x => p.startsWith(x)) && !siteSection(p) },
+  // A profile's own website and the people who signed up on it (RAZ-412).
+  { to: '/business/website', label: 'Website', icon: Globe, match: (p: string) => siteSection(p) === 'website' },
+  { to: '/business/contacts', label: 'Contacts', icon: Contact, match: (p: string) => siteSection(p) === 'contacts' },
 ]
 const isActive = (item: { match: (p: string) => boolean }) => item.match(route.path)
 </script>

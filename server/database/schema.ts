@@ -1280,3 +1280,35 @@ export const bookingInquiries = pgTable('booking_inquiries', {
   index('booking_inquiries_profile_idx').on(t.profileId, t.createdAt),
   index('booking_inquiries_email_idx').on(t.email, t.createdAt),
 ])
+
+// A profile's own website, managed on WeDance (RAZ-412, migration 0045): the
+// page's sections and words in every language (shared/types/profileSite.ts).
+// The site renders GET /api/profiles/<username>/site.
+export const profileSites = pgTable('profile_sites', {
+  profileId: uuid('profile_id').primaryKey().references(() => profiles.id, { onDelete: 'cascade' }),
+  content: jsonb('content').$type<import('../../shared/types/profileSite').ProfileSite>().notNull(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  updatedBy: uuid('updated_by').references(() => dancers.id, { onDelete: 'set null' }),
+})
+
+// People who signed up on a profile's website (RAZ-412, migration 0045): the
+// profile's contacts on WeDance. One row per email per profile; signing up
+// again updates it. Linked to a dancer when the email has a WeDance account.
+export const profileContacts = pgTable('profile_contacts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  dancerId: uuid('dancer_id').references(() => dancers.id, { onDelete: 'set null' }),
+  email: text('email').notNull(),
+  name: text('name'),
+  phone: text('phone'),
+  locale: text('locale'),
+  // Where they signed up: the site, the form, utm_* and referrer.
+  source: jsonb('source').$type<Record<string, string>>().notNull().default({}),
+  note: text('note'),
+  status: text('status').notNull().default('subscribed').$type<'subscribed' | 'unsubscribed'>(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('profile_contacts_profile_email_uidx').on(t.profileId, sql`lower(${t.email})`),
+  index('profile_contacts_profile_idx').on(t.profileId, t.createdAt),
+])

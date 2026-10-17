@@ -43,7 +43,7 @@ export const DOMAINS: Domain[] = [
     id: 'directory',
     title: 'Profiles & cities',
     summary: 'Venue / artist / organiser profiles under /@handle, canonical cities, follows and the per-city community-group directory.',
-    tables: ['profiles', 'profileMembers', 'profileClaims', 'profileAccessLog', 'profileSuggestions', 'profileInvites', 'follows', 'legacyFollows', 'profileAffiliations', 'handles', 'organizerSubscriptions', 'networkLinks', 'cities', 'communityGroups', 'communityGroupReports'],
+    tables: ['profiles', 'profileMembers', 'profileClaims', 'profileAccessLog', 'profileSuggestions', 'profileInvites', 'follows', 'legacyFollows', 'profileAffiliations', 'handles', 'organizerSubscriptions', 'networkLinks', 'profileSites', 'profileContacts', 'cities', 'communityGroups', 'communityGroupReports'],
   },
   {
     id: 'booking',

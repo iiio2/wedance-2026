@@ -304,3 +304,69 @@ export async function sendBookingInquiryEmail(params: {
     </div>`,
   })
 }
+
+/** Someone signed up on a profile's website (RAZ-412): tell the team. */
+export async function sendSiteSignupTeamEmail(params: {
+  to: string
+  name: string
+  profileName: string
+  contact: { name: string; email: string; phone?: string | null; locale?: string | null }
+  source: Record<string, string>
+  link: string
+}) {
+  const config = useRuntimeConfig()
+  const subject = `New sign-up on your website: ${params.contact.name}`
+  if (!config.resendApiKey) {
+    console.log(`\n✉️  ${params.to}: ${subject} → ${params.link}\n`)
+    return
+  }
+  const rows = [
+    ['Name', params.contact.name], ['Email', params.contact.email], ['Phone', params.contact.phone || ''], ['Language', params.contact.locale || ''],
+    ...Object.entries(params.source).map(([k, v]) => [k, v]),
+  ].filter(([, v]) => v).map(([k, v]) => `<tr><td style="padding: 4px 12px 4px 0; color: #888;">${escapeHtml(k!)}</td><td>${escapeHtml(v!)}</td></tr>`).join('')
+  await getResend().emails.send({
+    from: config.resendFromEmail || 'WeDance <noreply@wedance.vip>',
+    to: params.to,
+    replyTo: params.contact.email,
+    subject,
+    html: `<div style="font-family: sans-serif; max-width: 460px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #333;">Hey ${escapeHtml(params.name)}!</h2>
+      <p><strong>${escapeHtml(params.contact.name)}</strong> signed up on ${escapeHtml(params.profileName)}’s website.</p>
+      <table style="border-collapse: collapse; font-size: 14px;">${rows}</table>
+      <p style="margin-top: 16px;"><a href="${params.link}" style="display: inline-block; background: #000; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">See your contacts</a></p>
+      <p style="color: #888; font-size: 13px;">Reply to this email to answer them directly.</p>
+    </div>`,
+  })
+}
+
+/** The welcome email a profile wrote for people who sign up on its website. */
+export async function sendSiteWelcomeEmail(params: {
+  to: string
+  profileName: string
+  replyTo?: string | null
+  subject: string
+  body: string
+  siteUrl?: string | null
+  unsubscribeUrl: string
+}) {
+  const config = useRuntimeConfig()
+  if (!config.resendApiKey) {
+    console.log(`\n✉️  ${params.to}: ${params.subject}\n${params.body}\n`)
+    return
+  }
+  // Plain paragraphs; bare links become links.
+  const html = params.body.split(/\n{2,}/).map(p => `<p>${escapeHtml(p).replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>')}</p>`).join('')
+  const from = (config.resendFromEmail || 'WeDance <noreply@wedance.vip>').replace(/^[^<]*</, `${params.profileName.replace(/[<>"]/g, '')} <`)
+  await getResend().emails.send({
+    from,
+    to: params.to,
+    ...(params.replyTo ? { replyTo: params.replyTo } : {}),
+    subject: params.subject,
+    headers: { 'List-Unsubscribe': `<${params.unsubscribeUrl}>` },
+    html: `<div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; padding: 20px; color: #333; line-height: 1.6;">
+      ${html}
+      <p style="color: #999; font-size: 12px; margin-top: 32px;">${escapeHtml(params.profileName)}${params.siteUrl ? ` · <a href="${params.siteUrl}" style="color: #999;">${escapeHtml(params.siteUrl.replace(/^https?:\/\//, ''))}</a>` : ''} · via WeDance<br>
+      <a href="${params.unsubscribeUrl}" style="color: #999;">Unsubscribe</a></p>
+    </div>`,
+  })
+}

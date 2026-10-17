@@ -2,7 +2,7 @@ import { defineEventHandler, readMultipartFormData, getQuery, createError } from
 import cloudinary from 'cloudinary'
 
 // Allowed Cloudinary sub-folders (?folder=…); anything else falls back to avatars.
-const FOLDERS = new Set(['avatars', 'profiles', 'events', 'flyers'])
+const FOLDERS = new Set(['avatars', 'profiles', 'events', 'flyers', 'sites'])
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()

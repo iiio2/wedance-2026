@@ -32,6 +32,7 @@ import { venueAsksRouter } from './routers/venueAsks'
 import { inquiriesRouter } from './routers/inquiries'
 import { businessPostsRouter } from './routers/businessPosts'
 import { businessLooksRouter } from './routers/businessLooks'
+import { businessSiteRouter } from './routers/businessSite'
 import { businessTeamRouter } from './routers/businessTeam'
 import { businessNetworkRouter } from './routers/businessNetwork'
 import { waveRouter } from './routers/wave'
@@ -71,6 +72,7 @@ export const appRouter = router({
   inquiries: inquiriesRouter,
   businessPosts: businessPostsRouter,
   businessLooks: businessLooksRouter,
+  businessSite: businessSiteRouter,
   businessTeam: businessTeamRouter,
   businessNetwork: businessNetworkRouter,
   roommate: roommateRouter,

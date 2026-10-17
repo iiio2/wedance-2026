@@ -8,7 +8,7 @@
  * Sets `html.has-tabbar`, which reserves `--wd-tabbar-h` at the bottom of the
  * page (tailwind.css) so content and fixed buttons stay above the bar.
  */
-import { Compass, MapPin, CalendarDays, User, Home, UserSquare, LogOut } from 'lucide-vue-next'
+import { Compass, MapPin, CalendarDays, User, Home, UserSquare, LogOut, Globe, Contact } from 'lucide-vue-next'
 import type { NavMode } from '~/composables/useAccountNav'
 
 const props = withDefaults(defineProps<{ mode: NavMode, planCount?: number }>(), { planCount: 0 })
@@ -26,6 +26,10 @@ function under(path: string) {
   return route.path === path || route.path.startsWith(`${path}/`)
 }
 const EXPLORE_ROOTS = ['/festivals', '/artists', '/find-your-dance']
+// Business pages with no room in the tab bar: in the Me sheet instead (RAZ-412).
+const businessLinks = computed(() => props.mode === 'business'
+  ? [{ to: '/business/website', label: 'Website', icon: Globe }, { to: '/business/contacts', label: 'Contacts', icon: Contact }]
+  : [])
 
 const tabs = computed(() => props.mode === 'dance'
   ? [
@@ -83,6 +87,12 @@ function askSignOut() {
             <span v-if="displayUsername" class="block text-xs text-muted-foreground">@{{ displayUsername }}</span>
           </span>
         </NuxtLink>
+        <NuxtLink
+          v-for="l in businessLinks"
+          :key="l.to"
+          :to="l.to"
+          class="flex items-center gap-3 py-3 border-b border-border/60"
+        ><component :is="l.icon" class="w-5 h-5 text-muted-foreground" />{{ l.label }}</NuxtLink>
         <NuxtLink
           v-for="l in accountLinks"
           :key="l.label"
