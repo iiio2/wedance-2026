@@ -72,6 +72,9 @@ describe.skipIf(!DATABASE_URL)('my-plan feeds', () => {
     await addEvent('course', { type: 'Course', startDate: new Date(now + DAY), endDate: new Date(now + DAY + 3600_000) })
     await addEvent('nextMonth', { startDate: new Date(now + 20 * DAY), endDate: new Date(now + 20 * DAY + 3600_000) })
     await addEvent('past', { startDate: new Date(now - 3 * DAY), endDate: new Date(now - 3 * DAY + 3600_000) })
+    // A weekly social: last week's occurrence (planned) and this week's.
+    await addEvent('weeklyLast', { seriesId: `series-${RUN}`, startDate: new Date(now - 5 * DAY), endDate: new Date(now - 5 * DAY + 3600_000) })
+    await addEvent('weeklyThis', { seriesId: `series-${RUN}`, startDate: new Date(now + 2 * DAY + 3600_000), endDate: new Date(now + 2 * DAY + 2 * 3600_000) })
 
     // A festival the friend has picked, so a dancer card + friend count exist.
     await db.insert(schema.festivals).values({ slug: FEST, name: `Test Fest ${RUN}` })
@@ -94,27 +97,51 @@ describe.skipIf(!DATABASE_URL)('my-plan feeds', () => {
   })
 
   describe('plan.weekSocials', () => {
-    it('lists this week\'s socials in the dancer\'s city in their styles — no classes, nothing later or past', async () => {
-      const { citySlug, socials } = await caller(ids.me!).plan.weekSocials()
-      expect(citySlug).toBe(CITY_SLUG)
-      expect(socials.map(s => s.id)).toEqual([ids.socialSoon])
-      expect(socials[0]!.startDate).toMatch(/^\d{4}-\d{2}-\d{2}T/)
-      expect(socials[0]!.timezone).toBe('Europe/Berlin')
+    const weekIds = async () => (await caller(ids.me!).plan.weekSocials()).socials.map(s => s.id)
+
+    it('shows nothing the dancer did not plan — not even socials in their city this week', async () => {
+      expect(await weekIds()).toEqual([])
     })
 
-    it('counts friends (mutual follows) going, and marks the dancer\'s RSVP after a reload', async () => {
+    it('shows a planned event this week, with its date, time zone and friends going', async () => {
       const me = caller(ids.me!)
-      let [s] = (await me.plan.weekSocials()).socials
-      expect(s!.going).toBe(false)
-      expect(s!.friendsGoing).toBe(1)
-
-      await me.plan.add({ itemType: 'event', itemId: ids.socialSoon!, metadata: { type: 'social' } })
-      ;[s] = (await me.plan.weekSocials()).socials
-      expect(s!.going).toBe(true)
+      await me.plan.add({ itemType: 'event', itemId: ids.socialSoon! })
+      const { socials } = await me.plan.weekSocials()
+      expect(socials.map(s => s.id)).toEqual([ids.socialSoon])
+      expect(socials[0]!.planItemId).toBe(ids.socialSoon)
+      expect(socials[0]!.startDate).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+      expect(socials[0]!.timezone).toBe('Europe/Berlin')
+      expect(socials[0]!.friendsGoing).toBe(1)
 
       await me.plan.remove({ itemType: 'event', itemId: ids.socialSoon! })
-      ;[s] = (await me.plan.weekSocials()).socials
-      expect(s!.going).toBe(false)
+      expect(await weekIds()).toEqual([])
+    })
+
+    it('leaves out planned events next month or in the past', async () => {
+      const me = caller(ids.me!)
+      await me.plan.add({ itemType: 'event', itemId: ids.nextMonth! })
+      await me.plan.add({ itemType: 'event', itemId: ids.past! })
+      expect(await weekIds()).toEqual([])
+      await me.plan.remove({ itemType: 'event', itemId: ids.nextMonth! })
+      await me.plan.remove({ itemType: 'event', itemId: ids.past! })
+    })
+
+    it('leaves out courses (they have their own section)', async () => {
+      const me = caller(ids.me!)
+      await me.plan.add({ itemType: 'event', itemId: ids.course!, metadata: { type: 'class' } })
+      expect(await weekIds()).toEqual([])
+      await me.plan.remove({ itemType: 'event', itemId: ids.course! })
+    })
+
+    it('shows this week\'s occurrence of a recurring event planned on another date, sorted by time', async () => {
+      const me = caller(ids.me!)
+      await me.plan.add({ itemType: 'event', itemId: ids.weeklyLast! })
+      await me.plan.add({ itemType: 'event', itemId: ids.socialSoon! })
+      const { socials } = await me.plan.weekSocials()
+      expect(socials.map(s => s.id)).toEqual([ids.socialSoon, ids.weeklyThis])
+      expect(socials[1]!.planItemId).toBe(ids.weeklyLast)
+      await me.plan.remove({ itemType: 'event', itemId: ids.weeklyLast! })
+      await me.plan.remove({ itemType: 'event', itemId: ids.socialSoon! })
     })
   })
 

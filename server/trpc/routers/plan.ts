@@ -634,10 +634,10 @@ export const planRouter = router({
     }),
 
   /**
-   * "This week · socials" — real events in the dancer's city over the next
-   * 7 days (no classes, workshops or festivals), matched to their styles,
-   * with their own RSVPs (plan items of type 'event') marked going and a
-   * real count of friends (mutual follows) going.
+   * "Where you're dancing" — only the events in the dancer's plan (plan
+   * items of type 'event', added from any surface) happening in the next
+   * 7 days, soonest first; a recurring event shows its next occurrence.
+   * Includes a real count of friends (mutual follows) going.
    */
   weekSocials: protectedProcedure.query(async ({ ctx }) => {
     return weekSocials(ctx.db, ctx.dancerId)

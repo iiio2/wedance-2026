@@ -20,7 +20,7 @@ import { detectDanceStyle, relatedDanceStyles } from '#shared/dance-styles'
 import * as cubanFire from '~/data/mock-cuban-fire'
 import * as caribbeanUrbanFire from '~/data/mock-caribbean-urban-fire'
 import { WD } from '~/lib/brand'
-import { festivalPath } from '#shared/utils/eventSlug'
+import { eventPath, festivalPath } from '#shared/utils/eventSlug'
 
 definePageMeta({ layout: false })
 
@@ -1088,14 +1088,18 @@ function loadCoursesFromDb() {
 }
 
 // -----------------------------------------------------------------------
-// SOCIALS · this-week horizon: the real events in the dancer's city over the
-// next 7 days (plan.weekSocials), matched to their styles. RSVP = a plan item
-// of type 'event', so "Going" survives a reload and counts on the event page.
+// SOCIALS · "Where you're dancing": ONLY the events the dancer put in their
+// plan (plan.weekSocials — RSVPs from the city/event pages, discover Yes…)
+// happening in the next 7 days. No suggestions here; discovery is "Full week".
 // -----------------------------------------------------------------------
 type Social = {
-  id: string; name: string; dayLabel: string; dateISO: string; time: string
+  /** The occurrence shown this week. */
+  id: string
+  /** The plan item's event id (differs for a recurring event added on another date). */
+  planItemId: string
+  name: string; dayLabel: string; dateISO: string; time: string
   venue: string; city: string; style: string
-  friendsGoing: number; rsvpd: boolean
+  friendsGoing: number
   color: string
 }
 // Preview dates are relative to today so the demo always shows a live week.
@@ -1107,11 +1111,11 @@ function previewDay(offset: number): { dayLabel: string; dateISO: string } {
   }
 }
 const previewSocials: Social[] = [
-  { id: 's1', name: 'La Rumba night',         ...previewDay(1), time: '21:00', venue: 'La Rumba',   city: 'Munich', style: 'Cuban',   friendsGoing: 5, rsvpd: true,  color: WD.red600 },
-  { id: 's2', name: 'Rueda flashmob',         ...previewDay(2), time: '14:00', venue: 'Diana Tempel', city: 'Munich', style: 'Rueda',   friendsGoing: 12, rsvpd: true, color: WD.amber500 },
-  { id: 's3', name: 'Bailala night',          ...previewDay(2), time: '22:00', venue: 'Bailala',   city: 'Munich', style: 'Bachata', friendsGoing: 3, rsvpd: false, color: WD.purple500 },
-  { id: 's4', name: 'Cuban practica',         ...previewDay(3), time: '19:00', venue: 'Buena Vista', city: 'Munich', style: 'Practica', friendsGoing: 4, rsvpd: false, color: WD.green600 },
-  { id: 's5', name: 'Warm-up social',         ...previewDay(6), time: '20:30', venue: 'La Rumba',   city: 'Munich', style: 'All',     friendsGoing: 2, rsvpd: false, color: WD.cyan600 },
+  { id: 's1', planItemId: 's1', name: 'La Rumba night',         ...previewDay(1), time: '21:00', venue: 'La Rumba',   city: 'Munich', style: 'Cuban',   friendsGoing: 5, color: WD.red600 },
+  { id: 's2', planItemId: 's2', name: 'Rueda flashmob',         ...previewDay(2), time: '14:00', venue: 'Diana Tempel', city: 'Munich', style: 'Rueda',   friendsGoing: 12, color: WD.amber500 },
+  { id: 's3', planItemId: 's3', name: 'Bailala night',          ...previewDay(2), time: '22:00', venue: 'Bailala',   city: 'Munich', style: 'Bachata', friendsGoing: 3, color: WD.purple500 },
+  { id: 's4', planItemId: 's4', name: 'Cuban practica',         ...previewDay(3), time: '19:00', venue: 'Buena Vista', city: 'Munich', style: 'Practica', friendsGoing: 4, color: WD.green600 },
+  { id: 's5', planItemId: 's5', name: 'Warm-up social',         ...previewDay(6), time: '20:30', venue: 'La Rumba',   city: 'Munich', style: 'All',     friendsGoing: 2, color: WD.cyan600 },
 ]
 const socials = ref<Social[]>(isPreviewInitial ? previewSocials : [])
 const weekSocialsLoaded = ref(isPreviewInitial)
@@ -1141,7 +1145,7 @@ async function loadWeekSocials() {
         city: e.city,
         style,
         friendsGoing: e.friendsGoing,
-        rsvpd: e.going,
+        planItemId: e.planItemId,
         color: STYLE_COLORS_ENROLL[style] || WD.gray500,
       }
     })
@@ -1174,30 +1178,26 @@ const upcomingSocials = computed(() =>
   socials.value.filter(s => !s.dateISO || s.dateISO >= todayISO.value),
 )
 
-const rsvpPending = ref<Set<string>>(new Set())
+const { removeEvent: removeWeekEvent, addEvent: addWeekEvent } = useWeekPlan()
 
-async function toggleSocialRsvp(id: string) {
+// Last row taken out of the plan — the list offers a one-tap Undo for it.
+const removedSocial = ref<Social | null>(null)
+
+/** "✓ Going" off = out of the plan; the row leaves the list (Undo puts it back). */
+function removeSocialFromPlan(id: string) {
   const s = socials.value.find(x => x.id === id)
-  if (!s || rsvpPending.value.has(id)) return
-  const going = !s.rsvpd
-  socials.value = socials.value.map(x => x.id === id ? { ...x, rsvpd: going } : x)
-  if (previewMode.value) return
-  rsvpPending.value = new Set([...rsvpPending.value, id])
-  try {
-    if (going) {
-      await $trpc.plan.add.mutate({ itemType: 'event', itemId: id, metadata: { type: 'social', name: s.name, style: s.style, venue: s.venue, date: s.dateISO, time: s.time } })
-      useTrack().track('week_plan_add', { event_id: id, source: 'week_socials' })
-    } else {
-      await $trpc.plan.remove.mutate({ itemType: 'event', itemId: id })
-    }
-  } catch (err) {
-    console.warn('[my-plan] RSVP failed:', err)
-    socials.value = socials.value.map(x => x.id === id ? { ...x, rsvpd: !going } : x)
-  } finally {
-    const next = new Set(rsvpPending.value)
-    next.delete(id)
-    rsvpPending.value = next
-  }
+  if (!s) return
+  socials.value = socials.value.filter(x => x.id !== id)
+  removedSocial.value = s
+  if (!previewMode.value) removeWeekEvent(s.planItemId)
+}
+
+function undoRemoveSocial() {
+  const s = removedSocial.value
+  if (!s) return
+  removedSocial.value = null
+  socials.value = [...socials.value, s].sort((a, b) => (a.dateISO + a.time).localeCompare(b.dateISO + b.time))
+  if (!previewMode.value) addWeekEvent(s.planItemId)
 }
 
 // -----------------------------------------------------------------------
@@ -1388,8 +1388,8 @@ const heatItems = computed<HeatItem[]>(() => {
       urgency: 70,
     })
   })
-  // Socials: this-week RSVPs still open (upcoming only)
-  upcomingSocials.value.filter(s => !s.rsvpd).slice(0, 2).forEach(s => {
+  // Socials: the next two nights out already in the plan
+  upcomingSocials.value.slice(0, 2).forEach(s => {
     items.push({
       key: `social-${s.id}`,
       label: `${s.name} · ${s.dayLabel} ${s.time}`,
@@ -1609,19 +1609,17 @@ function commitSwipe(direction: 'yes' | 'skip' | 'later') {
     }
     if (card.kind === 'event-social') {
       addedEvent = true
-      const inWeek = socials.value.find(s => s.id === card.target?.id)
-      if (inWeek) {
-        socials.value = socials.value.map(s => s.id === inWeek.id ? { ...s, rsvpd: true } : s)
-      } else if (previewMode.value) {
+      if (previewMode.value) {
         socials.value = [...socials.value, {
-          id: card.id, name: card.name, dayLabel: card.dayLabel, dateISO: '', time: card.time,
-          venue: card.venue, city: card.city, style: card.style, friendsGoing: card.friendsGoing, rsvpd: true, color: card.color,
+          id: card.id, planItemId: card.id, name: card.name, dayLabel: card.dayLabel, dateISO: card.dateISO ?? '', time: card.time,
+          venue: card.venue, city: card.city, style: card.style, friendsGoing: card.friendsGoing, color: card.color,
         }]
       }
       if (!previewMode.value && card.target) {
         $trpc.plan.add
           .mutate({ itemType: 'event', itemId: card.target.id, metadata: { type: 'social', name: card.name, style: card.style, venue: card.venue, date: card.dateISO ?? '', time: card.time } })
-          .then(() => { if (!inWeek) loadWeekSocials() })
+          // Shows up under "Where you're dancing" if it's within the week.
+          .then(() => loadWeekSocials())
           .catch(err => console.warn('[discover] add to plan failed:', err))
       }
     }
@@ -1675,9 +1673,7 @@ function undoSwipe() {
   }
   if (last.addedEvent && card.kind === 'event-social') {
     const eventId = card.target?.id ?? card.id
-    socials.value = previewMode.value
-      ? socials.value.filter(s => s.id !== card.id)
-      : socials.value.map(s => s.id === eventId ? { ...s, rsvpd: false } : s)
+    socials.value = socials.value.filter(s => s.planItemId !== eventId)
     if (!previewMode.value && card.target) {
       $trpc.plan.remove
         .mutate({ itemType: 'event', itemId: card.target.id })
@@ -2649,19 +2645,26 @@ function cardSummary(f: CatalogueEntry) {
           </NuxtLink>
         </div>
 
+        <div v-if="removedSocial" class="mb-2 flex items-center gap-2 text-xs text-muted-foreground font-sans" role="status">
+          Removed {{ removedSocial.name }} from your plan.
+          <Button variant="link" class="h-auto p-0 text-xs font-bold text-primary" @click="undoRemoveSocial">Undo</Button>
+        </div>
+
         <div v-if="!upcomingSocials.length && (weekSocialsLoaded || !dancerCity)" class="rounded-2xl p-6 text-center border-2 border-dashed border-input bg-white/50">
           <Sparkles class="w-8 h-8 mx-auto mb-3 text-secondary" aria-hidden="true" />
-          <p class="text-sm text-muted-foreground font-sans">
-            <template v-if="dancerCity">
-              No socials in {{ dancerCity }} on WeDance for the next 7 days yet.
-            </template>
-            <template v-else>
-              Pick your city and we'll surface this week's socials here.
-            </template>
-          </p>
-          <NuxtLink v-if="!dancerCity" to="/settings" class="mt-2 inline-block font-sans text-xs font-bold underline text-primary">
-            Set your city
-          </NuxtLink>
+          <template v-if="dancerCity">
+            <p class="text-sm font-bold text-foreground font-sans">Nothing planned this week.</p>
+            <p class="mt-1 text-sm text-muted-foreground font-sans">Pick the nights you're going out from this week's socials in {{ dancerCity }}.</p>
+            <NuxtLink :to="citySocialsLink" class="mt-3 inline-flex items-center gap-1 rounded-full px-4 py-2 text-xs font-bold bg-wd-brown-900 font-sans" style="color:white;">
+              See this week in {{ dancerCity }} <ArrowRight class="w-3.5 h-3.5" aria-hidden="true" />
+            </NuxtLink>
+          </template>
+          <template v-else>
+            <p class="text-sm text-muted-foreground font-sans">Pick your city and we'll show this week's socials to choose from.</p>
+            <NuxtLink to="/settings" class="mt-2 inline-block font-sans text-xs font-bold underline text-primary">
+              Set your city
+            </NuxtLink>
+          </template>
         </div>
         <div v-else-if="upcomingSocials.length" class="rounded-2xl bg-white border overflow-hidden" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
           <div
@@ -2669,7 +2672,7 @@ function cardSummary(f: CatalogueEntry) {
             :key="s.id"
             class="flex flex-wrap items-center gap-3 px-4 py-3"
             :class="i > 0 ? 'border-t' : ''"
-            :style="{ borderColor: 'color-mix(in srgb, var(--wd-brown-900) 5.1%, transparent)', background: s.rsvpd ? (WD.green600 + '08') : 'white' }"
+            :style="{ borderColor: 'color-mix(in srgb, var(--wd-brown-900) 5.1%, transparent)', background: WD.green600 + '08' }"
           >
             <span
               class="w-12 text-center text-eyebrow font-black uppercase tracking-widest px-1.5 py-0.5 rounded leading-tight"
@@ -2679,7 +2682,8 @@ function cardSummary(f: CatalogueEntry) {
               {{ s.time }}
             </span>
             <div class="min-w-0 flex-1">
-              <div class="text-sm font-bold truncate text-foreground">{{ s.name }}</div>
+              <NuxtLink v-if="!previewMode" :to="eventPath({ id: s.id, name: s.name })" class="block text-sm font-bold truncate text-foreground hover:underline">{{ s.name }}</NuxtLink>
+              <div v-else class="text-sm font-bold truncate text-foreground">{{ s.name }}</div>
               <div class="text-xs truncate text-muted-foreground font-sans">
                 {{ s.venue }}<template v-if="s.style"> · <span :style="{ color: s.color }">{{ s.style }}</span></template><template v-if="s.friendsGoing > 0"> · {{ s.friendsGoing }} friend{{ s.friendsGoing === 1 ? '' : 's' }} going</template>
               </div>
@@ -2687,14 +2691,12 @@ function cardSummary(f: CatalogueEntry) {
             <button
               type="button"
               class="text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap"
-              :aria-pressed="s.rsvpd"
-              :disabled="rsvpPending.has(s.id)"
-              :style="s.rsvpd
-                ? { background: 'var(--wd-green-600)', color: 'white' }
-                : { background: 'white', color: s.color, border: '1.5px solid ' + s.color + '55' }"
-              @click="toggleSocialRsvp(s.id)"
+              style="background: var(--wd-green-600); color: white;"
+              :aria-label="`Going to ${s.name} — tap to remove from your plan`"
+              :title="'Tap to remove from your plan'"
+              @click="removeSocialFromPlan(s.id)"
             >
-              {{ s.rsvpd ? '✓ Going' : 'RSVP' }}
+              ✓ Going
             </button>
           </div>
         </div>

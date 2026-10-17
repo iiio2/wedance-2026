@@ -1,9 +1,8 @@
 /**
  * Data behind two /my-plan sections that used to be prototype-only:
  *
- *  - "This week · socials" (`weekSocials`): the real events in the dancer's
- *    city over the next 7 days, matched to their styles, with their own RSVPs
- *    (plan_items rows of type 'event') marked as going.
+ *  - "This week · socials" (`weekSocials`): only the events the dancer put in
+ *    their plan (plan_items of type 'event'), happening in the next 7 days.
  *  - "Widen your year · discover" (`discoverDeck`): people and places the
  *    dancer hasn't decided on yet. Every Yes / Skip lands in discover_swipes
  *    and is excluded here, so a decided card never comes back.
@@ -14,7 +13,6 @@
 import { and, asc, eq, gte, inArray, isNotNull, lt, ne, notInArray, or, sql, ilike } from 'drizzle-orm'
 import { cities, dancers, discoverSwipes, events, festivals, follows, planItems } from '../database/schema'
 import { relatedDanceStyles } from '../../shared/dance-styles'
-import { eventLocalDate } from '../../shared/utils/eventTime'
 
 type Db = any
 
@@ -100,7 +98,10 @@ export async function friendsGoingCounts(
 // ---------------------------------------------------------------------------
 
 export type WeekSocial = {
+  /** The occurrence shown (this week's date). */
   id: string
+  /** The plan item's event id — what "remove from plan" deletes. Differs from `id` for a recurring event added on another date. */
+  planItemId: string
   name: string
   type: string | null
   styles: string[]
@@ -109,35 +110,36 @@ export type WeekSocial = {
   timezone: string | null
   venueName: string
   city: string
-  going: boolean
   friendsGoing: number
-  styleMatch: boolean
 }
 
-/** Up to this many socials per day, so the list covers the whole week, not just its first nights. */
-export const WEEK_SOCIALS_PER_DAY = 3
+type WeekRow = { id: string; seriesId: string | null; startDate: Date | string | null }
 
 /**
- * Pick the list from the week's socials: the dancer's RSVPs always, then the
- * ones in their styles (or everything when no style matches / none are set),
- * at most `perDay` per local day, soonest first. Pure — unit-tested without a
- * database.
+ * Which occurrence to show for each planned event: the planned occurrence
+ * itself when it falls in the week; otherwise, for a recurring event (same
+ * series_id), its next occurrence in the week. A series the dancer already
+ * planned directly this week isn't shown twice. Pure — unit-tested.
+ * `inWeek` must be sorted soonest first.
  */
-export function pickWeekSocials(rows: WeekSocial[], hasStyles: boolean, perDay = WEEK_SOCIALS_PER_DAY): WeekSocial[] {
-  const anyMatch = rows.some(r => !r.going && r.styleMatch)
-  const dayOf = (r: WeekSocial) => eventLocalDate(r.startDate, r.timezone || undefined)
-  const perDayCount = new Map<string, number>()
-  for (const r of rows) if (r.going) perDayCount.set(dayOf(r), (perDayCount.get(dayOf(r)) ?? 0) + 1)
-  const picked = rows.filter((r) => {
-    if (r.going) return true
-    if (hasStyles && anyMatch && !r.styleMatch) return false
-    const day = dayOf(r)
-    const n = perDayCount.get(day) ?? 0
-    if (n >= perDay) return false
-    perDayCount.set(day, n + 1)
-    return true
-  })
-  return picked.sort((a, b) => a.startDate.localeCompare(b.startDate))
+export function resolveWeekOccurrences(
+  planned: Array<{ id: string; seriesId: string | null }>,
+  inWeek: WeekRow[],
+): Array<{ eventId: string; planItemId: string }> {
+  const plannedIds = new Set(planned.map(p => p.id))
+  const direct = inWeek.filter(r => plannedIds.has(r.id))
+  const coveredSeries = new Set(direct.map(r => r.seriesId).filter(Boolean) as string[])
+  const out = direct.map(r => ({ eventId: r.id, planItemId: r.id }))
+  const used = new Set(out.map(o => o.eventId))
+  for (const p of planned) {
+    if (!p.seriesId || coveredSeries.has(p.seriesId)) continue
+    const next = inWeek.find(r => r.seriesId === p.seriesId && !used.has(r.id))
+    if (!next) continue
+    coveredSeries.add(p.seriesId)
+    used.add(next.id)
+    out.push({ eventId: next.id, planItemId: p.id })
+  }
+  return out
 }
 
 /** The event's styles with the ones the dancer dances first (the list shows the first). */
@@ -147,47 +149,35 @@ export function stylesForDancer(eventStyles: string[], myStyles: readonly string
   return [...mine, ...eventStyles.filter(e => !mine.includes(e))]
 }
 
-export async function weekSocials(db: Db, dancerId: string, now = new Date(), days = 7): Promise<{ citySlug: string; socials: WeekSocial[] }> {
-  const [me] = await db
-    .select({ city: dancers.city, danceStyles: dancers.danceStyles })
-    .from(dancers)
-    .where(eq(dancers.id, dancerId))
-  if (!me) return { citySlug: '', socials: [] }
-
-  const citySlug = await citySlugFor(db, me.city)
-  const myStyles = (me.danceStyles as string[] | null) ?? []
-
-  const myEventRows = await db
-    .select({ itemId: planItems.itemId })
+/**
+ * "Where you're dancing" — ONLY the events the dancer put in their plan
+ * (plan_items of type 'event', from any surface: RSVP, discover Yes, the
+ * city or event page), happening in the next `days` days, soonest first.
+ * Courses (metadata type 'class') have their own section and are left out.
+ * Suggestions never appear here; discovery lives on the city page.
+ */
+export async function weekSocials(db: Db, dancerId: string, now = new Date(), days = 7): Promise<{ socials: WeekSocial[] }> {
+  const planRows = await db
+    .select({ itemId: planItems.itemId, metadata: planItems.metadata })
     .from(planItems)
     .where(and(eq(planItems.dancerId, dancerId), eq(planItems.itemType, 'event')))
-  const myEventIds = myEventRows.map((r: any) => r.itemId as string).filter((id: string) => UUID_RE.test(id))
-  const goingSet = new Set(myEventIds)
+  const plannedIds = planRows
+    .filter((r: any) => (r.metadata as Record<string, string> | null)?.type !== 'class')
+    .map((r: any) => r.itemId as string)
+    .filter((id: string) => UUID_RE.test(id))
+  if (!plannedIds.length) return { socials: [] }
 
-  if (!citySlug && !myEventIds.length) return { citySlug, socials: [] }
+  const planned: Array<{ id: string; seriesId: string | null }> = await db
+    .select({ id: events.id, seriesId: events.seriesId })
+    .from(events)
+    .where(inArray(events.id, plannedIds))
+  const seriesIds = [...new Set(planned.map(p => p.seriesId).filter(Boolean) as string[])]
 
   const until = new Date(now.getTime() + days * DAY)
-  const where = and(
-    live(),
-    gte(sql`coalesce(${events.endDate}, ${events.startDate})`, now),
-    lt(events.startDate, until),
-    or(
-      // Socials in the city…
-      citySlug
-        ? and(
-            eq(events.citySlug, citySlug),
-            sql`coalesce(${events.isFestival}, false) = false`,
-            sql`coalesce(${events.type}, '') not in (${sql.join(NON_SOCIAL_TYPES.map(t => sql`${t}`), sql`, `)})`,
-          )
-        : sql`false`,
-      // …plus anything this week the dancer already said they're going to.
-      myEventIds.length ? inArray(events.id, myEventIds) : sql`false`,
-    ),
-  )
-
   const rows = await db
     .select({
       id: events.id,
+      seriesId: events.seriesId,
       name: events.name,
       type: events.type,
       styles: events.styles,
@@ -198,34 +188,45 @@ export async function weekSocials(db: Db, dancerId: string, now = new Date(), da
       city: events.city,
     })
     .from(events)
-    .where(where)
+    .where(and(
+      live(),
+      gte(sql`coalesce(${events.endDate}, ${events.startDate})`, now),
+      lt(events.startDate, until),
+      seriesIds.length
+        ? or(inArray(events.id, plannedIds), inArray(events.seriesId, seriesIds))
+        : inArray(events.id, plannedIds),
+    ))
     .orderBy(asc(events.startDate))
     .limit(200)
 
-  const friendIds = await friendIdsOf(db, dancerId)
-  const counts = await friendsGoingCounts(db, friendIds, 'event', rows.map((r: any) => r.id))
+  const picks = resolveWeekOccurrences(planned, rows)
+  const byId = new Map<string, any>(rows.map((r: any) => [r.id, r]))
 
-  const all: WeekSocial[] = rows
-    .filter((r: any) => r.startDate)
-    .map((r: any) => {
-      const styles = stylesForDancer((r.styles as string[] | null) ?? [], myStyles)
+  const [me] = await db.select({ danceStyles: dancers.danceStyles }).from(dancers).where(eq(dancers.id, dancerId))
+  const myStyles = (me?.danceStyles as string[] | null) ?? []
+  const friendIds = await friendIdsOf(db, dancerId)
+  const counts = await friendsGoingCounts(db, friendIds, 'event', picks.map(p => p.eventId))
+
+  const socials: WeekSocial[] = picks
+    .map(({ eventId, planItemId }) => {
+      const r = byId.get(eventId)
       return {
         id: r.id,
-        name: r.name || 'Social',
+        planItemId,
+        name: r.name || 'Event',
         type: r.type ?? null,
-        styles,
+        styles: stylesForDancer((r.styles as string[] | null) ?? [], myStyles),
         startDate: new Date(r.startDate).toISOString(),
         endDate: r.endDate ? new Date(r.endDate).toISOString() : null,
         timezone: r.timezone ?? null,
         venueName: r.venueName ?? '',
         city: r.city ?? '',
-        going: goingSet.has(r.id),
-        friendsGoing: counts.get(r.id) ?? 0,
-        styleMatch: myStyles.length ? stylesMatch(styles, myStyles) : false,
+        friendsGoing: counts.get(eventId) ?? 0,
       }
     })
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
 
-  return { citySlug, socials: pickWeekSocials(all, myStyles.length > 0) }
+  return { socials }
 }
 
 // ---------------------------------------------------------------------------
