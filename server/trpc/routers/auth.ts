@@ -67,12 +67,12 @@ export const authRouter = router({
       city: z.string().optional(),
       purpose: z.enum(['login', 'recovery']).default('login'),
     }))
-    .mutation(async ({ ctx, input }) => {
-      // Always return { sent: true } regardless of outcome — never reveal
-      // whether the email exists or whether the DB/email send succeeded.
-      // This prevents user enumeration and stops raw SQL errors from leaking
-      // to the client (the neon-http driver embeds query params including the
-      // magic token in its error messages).
+    .mutation(async ({ ctx, input }): Promise<{ sent: boolean; accountExists?: boolean }> => {
+      // Return { sent: true } whether or not the DB/email send succeeded, so
+      // raw SQL errors never leak to the client (the neon-http driver embeds
+      // query params including the magic token in its error messages). The
+      // one exception: recovery for an unregistered email answers
+      // { sent: false, accountExists: false }.
       try {
         const magicToken = crypto.randomUUID()
         const magicTokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
@@ -86,23 +86,40 @@ export const authRouter = router({
         if (input.role) updateSet.role = input.role
         if (input.city) updateSet.city = input.city
 
-        // Upsert: create new user or update existing user's magic token.
         try {
-          await ctx.db
-            .insert(dancers)
-            .values({
-              name: input.name || input.email.split('@')[0],
-              email: input.email,
-              danceStyles: input.danceStyles,
-              role: input.role ?? null,
-              city: input.city ?? null,
-              magicToken,
-              magicTokenExpiresAt,
-            })
-            .onConflictDoUpdate({
-              target: dancers.email,
-              set: updateSet,
-            })
+          if (input.purpose === 'recovery') {
+            // Recovery only ever targets an existing account: no new dancer
+            // row, no email to addresses that never signed up. Telling the
+            // caller so leaks nothing new — register already answers "Email
+            // already in use." — and lets the UI point them to sign-up.
+            const [existing] = await ctx.db
+              .select({ id: dancers.id })
+              .from(dancers)
+              .where(eq(dancers.email, input.email))
+            if (!existing) return { sent: false, accountExists: false }
+
+            await ctx.db
+              .update(dancers)
+              .set({ magicToken, magicTokenExpiresAt })
+              .where(eq(dancers.id, existing.id))
+          } else {
+            // Upsert: create new user or update existing user's magic token.
+            await ctx.db
+              .insert(dancers)
+              .values({
+                name: input.name || input.email.split('@')[0],
+                email: input.email,
+                danceStyles: input.danceStyles,
+                role: input.role ?? null,
+                city: input.city ?? null,
+                magicToken,
+                magicTokenExpiresAt,
+              })
+              .onConflictDoUpdate({
+                target: dancers.email,
+                set: updateSet,
+              })
+          }
         } catch (dbErr) {
           console.error('[auth.requestMagicLink] DB upsert failed for', input.email, dbErr)
           // Bail — without a stored token the email link would be dead anyway.

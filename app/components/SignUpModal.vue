@@ -15,9 +15,9 @@
  * Recovery ("Forgot password?") reuses the existing magic-link plumbing: it
  * calls auth.requestMagicLink with purpose='recovery'; the emailed link points
  * to /auth/verify?token=…&mode=reset which shows a "set new password" form.
- * requestMagicLink shows the same "check your email" confirmation whether or
- * not the address is registered, so the recovery view never reveals which
- * emails exist.
+ * An unregistered email gets no email; the view says so and offers sign-up
+ * instead (register already reveals "Email already in use", so this exposes
+ * nothing new).
  */
 import { LoginSchema, RecoverySchema, RegisterSchema } from '#shared/validation'
 
@@ -64,9 +64,9 @@ const error = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
 
-// Recovery sub-state: after a successful requestMagicLink we show a
-// "check your email" confirmation instead of the email input.
-const recoverySent = ref(false)
+// Recovery sub-state: after requestMagicLink we replace the email input with
+// either a "check your email" confirmation or a "no account" prompt.
+const recoveryResult = ref<'sent' | 'no-account' | null>(null)
 
 // Track whether the name was pre-filled from onboarding — hide it in the form.
 const hasPrefillName = ref(false)
@@ -98,7 +98,7 @@ function resetForm() {
   form.password = ''
   error.value = ''
   showPassword.value = false
-  recoverySent.value = false
+  recoveryResult.value = null
   hasPrefillName.value = false
   resetValidation()
 }
@@ -122,7 +122,7 @@ watch(() => props.open, (open) => {
 function switchMode(next: Mode) {
   mode.value = next
   error.value = ''
-  recoverySent.value = false
+  recoveryResult.value = null
   resetValidation()
 }
 
@@ -179,6 +179,29 @@ async function submitWith(action: () => Promise<void>) {
   }
 }
 
+const recoveryTitle = computed(() => {
+  if (recoveryResult.value === 'sent') return 'Check your email'
+  if (recoveryResult.value === 'no-account') return 'No account found'
+  return 'Forgot your password?'
+})
+
+const recoveryDescription = computed(() => {
+  if (recoveryResult.value === 'sent') return 'We sent you a password reset link. Click it to set a new password.'
+  if (recoveryResult.value === 'no-account') return 'We couldn\'t find an account with that email.'
+  return 'Enter your email and we\'ll send you a link to reset your password.'
+})
+
+// Keep the typed email when switching modes (switchMode never clears `form`).
+function registerInstead() {
+  switchMode('register')
+  focusById(hasPrefillName.value ? 'auth-email' : 'auth-name')
+}
+
+function tryAnotherEmail() {
+  recoveryResult.value = null
+  focusById('recovery-email')
+}
+
 async function handleRecovery() {
   error.value = ''
 
@@ -187,10 +210,9 @@ async function handleRecovery() {
 
   loading.value = true
   try {
-    // Send a password-reset magic link. requestMagicLink returns the same
-    // result whether or not the email exists → no user enumeration.
-    await requestMagicLink({ ...result.data, purpose: 'recovery' })
-    recoverySent.value = true
+    // Send a password-reset magic link — only to an existing account.
+    const res = await requestMagicLink({ ...result.data, purpose: 'recovery' })
+    recoveryResult.value = res.accountExists === false ? 'no-account' : 'sent'
   } catch (e: any) {
     error.value = e?.message || 'Something went wrong. Please try again.'
   } finally {
@@ -215,17 +237,15 @@ async function handleRecovery() {
               Account recovery
             </div>
             <DialogTitle class="text-2xl leading-tight text-foreground font-display">
-              {{ recoverySent ? 'Check your email' : 'Forgot your password?' }}
+              {{ recoveryTitle }}
             </DialogTitle>
             <DialogDescription class="text-muted-foreground font-sans">
-              {{ recoverySent
-                ? 'We sent you a password reset link. Click it to set a new password.'
-                : 'Enter your email and we\'ll send you a link to reset your password.' }}
+              {{ recoveryDescription }}
             </DialogDescription>
           </DialogHeader>
 
           <!-- Recovery form -->
-          <form v-if="!recoverySent" class="space-y-4 pt-4" novalidate @submit.prevent="handleRecovery">
+          <form v-if="!recoveryResult" class="space-y-4 pt-4" novalidate @submit.prevent="handleRecovery">
             <Field id="recovery-email" label="Email" :error="recoveryForm.errors.email">
               <Input
                 v-model="form.email"
@@ -252,12 +272,36 @@ async function handleRecovery() {
             </p>
           </form>
 
+          <!-- No account for that email: point to sign-up instead -->
+          <div v-else-if="recoveryResult === 'no-account'" class="space-y-4 pt-4">
+            <div
+              role="status"
+              class="rounded-2xl px-4 py-4 text-sm bg-white border border-border text-foreground font-sans"
+            >
+              There's no WeDance account for <span class="font-bold">{{ form.email.trim() }}</span>.
+              Check the spelling, or create a free account with this email.
+            </div>
+            <Button type="button" variant="pill" size="lg" class="w-full px-5 font-sans" @click="registerInstead">
+              Create an account
+            </Button>
+            <p class="text-center text-sm text-muted-foreground font-sans">
+              <Button type="button" variant="link" class="h-auto p-0 font-bold underline" @click="tryAnotherEmail">
+                Try another email
+              </Button>
+              <span class="mx-2" aria-hidden="true">·</span>
+              <Button type="button" variant="link" class="h-auto p-0 font-bold underline" @click="backToLogin">
+                Back to login
+              </Button>
+            </p>
+          </div>
+
           <!-- Recovery confirmation -->
           <div v-else class="space-y-4 pt-4">
             <div
+              role="status"
               class="rounded-2xl px-4 py-4 text-sm bg-white border border-success/33 text-foreground font-sans"
             >
-              If <span class="font-bold">{{ form.email.trim() }}</span> has an account, a password reset link is on its way.
+              A password reset link is on its way to <span class="font-bold">{{ form.email.trim() }}</span>.
               The link expires in 15 minutes.
             </div>
             <p class="text-center text-sm text-muted-foreground font-sans">
