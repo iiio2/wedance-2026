@@ -666,7 +666,7 @@ describe('auth.requestMagicLink', () => {
     expect(db.dancers[0].magicToken).toBeTruthy()
   })
 
-  it('returns { sent: true } for an unknown email (no user enumeration)', async () => {
+  it('recovery for an unknown email sends nothing and reports no account', async () => {
     const db = new FakeDb()
     const caller = createCaller(db)
 
@@ -675,8 +675,58 @@ describe('auth.requestMagicLink', () => {
       purpose: 'recovery',
     })
 
-    // Always succeeds — never reveals whether the email exists.
+    // The UI uses this to offer sign-up instead of "check your email".
+    expect(result).toEqual({ sent: false, accountExists: false })
+    // No email to a non-user, and no account created for them.
+    expect(mockSendPasswordReset).not.toHaveBeenCalled()
+    expect(mockSendMagicLink).not.toHaveBeenCalled()
+    expect(db.dancers).toHaveLength(0)
+  })
+
+  it('recovery leaves the existing profile fields untouched', async () => {
+    const db = new FakeDb()
+    db.seedDancer({ email: 'keep@example.com', name: 'Keep Me', city: 'munich' })
+    const caller = createCaller(db)
+
+    await caller.auth.requestMagicLink({
+      email: 'keep@example.com',
+      name: 'Overwrite Attempt',
+      city: 'berlin',
+      purpose: 'recovery',
+    })
+
+    expect(db.dancers[0].name).toBe('Keep Me')
+    expect(db.dancers[0].city).toBe('munich')
+    expect(db.dancers[0].magicToken).toBeTruthy()
+  })
+
+  it('login magic link still creates an account for a new email', async () => {
+    const db = new FakeDb()
+    const caller = createCaller(db)
+
+    const result = await caller.auth.requestMagicLink({ email: 'new@example.com', purpose: 'login' })
+
     expect(result).toEqual({ sent: true })
+    expect(db.dancers).toHaveLength(1)
+    expect(mockSendMagicLink).toHaveBeenCalledOnce()
+  })
+
+  it('never exposes raw DB errors on the recovery path (RAZ-413)', async () => {
+    const db = new FakeDb()
+    db.seedDancer({ email: 'crash@example.com', name: 'Crash' })
+    db.update = () => ({
+      set: () => ({
+        where: () => { throw new Error('Failed query: update "dancers" ... params: [secret-token]') },
+      }),
+    }) as any
+    const caller = createCaller(db)
+
+    const result = await caller.auth.requestMagicLink({
+      email: 'crash@example.com',
+      purpose: 'recovery',
+    })
+    expect(result).toEqual({ sent: true })
+    expect(mockSendPasswordReset).not.toHaveBeenCalled()
   })
 
   it('never exposes raw DB errors to the client (RAZ-413)', async () => {
@@ -700,11 +750,11 @@ describe('auth.requestMagicLink', () => {
     // Must NOT throw — the raw "Failed query" error stays server-side.
     const result = await caller.auth.requestMagicLink({
       email: 'crash@example.com',
-      purpose: 'recovery',
+      purpose: 'login',
     })
     expect(result).toEqual({ sent: true })
     // Email was never sent because the DB call failed before it.
-    expect(mockSendPasswordReset).not.toHaveBeenCalled()
+    expect(mockSendMagicLink).not.toHaveBeenCalled()
   })
 
   it('never exposes email-send errors to the client', async () => {
