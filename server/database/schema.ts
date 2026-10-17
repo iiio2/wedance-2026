@@ -1004,6 +1004,29 @@ export const festivalWaves = pgTable('festival_waves', {
   index('festival_waves_target_idx').on(t.festivalSlug, t.targetDancerId),
 ])
 
+/**
+ * Discover-deck decisions on /my-plan ("Widen your year"). One row per dancer
+ * per card: a Yes or a Skip on another dancer, an event or a festival, so a
+ * card never comes back once decided (migration 0046). Kept apart from
+ * festival_waves on purpose: a wave is a message the other dancer sees, a
+ * deck Yes is private bookkeeping. `festival_slug` records the festival that
+ * put a dancer on the card — Yes on two or more dancers heading to the same
+ * festival raises the "add it to your year?" nudge.
+ */
+export const discoverSwipes = pgTable('discover_swipes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dancerId: uuid('dancer_id').notNull().references(() => dancers.id, { onDelete: 'cascade' }),
+  targetKind: text('target_kind').notNull().$type<'dancer' | 'event' | 'festival'>(),
+  // A dancer id, an event id, or a festival slug.
+  targetId: text('target_id').notNull(),
+  decision: text('decision').notNull().$type<'yes' | 'skip'>(),
+  festivalSlug: text('festival_slug'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  unique('discover_swipes_unique').on(t.dancerId, t.targetKind, t.targetId),
+  index('discover_swipes_dancer_idx').on(t.dancerId),
+])
+
 // ---------------------------------------------------------------------------
 // Cities — canonical, Google-Places-backed (migration 0024). One row per
 // Google place: `name` is the English name ("Munich"), `local_name` the name in

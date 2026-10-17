@@ -5,10 +5,11 @@
  *   Heat strip -> Goals -> Year (festivals) -> Month (courses)
  *   -> Week (socials) -> Tonight (hangouts)
  * Every section uses the V3 tropical style + accordion / compact-list
- * pattern established by the Year cards. Data is currently local +
- * preview-seeded; wire real backend when the pieces exist.
+ * pattern established by the Year cards. Week socials (plan.weekSocials)
+ * and the discover deck (plan.discover + discover_swipes) are DB-backed;
+ * ?preview=1 swaps in the preview* demo arrays and never writes.
  */
-import { ArrowRight, MapPin, Calendar, Search, Ticket, Plane, Home, GraduationCap, Heart, Coffee, CalendarPlus, Check, ExternalLink, ChevronDown, Target, Flame, Sparkles, MoonStar, UtensilsCrossed, GlassWater, Car, X, Star, Users as UsersIcon, Undo2, Plus } from 'lucide-vue-next'
+import { ArrowRight, MapPin, Calendar, Search, Ticket, Plane, Home, GraduationCap, Heart, Coffee, CalendarPlus, Check, ExternalLink, ChevronDown, Target, Flame, Sparkles, MoonStar, UtensilsCrossed, GlassWater, Car, X, Star, Clock, Users as UsersIcon, Undo2, Plus } from 'lucide-vue-next'
 import * as salsaOpen from '~/data/mock-festival'
 import * as meneate from '~/data/mock-meneate'
 import * as cityMunich from '~/data/mock-city-munich'
@@ -268,15 +269,16 @@ const picked = computed(() => {
     .sort((a, b) => a.startDate.localeCompare(b.startDate))
 })
 
-// City events by slug — used by autoFillPlan to seed courses and socials.
+// City events by slug — used by autoFillPlan to seed courses.
 const cityEventsMap: Record<string, CityEvent[]> = {
   munich: cityMunich.events,
   berlin: cityBerlin.events,
 }
 
 // Auto-fill the plan based on user preferences after onboarding.
-// Seeds festivals (year), courses (month) and socials (week) that match the
-// dancer's selected dance styles and city.
+// Seeds festivals (year) and courses (month) that match the dancer's selected
+// dance styles and city. Socials (week) are not seeded: that section lists the
+// real events of the coming 7 days, and going is the dancer's own RSVP.
 function autoFillPlan() {
   if (previewMode.value) return
   if (!isSignedIn.value) return
@@ -284,7 +286,7 @@ function autoFillPlan() {
   const city = dancerCity.value
   if (!styles.length) return
 
-  const alreadyFilled = yearPlanIds.value.size > 0 || courses.value.length > 0 || socials.value.length > 0
+  const alreadyFilled = yearPlanIds.value.size > 0 || courses.value.length > 0
   if (alreadyFilled) return
 
   const upperStyles = styles.map(s => s.toUpperCase())
@@ -298,7 +300,7 @@ function autoFillPlan() {
     if (!yearPlanIds.value.has(f.slug)) addFestival(f.slug)
   })
 
-  // --- City events → courses + socials ---
+  // --- City events → courses ---
   // Prefer real DB events; fall back to mock only if none loaded yet.
   const citySlug = (city || '').trim().toLowerCase()
   const cityEvents = realCityEvents.value.length > 0
@@ -334,29 +336,6 @@ function autoFillPlan() {
     trpc.plan.add
       .mutate({ itemType: 'event', itemId: e.id, metadata: { type: 'class', style: e.style, school: e.organizer, venue: e.venue, weekday: e.day, time: e.time, date: e.date || '' } })
       .catch((err) => { console.warn('[my-plan] autoFill persist course failed:', err) })
-  }
-
-  // Socials from type 'social' or 'practica' events (up to 4).
-  const socialEvents = matchedEvents.filter(e => e.type === 'social' || e.type === 'practica')
-  socials.value = socialEvents.slice(0, 4).map(e => ({
-    id: e.id,
-    name: e.name,
-    dayLabel: WEEKDAY_SHORT[e.day] || e.day,
-    dateISO: e.date || '',
-    time: e.time,
-    venue: e.venue,
-    city: city || '',
-    style: e.style,
-    friendsGoing: 0,
-    rsvpd: false,
-    color: STYLE_COLORS[e.style] || WD.gray500,
-  }))
-
-  // Persist seeded socials
-  for (const e of socialEvents.slice(0, 4)) {
-    trpc.plan.add
-      .mutate({ itemType: 'event', itemId: e.id, metadata: { type: 'social', name: e.name, style: e.style, venue: e.venue, weekday: e.day, time: e.time } })
-      .catch((err) => { console.warn('[my-plan] autoFill persist social failed:', err) })
   }
 }
 
@@ -439,7 +418,7 @@ onMounted(() => {
   if (isSignedIn.value && !previewMode.value) {
     loadGoalsFromDb()
     loadCoursesFromDb()
-    loadSocialsFromDb()
+    loadWeekSocials()
     loadDiscoverDeck()
     loadMyPlanFestivals()
   }
@@ -1108,42 +1087,10 @@ function loadCoursesFromDb() {
     })
 }
 
-// Load persisted socials from the DB on mount.
-function loadSocialsFromDb() {
-  const { $trpc } = useNuxtApp()
-  $trpc.plan.listDetailed
-    .query()
-    .then((rows) => {
-      const dbSocials: Social[] = []
-      for (const r of rows) {
-        if (r.itemType === 'event' && r.metadata && (r.metadata as Record<string, string>).type === 'social') {
-          const m = r.metadata as Record<string, string>
-          dbSocials.push({
-            id: r.itemId,
-            name: m.name || '',
-            dayLabel: (m.weekday && WEEKDAY_SHORT_ENROLL[m.weekday]) || m.weekday || '',
-            dateISO: '',
-            time: m.time || '',
-            venue: m.venue || '',
-            city: dancerCity.value || '',
-            style: m.style || '',
-            friendsGoing: 0,
-            rsvpd: false,
-            color: (m.style && STYLE_COLORS_ENROLL[m.style]) || WD.gray500,
-          })
-        }
-      }
-      if (dbSocials.length > 0) {
-        socials.value = dbSocials
-      }
-    })
-    .catch((err) => {
-      console.warn('[my-plan] loadSocialsFromDb failed:', err)
-    })
-}
-
 // -----------------------------------------------------------------------
-// SOCIALS · this-week horizon. Fri/Sat/Sun parties + practicas.
+// SOCIALS · this-week horizon: the real events in the dancer's city over the
+// next 7 days (plan.weekSocials), matched to their styles. RSVP = a plan item
+// of type 'event', so "Going" survives a reload and counts on the event page.
 // -----------------------------------------------------------------------
 type Social = {
   id: string; name: string; dayLabel: string; dateISO: string; time: string
@@ -1151,38 +1098,106 @@ type Social = {
   friendsGoing: number; rsvpd: boolean
   color: string
 }
+// Preview dates are relative to today so the demo always shows a live week.
+function previewDay(offset: number): { dayLabel: string; dateISO: string } {
+  const d = new Date(Date.now() + offset * 86400_000)
+  return {
+    dayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }),
+    dateISO: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+  }
+}
 const previewSocials: Social[] = [
-  { id: 's1', name: 'La Rumba Fri',           dayLabel: 'Fri', dateISO: '2026-07-03', time: '21:00', venue: 'La Rumba',   city: 'Munich', style: 'Cuban',   friendsGoing: 5, rsvpd: true,  color: WD.red600 },
-  { id: 's2', name: 'Rueda flashmob',         dayLabel: 'Sat', dateISO: '2026-07-04', time: '14:00', venue: 'Diana Tempel', city: 'Munich', style: 'Rueda',   friendsGoing: 12, rsvpd: true, color: WD.amber500 },
-  { id: 's3', name: 'Bailala Sat',            dayLabel: 'Sat', dateISO: '2026-07-04', time: '22:00', venue: 'Bailala',   city: 'Munich', style: 'Bachata', friendsGoing: 3, rsvpd: false, color: WD.purple500 },
-  { id: 's4', name: 'Cuban Sunday practica',  dayLabel: 'Sun', dateISO: '2026-07-05', time: '19:00', venue: 'Buena Vista', city: 'Munich', style: 'Practica', friendsGoing: 4, rsvpd: false, color: WD.green600 },
-  { id: 's5', name: 'Thursday warmup',        dayLabel: 'Thu', dateISO: '2026-07-09', time: '20:30', venue: 'La Rumba',   city: 'Munich', style: 'All',     friendsGoing: 2, rsvpd: false, color: WD.cyan600 },
+  { id: 's1', name: 'La Rumba night',         ...previewDay(1), time: '21:00', venue: 'La Rumba',   city: 'Munich', style: 'Cuban',   friendsGoing: 5, rsvpd: true,  color: WD.red600 },
+  { id: 's2', name: 'Rueda flashmob',         ...previewDay(2), time: '14:00', venue: 'Diana Tempel', city: 'Munich', style: 'Rueda',   friendsGoing: 12, rsvpd: true, color: WD.amber500 },
+  { id: 's3', name: 'Bailala night',          ...previewDay(2), time: '22:00', venue: 'Bailala',   city: 'Munich', style: 'Bachata', friendsGoing: 3, rsvpd: false, color: WD.purple500 },
+  { id: 's4', name: 'Cuban practica',         ...previewDay(3), time: '19:00', venue: 'Buena Vista', city: 'Munich', style: 'Practica', friendsGoing: 4, rsvpd: false, color: WD.green600 },
+  { id: 's5', name: 'Warm-up social',         ...previewDay(6), time: '20:30', venue: 'La Rumba',   city: 'Munich', style: 'All',     friendsGoing: 2, rsvpd: false, color: WD.cyan600 },
 ]
 const socials = ref<Social[]>(isPreviewInitial ? previewSocials : [])
+const weekSocialsLoaded = ref(isPreviewInitial)
+
+/** 'YYYY-MM-DD' → 'Sat 18 Oct' for the day chip's second line. */
+function shortDayDate(iso: string): string {
+  if (!iso) return ''
+  const d = new Date(`${iso}T12:00:00Z`)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+}
+
+async function loadWeekSocials() {
+  if (previewMode.value || !isSignedIn.value) return
+  try {
+    const { socials: rows } = await $trpc.plan.weekSocials.query()
+    socials.value = rows.map((e) => {
+      const tz = e.timezone || undefined
+      const style = e.styles[0] || e.type || ''
+      return {
+        id: e.id,
+        name: e.name,
+        dayLabel: (WEEKDAY_SHORT_ENROLL[eventLocalWeekday(e.startDate, tz)] || ''),
+        dateISO: eventLocalDate(e.startDate, tz),
+        time: eventLocalTime(e.startDate, tz),
+        venue: e.venueName,
+        city: e.city,
+        style,
+        friendsGoing: e.friendsGoing,
+        rsvpd: e.going,
+        color: STYLE_COLORS_ENROLL[style] || WD.gray500,
+      }
+    })
+  } catch (err) {
+    console.warn('[my-plan] loadWeekSocials failed:', err)
+  } finally {
+    weekSocialsLoaded.value = true
+  }
+}
 
 // Trigger auto-fill when user lands on my-plan for the first time after onboarding.
-// Must be placed after courses + socials refs to avoid TDZ errors in production builds.
+// Must be placed after the courses ref to avoid TDZ errors in production builds.
 // The flag prevents auto-fill from re-triggering after the user manually removes
 // all plan items (RAZ-285).
 const autoFillDone = ref(false)
 watch([isSignedIn, onboardedAtReal, yearPlanIds], () => {
   if (autoFillDone.value) return
-  if (isSignedIn.value && onboardedAtReal.value && yearPlanIds.value.size === 0 && courses.value.length === 0 && socials.value.length === 0) {
+  if (isSignedIn.value && onboardedAtReal.value && yearPlanIds.value.size === 0 && courses.value.length === 0) {
     autoFillDone.value = true
     nextTick(() => autoFillPlan())
-  } else if (yearPlanIds.value.size > 0 || courses.value.length > 0 || socials.value.length > 0) {
+  } else if (yearPlanIds.value.size > 0 || courses.value.length > 0) {
     // Plan already has items (loaded from DB or just added) — suppress future auto-fills.
     autoFillDone.value = true
   }
 }, { immediate: true })
 
-// Only show socials that are upcoming (no date = recurring/always shown; with date = future only).
+// The server already limits the list to the coming week; drop anything that
+// has started since the page loaded.
 const upcomingSocials = computed(() =>
   socials.value.filter(s => !s.dateISO || s.dateISO >= todayISO.value),
 )
 
-function toggleSocialRsvp(id: string) {
-  socials.value = socials.value.map(s => s.id === id ? { ...s, rsvpd: !s.rsvpd } : s)
+const rsvpPending = ref<Set<string>>(new Set())
+
+async function toggleSocialRsvp(id: string) {
+  const s = socials.value.find(x => x.id === id)
+  if (!s || rsvpPending.value.has(id)) return
+  const going = !s.rsvpd
+  socials.value = socials.value.map(x => x.id === id ? { ...x, rsvpd: going } : x)
+  if (previewMode.value) return
+  rsvpPending.value = new Set([...rsvpPending.value, id])
+  try {
+    if (going) {
+      await $trpc.plan.add.mutate({ itemType: 'event', itemId: id, metadata: { type: 'social', name: s.name, style: s.style, venue: s.venue, date: s.dateISO, time: s.time } })
+      useTrack().track('week_plan_add', { event_id: id, source: 'week_socials' })
+    } else {
+      await $trpc.plan.remove.mutate({ itemType: 'event', itemId: id })
+    }
+  } catch (err) {
+    console.warn('[my-plan] RSVP failed:', err)
+    socials.value = socials.value.map(x => x.id === id ? { ...x, rsvpd: !going } : x)
+  } finally {
+    const next = new Set(rsvpPending.value)
+    next.delete(id)
+    rsvpPending.value = next
+  }
 }
 
 // -----------------------------------------------------------------------
@@ -1378,7 +1393,7 @@ const heatItems = computed<HeatItem[]>(() => {
     items.push({
       key: `social-${s.id}`,
       label: `${s.name} · ${s.dayLabel} ${s.time}`,
-      detail: `${s.venue} · ${s.friendsGoing} friends going`,
+      detail: s.friendsGoing > 0 ? `${s.venue} · ${s.friendsGoing} friend${s.friendsGoing === 1 ? '' : 's'} going` : s.venue,
       href: '#socials',
       color: WD.cyan600,
       urgency: 40,
@@ -1404,12 +1419,15 @@ const heatItems = computed<HeatItem[]>(() => {
 // Yes-swipe on a dancer heading to an unpicked festival accumulates a
 // nudge in the Year section: "3 friends heading to Prague — add it?".
 // -----------------------------------------------------------------------
+// `target` is what a decision is stored against (discover_swipes); preview
+// cards have none and never write.
+type DeckTarget = { kind: 'dancer' | 'event' | 'festival'; id: string; festivalSlug?: string }
 type DeckCard =
-  | { id: string; kind: 'dancer-your-fest';   name: string; photo: string; city: string; danceStyles: string[]; festivalSlug: string; festivalName: string; festivalColor: string; reason: string }
-  | { id: string; kind: 'dancer-new-fest';    name: string; photo: string; city: string; danceStyles: string[]; festivalSlug: string; festivalName: string; festivalColor: string; reason: string }
-  | { id: string; kind: 'dancer-local';       name: string; photo: string; city: string; danceStyles: string[]; regularAt: string; reason: string }
-  | { id: string; kind: 'event-festival';     name: string; slug: string;  dateISO: string; venue: string; city: string; friendsGoing: number; color: string; reason: string }
-  | { id: string; kind: 'event-social';       name: string; dayLabel: string; time: string; venue: string; city: string; style: string; friendsGoing: number; color: string; reason: string }
+  | { id: string; kind: 'dancer-your-fest';   target?: DeckTarget; name: string; photo: string; city: string; danceStyles: string[]; festivalSlug: string; festivalName: string; festivalColor: string; reason: string }
+  | { id: string; kind: 'dancer-new-fest';    target?: DeckTarget; name: string; photo: string; city: string; danceStyles: string[]; festivalSlug: string; festivalName: string; festivalColor: string; reason: string }
+  | { id: string; kind: 'dancer-local';       target?: DeckTarget; name: string; photo: string; city: string; danceStyles: string[]; regularAt?: string; reason: string }
+  | { id: string; kind: 'event-festival';     target?: DeckTarget; name: string; slug: string;  dateISO: string; venue: string; city: string; friendsGoing: number; color: string; reason: string }
+  | { id: string; kind: 'event-social';       target?: DeckTarget; name: string; dayLabel: string; dateISO?: string; time: string; venue: string; city: string; style: string; friendsGoing: number; color: string; reason: string }
 
 const previewDeck: DeckCard[] = [
   { id: 'd1', kind: 'dancer-your-fest',  name: 'Ivana',   city: 'Berlin',    photo: 'https://i.pravatar.cc/240?u=ivana',   danceStyles: ['Timba', 'Son'],       festivalSlug: 'meneate-viena-2026',           festivalName: 'Menéate Viena',        festivalColor: WD.red600, reason: 'You both dance Timba — and she\'s at Menéate Viena too.' },
@@ -1427,10 +1445,9 @@ const previewDeck: DeckCard[] = [
 // Live deck state
 const deck = ref<DeckCard[]>(isPreviewInitial ? [...previewDeck] : [])
 // History stack for Undo
-const swipeHistory = ref<Array<{ card: DeckCard; direction: 'yes' | 'skip' | 'save'; nudgeAdded?: string }>>([])
-// Save-for-later stash (not exposed yet; scaffold shape)
-const savedForLater = ref<DeckCard[]>([])
-// Yes-swipes on dancers heading to a festival → accumulator
+const swipeHistory = ref<Array<{ card: DeckCard; direction: 'yes' | 'skip' | 'later'; nudgeAdded?: string; addedFestival?: boolean; addedEvent?: boolean }>>([])
+// Yes-swipes on dancers heading to a festival → accumulator. Real mode loads
+// these from the server (built from stored Yes swipes), so they survive a reload.
 type FestivalNudge = { festivalSlug: string; festivalName: string; festivalColor: string; dancerNames: string[]; dismissed: boolean }
 const festivalNudges = ref<FestivalNudge[]>(isPreviewInitial
   ? [
@@ -1444,95 +1461,68 @@ async function loadDiscoverDeck() {
   if (previewMode.value || !isSignedIn.value) return
   try {
     const result = await $trpc.plan.discover.query()
-    if (!result.cards.length) return
+
+    festivalNudges.value = result.nudges.map(n => ({ ...n, dismissed: false }))
 
     const myCity = dancerCity.value ?? ''
     const myStyles = dancerStyles.value ?? []
+    const sharedWith = (styles: string[]) => styles.filter(s => myStyles.some(m => relatedDanceStyles(s, m)))
 
     const mapped: DeckCard[] = []
-    let counter = 0
     for (const c of result.cards) {
-      const id = `disc-${counter++}`
-      if (c.kind === 'dancer-local') {
-        const dStyles = c.dancerStyles ?? []
-        const shared = dStyles.filter(s => myStyles.includes(s))
-        mapped.push({
-          id,
-          kind: 'dancer-local',
-          name: c.dancerName ?? '',
-          photo: c.dancerPhoto || `https://i.pravatar.cc/240?u=${encodeURIComponent(c.dancerName ?? id)}`,
-          city: c.dancerCity ?? '',
-          danceStyles: dStyles,
-          regularAt: `${myCity} socials`,
-          reason: shared.length
-            ? `You both dance ${shared.join(' & ')} in ${myCity}.`
-            : `Dancer in ${myCity} — you might cross paths.`,
-        })
-      } else if (c.kind === 'dancer-new-fest') {
-        const dStyles = c.dancerStyles ?? []
-        const shared = dStyles.filter(s => myStyles.includes(s))
-        mapped.push({
-          id,
-          kind: 'dancer-new-fest',
-          name: c.dancerName ?? '',
-          photo: c.dancerPhoto || `https://i.pravatar.cc/240?u=${encodeURIComponent(c.dancerName ?? id)}`,
-          city: c.dancerCity ?? '',
-          danceStyles: dStyles,
-          festivalSlug: c.festivalSlug ?? '',
-          festivalName: c.festivalName ?? '',
-          festivalColor: c.festivalColor ?? WD.sky500,
-          reason: shared.length
-            ? `${shared.join(' & ')} dancer heading to ${c.festivalName} — a festival not in your year yet.`
-            : `Heading to ${c.festivalName} — a festival you haven't explored.`,
-        })
-      } else if (c.kind === 'dancer-your-fest') {
-        const dStyles = c.dancerStyles ?? []
-        mapped.push({
-          id,
-          kind: 'dancer-your-fest',
-          name: c.dancerName ?? '',
-          photo: c.dancerPhoto || `https://i.pravatar.cc/240?u=${encodeURIComponent(c.dancerName ?? id)}`,
-          city: c.dancerCity ?? '',
-          danceStyles: dStyles,
-          festivalSlug: c.festivalSlug ?? '',
-          festivalName: c.festivalName ?? '',
-          festivalColor: c.festivalColor ?? WD.violet600,
-          reason: `Also going to ${c.festivalName} — you'll be at the same festival.`,
-        })
+      const id = `${c.targetKind}:${c.targetId}`
+      if (c.targetKind === 'dancer') {
+        const target: DeckTarget = { kind: 'dancer', id: c.targetId, festivalSlug: c.festivalSlug }
+        const shared = sharedWith(c.dancerStyles)
+        if (c.kind === 'dancer-local') {
+          mapped.push({
+            id, target, kind: 'dancer-local',
+            name: c.dancerName, photo: c.dancerPhoto, city: c.dancerCity, danceStyles: c.dancerStyles,
+            // The chip already says where they dance; only add what you share.
+            reason: shared.length
+              ? `You both dance ${shared.join(' & ')}${c.dancerCity && c.dancerCity.toLowerCase() === myCity.toLowerCase() ? ` in ${c.dancerCity}` : ''}.`
+              : '',
+          })
+        } else if (c.kind === 'dancer-new-fest') {
+          mapped.push({
+            id, target, kind: 'dancer-new-fest',
+            name: c.dancerName, photo: c.dancerPhoto, city: c.dancerCity, danceStyles: c.dancerStyles,
+            festivalSlug: c.festivalSlug ?? '', festivalName: c.festivalName ?? '', festivalColor: c.festivalColor ?? WD.sky500,
+            reason: shared.length
+              ? `${shared.join(' & ')} dancer heading to ${c.festivalName} — a festival not in your year yet.`
+              : `Heading to ${c.festivalName} — a festival you haven't explored.`,
+          })
+        } else {
+          mapped.push({
+            id, target, kind: 'dancer-your-fest',
+            name: c.dancerName, photo: c.dancerPhoto, city: c.dancerCity, danceStyles: c.dancerStyles,
+            festivalSlug: c.festivalSlug ?? '', festivalName: c.festivalName ?? '', festivalColor: c.festivalColor ?? WD.violet600,
+            reason: `Also going to ${c.festivalName} — you'll be at the same festival.`,
+          })
+        }
       } else if (c.kind === 'event-festival') {
         mapped.push({
-          id,
-          kind: 'event-festival',
-          name: c.eventName ?? '',
-          slug: c.eventSlug ?? '',
-          dateISO: c.eventDateISO ?? '',
-          venue: c.eventVenue ?? '',
-          city: c.eventCity ?? '',
-          friendsGoing: c.friendsGoing ?? 0,
-          color: c.color ?? WD.purple500,
+          id, target: { kind: 'festival', id: c.targetId }, kind: 'event-festival',
+          name: c.eventName, slug: c.eventSlug, dateISO: eventLocalDate(c.eventDateISO, c.eventTimezone || undefined),
+          venue: c.eventVenue, city: c.eventCity, friendsGoing: c.friendsGoing, color: c.color,
           reason: `Festival in ${c.eventCity} — not in your year yet.`,
         })
-      } else if (c.kind === 'event-social') {
+      } else {
+        const tz = c.eventTimezone || undefined
         mapped.push({
-          id,
-          kind: 'event-social',
-          name: c.eventName ?? '',
-          dayLabel: c.eventDayLabel ?? '',
-          time: c.eventTime ?? '',
-          venue: c.eventVenue ?? '',
-          city: c.eventCity ?? '',
-          style: c.eventStyle ?? '',
-          friendsGoing: c.friendsGoing ?? 0,
-          color: c.color ?? WD.amber500,
-          reason: myStyles.includes(c.eventStyle ?? '')
+          id, target: { kind: 'event', id: c.targetId }, kind: 'event-social',
+          name: c.eventName,
+          dayLabel: WEEKDAY_SHORT_ENROLL[eventLocalWeekday(c.eventDateISO, tz)] || '',
+          dateISO: eventLocalDate(c.eventDateISO, tz),
+          time: eventLocalTime(c.eventDateISO, tz),
+          venue: c.eventVenue, city: c.eventCity, style: c.eventStyle, friendsGoing: c.friendsGoing, color: c.color,
+          reason: c.eventStyle && sharedWith([c.eventStyle]).length
             ? `${c.eventStyle} in ${c.eventCity} — matches your style.`
-            : `${c.eventStyle ?? 'Dance'} event in ${c.eventCity}.`,
+            : `${c.eventStyle || 'Dance'} event in ${c.eventCity}.`,
         })
       }
     }
-    if (mapped.length) {
-      deck.value = mapped
-    }
+    deck.value = mapped
   } catch (err) {
     console.error('[discover] loadDiscoverDeck failed:', err)
   }
@@ -1552,14 +1542,14 @@ const dragDx = ref(0)
 const dragActive = ref(false)
 const dragStartX = ref(0)
 const dragPointerId = ref<number | null>(null)
-const cardExitDir = ref<'yes' | 'skip' | 'save' | null>(null)
+const cardExitDir = ref<'yes' | 'skip' | 'later' | null>(null)
 
 const SWIPE_THRESHOLD = 110
 
 function currentCardTransform(): string {
   if (cardExitDir.value === 'yes')  return 'translateX(120vw) rotate(18deg)'
   if (cardExitDir.value === 'skip') return 'translateX(-120vw) rotate(-18deg)'
-  if (cardExitDir.value === 'save') return 'translateY(120vh) scale(0.9)'
+  if (cardExitDir.value === 'later') return 'translateY(120vh) scale(0.9)'
   const dx = dragDx.value
   const rot = dx * 0.06
   return `translateX(${dx}px) rotate(${rot}deg)`
@@ -1587,49 +1577,61 @@ function onCardPointerUp(e: PointerEvent) {
   else                                      dragDx.value = 0
 }
 
-function commitSwipe(direction: 'yes' | 'skip' | 'save') {
+/** Store a decision server-side (real mode only). Failures are logged, not fatal. */
+function persistSwipe(card: DeckCard, decision: 'yes' | 'skip') {
+  if (previewMode.value || !card.target) return
+  $trpc.plan.discoverSwipe
+    .mutate({ targetKind: card.target.kind, targetId: card.target.id, decision, festivalSlug: card.target.festivalSlug })
+    .catch(err => console.warn('[discover] swipe not saved:', err))
+}
+
+/**
+ * Yes / Skip are stored, so the card never comes back. "Later" only moves the
+ * card to the back of the deck for this visit — nothing is stored.
+ */
+function commitSwipe(direction: 'yes' | 'skip' | 'later') {
   const card = deckCurrent.value
-  if (!card) return
+  if (!card || cardExitDir.value) return
   cardExitDir.value = direction
 
   let nudgeAdded: string | undefined
+  let addedFestival = false
+  let addedEvent = false
   if (direction === 'yes') {
     if (card.kind === 'dancer-new-fest') {
       nudgeAdded = card.festivalSlug
       addNudge(card)
     }
-    if (card.kind === 'event-festival') {
+    if (card.kind === 'event-festival' && !effectivePickIds.value.has(card.slug)) {
       // Add straight to the year picks
-      if (!previewMode.value) toggleFestival(card.slug)
+      if (!previewMode.value) addFestival(card.slug)
+      addedFestival = true
     }
     if (card.kind === 'event-social') {
-      // Add to week socials if not already there
-      const existing = socials.value.find(s => s.name === card.name)
-      if (!existing) {
+      addedEvent = true
+      const inWeek = socials.value.find(s => s.id === card.target?.id)
+      if (inWeek) {
+        socials.value = socials.value.map(s => s.id === inWeek.id ? { ...s, rsvpd: true } : s)
+      } else if (previewMode.value) {
         socials.value = [...socials.value, {
-          id: card.id,
-          name: card.name,
-          dayLabel: card.dayLabel,
-          dateISO: '',
-          time: card.time,
-          venue: card.venue,
-          city: card.city,
-          style: card.style,
-          friendsGoing: card.friendsGoing,
-          rsvpd: true,
-          color: card.color,
+          id: card.id, name: card.name, dayLabel: card.dayLabel, dateISO: '', time: card.time,
+          venue: card.venue, city: card.city, style: card.style, friendsGoing: card.friendsGoing, rsvpd: true, color: card.color,
         }]
+      }
+      if (!previewMode.value && card.target) {
+        $trpc.plan.add
+          .mutate({ itemType: 'event', itemId: card.target.id, metadata: { type: 'social', name: card.name, style: card.style, venue: card.venue, date: card.dateISO ?? '', time: card.time } })
+          .then(() => { if (!inWeek) loadWeekSocials() })
+          .catch(err => console.warn('[discover] add to plan failed:', err))
       }
     }
   }
-  if (direction === 'save') {
-    savedForLater.value = [...savedForLater.value, card]
-  }
+  if (direction === 'yes' || direction === 'skip') persistSwipe(card, direction)
 
   // Animate out then advance
   setTimeout(() => {
-    swipeHistory.value = [...swipeHistory.value, { card, direction, nudgeAdded }]
-    deck.value = deck.value.slice(1)
+    swipeHistory.value = [...swipeHistory.value, { card, direction, nudgeAdded, addedFestival, addedEvent }]
+    deck.value = direction === 'later' ? [...deck.value.slice(1), card] : deck.value.slice(1)
     dragDx.value = 0
     cardExitDir.value = null
   }, 260)
@@ -1654,28 +1656,51 @@ function undoSwipe() {
   const last = swipeHistory.value[swipeHistory.value.length - 1]
   if (!last) return
   swipeHistory.value = swipeHistory.value.slice(0, -1)
-  deck.value = [last.card, ...deck.value]
-  if (last.direction === 'save') savedForLater.value = savedForLater.value.filter(c => c.id !== last.card.id)
-  if (last.direction === 'yes' && last.nudgeAdded) {
-    const n = festivalNudges.value.find(x => x.festivalSlug === last.nudgeAdded)
-    if (n && 'name' in last.card) {
-      n.dancerNames = n.dancerNames.filter(name => name !== (last.card as any).name)
-    }
+  const card = last.card
+  deck.value = [card, ...(last.direction === 'later' ? deck.value.filter(c => c.id !== card.id) : deck.value)]
+  if (last.direction === 'later') return
+
+  if (!previewMode.value && card.target) {
+    $trpc.plan.discoverUnswipe
+      .mutate({ targetKind: card.target.kind, targetId: card.target.id })
+      .catch(err => console.warn('[discover] undo not saved:', err))
   }
-  if (last.direction === 'yes' && last.card.kind === 'event-social') {
-    socials.value = socials.value.filter(s => s.id !== last.card.id)
+  if (last.direction !== 'yes') return
+  if (last.nudgeAdded) {
+    const n = festivalNudges.value.find(x => x.festivalSlug === last.nudgeAdded)
+    if (n && 'name' in card) n.dancerNames = n.dancerNames.filter(name => name !== card.name)
+  }
+  if (last.addedFestival && card.kind === 'event-festival' && !previewMode.value) {
+    removeFestival(card.slug)
+  }
+  if (last.addedEvent && card.kind === 'event-social') {
+    const eventId = card.target?.id ?? card.id
+    socials.value = previewMode.value
+      ? socials.value.filter(s => s.id !== card.id)
+      : socials.value.map(s => s.id === eventId ? { ...s, rsvpd: false } : s)
+    if (!previewMode.value && card.target) {
+      $trpc.plan.remove
+        .mutate({ itemType: 'event', itemId: card.target.id })
+        .catch(err => console.warn('[discover] undo add failed:', err))
+    }
   }
 }
 
 function acceptFestivalNudge(n: FestivalNudge) {
-  if (!previewMode.value) toggleFestival(n.festivalSlug)
+  if (!previewMode.value) addFestival(n.festivalSlug)
   n.dismissed = true
   festivalNudges.value = [...festivalNudges.value]
 }
 
+/** "Not this year" — stored as a Skip on the festival, so the nudge and its cards stay gone. */
 function dismissFestivalNudge(n: FestivalNudge) {
   n.dismissed = true
   festivalNudges.value = [...festivalNudges.value]
+  if (!previewMode.value) {
+    $trpc.plan.discoverSwipe
+      .mutate({ targetKind: 'festival', targetId: n.festivalSlug, decision: 'skip' })
+      .catch(err => console.warn('[discover] dismiss not saved:', err))
+  }
 }
 
 // -----------------------------------------------------------------------
@@ -2624,11 +2649,11 @@ function cardSummary(f: CatalogueEntry) {
           </NuxtLink>
         </div>
 
-        <div v-if="!upcomingSocials.length" class="rounded-2xl p-6 text-center border-2 border-dashed border-input bg-white/50">
+        <div v-if="!upcomingSocials.length && (weekSocialsLoaded || !dancerCity)" class="rounded-2xl p-6 text-center border-2 border-dashed border-input bg-white/50">
           <Sparkles class="w-8 h-8 mx-auto mb-3 text-secondary" aria-hidden="true" />
           <p class="text-sm text-muted-foreground font-sans">
             <template v-if="dancerCity">
-              We're still gathering this week's socials in {{ dancerCity }}<template v-if="stylesLabel"> for {{ stylesLabel }}</template>. Check back soon.
+              No socials in {{ dancerCity }} on WeDance for the next 7 days yet.
             </template>
             <template v-else>
               Pick your city and we'll surface this week's socials here.
@@ -2638,7 +2663,7 @@ function cardSummary(f: CatalogueEntry) {
             Set your city
           </NuxtLink>
         </div>
-        <div v-else class="rounded-2xl bg-white border overflow-hidden" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
+        <div v-else-if="upcomingSocials.length" class="rounded-2xl bg-white border overflow-hidden" style="border-color:color-mix(in srgb, var(--wd-brown-900) 13.3%, transparent);">
           <div
             v-for="(s, i) in upcomingSocials"
             :key="s.id"
@@ -2647,22 +2672,23 @@ function cardSummary(f: CatalogueEntry) {
             :style="{ borderColor: 'color-mix(in srgb, var(--wd-brown-900) 5.1%, transparent)', background: s.rsvpd ? (WD.green600 + '08') : 'white' }"
           >
             <span
-              class="w-10 text-center text-eyebrow font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
+              class="w-12 text-center text-eyebrow font-black uppercase tracking-widest px-1.5 py-0.5 rounded leading-tight"
               :style="{ background: s.color + '18', color: s.color }"
-            >{{ s.dayLabel }}</span>
+            >{{ s.dayLabel }}<span v-if="s.dateISO" class="block font-bold normal-case tracking-normal">{{ shortDayDate(s.dateISO) }}</span></span>
             <span class="text-sm font-bold text-foreground font-sans">
               {{ s.time }}
             </span>
             <div class="min-w-0 flex-1">
               <div class="text-sm font-bold truncate text-foreground">{{ s.name }}</div>
               <div class="text-xs truncate text-muted-foreground font-sans">
-                {{ s.venue }} · <span :style="{ color: s.color }">{{ s.style }}</span> · {{ s.friendsGoing }} friends going
+                {{ s.venue }}<template v-if="s.style"> · <span :style="{ color: s.color }">{{ s.style }}</span></template><template v-if="s.friendsGoing > 0"> · {{ s.friendsGoing }} friend{{ s.friendsGoing === 1 ? '' : 's' }} going</template>
               </div>
             </div>
             <button
               type="button"
               class="text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap"
               :aria-pressed="s.rsvpd"
+              :disabled="rsvpPending.has(s.id)"
               :style="s.rsvpd
                 ? { background: 'var(--wd-green-600)', color: 'white' }
                 : { background: 'white', color: s.color, border: '1.5px solid ' + s.color + '55' }"
@@ -2823,7 +2849,7 @@ function cardSummary(f: CatalogueEntry) {
           </Button>
         </div>
         <p class="text-sm mb-6 max-w-xl text-muted-foreground font-sans">
-          People and places that could pull you somewhere new. Yes = we surface it above. Skip = we won't.
+          People and places that could pull you somewhere new. Yes on an event adds it to your plan; Yes on two dancers heading to the same festival suggests it for your year. Skip = we won't show it again.
         </p>
 
         <!-- Deck -->
@@ -2834,7 +2860,7 @@ function cardSummary(f: CatalogueEntry) {
               That's it for this pass.
             </p>
             <p class="mt-2 text-sm text-muted-foreground font-sans">
-              We'll refresh nightly with more people and places.
+              You've seen everyone and everything we have for you right now. New dancers and events show up here as they join WeDance.
             </p>
           </div>
 
@@ -2896,11 +2922,12 @@ function cardSummary(f: CatalogueEntry) {
                     <Plane class="w-3 h-3" style="stroke-width:1.5;" />
                     Going to {{ deckCurrent.festivalName }} — you're not
                   </div>
-                  <div v-else-if="deckCurrent.kind === 'dancer-local'"
+                  <div v-else-if="deckCurrent.kind === 'dancer-local' && (deckCurrent.regularAt || deckCurrent.city)"
                        class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-wd-green-600"
                        style="background:color-mix(in srgb, var(--wd-green-600) 9.4%, transparent);">
                     <MapPin class="w-3 h-3" style="stroke-width:1.5;" />
-                    Regular at {{ (deckCurrent as any).regularAt }}
+                    <template v-if="deckCurrent.regularAt">Regular at {{ deckCurrent.regularAt }}</template>
+                    <template v-else>Dances in {{ deckCurrent.city }}</template>
                   </div>
                   <div class="mt-3 flex flex-wrap gap-1">
                     <span v-for="st in deckCurrent.danceStyles" :key="st"
@@ -2927,17 +2954,17 @@ function cardSummary(f: CatalogueEntry) {
                   <div class="flex items-center gap-4 text-xs text-muted-foreground font-sans">
                     <span class="inline-flex items-center gap-1">
                       <Calendar class="w-3 h-3 text-secondary" />
-                      {{ new Date((deckCurrent as any).dateISO).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+                      {{ new Date(`${(deckCurrent as any).dateISO}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) }}
                     </span>
                     <span class="inline-flex items-center gap-1">
                       <MapPin class="w-3 h-3 text-secondary" />
                       {{ (deckCurrent as any).venue }}, {{ (deckCurrent as any).city }}
                     </span>
                   </div>
-                  <div class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-wd-amber-500"
+                  <div v-if="(deckCurrent as any).friendsGoing > 0" class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-wd-amber-500"
                        style="background:color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent);">
                     <UsersIcon class="w-3 h-3" style="stroke-width:1.5;" />
-                    {{ (deckCurrent as any).friendsGoing }} friends going
+                    {{ (deckCurrent as any).friendsGoing }} friend{{ (deckCurrent as any).friendsGoing === 1 ? '' : 's' }} going
                   </div>
                   <p v-if="deckCurrent.reason" class="mt-3 text-xs italic leading-snug text-muted-foreground font-display">
                     {{ deckCurrent.reason }}
@@ -2957,17 +2984,17 @@ function cardSummary(f: CatalogueEntry) {
                   <div class="flex items-center gap-4 text-xs text-muted-foreground font-sans">
                     <span class="inline-flex items-center gap-1">
                       <Calendar class="w-3 h-3 text-secondary" />
-                      {{ (deckCurrent as any).dayLabel }} {{ (deckCurrent as any).time }}
+                      {{ [(deckCurrent as any).dayLabel, shortDayDate((deckCurrent as any).dateISO ?? '')].filter(Boolean).join(' ') }} · {{ (deckCurrent as any).time }}
                     </span>
                     <span class="inline-flex items-center gap-1">
                       <MapPin class="w-3 h-3 text-secondary" />
                       {{ (deckCurrent as any).venue }}, {{ (deckCurrent as any).city }}
                     </span>
                   </div>
-                  <div class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-wd-amber-500"
+                  <div v-if="(deckCurrent as any).friendsGoing > 0" class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-wd-amber-500"
                        style="background:color-mix(in srgb, var(--wd-amber-500) 9.4%, transparent);">
                     <UsersIcon class="w-3 h-3" style="stroke-width:1.5;" />
-                    {{ (deckCurrent as any).friendsGoing }} friends going
+                    {{ (deckCurrent as any).friendsGoing }} friend{{ (deckCurrent as any).friendsGoing === 1 ? '' : 's' }} going
                   </div>
                   <p v-if="deckCurrent.reason" class="mt-3 text-xs italic leading-snug text-muted-foreground font-display">
                     {{ deckCurrent.reason }}
@@ -2992,10 +3019,11 @@ function cardSummary(f: CatalogueEntry) {
               type="button"
               class="w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95 text-wd-amber-500"
               style="background:white; border:2px solid color-mix(in srgb, var(--wd-amber-500) 33.3%, transparent);"
-              aria-label="Save for later"
-              @click="commitSwipe('save')"
+              aria-label="Later — show again at the end"
+              title="Later — show again at the end"
+              @click="commitSwipe('later')"
             >
-              <Star class="w-5 h-5" />
+              <Clock class="w-5 h-5" />
             </button>
             <button
               type="button"
