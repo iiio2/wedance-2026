@@ -1203,11 +1203,16 @@ function undoRemoveSocial() {
 // -----------------------------------------------------------------------
 // TONIGHT · spontaneous evening — dinners, bar hops, rides.
 // -----------------------------------------------------------------------
+type HangoutEvent = { id: string; name: string; startDate: string | null; timezone: string | null }
 type Hangout = {
   id: string; kind: 'dinner' | 'bar' | 'ride' | 'floor' | 'coffee'
-  title: string; time: string; host?: string; venue?: string
+  title: string; time: string; host?: string; venue?: string; placeAddress?: string
   people: number; going: boolean
   color: string; mine: boolean
+  /** The dance night it belongs to — linked on the row. */
+  event?: HangoutEvent | null
+  /** That event is in my plan — these rows come first. */
+  inMyPlan?: boolean
 }
 
 // Color map for hangout kinds
@@ -1220,8 +1225,8 @@ const hangoutColors: Record<string, string> = {
 }
 
 const previewHangouts: Hangout[] = [
-  { id: 'h1', kind: 'dinner', title: 'Dinner before La Rumba', time: '19:00', host: 'Mark + Klaus', venue: 'Xoco', people: 6,  going: false, color: WD.amber500, mine: false },
-  { id: 'h2', kind: 'floor',  title: 'La Rumba floor',         time: '22:00', venue: 'La Rumba',   people: 40, going: true,  color: WD.red600, mine: true },
+  { id: 'h1', kind: 'dinner', title: 'Dinner before La Rumba', time: '19:00', host: 'Mark + Klaus', venue: 'Xoco', people: 6,  going: false, color: WD.amber500, mine: false, event: { id: 'preview', name: 'La Rumba Friday', startDate: null, timezone: null }, inMyPlan: true },
+  { id: 'h2', kind: 'floor',  title: 'La Rumba floor',         time: '22:00', venue: 'La Rumba',   people: 40, going: true,  color: WD.red600, mine: true, event: { id: 'preview', name: 'La Rumba Friday', startDate: null, timezone: null }, inMyPlan: true },
   { id: 'h3', kind: 'bar',    title: 'Post-social mojitos',    time: '02:30', venue: 'Café con Leche', people: 8,  going: false, color: WD.purple500, mine: false },
   { id: 'h4', kind: 'ride',   title: 'Ride to Diana Tempel',   time: '13:30', host: 'Egor',        people: 3,  going: false, color: WD.cyan600, mine: false },
 ]
@@ -1236,8 +1241,8 @@ async function fetchHangouts() {
 
   loadingHangouts.value = true
   try {
-    const citySlug = dancerCity.value?.toLowerCase() || 'munich'
-    const result = await $trpc.hangouts.listTonight.query({ citySlug })
+    // The server resolves a typed city name ("München") to its slug.
+    const result = await $trpc.hangouts.listTonight.query({ citySlug: dancerCity.value })
     const currentDancerId = dancerIdReal.value
 
     hangouts.value = (result as any[]).map((h: any) => ({
@@ -1247,6 +1252,9 @@ async function fetchHangouts() {
       time: h.time,
       host: h.host,
       venue: h.venue,
+      placeAddress: h.placeAddress || undefined,
+      event: h.event,
+      inMyPlan: !!h.inMyPlan,
       people: h.rsvpCount || 0,
       going: h.rsvps?.includes(currentDancerId) || false,
       color: hangoutColors[h.kind] || WD.brown900,
@@ -1291,7 +1299,33 @@ const hangoutIcon = (kind: Hangout['kind']) => kind === 'dinner' ? UtensilsCross
 
 // Create-hangout form state
 const showHangoutForm = ref(false)
-const newHangout = ref({ kind: 'dinner' as 'dinner' | 'bar' | 'ride' | 'floor' | 'coffee', title: '', time: '20:00', venue: '' })
+type NewHangout = { kind: 'dinner' | 'bar' | 'ride' | 'floor' | 'coffee'; title: string; time: string; venue: string; eventId: string }
+const emptyHangout = (): NewHangout => ({ kind: 'dinner', title: '', time: '20:00', venue: '', eventId: '' })
+const newHangout = ref<NewHangout>(emptyHangout())
+// The place picked from Google autocomplete (null = typed text or nothing).
+const newHangoutPlace = ref<{ placeId: string; name: string; address: string; lat: number | null; lng: number | null } | null>(null)
+
+// Events a hangout can belong to: mine tonight first, then the rest tonight.
+type EventOption = { id: string; name: string | null; startDate: string | null; timezone: string | null; venueName: string | null }
+const hangoutEventOptions = ref<{ inPlan: EventOption[]; others: EventOption[] }>({ inPlan: [], others: [] })
+function eventOptionLabel(e: EventOption) {
+  const t = e.startDate ? eventLocalTime(e.startDate, e.timezone || undefined) : ''
+  return [t, e.name || 'Event', e.venueName ? `· ${e.venueName}` : ''].filter(Boolean).join(' ')
+}
+const pickedHangoutEvent = computed(() =>
+  [...hangoutEventOptions.value.inPlan, ...hangoutEventOptions.value.others].find(e => e.id === newHangout.value.eventId) ?? null,
+)
+async function openHangoutForm() {
+  showHangoutForm.value = !showHangoutForm.value
+  if (!showHangoutForm.value || previewMode.value || !dancerCity.value) return
+  try {
+    hangoutEventOptions.value = await $trpc.hangouts.eventOptions.query({ citySlug: dancerCity.value })
+    // Default to the dancer's own (first) planned event tonight.
+    if (!newHangout.value.eventId && hangoutEventOptions.value.inPlan[0]) newHangout.value.eventId = hangoutEventOptions.value.inPlan[0].id
+  } catch (err) {
+    console.warn('[my-plan] hangout event options failed:', err)
+  }
+}
 const creatingHangout = ref(false)
 const hangoutError = ref('')
 
@@ -1310,7 +1344,8 @@ async function createHangout() {
     }
     hangouts.value.unshift(fake)
     showHangoutForm.value = false
-    newHangout.value = { kind: 'dinner', title: '', time: '20:00', venue: '' }
+    newHangout.value = emptyHangout()
+    newHangoutPlace.value = null
     return
   }
 
@@ -1318,16 +1353,21 @@ async function createHangout() {
   hangoutError.value = ''
   creatingHangout.value = true
   try {
-    const citySlug = dancerCity.value?.toLowerCase() || 'munich'
+    const place = newHangoutPlace.value
+    const venue = newHangout.value.venue.trim()
     await $trpc.hangouts.create.mutate({
       kind: newHangout.value.kind,
       title: newHangout.value.title.trim(),
       time: newHangout.value.time,
-      venue: newHangout.value.venue.trim() || undefined,
-      citySlug,
+      // Empty + an event picked → the server uses the event's venue.
+      venue: venue || undefined,
+      ...(place && venue ? { placeId: place.placeId, placeAddress: place.address || undefined, placeLat: place.lat ?? undefined, placeLng: place.lng ?? undefined } : {}),
+      citySlug: dancerCity.value || 'munich',
+      eventId: newHangout.value.eventId || undefined,
     })
     showHangoutForm.value = false
-    newHangout.value = { kind: 'dinner', title: '', time: '20:00', venue: '' }
+    newHangout.value = emptyHangout()
+    newHangoutPlace.value = null
     await fetchHangouts()
   } catch (error: any) {
     const msg = error?.message || ''
@@ -2717,7 +2757,7 @@ function cardSummary(f: CatalogueEntry) {
               type="button"
               class="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full bg-wd-brown-900 font-sans"
               style="color:white;"
-              @click="showHangoutForm = !showHangoutForm"
+              @click="openHangoutForm"
             >
               <Plus class="w-3.5 h-3.5" />
               I'm out
@@ -2753,12 +2793,31 @@ function cardSummary(f: CatalogueEntry) {
             <Field id="hangout-title" label="What's the plan?">
               <Input v-model="newHangout.title" size="sm" placeholder="e.g. Dinner before La Rumba" />
             </Field>
+            <Field id="hangout-event" label="For which night?" optional>
+              <Select v-model="newHangout.eventId" size="sm">
+                <option value="">Not tied to an event</option>
+                <optgroup v-if="hangoutEventOptions.inPlan.length" label="In your plan tonight">
+                  <option v-for="e in hangoutEventOptions.inPlan" :key="e.id" :value="e.id">{{ eventOptionLabel(e) }}</option>
+                </optgroup>
+                <optgroup v-if="hangoutEventOptions.others.length" :label="`Also tonight${dancerCity ? ' in ' + dancerCity : ''}`">
+                  <option v-for="e in hangoutEventOptions.others" :key="e.id" :value="e.id">{{ eventOptionLabel(e) }}</option>
+                </optgroup>
+              </Select>
+            </Field>
             <div class="grid grid-cols-[110px_minmax(0,1fr)] gap-2">
               <Field id="hangout-time" label="Time">
                 <Input v-model="newHangout.time" type="time" size="sm" />
               </Field>
               <Field id="hangout-venue" label="Where?" optional>
-                <Input v-model="newHangout.venue" size="sm" placeholder="Venue or address" />
+                <HangoutsPlaceAutocomplete
+                  v-if="!previewMode && dancerCity"
+                  v-model="newHangout.venue"
+                  :city-slug="dancerCity"
+                  size="sm"
+                  :placeholder="pickedHangoutEvent?.venueName ? `${pickedHangoutEvent.venueName} (the event's venue)` : 'Search a place'"
+                  @place="newHangoutPlace = $event"
+                />
+                <Input v-else v-model="newHangout.venue" size="sm" placeholder="Venue or address" />
               </Field>
             </div>
           </div>
@@ -2801,9 +2860,23 @@ function cardSummary(f: CatalogueEntry) {
             </span>
             <div class="min-w-0 flex-1">
               <div class="text-sm font-bold truncate text-foreground">{{ h.title }}</div>
+              <div v-if="h.event" class="text-xs truncate font-sans">
+                <span class="text-muted-foreground">For </span>
+                <NuxtLink v-if="!previewMode" :to="eventPath({ id: h.event.id, name: h.event.name })" class="font-bold text-primary hover:underline">{{ h.event.name }}</NuxtLink>
+                <span v-else class="font-bold text-primary">{{ h.event.name }}</span>
+                <span v-if="h.event.startDate" class="text-muted-foreground"> · {{ eventLocalTime(h.event.startDate, h.event.timezone || undefined) }}</span>
+                <span v-if="h.inMyPlan" class="ml-1 text-eyebrow font-bold uppercase tracking-widest text-wd-green-600">in your plan</span>
+              </div>
               <div class="text-xs truncate text-muted-foreground font-sans">
                 <span v-if="h.host">{{ h.host }} · </span>
-                <span v-if="h.venue">{{ h.venue }} · </span>
+                <a
+                  v-if="h.venue && h.placeAddress"
+                  :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.venue + ', ' + h.placeAddress)}`"
+                  target="_blank"
+                  rel="noopener"
+                  class="hover:underline"
+                  :title="h.placeAddress"
+                >{{ h.venue }}</a><span v-else-if="h.venue">{{ h.venue }}</span><span v-if="h.venue"> · </span>
                 {{ h.people }} in
               </div>
             </div>

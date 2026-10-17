@@ -282,6 +282,20 @@ describe('Places client', () => {
     expect(client.calls).toBe(1)
   })
 
+  it('venue search: types=establishment biased around the city; details carry the formatted address', async () => {
+    const fetchMock = vi.fn(async (url: string) => new Response(JSON.stringify(url.includes('/details/')
+      ? { status: 'OK', result: { place_id: 'ChIJvenue', name: 'Café Kosmos', formatted_address: 'Dachauer Str. 7, 80335 München, Germany', geometry: { location: { lat: 48.14, lng: 11.56 } } } }
+      : { status: 'OK', predictions: [{ place_id: 'ChIJvenue', description: 'Café Kosmos, Dachauer Str., München', structured_formatting: { main_text: 'Café Kosmos', secondary_text: 'Dachauer Str., München' }, types: ['bar'] }] })))
+    const client = createPlacesClient('test-key', fetchMock as unknown as typeof fetch)
+    const preds = await client.autocomplete('Kosmos', { sessionToken: 'sess-2', types: 'establishment', near: { lat: 48.137, lng: 11.575, radius: 30000 } })
+    const url = new URL(fetchMock.mock.calls[0]![0])
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({ input: 'Kosmos', types: 'establishment', location: '48.137,11.575', radius: '30000', sessiontoken: 'sess-2' })
+    expect(preds[0]).toMatchObject({ placeId: 'ChIJvenue', mainText: 'Café Kosmos' })
+    const d = await client.details('ChIJvenue', { sessionToken: 'sess-2' })
+    expect(new URL(fetchMock.mock.calls[1]![0]).searchParams.get('fields')).toContain('formatted_address')
+    expect(d).toMatchObject({ name: 'Café Kosmos', formattedAddress: 'Dachauer Str. 7, 80335 München, Germany', lat: 48.14, lng: 11.56 })
+  })
+
   it('treats ZERO_RESULTS as empty and other statuses as errors without leaking the key', async () => {
     const zero = createPlacesClient('k', (async () => new Response('{"status":"ZERO_RESULTS"}')) as unknown as typeof fetch)
     expect(await zero.autocomplete('zzz', {})).toEqual([])

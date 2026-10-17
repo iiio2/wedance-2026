@@ -710,8 +710,16 @@ export const hangouts = pgTable('hangouts', {
   title: text('title').notNull(),
   time: text('time').notNull(), // 'HH:MM' format
   venue: text('venue'),
+  // The place picked from Google Places autocomplete (migration 0047). `venue`
+  // keeps the display name; these are null for a typed-in place.
+  placeId: text('place_id'),
+  placeAddress: text('place_address'),
+  placeLat: doublePrecision('place_lat'),
+  placeLng: doublePrecision('place_lng'),
   host: text('host'),
   citySlug: text('city_slug').notNull(),
+  // The dance night this hangout belongs to (dinner before it, ride to it…).
+  // A linked hangout shows on that event's night, not the night it was posted.
   eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }),
   peopleCount: integer('people_count').default(0),
   status: text('status').notNull().default('active').$type<'active' | 'closed'>(),
