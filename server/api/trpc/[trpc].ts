@@ -29,6 +29,10 @@ export default defineEventHandler(async (event) => {
     // Long work (painting a flyer) keeps running after the response, on Vercel too.
     // No `resource`: connected apps' tokens are for /mcp only and are ignored here.
     createContext: (opts) => createContext(opts, { voterSessionId, waitUntil: p => event.waitUntil(p), origin: requestOrigin(event) }),
+    // A 500 without a log line can't be debugged (RAZ-618): log every server error.
+    onError: ({ path, error }) => {
+      if (error.code === 'INTERNAL_SERVER_ERROR') console.error(`[trpc] ${path}:`, error.cause ?? error)
+    },
   })
 
   // Use sendWebResponse to correctly forward the tRPC Response to the client

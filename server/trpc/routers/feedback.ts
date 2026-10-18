@@ -57,9 +57,48 @@ async function linear<T = any>(query: string, variables: Record<string, unknown>
     headers: { 'Content-Type': 'application/json', Authorization: key },
     body: JSON.stringify({ query, variables }),
   })
-  const j = await r.json()
-  if (j.errors) throw new Error(j.errors[0]?.message || 'Linear API error')
+  const text = await r.text()
+  let j: any
+  try {
+    j = JSON.parse(text)
+  } catch {
+    throw new Error(`Linear API ${r.status}: ${text.slice(0, 300)}`)
+  }
+  if (j.errors) {
+    // Keep Linear's full error (extensions carry the real reason) in the server log.
+    console.error('[linear] GraphQL error', r.status, JSON.stringify(j.errors).slice(0, 2000))
+    throw new Error(j.errors[0]?.message || 'Linear API error')
+  }
   return j.data as T
+}
+
+type CreatedIssue = { issueCreate: { success: boolean; issue: { id: string; identifier: string; url: string } } }
+
+const ISSUE_CREATE = `mutation($i:IssueCreateInput!){ issueCreate(input:$i){ success issue{ id identifier url } } }`
+
+// File the issue; if Linear rejects the full payload, file a minimal one and attach
+// the rest as a comment, so a user's report is never lost (RAZ-618).
+async function createIssueResilient(
+  full: Record<string, unknown>,
+  minimal: Record<string, unknown>,
+  rest: string,
+): Promise<CreatedIssue['issueCreate']> {
+  try {
+    return (await linear<CreatedIssue>(ISSUE_CREATE, { i: full })).issueCreate
+  } catch (e) {
+    console.error('[feedback] issueCreate failed, retrying minimal:', (e as Error).message)
+  }
+  const created = (await linear<CreatedIssue>(ISSUE_CREATE, { i: minimal })).issueCreate
+  if (created.issue?.id && rest) {
+    try {
+      await linear(`mutation($i:CommentCreateInput!){ commentCreate(input:$i){ success } }`, {
+        i: { issueId: created.issue.id, body: rest.slice(0, 50_000) },
+      })
+    } catch (e) {
+      console.error('[feedback] context comment failed:', (e as Error).message)
+    }
+  }
+  return created
 }
 
 // Find (or create) a label on the team, return its id.
@@ -194,7 +233,9 @@ export const feedbackRouter = router({
 
       const c = input.context ?? {}
       const desc = input.description.trim()
-      const title = `${isIdea ? '💡' : '🐞'} ${desc.slice(0, 70)}${desc.length > 70 ? '…' : ''}`
+      // Slice by code point so an emoji is never cut in half.
+      const chars = Array.from(desc)
+      const title = `${isIdea ? '💡' : '🐞'} ${chars.slice(0, 70).join('')}${chars.length > 70 ? '…' : ''}`
 
       // Upload screenshot first so we can embed it inline in the description.
       const assetUrl = input.screenshot ? await uploadScreenshot(input.screenshot) : null
@@ -248,15 +289,20 @@ export const feedbackRouter = router({
       if (labelId) issueInput.labelIds = [labelId]
       if (stateId) issueInput.stateId = stateId
 
-      const d = await linear<{ issueCreate: { success: boolean; issue: { identifier: string; url: string } } }>(
-        `mutation($i:IssueCreateInput!){ issueCreate(input:$i){ success issue{ identifier url } } }`,
-        { i: issueInput },
-      )
+      // Fallback: the user's words + who sent it, in the Support project. Everything
+      // else (page, device, console errors, screenshot) follows as a comment.
+      const minimalInput: Record<string, unknown> = {
+        teamId: TEAM_ID,
+        projectId: SUPPORT_PROJECT_ID,
+        title,
+        description: lines.slice(0, 4).join('\n'),
+      }
+      const created = await createIssueResilient(issueInput, minimalInput, lines.slice(4).join('\n'))
 
       return {
-        ok: d.issueCreate.success,
-        identifier: d.issueCreate.issue.identifier,
-        url: d.issueCreate.issue.url,
+        ok: created.success,
+        identifier: created.issue.identifier,
+        url: created.issue.url,
       }
     }),
 })
