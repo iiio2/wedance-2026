@@ -5,7 +5,7 @@ import { planItems, dancers, festivals, festivalSignups, events, attendances, da
 import { getReferralDiscountPercent, getEarlyBirdInfo } from '../../utils/ticket-prices'
 import { eventPath } from '../../../shared/utils/eventSlug'
 import { festivalPath } from '../../../shared/utils/eventSlug'
-import { discoverDeck, recordSwipe, removeSwipe, weekSocials } from '../../utils/myPlanFeeds'
+import { discoverDeck, myCourses, recordSwipe, removeSwipe, weekSocials } from '../../utils/myPlanFeeds'
 
 export const planRouter = router({
   count: publicProcedure
@@ -641,6 +641,14 @@ export const planRouter = router({
    */
   weekSocials: protectedProcedure.query(async ({ ctx }) => {
     return weekSocials(ctx.db, ctx.dancerId)
+  }),
+
+  /**
+   * "Month · courses" — only the courses in the dancer's plan, backed by real
+   * events, each with its next upcoming class. Never suggestions or mock data.
+   */
+  myCourses: protectedProcedure.query(async ({ ctx }) => {
+    return myCourses(ctx.db, ctx.dancerId)
   }),
 
   /**

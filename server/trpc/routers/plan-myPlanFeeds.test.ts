@@ -75,6 +75,10 @@ describe.skipIf(!DATABASE_URL)('my-plan feeds', () => {
     // A weekly social: last week's occurrence (planned) and this week's.
     await addEvent('weeklyLast', { seriesId: `series-${RUN}`, startDate: new Date(now - 5 * DAY), endDate: new Date(now - 5 * DAY + 3600_000) })
     await addEvent('weeklyThis', { seriesId: `series-${RUN}`, startDate: new Date(now + 2 * DAY + 3600_000), endDate: new Date(now + 2 * DAY + 2 * 3600_000) })
+    // A weekly course: last week's class (planned) and the next one; plus a course that has ended.
+    await addEvent('courseLast', { type: 'Course', seriesId: `course-${RUN}`, startDate: new Date(now - 3 * DAY), endDate: new Date(now - 3 * DAY + 3600_000) })
+    await addEvent('courseNext', { type: 'Course', seriesId: `course-${RUN}`, startDate: new Date(now + 4 * DAY), endDate: new Date(now + 4 * DAY + 3600_000), organizerName: `School ${RUN}`, organizerUsername: `school-${RUN}` })
+    await addEvent('courseEnded', { type: 'Course', startDate: new Date(now - 10 * DAY), endDate: new Date(now - 10 * DAY + 3600_000) })
 
     // A festival the friend has picked, so a dancer card + friend count exist.
     await db.insert(schema.festivals).values({ slug: FEST, name: `Test Fest ${RUN}` })
@@ -142,6 +146,52 @@ describe.skipIf(!DATABASE_URL)('my-plan feeds', () => {
       expect(socials[1]!.planItemId).toBe(ids.weeklyLast)
       await me.plan.remove({ itemType: 'event', itemId: ids.weeklyLast! })
       await me.plan.remove({ itemType: 'event', itemId: ids.socialSoon! })
+    })
+  })
+
+  describe('plan.myCourses', () => {
+    const courseIds = async () => (await caller(ids.me!).plan.myCourses()).courses.map(c => c.eventId)
+
+    it('shows no course the dancer did not add — not even courses in their city', async () => {
+      expect(await courseIds()).toEqual([])
+    })
+
+    it('shows a course added from the event page (no metadata) at its next class, and not in the week socials', async () => {
+      const me = caller(ids.me!)
+      await me.plan.add({ itemType: 'event', itemId: ids.courseLast! })
+      const { courses } = await me.plan.myCourses()
+      expect(courses).toHaveLength(1)
+      expect(courses[0]).toMatchObject({ planItemId: ids.courseLast, eventId: ids.courseNext, organizerName: `School ${RUN}`, organizerUsername: `school-${RUN}` })
+      expect(courses[0]!.startDate).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+      expect(courses[0]).not.toHaveProperty('paidThroughMonth')
+      expect(courses[0]).not.toHaveProperty('attended')
+      // Planning the next occurrence too doesn't list the course twice.
+      await me.plan.add({ itemType: 'event', itemId: ids.courseNext! })
+      expect(await courseIds()).toEqual([ids.courseNext])
+      expect((await me.plan.weekSocials()).socials.map(s => s.id)).not.toContain(ids.courseNext)
+    })
+
+    it('removing the plan item removes the course for good', async () => {
+      const me = caller(ids.me!)
+      await me.plan.remove({ itemType: 'event', itemId: ids.courseLast! })
+      await me.plan.remove({ itemType: 'event', itemId: ids.courseNext! })
+      expect(await courseIds()).toEqual([])
+    })
+
+    it('leaves out ended courses and nights out', async () => {
+      const me = caller(ids.me!)
+      await me.plan.add({ itemType: 'event', itemId: ids.courseEnded! })
+      await me.plan.add({ itemType: 'event', itemId: ids.socialSoon! })
+      expect(await courseIds()).toEqual([])
+      await me.plan.remove({ itemType: 'event', itemId: ids.courseEnded! })
+      await me.plan.remove({ itemType: 'event', itemId: ids.socialSoon! })
+    })
+
+    it('counts a class saved from the course picker (metadata type class)', async () => {
+      const me = caller(ids.me!)
+      await me.plan.add({ itemType: 'event', itemId: ids.course!, metadata: { type: 'class' } })
+      expect(await courseIds()).toEqual([ids.course])
+      await me.plan.remove({ itemType: 'event', itemId: ids.course! })
     })
   })
 
