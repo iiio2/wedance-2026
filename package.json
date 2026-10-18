@@ -5,7 +5,8 @@
   "license": "AGPL-3.0-only",
   "scripts": {
     "build": "nuxt build",
-    "vercel-build": "npx tsx scripts/db-push-production.ts && nuxt build",
+    "vercel-build": "bun scripts/db-migrate.ts --deploy && nuxt build",
+    "db:migrate:deploy": "bun scripts/db-migrate.ts",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
