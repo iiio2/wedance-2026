@@ -5,7 +5,8 @@
   "license": "AGPL-3.0-only",
   "scripts": {
     "build": "nuxt build",
-    "vercel-build": "npx tsx scripts/db-push-production.ts && nuxt build",
+    "vercel-build": "bun scripts/db-migrate.ts --deploy && nuxt build",
+    "db:migrate:deploy": "bun scripts/db-migrate.ts",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
@@ -28,6 +29,7 @@
     "seed:pinakothek": "bun scripts/seed-pinakothek.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@neondatabase/serverless": "^1.0.2",
     "@sentry/nuxt": "^10.67.0",
     "@tailwindcss/vite": "^4.2.1",
@@ -43,6 +45,7 @@
     "lucide-vue-next": "^0.577.0",
     "nuxt": "^4.4.2",
     "posthog-js": "^1.400.1",
+    "qrcode": "^1.5.4",
     "radix-vue": "^1.9.17",
     "reka-ui": "^2.9.2",
     "resend": "^6.9.4",
@@ -63,6 +66,7 @@
     "@axe-core/playwright": "^4.10.2",
     "@playwright/test": "^1.58.2",
     "@types/pg": "^8.23.1",
+    "@types/qrcode": "^1.5.5",
     "@vitest/coverage-v8": "^4.1.0",
     "drizzle-kit": "^0.31.10",
     "pg": "^8.23.1",

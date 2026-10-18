@@ -4,6 +4,7 @@ import { useDb } from '../../utils/db'
 import { festivals, festivalSignups, dancers, organizerSubscriptions } from '../../database/schema'
 import { sendTicketConfirmationEmail } from '../../utils/email'
 import { completeReferral, expireReferral } from './webhook.lib'
+import { eventIdForFestival, recordLinkAction } from '../../utils/trackedLinks'
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
@@ -97,6 +98,11 @@ export default defineEventHandler(async (event) => {
       } catch (refErr) {
         console.error('Stripe webhook: referral completion failed:', refErr)
       }
+    }
+
+    // Bought through a promoter's tracked link: credit it (once per buyer).
+    if (isTicketCheckout && session.metadata?.via) {
+      await recordLinkAction(db, session.metadata.via, 'ticket', { dancerId, eventId: await eventIdForFestival(db, festivalSlug).catch(() => null), ref: session.id })
     }
 
     // Send confirmation email after a NEW signup is persisted.

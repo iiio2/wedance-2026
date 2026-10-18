@@ -5,7 +5,8 @@ import { planItems, dancers, festivals, festivalSignups, events, attendances, da
 import { getReferralDiscountPercent, getEarlyBirdInfo } from '../../utils/ticket-prices'
 import { eventPath } from '../../../shared/utils/eventSlug'
 import { festivalPath } from '../../../shared/utils/eventSlug'
-import { discoverDeck, recordSwipe, removeSwipe, weekSocials } from '../../utils/myPlanFeeds'
+import { discoverDeck, myCourses, recordSwipe, removeSwipe, weekSocials } from '../../utils/myPlanFeeds'
+import { eventIdForFestival, recordLinkAction } from '../../utils/trackedLinks'
 
 export const planRouter = router({
   count: publicProcedure
@@ -95,6 +96,12 @@ export const planRouter = router({
         .insert(planItems)
         .values(values)
         .onConflictDoNothing()
+
+      // Came through a promoter's tracked link for this event: credit the plan add.
+      if (ctx.viaCode && (input.itemType === 'event' || input.itemType === 'festival')) {
+        const eventId = input.itemType === 'event' ? input.itemId : await eventIdForFestival(ctx.db, input.itemId)
+        await recordLinkAction(ctx.db, ctx.viaCode, 'plan_add', { dancerId: ctx.dancerId, eventId })
+      }
 
       // Phase 4 dual-write: also write to the new typed tables so they
       // accumulate data for the switch step. Best-effort — failures here
@@ -641,6 +648,14 @@ export const planRouter = router({
    */
   weekSocials: protectedProcedure.query(async ({ ctx }) => {
     return weekSocials(ctx.db, ctx.dancerId)
+  }),
+
+  /**
+   * "Month · courses" — only the courses in the dancer's plan, backed by real
+   * events, each with its next upcoming class. Never suggestions or mock data.
+   */
+  myCourses: protectedProcedure.query(async ({ ctx }) => {
+    return myCourses(ctx.db, ctx.dancerId)
   }),
 
   /**

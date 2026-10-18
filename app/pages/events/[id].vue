@@ -60,10 +60,30 @@ function onOnboardingComplete(role: DanceRole, styles: string[], name: string, c
 const id = computed(() => String(route.params.id))
 const ev = ref<any>(null)
 const festivalData = ref<Awaited<ReturnType<typeof $trpc.events.festival.query>> | null>(null)
-const pending = ref(true)
-const failed = ref(false)
+
+// The page's data loads in the browser, so without this the server answered
+// 200 with an empty shell for events that don't exist or were unpublished.
+// During SSR, ask whether anything is behind this address; if not (and it
+// isn't a mock city/festival-programme page either), answer HTTP 404 and
+// render "Event not found" straight away. useState carries the verdict to the
+// browser so it doesn't load (or flash a spinner) again.
+const notFound = useState(`event-404:${id.value}`, () => false)
+if (import.meta.server) {
+  try {
+    const { found } = await $fetch<{ found: boolean }>('/api/event-status', { query: { id: id.value } })
+    if (!found && !findMockEvent(id.value)) {
+      notFound.value = true
+      const reqEvent = useRequestEvent()
+      if (reqEvent) setResponseStatus(reqEvent, 404, 'Event not found')
+    }
+  } catch { /* status check failed — let the browser try as before */ }
+}
+
+const pending = ref(!notFound.value)
+const failed = ref(notFound.value)
 
 async function load() {
+  if (notFound.value) return
   pending.value = true; failed.value = false
   try {
     // Booking requests are only linked by their full id; anything else is a dated event.
@@ -188,7 +208,8 @@ function scrollTo(anchor: string) {
 }
 
 useHead(() => ({
-  title: ev.value ? `${ev.value.title || 'Event'} — WeDance` : 'WeDance — Event',
+  title: ev.value ? `${ev.value.title || 'Event'} — WeDance` : (failed.value ? 'Event not found — WeDance' : 'WeDance — Event'),
+  meta: failed.value ? [{ name: 'robots', content: 'noindex' }] : [],
 }))
 </script>
 

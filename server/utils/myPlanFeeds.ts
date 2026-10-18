@@ -167,10 +167,13 @@ export async function weekSocials(db: Db, dancerId: string, now = new Date(), da
     .filter((id: string) => UUID_RE.test(id))
   if (!plannedIds.length) return { socials: [] }
 
-  const planned: Array<{ id: string; seriesId: string | null }> = await db
-    .select({ id: events.id, seriesId: events.seriesId })
+  // Courses (v3 type 'Course') have their own section, however they were added.
+  const planned: Array<{ id: string; seriesId: string | null }> = (await db
+    .select({ id: events.id, seriesId: events.seriesId, type: events.type })
     .from(events)
-    .where(inArray(events.id, plannedIds))
+    .where(inArray(events.id, plannedIds)))
+    .filter((p: any) => !isClassType(p.type))
+  if (!planned.length) return { socials: [] }
   const seriesIds = [...new Set(planned.map(p => p.seriesId).filter(Boolean) as string[])]
 
   const until = new Date(now.getTime() + days * DAY)
@@ -193,8 +196,8 @@ export async function weekSocials(db: Db, dancerId: string, now = new Date(), da
       gte(sql`coalesce(${events.endDate}, ${events.startDate})`, now),
       lt(events.startDate, until),
       seriesIds.length
-        ? or(inArray(events.id, plannedIds), inArray(events.seriesId, seriesIds))
-        : inArray(events.id, plannedIds),
+        ? or(inArray(events.id, planned.map(p => p.id)), inArray(events.seriesId, seriesIds))
+        : inArray(events.id, planned.map(p => p.id)),
     ))
     .orderBy(asc(events.startDate))
     .limit(200)
@@ -227,6 +230,93 @@ export async function weekSocials(db: Db, dancerId: string, now = new Date(), da
     .sort((a, b) => a.startDate.localeCompare(b.startDate))
 
   return { socials }
+}
+
+// ---------------------------------------------------------------------------
+// Month · courses
+// ---------------------------------------------------------------------------
+
+/** v3 event types that are a course (a class series), not a night out. */
+export const CLASS_TYPES = ['Course']
+export const isClassType = (type: string | null | undefined) => CLASS_TYPES.includes(type ?? '')
+
+export type MyCourse = {
+  /** The plan item's event id — what removing the card deletes. */
+  planItemId: string
+  /** The next upcoming class (same series), or the planned one. */
+  eventId: string
+  name: string
+  styles: string[]
+  startDate: string
+  timezone: string | null
+  venueName: string
+  organizerName: string
+  organizerUsername: string | null
+}
+
+/**
+ * "Month · courses" — only the classes the dancer put in their plan: plan
+ * items of type 'event' that are a course (event type 'Course', or saved
+ * from the course picker with metadata type 'class'), backed by a real
+ * event. Shows each course's next upcoming class (same series_id); a course
+ * with nothing upcoming has ended and is left out. No payment or attendance
+ * here — WeDance has no data for either, so none is shown.
+ */
+export async function myCourses(db: Db, dancerId: string, now = new Date()): Promise<{ courses: MyCourse[] }> {
+  const planRows = await db
+    .select({ itemId: planItems.itemId, metadata: planItems.metadata })
+    .from(planItems)
+    .where(and(eq(planItems.dancerId, dancerId), eq(planItems.itemType, 'event')))
+  const meta = new Map<string, Record<string, string> | null>(planRows.map((r: any) => [r.itemId, r.metadata]))
+  const ids = [...meta.keys()].filter(id => UUID_RE.test(id))
+  if (!ids.length) return { courses: [] }
+
+  const planned = (await db
+    .select({ id: events.id, seriesId: events.seriesId, type: events.type })
+    .from(events)
+    .where(inArray(events.id, ids)))
+    .filter((e: any) => isClassType(e.type) || meta.get(e.id)?.type === 'class')
+  if (!planned.length) return { courses: [] }
+
+  const seriesIds = [...new Set(planned.map((p: any) => p.seriesId).filter(Boolean) as string[])]
+  const cols = {
+    id: events.id, seriesId: events.seriesId, name: events.name, styles: events.styles, startDate: events.startDate,
+    timezone: events.timezone, venueName: events.venueName, organizerName: events.organizerName, organizerUsername: events.organizerUsername,
+  }
+  const upcoming = await db
+    .select(cols)
+    .from(events)
+    .where(and(
+      live(),
+      gte(sql`coalesce(${events.endDate}, ${events.startDate})`, now),
+      seriesIds.length
+        ? or(inArray(events.id, planned.map((p: any) => p.id)), inArray(events.seriesId, seriesIds))
+        : inArray(events.id, planned.map((p: any) => p.id)),
+    ))
+    .orderBy(asc(events.startDate))
+    .limit(500)
+
+  const courses: MyCourse[] = []
+  const seenSeries = new Set<string>()
+  for (const p of planned) {
+    if (p.seriesId && seenSeries.has(p.seriesId)) continue
+    const next = upcoming.find((r: any) => r.id === p.id || (p.seriesId && r.seriesId === p.seriesId))
+    if (!next?.startDate) continue
+    if (p.seriesId) seenSeries.add(p.seriesId)
+    courses.push({
+      planItemId: p.id,
+      eventId: next.id,
+      name: next.name || 'Class',
+      styles: (next.styles as string[] | null) ?? [],
+      startDate: new Date(next.startDate).toISOString(),
+      timezone: next.timezone ?? null,
+      venueName: next.venueName ?? '',
+      organizerName: next.organizerName ?? '',
+      organizerUsername: next.organizerUsername ?? null,
+    })
+  }
+  courses.sort((a, b) => a.startDate.localeCompare(b.startDate))
+  return { courses }
 }
 
 // ---------------------------------------------------------------------------

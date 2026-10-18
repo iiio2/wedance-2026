@@ -12,6 +12,7 @@ import { Field } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
 import { CityCombobox } from '~/components/ui/city-combobox'
 import { Select } from '~/components/ui/select'
+import { Textarea } from '~/components/ui/textarea'
 import { WD } from '~/lib/brand'
 import { mixHex, readableOn } from '~/lib/contrast'
 
@@ -170,6 +171,62 @@ function gigMailto(g: any): string | null {
 
 // Track which gigs the user has clicked Apply/Contact on
 const appliedGigs = ref(new Set<string>())
+
+// Applying on WeDance (signed in): my applications, and the applications to the
+// gigs I posted. Both client-only, like the board.
+const { data: myApplications, refresh: refreshMyApplications } = useAsyncData(
+  'gigs-my-applications',
+  () => isSignedIn.value ? $trpc.gigs.myApplications.query() : Promise.resolve([]),
+  { server: false, watch: [isSignedIn] },
+)
+const { data: myGigs, refresh: refreshMyGigs } = useAsyncData(
+  'gigs-mine',
+  () => isSignedIn.value ? $trpc.gigs.applications.query() : Promise.resolve([]),
+  { server: false, watch: [isSignedIn] },
+)
+const myApplicationFor = computed(() => new Map((myApplications.value ?? []).map((a: any) => [a.gig.id, a])))
+const myGigIds = computed(() => new Set((myGigs.value ?? []).map((g: any) => g.id)))
+const gigsWithApplications = computed(() => (myGigs.value ?? []).filter((g: any) => g.kind === 'role'))
+
+const applyOpen = ref<string | null>(null)
+const applyMessage = ref('')
+const applyError = ref('')
+const applying = ref(false)
+function openApply(id: string) {
+  applyOpen.value = applyOpen.value === id ? null : id
+  applyMessage.value = ''
+  applyError.value = ''
+}
+async function sendApplication(g: any) {
+  applyError.value = applyMessage.value.trim().length < 10 ? 'Say a few words about yourself (10 characters or more).' : ''
+  if (applyError.value) return
+  applying.value = true
+  try {
+    await $trpc.gigs.applyTo.mutate({ gigId: g.id, message: applyMessage.value.trim() })
+    useTrack().track('gig_cta_click', { action: 'apply_on_wedance', gig_id: g.id })
+    applyOpen.value = null
+    await refreshMyApplications()
+  }
+  catch (e: any) {
+    applyError.value = e?.message || 'Couldn’t send your application. Try again.'
+  }
+  finally {
+    applying.value = false
+  }
+}
+
+const deciding = ref<string | null>(null)
+async function decide(applicationId: string, decision: 'accepted' | 'declined') {
+  deciding.value = applicationId
+  try {
+    await $trpc.gigs.decideApplication.mutate({ applicationId, decision })
+    await refreshMyGigs()
+  }
+  finally {
+    deciding.value = null
+  }
+}
+const statusLabel: Record<string, string> = { pending: 'Waiting for an answer', accepted: 'Accepted', declined: 'Declined' }
 
 function handleApply(g: any) {
   useTrack().track('gig_cta_click', { action: g.kind === 'role' ? 'apply' : 'contact', gig_id: g.id })
@@ -479,6 +536,40 @@ const chipInk = (c: string, alpha = 0.094) => readableOn(c, mixHex(c, '#fff', al
       </form>
     </section>
 
+    <!-- YOUR GIGS: applications to the roles you posted -->
+    <section v-if="gigsWithApplications.length" id="your-gigs" class="max-w-4xl mx-auto px-4 pb-10">
+      <h2 class="text-2xl leading-tight font-display text-foreground mb-4">Applications to your gigs</h2>
+      <div class="grid gap-4">
+        <div v-for="g in gigsWithApplications" :key="g.id" class="rounded-2xl bg-white border border-border p-5">
+          <div class="flex items-baseline justify-between gap-3">
+            <h3 class="text-lg font-bold leading-tight text-foreground font-display">{{ g.title }}</h3>
+            <span class="text-xs text-muted-foreground font-sans">{{ g.applications.length }} application{{ g.applications.length === 1 ? '' : 's' }}</span>
+          </div>
+          <p v-if="!g.applications.length" class="mt-2 text-sm text-muted-foreground font-sans">Nobody applied yet.</p>
+          <ul v-else class="mt-3 divide-y divide-border">
+            <li v-for="a in g.applications" :key="a.id" class="py-3 flex flex-col sm:flex-row sm:items-start gap-3">
+              <div class="flex-1 min-w-0 font-sans">
+                <div class="text-sm font-bold text-foreground">
+                  {{ a.page?.name ?? a.applicant.name }}
+                  <NuxtLink v-if="a.page" :to="`/@${a.page.username}`" class="ml-1 text-xs font-normal underline text-secondary">page</NuxtLink>
+                  <NuxtLink v-else-if="a.applicant.handle" :to="`/@${a.applicant.handle}`" class="ml-1 text-xs font-normal underline text-secondary">profile</NuxtLink>
+                </div>
+                <p class="mt-1 text-sm text-muted-foreground whitespace-pre-line break-words">{{ a.message }}</p>
+                <a :href="`mailto:${a.applicant.email}`" class="mt-1 inline-block text-xs underline text-secondary break-all">{{ a.applicant.email }}</a>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <template v-if="a.status === 'pending'">
+                  <Button type="button" variant="outline-pill" size="pill-sm" :disabled="deciding === a.id" @click="decide(a.id, 'declined')">Decline</Button>
+                  <Button type="button" variant="pill" size="pill-sm" :disabled="deciding === a.id" @click="decide(a.id, 'accepted')">Accept</Button>
+                </template>
+                <span v-else class="text-xs font-bold font-sans" :class="a.status === 'accepted' ? 'text-success' : 'text-muted-foreground'">{{ statusLabel[a.status] }}</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
     <!-- BOARD -->
     <section class="max-w-4xl mx-auto px-4 pb-16">
       <div class="flex items-baseline justify-between mb-6">
@@ -566,6 +657,27 @@ const chipInk = (c: string, alpha = 0.094) => readableOn(c, mixHex(c, '#fff', al
             </template>
           </div>
 
+          <!-- Applied on WeDance -->
+          <div
+            v-if="myApplicationFor.get(g.id)"
+            class="mt-3 p-3 rounded-lg text-xs font-bold font-sans border"
+            :class="myApplicationFor.get(g.id).status === 'accepted' ? 'bg-success/[7.8%] text-success border-wd-green-600/20' : 'bg-muted text-muted-foreground border-border'"
+          >
+            You applied · {{ statusLabel[myApplicationFor.get(g.id).status] ?? myApplicationFor.get(g.id).status }}
+          </div>
+
+          <!-- Apply on WeDance -->
+          <form v-if="applyOpen === g.id" class="mt-3 grid gap-2" novalidate @submit.prevent="sendApplication(g)">
+            <Field :id="`apply-${g.id}`" label="Your message to the organizer" :error="applyError">
+              <Textarea v-model="applyMessage" rows="4" placeholder="Your experience, styles, links to videos…" />
+            </Field>
+            <p class="text-xs text-muted-foreground font-sans">They get your message and your account email to reply to.</p>
+            <div class="flex justify-end gap-2">
+              <Button type="button" variant="ghost" size="pill-sm" @click="applyOpen = null">Cancel</Button>
+              <Button type="submit" variant="pill" size="pill-sm" :loading="applying">Send application</Button>
+            </div>
+          </form>
+
           <!-- Footer -->
           <div class="mt-auto pt-4 flex items-center justify-between gap-3">
             <span
@@ -580,7 +692,16 @@ const chipInk = (c: string, alpha = 0.094) => readableOn(c, mixHex(c, '#fff', al
               <Button v-if="safeHref(g.contactUrl)" as-child variant="outline-pill" size="pill-sm" class="px-3" :accent="ink(getAccent(g.category))">
                 <a :href="safeHref(g.contactUrl)" target="_blank" rel="noopener">Profile</a>
               </Button>
-              <Button v-if="gigMailto(g)" as-child variant="pill" size="pill-sm" class="[&_svg]:size-3.5" :accent="ink(getAccent(g.category))">
+              <span v-if="myGigIds.has(g.id)" class="text-xs font-bold text-secondary font-sans">Your gig</span>
+              <Button
+                v-else-if="g.kind === 'role' && isSignedIn && !myApplicationFor.get(g.id) && applyOpen !== g.id"
+                type="button" variant="pill" size="pill-sm" class="[&_svg]:size-3.5" :accent="ink(getAccent(g.category))"
+                :aria-expanded="applyOpen === g.id ? 'true' : 'false'"
+                @click="openApply(g.id)"
+              >
+                Apply <ArrowRight aria-hidden="true" />
+              </Button>
+              <Button v-else-if="gigMailto(g) && !(g.kind === 'role' && isSignedIn)" as-child variant="pill" size="pill-sm" class="[&_svg]:size-3.5" :accent="ink(getAccent(g.category))">
                 <a :href="gigMailto(g)!" @click="handleApply(g)">
                   {{ g.kind === 'role' ? 'Apply' : 'Contact' }} <ArrowRight aria-hidden="true" />
                 </a>

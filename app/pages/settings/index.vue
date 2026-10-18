@@ -3,9 +3,10 @@
  * /settings — the signed-in dancer manages their profile + account.
  *   - Profile: name, city, role, styles, bio, socials, photo URL, privacy.
  *   - Account: change password, delete account.
+ *   - Connected apps: link to /settings/connections (assistants connected via MCP).
  * Protected: signed-out users are sent home. 2026 tropical style.
  */
-import { Check, ExternalLink, AlertTriangle } from 'lucide-vue-next'
+import { Check, ExternalLink, AlertTriangle, ChevronRight, Plug } from 'lucide-vue-next'
 import { ChangePasswordSchema, ProfileSettingsSchema, deleteAccountSchema, validateForm } from '#shared/validation'
 import { DANCE_LEVELS, type DanceLevel } from '#shared/utils/styleLevelMix'
 import { chilis } from '~/lib/levels'
@@ -239,6 +240,20 @@ async function submitDelete() {
           {{ loading ? 'Saving…' : 'Save changes' }}
         </Button>
       </form>
+
+      <!-- CONNECTED APPS -->
+      <h2 class="mt-12 text-lg font-bold text-foreground font-display">Connected apps</h2>
+      <NuxtLink
+        to="/settings/connections"
+        class="mt-4 flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-wd-card hover:border-primary/40 transition-colors duration-wd-quick"
+      >
+        <Plug class="w-5 h-5 shrink-0 text-secondary" aria-hidden="true" />
+        <span class="flex-1 text-sm">
+          <span class="block font-bold text-foreground">Claude, ChatGPT and other assistants</span>
+          <span class="block text-xs text-muted-foreground">See what they may do for you and disconnect them.</span>
+        </span>
+        <ChevronRight class="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+      </NuxtLink>
 
       <!-- ACCOUNT -->
       <h2 class="mt-12 text-lg font-bold text-foreground font-display">Change password</h2>

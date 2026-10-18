@@ -1320,3 +1320,196 @@ export const profileContacts = pgTable('profile_contacts', {
   uniqueIndex('profile_contacts_profile_email_uidx').on(t.profileId, sql`lower(${t.email})`),
   index('profile_contacts_profile_idx').on(t.profileId, t.createdAt),
 ])
+
+// ---------------------------------------------------------------------------
+// MCP server: WeDance as its own OAuth 2.1 authorization server (migration 0050,
+// docs/proposals/2026-10-18-mcp-server.md). Identities stay in `dancers`; an
+// assistant (Claude, ChatGPT) gets a grant the dancer consented to: scopes plus
+// the business profiles it may act for. Tokens and codes are stored as sha256
+// hashes only, never in plain text.
+// ---------------------------------------------------------------------------
+
+// A registered app. `id` is the client_id: a random id for Dynamic Client
+// Registration (RFC 7591), or the https URL of a Client ID Metadata Document,
+// whose fetched document is cached here (`metadataFetchedAt`).
+export const oauthClients = pgTable('oauth_clients', {
+  id: text('id').primaryKey(),
+  kind: text('kind').notNull().$type<'dcr' | 'cimd'>(),
+  name: text('name').notNull(),
+  redirectUris: jsonb('redirect_uris').$type<string[]>().notNull().default([]),
+  clientUri: text('client_uri'),
+  logoUri: text('logo_uri'),
+  // 'none' (public client, PKCE only) · 'client_secret_post' · 'client_secret_basic'.
+  tokenEndpointAuthMethod: text('token_endpoint_auth_method').notNull().default('none'),
+  clientSecretHash: text('client_secret_hash'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+  metadataFetchedAt: timestamp('metadata_fetched_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+// What a dancer allowed an app: scopes and the profiles it may act for. One
+// live grant per dancer + app; consenting again replaces scopes and profiles.
+// Revoking (settings → Connected apps, or refresh-token reuse) ends every token.
+export const oauthGrants = pgTable('oauth_grants', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dancerId: uuid('dancer_id').notNull().references(() => dancers.id, { onDelete: 'cascade' }),
+  clientId: text('client_id').notNull().references(() => oauthClients.id, { onDelete: 'cascade' }),
+  scopes: jsonb('scopes').$type<string[]>().notNull().default([]),
+  profileIds: jsonb('profile_ids').$type<string[]>().notNull().default([]),
+  revokedAt: timestamp('revoked_at'),
+  revokedReason: text('revoked_reason'),
+  lastUsedAt: timestamp('last_used_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (t) => [
+  index('oauth_grants_dancer_idx').on(t.dancerId),
+  index('oauth_grants_client_idx').on(t.clientId),
+])
+
+// Authorization codes: single use, a few minutes, bound to the PKCE challenge,
+// the exact redirect_uri and the resource (RFC 8707) they were issued for.
+export const oauthCodes = pgTable('oauth_codes', {
+  codeHash: text('code_hash').primaryKey(),
+  grantId: uuid('grant_id').notNull().references(() => oauthGrants.id, { onDelete: 'cascade' }),
+  clientId: text('client_id').notNull(),
+  redirectUri: text('redirect_uri').notNull(),
+  codeChallenge: text('code_challenge').notNull(),
+  resource: text('resource').notNull(),
+  scopes: jsonb('scopes').$type<string[]>().notNull().default([]),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+// Access tokens (1 h) and refresh tokens (30 d, rotating). A refresh token is
+// spent once (`usedAt`); presenting a spent one again is reuse and revokes the
+// whole grant.
+export const oauthTokens = pgTable('oauth_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  grantId: uuid('grant_id').notNull().references(() => oauthGrants.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull().$type<'access' | 'refresh'>(),
+  tokenHash: text('token_hash').notNull().unique(),
+  scopes: jsonb('scopes').$type<string[]>().notNull().default([]),
+  resource: text('resource').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  revokedAt: timestamp('revoked_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  index('oauth_tokens_grant_idx').on(t.grantId),
+])
+
+// Every MCP tool call: who (grant / dancer / app), which tool, what for
+// (`target`: a profile handle or event id), a hash of the input (never the
+// input), the outcome and how long it took. `confirmNonce` makes a publish
+// confirmation single use.
+export const mcpAudit = pgTable('mcp_audit', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  grantId: uuid('grant_id').references(() => oauthGrants.id, { onDelete: 'set null' }),
+  dancerId: uuid('dancer_id').references(() => dancers.id, { onDelete: 'set null' }),
+  clientId: text('client_id'),
+  tool: text('tool').notNull(),
+  target: text('target'),
+  profileId: uuid('profile_id').references(() => profiles.id, { onDelete: 'set null' }),
+  inputHash: text('input_hash').notNull(),
+  result: text('result').notNull().$type<'ok' | 'error' | 'preview' | 'denied'>(),
+  errorCode: text('error_code'),
+  latencyMs: integer('latency_ms'),
+  confirmNonce: text('confirm_nonce').unique(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  index('mcp_audit_grant_idx').on(t.grantId, t.createdAt),
+  index('mcp_audit_profile_idx').on(t.profileId, t.createdAt),
+])
+
+// Fixed-window rate limits for /mcp and the OAuth endpoints: one row per key
+// (token grant or client IP hash) per window. Old windows are pruned as we go.
+export const mcpRateLimits = pgTable('mcp_rate_limits', {
+  key: text('key').notNull(),
+  windowStart: timestamp('window_start').notNull(),
+  count: integer('count').notNull().default(0),
+}, (t) => [
+  uniqueIndex('mcp_rate_limits_key_window_uidx').on(t.key, t.windowStart),
+])
+
+// ---------------------------------------------------------------------------
+// MCP server, phase 2 (migration 0051, docs/proposals/2026-10-18-mcp-server.md):
+// promoter tracked links, gig applications, giveaway proposals.
+// ---------------------------------------------------------------------------
+
+// A promoter's (or influencer's) personal link to one event: /events/<slug>?via=<code>.
+// One per promoter page + event. The caption cached here is the kit caption
+// written for this promoter (promo_kit), so it isn't rewritten on every call.
+export const trackedLinks = pgTable('tracked_links', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  code: text('code').notNull().unique(),
+  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  createdBy: uuid('created_by').references(() => dancers.id, { onDelete: 'set null' }),
+  caption: jsonb('caption').$type<{ language: string; text: string; lines: string[]; writtenAt: string } | null>(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  unique('tracked_links_event_profile').on(t.eventId, t.profileId),
+  index('tracked_links_profile_idx').on(t.profileId),
+])
+
+// What a tracked link brought: a visit (per browser), a sign-up, a plan add or
+// a ticket (per dancer). Each counts once per link. Last touch wins: the link in
+// the visitor's `wd_via` cookie when they act.
+export const trackedLinkActions = pgTable('tracked_link_actions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  linkId: uuid('link_id').notNull().references(() => trackedLinks.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull().$type<'visit' | 'signup' | 'plan_add' | 'ticket'>(),
+  dancerId: uuid('dancer_id').references(() => dancers.id, { onDelete: 'cascade' }),
+  // Anonymous visits: the browser's session cookie id (never an IP).
+  visitorId: text('visitor_id'),
+  // The Stripe checkout session for a ticket.
+  ref: text('ref'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('tracked_link_actions_dancer_uidx').on(t.linkId, t.kind, t.dancerId).where(sql`${t.dancerId} IS NOT NULL`),
+  uniqueIndex('tracked_link_actions_visitor_uidx').on(t.linkId, t.kind, t.visitorId).where(sql`${t.dancerId} IS NULL AND ${t.visitorId} IS NOT NULL`),
+  index('tracked_link_actions_link_idx').on(t.linkId, t.kind),
+])
+
+// An artist applies to a gig role. The gig's poster (or its page's team) accepts
+// or declines; the applicant's account email is shared with the poster.
+export const gigApplications = pgTable('gig_applications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  gigId: uuid('gig_id').notNull().references(() => gigs.id, { onDelete: 'cascade' }),
+  dancerId: uuid('dancer_id').notNull().references(() => dancers.id, { onDelete: 'cascade' }),
+  // The artist page they apply as (optional).
+  profileId: uuid('profile_id').references(() => profiles.id, { onDelete: 'set null' }),
+  message: text('message').notNull(),
+  status: text('status').notNull().default('pending').$type<'pending' | 'accepted' | 'declined' | 'withdrawn'>(),
+  decidedBy: uuid('decided_by').references(() => dancers.id, { onDelete: 'set null' }),
+  decidedAt: timestamp('decided_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (t) => [
+  unique('gig_applications_gig_dancer').on(t.gigId, t.dancerId),
+  index('gig_applications_dancer_idx').on(t.dancerId),
+])
+
+// A promoter/influencer proposes a giveaway for an event; only admins create
+// giveaways directly, so the event's organizer approves it and it becomes one.
+export const giveawayProposals = pgTable('giveaway_proposals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  proposedBy: uuid('proposed_by').references(() => dancers.id, { onDelete: 'set null' }),
+  // The page proposing it (a promoter or influencer).
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  prize: text('prize').notNull(),
+  description: text('description').notNull().default(''),
+  sponsorName: text('sponsor_name'),
+  endsAt: timestamp('ends_at'),
+  status: text('status').notNull().default('pending').$type<'pending' | 'approved' | 'declined'>(),
+  note: text('note'),
+  giveawayId: uuid('giveaway_id').references(() => giveaways.id, { onDelete: 'set null' }),
+  decidedBy: uuid('decided_by').references(() => dancers.id, { onDelete: 'set null' }),
+  decidedAt: timestamp('decided_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  index('giveaway_proposals_event_idx').on(t.eventId, t.status),
+  index('giveaway_proposals_profile_idx').on(t.profileId),
+])

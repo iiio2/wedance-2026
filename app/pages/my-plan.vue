@@ -12,14 +12,13 @@
 import { ArrowRight, MapPin, Calendar, Search, Ticket, Plane, Home, GraduationCap, Heart, Coffee, CalendarPlus, Check, ExternalLink, ChevronDown, Target, Flame, Sparkles, MoonStar, UtensilsCrossed, GlassWater, Car, X, Star, Clock, Users as UsersIcon, Undo2, Plus } from 'lucide-vue-next'
 import * as salsaOpen from '~/data/mock-festival'
 import * as meneate from '~/data/mock-meneate'
-import * as cityMunich from '~/data/mock-city-munich'
-import * as cityBerlin from '~/data/mock-city-berlin'
 import type { CityEvent } from '~/types/city'
 import { eventLocalDate, eventLocalTime, eventLocalWeekday } from '#shared/utils/eventTime'
 import { detectDanceStyle, relatedDanceStyles } from '#shared/dance-styles'
 import * as cubanFire from '~/data/mock-cuban-fire'
 import * as caribbeanUrbanFire from '~/data/mock-caribbean-urban-fire'
 import { WD } from '~/lib/brand'
+import { previewOnlyFestivals } from '~/data/mock-preview-festivals'
 import { eventPath, festivalPath } from '#shared/utils/eventSlug'
 
 definePageMeta({ layout: false })
@@ -94,6 +93,11 @@ const stylesLabel = computed(() => {
 // "Full week" link → the user's city page when we have one, else the cities
 // index. Only munich/berlin have dedicated pages in the current mock data.
 const CITY_PAGES = new Set(['munich', 'berlin'])
+// Upcoming classes in the city ("Your first class" list on the city page).
+const cityClassesLink = computed(() => {
+  const slug = (dancerCity.value || '').trim().toLowerCase()
+  return CITY_PAGES.has(slug) ? `/cities/${slug}?taster=1#taster` : '/cities'
+})
 const citySocialsLink = computed(() => {
   const slug = (dancerCity.value || '').trim().toLowerCase()
   return CITY_PAGES.has(slug) ? `/cities/${slug}` : '/cities'
@@ -167,54 +171,7 @@ const catalogue = [
     earlyBirdDeadline: '2026-06-01',
     styles: ['Salsa', 'Bachata'] as string[],
   },
-  {
-    slug: 'bachata-stars-barcelona-2026',
-    name: 'Bachata Stars Barcelona',
-    startDate: '2026-07-03',
-    endDate: '2026-07-06',
-    location: 'Barcelona, Spain',
-    venue: 'Sala Apolo',
-    logo: 'https://ui-avatars.com/api/?name=BSB&size=80&background=7c3aed&color=fff&bold=true&rounded=true',
-    accentColor: WD.violet600,
-    workshopCount: 24,
-    ticketUrl: 'https://bachatastarsbarcelona.com/tickets',
-    ticketFromPrice: 145,
-    // Set close to "today" so the urgent-deadline UI has something to
-    // fire on in the preview demo. When real data lands this becomes
-    // whatever the organizer sets.
-    earlyBirdDeadline: '2026-07-06',
-    styles: ['Bachata'] as string[],
-  },
-  {
-    slug: 'timba-fest-london-2026',
-    name: 'Timba Fest London',
-    startDate: '2026-09-18',
-    endDate: '2026-09-21',
-    location: 'London, UK',
-    venue: 'Village Underground',
-    logo: 'https://ui-avatars.com/api/?name=TFL&size=80&background=0ea5e9&color=fff&bold=true&rounded=true',
-    accentColor: WD.sky500,
-    workshopCount: 18,
-    ticketUrl: 'https://timbafestlondon.co.uk/tickets',
-    ticketFromPrice: 95,
-    earlyBirdDeadline: undefined as string | undefined,
-    styles: ['Timba', 'Salsa'] as string[],
-  },
-  {
-    slug: 'kizomba-prague-2026',
-    name: 'Kizomba & Urban Kiz Prague',
-    startDate: '2026-10-10',
-    endDate: '2026-10-12',
-    location: 'Prague, Czech Republic',
-    venue: 'La Loca Prague',
-    logo: 'https://ui-avatars.com/api/?name=KPR&size=80&background=ec4899&color=fff&bold=true&rounded=true',
-    accentColor: WD.pink500,
-    workshopCount: 16,
-    ticketUrl: 'https://kizombaprague.com/tickets',
-    ticketFromPrice: 110,
-    earlyBirdDeadline: undefined as string | undefined,
-    styles: ['Kizomba', 'Semba'] as string[],
-  },
+  ...previewOnlyFestivals,
 ]
 
 type CatalogueEntry = typeof catalogue[number]
@@ -254,90 +211,17 @@ const picked = computed(() => {
       .sort((a, b) => a.startDate.localeCompare(b.startDate))
   }
 
-  // Real mode: merge DB festivals with mock catalogue entries.
-  // DB data wins when slugs overlap; mock-only slugs still in yearPlanIds
-  // are included as fallback (they exist in the plan but not yet in the
-  // festivals table — e.g. hand-seeded mock entries).
-  // Filter both sources by effectivePickIds so local removals are
-  // reflected immediately (RAZ-285).
-  const fromDb = dbFestivals.value.filter(f => effectivePickIds.value.has(f.slug))
-  const dbSlugs = new Set(fromDb.map(f => f.slug))
-  const fromMock = catalogue
-    .filter(f => effectivePickIds.value.has(f.slug) && !dbSlugs.has(f.slug))
-
-  return [...fromDb, ...fromMock]
+  // Real mode: only the dancer's festivals from the DB (plan.myPlan). The
+  // mock catalogue above is preview-only — it never fills a real plan.
+  // Filtered by effectivePickIds so local removals show at once (RAZ-285).
+  return dbFestivals.value
+    .filter(f => effectivePickIds.value.has(f.slug))
     .sort((a, b) => a.startDate.localeCompare(b.startDate))
 })
 
-// City events by slug — used by autoFillPlan to seed courses.
-const cityEventsMap: Record<string, CityEvent[]> = {
-  munich: cityMunich.events,
-  berlin: cityBerlin.events,
-}
-
-// Auto-fill the plan based on user preferences after onboarding.
-// Seeds festivals (year) and courses (month) that match the dancer's selected
-// dance styles and city. Socials (week) are not seeded: that section lists the
-// real events of the coming 7 days, and going is the dancer's own RSVP.
-function autoFillPlan() {
-  if (previewMode.value) return
-  if (!isSignedIn.value) return
-  const styles = dancerStyles.value
-  const city = dancerCity.value
-  if (!styles.length) return
-
-  const alreadyFilled = yearPlanIds.value.size > 0 || courses.value.length > 0
-  if (alreadyFilled) return
-
-  const upperStyles = styles.map(s => s.toUpperCase())
-
-  // --- Festivals (year plan) ---
-  const matchedFestivals = catalogue.filter(f => {
-    const nameUpper = f.name.toUpperCase()
-    return upperStyles.some(s => nameUpper.includes(s))
-  })
-  matchedFestivals.slice(0, 4).forEach(f => {
-    if (!yearPlanIds.value.has(f.slug)) addFestival(f.slug)
-  })
-
-  // --- City events → courses ---
-  // Prefer real DB events; fall back to mock only if none loaded yet.
-  const citySlug = (city || '').trim().toLowerCase()
-  const cityEvents = realCityEvents.value.length > 0
-    ? realCityEvents.value
-    : (cityEventsMap[citySlug] || [])
-  const matchedEvents = cityEvents.filter(e =>
-    upperStyles.some(s => e.style.toUpperCase().includes(s)),
-  )
-
-  // Courses from type 'class' events (up to 3).
-  const classEvents = matchedEvents.filter(e => e.type === 'class')
-  const WEEKDAY_SHORT: Record<string, string> = { Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat', Sunday: 'Sun' }
-  const STYLE_COLORS: Record<string, string> = { Salsa: WD.red600, Bachata: WD.violet600, Kizomba: WD.pink500, Timba: WD.cyan600 }
-  courses.value = classEvents.slice(0, 3).map(e => ({
-    id: e.id,
-    school: e.organizer,
-    teacher: '',
-    style: e.style,
-    level: e.level || 'All levels',
-    weekday: WEEKDAY_SHORT[e.day] || e.day,
-    time: e.time,
-    venue: e.venue,
-    nextClassDate: e.date || '',
-    attended: 0,
-    total: 0,
-    paidThroughMonth: false,
-    color: STYLE_COLORS[e.style] || WD.gray500,
-  }))
-
-  // Persist seeded courses
-  const { $trpc: trpc } = useNuxtApp()
-  for (const e of classEvents.slice(0, 3)) {
-    trpc.plan.add
-      .mutate({ itemType: 'event', itemId: e.id, metadata: { type: 'class', style: e.style, school: e.organizer, venue: e.venue, weekday: e.day, time: e.time, date: e.date || '' } })
-      .catch((err) => { console.warn('[my-plan] autoFill persist course failed:', err) })
-  }
-}
+// Nothing is ever added to a real plan without the dancer's own action:
+// onboarding used to auto-fill festivals (by name match against the mock
+// catalogue) and courses (from mock city data) — removed.
 
 function onRemove(slug: string) {
   // In preview mode we don't mutate real state.
@@ -907,11 +791,18 @@ function stopEditingProgress() {
 // COURSES · monthly cadence: school + teacher + level + next class.
 // -----------------------------------------------------------------------
 type Course = {
-  id: string; school: string; teacher: string; style: string; level: string
+  /** The plan item's event id — what the X removes. */
+  id: string
+  /** The next class's event (the card links there; "where it's edited"). */
+  eventId?: string
+  name?: string
+  school: string; schoolUsername?: string | null
+  teacher: string; style: string; level: string
   weekday: string; time: string; venue: string
   nextClassDate: string
-  attended: number; total: number
-  paidThroughMonth: boolean
+  /** Payment / attendance only when real data exists — never 0/0 placeholders. Preview only today. */
+  attended?: number; total?: number
+  paidThroughMonth?: boolean
   color: string
 }
 const previewCourses: Course[] = [
@@ -993,98 +884,66 @@ function formatShortDate(iso: string): string {
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })
 }
 
-// Merge real DB events with mock fallback (mock only if no real events loaded).
+// Real upcoming classes in the dancer's city (never mock data).
 const availableClasses = computed(() => {
-  const citySlug = (dancerCity.value || '').trim().toLowerCase()
-  const enrolledIds = new Set(courses.value.map(c => c.id))
-  // Prefer real events from DB; fall back to mock data only if DB returned nothing.
-  const source = realCityEvents.value.length > 0
-    ? realCityEvents.value
-    : (cityEventsMap[citySlug] || [])
-  return source
+  const enrolledIds = new Set(courses.value.flatMap(c => [c.id, c.eventId].filter(Boolean) as string[]))
+  return realCityEvents.value
     .filter(e => e.type === 'class' && !enrolledIds.has(e.id))
     .filter(e => !e.date || e.date >= todayISO.value)
 })
 
-function enrollClass(e: CityEvent) {
-  const course: Course = {
-    id: e.id,
-    school: e.organizer,
-    teacher: '',
-    style: e.style,
-    level: e.level || 'All levels',
-    weekday: WEEKDAY_SHORT_ENROLL[e.day] || e.day,
-    time: e.time,
-    venue: e.venue,
-    nextClassDate: e.date || '',
-    attended: 0,
-    total: 0,
-    paidThroughMonth: false,
-    color: STYLE_COLORS_ENROLL[e.style] || WD.gray500,
-  }
-  courses.value.push(course)
+async function enrollClass(e: CityEvent) {
+  if (previewMode.value) return
   useTrack().track('week_plan_add', { event_id: e.id, source: 'enroll_picker' })
+  try {
+    await $trpc.plan.add.mutate({ itemType: 'event', itemId: e.id, metadata: { type: 'class' } })
+    await loadCoursesFromDb()
+  } catch (err) {
+    console.warn('[my-plan] enrollCourse failed:', err)
+  }
+  if (availableClasses.value.length === 0) showEnrollPicker.value = false
+}
 
-  // Persist the enrollment
-  const { $trpc } = useNuxtApp()
-  $trpc.plan.add
-    .mutate({ itemType: 'event', itemId: e.id, metadata: { type: 'class', style: e.style, school: e.organizer, venue: e.venue, weekday: e.day, time: e.time, date: e.date || '' } })
-    .catch((err) => {
-      console.warn('[my-plan] enrollCourse failed:', err)
-    })
-
-  // Auto-close picker if no more classes available
-  if (availableClasses.value.length === 0) {
-    showEnrollPicker.value = false
+/** X = out of the plan, server-side; the card stays gone after a reload. */
+async function unenrollCourse(id: string) {
+  const before = courses.value
+  courses.value = courses.value.filter(c => c.id !== id)
+  if (previewMode.value) return
+  try {
+    await $trpc.plan.remove.mutate({ itemType: 'event', itemId: id })
+  } catch (err) {
+    console.warn('[my-plan] unenrollCourse failed:', err)
+    courses.value = before
   }
 }
 
-function unenrollCourse(id: string) {
-  courses.value = courses.value.filter(c => c.id !== id)
-  const { $trpc } = useNuxtApp()
-  $trpc.plan.remove
-    .mutate({ itemType: 'event', itemId: id })
-    .catch((err) => {
-      console.warn('[my-plan] unenrollCourse failed:', err)
-    })
-}
-
-// Load enrolled courses from the DB on mount.
-function loadCoursesFromDb() {
-  const { $trpc } = useNuxtApp()
-  $trpc.plan.listDetailed
-    .query()
-    .then((rows) => {
-      const dbCourses: Course[] = []
-      for (const r of rows) {
-        if (r.itemType === 'event' && r.metadata && (r.metadata as Record<string, string>).type === 'class') {
-          const m = r.metadata as Record<string, string>
-          // Skip courses with a specific past date — they already happened.
-          if (m.date && m.date < todayISO.value) continue
-          dbCourses.push({
-            id: r.itemId,
-            school: m.school || '',
-            teacher: '',
-            style: m.style || '',
-            level: m.level || 'All levels',
-            weekday: (m.weekday && WEEKDAY_SHORT_ENROLL[m.weekday]) || m.weekday || '',
-            time: m.time || '',
-            venue: m.venue || '',
-            nextClassDate: m.date || '',
-            attended: 0,
-            total: 0,
-            paidThroughMonth: false,
-            color: (m.style && STYLE_COLORS_ENROLL[m.style]) || WD.gray500,
-          })
-        }
-      }
-      if (dbCourses.length > 0) {
-        courses.value = dbCourses
+// The dancer's courses: class plan items backed by real events (plan.myCourses).
+async function loadCoursesFromDb() {
+  if (previewMode.value || !isSignedIn.value) return
+  try {
+    const { courses: rows } = await $trpc.plan.myCourses.query()
+    courses.value = rows.map((c) => {
+      const tz = c.timezone || undefined
+      const style = c.styles[0] || ''
+      return {
+        id: c.planItemId,
+        eventId: c.eventId,
+        name: c.name,
+        school: c.organizerName,
+        schoolUsername: c.organizerUsername,
+        teacher: '',
+        style,
+        level: '',
+        weekday: WEEKDAY_SHORT_ENROLL[eventLocalWeekday(c.startDate, tz)] || '',
+        time: eventLocalTime(c.startDate, tz),
+        venue: c.venueName,
+        nextClassDate: eventLocalDate(c.startDate, tz),
+        color: STYLE_COLORS_ENROLL[style] || WD.gray500,
       }
     })
-    .catch((err) => {
-      console.warn('[my-plan] loadCoursesFromDb failed:', err)
-    })
+  } catch (err) {
+    console.warn('[my-plan] loadCoursesFromDb failed:', err)
+  }
 }
 
 // -----------------------------------------------------------------------
@@ -1156,21 +1015,6 @@ async function loadWeekSocials() {
   }
 }
 
-// Trigger auto-fill when user lands on my-plan for the first time after onboarding.
-// Must be placed after the courses ref to avoid TDZ errors in production builds.
-// The flag prevents auto-fill from re-triggering after the user manually removes
-// all plan items (RAZ-285).
-const autoFillDone = ref(false)
-watch([isSignedIn, onboardedAtReal, yearPlanIds], () => {
-  if (autoFillDone.value) return
-  if (isSignedIn.value && onboardedAtReal.value && yearPlanIds.value.size === 0 && courses.value.length === 0) {
-    autoFillDone.value = true
-    nextTick(() => autoFillPlan())
-  } else if (yearPlanIds.value.size > 0 || courses.value.length > 0) {
-    // Plan already has items (loaded from DB or just added) — suppress future auto-fills.
-    autoFillDone.value = true
-  }
-}, { immediate: true })
 
 // The server already limits the list to the coming week; drop anything that
 // has started since the page loaded.
@@ -1417,13 +1261,14 @@ const heatItems = computed<HeatItem[]>(() => {
       urgency: 100 - d,
     })
   })
-  // Courses: unpaid this month
-  courses.value.filter(c => !c.paidThroughMonth).forEach(c => {
+  // Courses: unpaid this month — only where payment is actually tracked
+  // (never for courses without payment data).
+  courses.value.filter(c => c.paidThroughMonth === false).forEach(c => {
     items.push({
       key: `course-${c.id}`,
-      label: `${c.school} · pay for July`,
-      detail: `${c.style} ${c.level} · ${c.weekday} ${c.time}`,
-      href: `/events/${c.id}`,
+      label: `${c.name || c.school} · pay this month`,
+      detail: [c.style, c.level, `${c.weekday} ${c.time}`].filter(Boolean).join(' · '),
+      href: c.eventId ? eventPath({ id: c.eventId, name: c.name }) : '#courses',
       color: WD.amber500,
       urgency: 70,
     })
@@ -1900,13 +1745,20 @@ function cardSummary(f: CatalogueEntry) {
           You haven't picked anything yet.
         </p>
         <p class="mt-2 text-sm text-muted-foreground font-sans">
-          Start by picking one festival — the rest of the year plans itself.
+          Pick a festival, a class or a night out — whatever you add shows up here.
         </p>
-        <Button as-child variant="cta" size="lg" class="mt-6 px-6">
-          <NuxtLink to="/festivals">
-            Browse festivals <ArrowRight aria-hidden="true" />
-          </NuxtLink>
-        </Button>
+        <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <Button as-child variant="cta" size="lg" class="px-6">
+            <NuxtLink to="/festivals">
+              Browse festivals <ArrowRight aria-hidden="true" />
+            </NuxtLink>
+          </Button>
+          <Button as-child variant="pill" class="px-5">
+            <NuxtLink :to="cityClassesLink">
+              Find a class{{ dancerCity ? ` in ${dancerCity}` : '' }}
+            </NuxtLink>
+          </Button>
+        </div>
       </div>
     </section>
 
@@ -2579,15 +2431,13 @@ function cardSummary(f: CatalogueEntry) {
 
         <div v-if="!courses.length && !showEnrollPicker" class="rounded-2xl p-6 text-center border-2 border-dashed border-input bg-white/50">
           <GraduationCap class="w-8 h-8 mx-auto mb-3 text-secondary" />
-          <p class="text-sm mb-3 text-muted-foreground font-sans">
-            No monthly cadence yet. A weekly class is the quickest way to keep momentum.
+          <p class="text-sm font-bold text-foreground font-sans">No classes yet.</p>
+          <p class="mt-1 mb-3 text-sm text-muted-foreground font-sans">
+            A weekly class is the quickest way to keep momentum.
           </p>
-          <Button v-if="availableClasses.length > 0" variant="pill" class="px-5" @click="showEnrollPicker = true">
-            Browse classes <ArrowRight aria-hidden="true" />
-          </Button>
-          <Button v-else as-child variant="pill" class="px-5">
-            <NuxtLink :to="citySocialsLink">
-              Browse city page <ArrowRight aria-hidden="true" />
+          <Button as-child variant="pill" class="px-5">
+            <NuxtLink :to="cityClassesLink">
+              Find a class{{ dancerCity ? ` in ${dancerCity}` : '' }} <ArrowRight aria-hidden="true" />
             </NuxtLink>
           </Button>
         </div>
@@ -2600,14 +2450,24 @@ function cardSummary(f: CatalogueEntry) {
           >
             <div class="flex items-start justify-between gap-3 mb-2">
               <div class="min-w-0">
-                <div class="text-base font-bold leading-tight text-foreground">
-                  {{ c.school }}
+                <NuxtLink
+                  v-if="c.eventId && !previewMode"
+                  :to="eventPath({ id: c.eventId, name: c.name })"
+                  class="block text-base font-bold leading-tight text-foreground hover:underline"
+                >{{ c.name || c.school }}</NuxtLink>
+                <div v-else class="text-base font-bold leading-tight text-foreground">
+                  {{ c.name || c.school }}
                 </div>
                 <div class="text-xs mt-0.5 text-muted-foreground font-sans">
-                  {{ c.teacher }} · <span class="text-secondary">{{ c.style }} · {{ c.level }}</span>
+                  <template v-if="c.name && c.school">
+                    <NuxtLink v-if="c.schoolUsername && !previewMode" :to="`/@${c.schoolUsername}`" class="hover:underline">{{ c.school }}</NuxtLink>
+                    <span v-else>{{ c.school }}</span>
+                  </template>
+                  <span v-else-if="c.teacher">{{ c.teacher }}</span>
+                  <template v-if="c.style || c.level"> · <span class="text-secondary">{{ [c.style, c.level].filter(Boolean).join(' · ') }}</span></template>
                 </div>
                 <div
-                  v-if="goalsForStyle(c.style).length"
+                  v-if="c.style && goalsForStyle(c.style).length"
                   class="text-[10px] mt-1 italic"
                   style="color:var(--wd-green-600); font-family:var(--wd-font-display);"
                 >
@@ -2615,26 +2475,28 @@ function cardSummary(f: CatalogueEntry) {
                 </div>
               </div>
               <div class="flex items-center gap-2 shrink-0">
-                <NuxtLink
-                  v-if="!c.paidThroughMonth"
-                  :to="`/events/${c.id}`"
-                  class="text-eyebrow font-bold uppercase tracking-widest px-2 py-1 rounded-full whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity"
-                  :style="{ color: 'var(--wd-red-600)', background: 'color-mix(in srgb, var(--wd-red-600) 9.4%, transparent)' }"
-                >
-                  Pay due
-                </NuxtLink>
-                <span
-                  v-else
-                  class="text-eyebrow font-bold uppercase tracking-widest px-2 py-1 rounded-full whitespace-nowrap"
-                  :style="{ color: 'var(--wd-green-600)', background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)' }"
-                >
-                  Paid
-                </span>
+                <!-- Payment status only when there's real data for this enrolment. -->
+                <template v-if="c.paidThroughMonth !== undefined">
+                  <span
+                    v-if="!c.paidThroughMonth"
+                    class="text-eyebrow font-bold uppercase tracking-widest px-2 py-1 rounded-full whitespace-nowrap"
+                    :style="{ color: 'var(--wd-red-600)', background: 'color-mix(in srgb, var(--wd-red-600) 9.4%, transparent)' }"
+                  >
+                    Pay due
+                  </span>
+                  <span
+                    v-else
+                    class="text-eyebrow font-bold uppercase tracking-widest px-2 py-1 rounded-full whitespace-nowrap"
+                    :style="{ color: 'var(--wd-green-600)', background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)' }"
+                  >
+                    Paid
+                  </span>
+                </template>
                 <Button
                   variant="ghost"
                   size="icon-sm"
                   class="size-7 rounded hover:bg-wd-red-50 text-primary hover:text-primary [&_svg]:size-3.5"
-                  :aria-label="`Remove course: ${c.school}`"
+                  :aria-label="`Remove from your plan: ${c.name || c.school}`"
                   @click="unenrollCourse(c.id)"
                 >
                   <X aria-hidden="true" />
@@ -2647,19 +2509,20 @@ function cardSummary(f: CatalogueEntry) {
                 <Calendar class="w-3 h-3 text-secondary" />
                 Next class <strong>{{ c.nextClassDate ? formatShortDate(c.nextClassDate) : c.weekday }}, {{ c.time }}</strong>
               </div>
-              <div class="flex items-center gap-2">
+              <div v-if="c.venue" class="flex items-center gap-2">
                 <MapPin class="w-3 h-3 text-secondary" />
                 {{ c.venue }}
               </div>
             </div>
 
-            <div class="mt-4">
+            <!-- Attendance only when it's tracked for this enrolment (never 0 / 0). -->
+            <div v-if="c.total && c.total > 0" class="mt-4">
               <div class="flex items-baseline justify-between mb-1">
                 <span class="text-eyebrow uppercase tracking-widest font-bold text-secondary">Attendance this cycle</span>
-                <span class="text-xs font-black text-foreground font-display">{{ c.attended }} / {{ c.total }}</span>
+                <span class="text-xs font-black text-foreground font-display">{{ c.attended ?? 0 }} / {{ c.total }}</span>
               </div>
               <div class="w-full h-1.5 rounded-full overflow-hidden" style="background:color-mix(in srgb, var(--wd-brown-900) 6.3%, transparent);">
-                <div class="h-full transition-all" :style="{ width: Math.round((c.attended / c.total) * 100) + '%', background: c.color }" />
+                <div class="h-full transition-all" :style="{ width: Math.round(((c.attended ?? 0) / c.total) * 100) + '%', background: c.color }" />
               </div>
             </div>
           </div>

@@ -81,6 +81,7 @@ onMounted(resolve)
 const following = ref(false)
 const followBusy = ref(false)
 const followerCount = ref(0)
+const followError = ref('')
 
 watch(() => data.value?.profile, async (p) => {
   if (!p) return
@@ -95,11 +96,15 @@ async function toggleFollow() {
   if (!p || followBusy.value) return
   if (!isSignedIn.value) { await navigateTo('/auth/login'); return }
   followBusy.value = true
+  followError.value = ''
   try {
     const result = await $trpc.follow.toggle.mutate({ profileId: p.id })
     following.value = result.following
     followerCount.value += result.following ? 1 : -1
-  } catch {} finally { followBusy.value = false }
+  } catch (e) {
+    console.error('follow.toggle failed', e)
+    followError.value = "Couldn't update — please try again."
+  } finally { followBusy.value = false }
 }
 
 const profile = computed(() => data.value?.profile ?? null)
@@ -279,6 +284,7 @@ useHead(() => ({
               <span v-if="(profile.type === 'artist' || isPromoter) && followerCount" class="text-xs text-muted-foreground font-sans">
                 {{ followerCount }} follower{{ followerCount === 1 ? '' : 's' }}
               </span>
+              <span v-if="followError" role="alert" class="w-full text-xs font-bold text-destructive font-sans">{{ followError }}</span>
             </div>
             <div v-if="profile.moderatorName" class="mt-4 flex items-center gap-1.5 text-xs text-secondary font-sans">
               <ShieldCheck class="w-3.5 h-3.5" /> Moderated by the {{ profile.moderatorName }}<span v-if="profile.moderatorSince"> · since {{ profile.moderatorSince }}</span>
