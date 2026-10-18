@@ -80,7 +80,7 @@ split users in two.
 
 ## Tools by persona
 
-✅ = existing procedure · 🆕 = new procedure needed
+✅ = existing procedure · 🆕 = new procedure needed · **built in phase 2** = shipped in the second PR
 
 ### Everyone (no auth)
 `find_events(city, from, to, styles?, type?)` ✅ events.byCity · `get_event` ✅ events.get ·
@@ -112,9 +112,9 @@ split users in two.
 - `inbox`, `inquiries`, `answer_inquiry` ✅
 - `team`, `add_member`, `set_role` ✅ businessTeam.*
 - `event_insights` ✅ festivalInsights
-- 🆕 `attendees(event)`: who signed up or bought, with export
+- 🆕 `attendees(event)`: who signed up or bought, with export · **built in phase 2** (`businessEvents.attendees`, CSV)
 - 🆕 `message_attendees(event, text)`: publish scope, with preview
-- 🆕 `recurring_series`: create a weekly series in one call (classes, weekly parties)
+- 🆕 `recurring_series`: create a weekly series in one call (classes, weekly parties) · **built in phase 2** (+ `publish_series`)
 
 ### Artists
 - `update_my_profile` ✅ profile.update
@@ -123,23 +123,23 @@ split users in two.
 - `my_invites`, `respond_invite`, `claim_profile` ✅ artistInvites.*
 - `my_gigs` ✅ events.byProfile
 - `find_gigs`, `post_offer` ✅ gigs.list/create
-- 🆕 `apply_to_gig`: gigs has no apply step today
+- 🆕 `apply_to_gig`: gigs has no apply step today · **built in phase 2** (+ `gig_applications`, `decide_gig_application`, `my_gig_applications`, web UI on /gigs)
 
 ### Promoters
 - `my_roster` ✅ entity.promoterRoster
-- `promoter_dashboard` ✅
+- `promoter_dashboard` · **built in phase 2** (there was no such procedure: `referral.promoterDashboard`)
 - `my_referrals` ✅ referral.myReferrals
 - Plus the organizer flyer/caption tools for the events they promote
-- 🆕 `my_link(event)`: a per-promoter tracked link (reuse `referrals`)
-- 🆕 `my_results`: sign-ups and tickets per link per event
+- 🆕 `my_link(event)`: a per-promoter tracked link · **built in phase 2** (own `tracked_links` table, procedures in the referral router)
+- 🆕 `my_results`: sign-ups and tickets per link per event · **built in phase 2** (+ `event_link_results` for the organizer)
 
 ### Influencers
 There is no influencer entity type today (`venue | artist | organizer | promoter`). Proposal: an
 influencer is a promoter whose deliverable is content. The promoter role gains one flag, with no
 new type.
-- 🆕 `promo_kit(event)`: flyer (feed + story), captions in the event's languages, hashtags, tracked link, QR
+- 🆕 `promo_kit(event)`: flyer (feed + story), captions in the event's languages, hashtags, tracked link, QR · **built in phase 2**
 - `my_link`, `my_results` (shared with promoters)
-- 🆕 `propose_giveaway(event)`: giveaway.create is admin-only today, so this becomes a request the organizer approves
+- 🆕 `propose_giveaway(event)`: giveaway.create is admin-only today, so this becomes a request the organizer approves · **built in phase 2** (+ `giveaway_proposals`, `decide_giveaway_proposal`)
 - `city_battle_status` ✅ cityVideo.cityLeaderboard
 
 ### Montuno Club (Alex, as organizer + `admin` for his agents)
@@ -205,3 +205,30 @@ All four recommendations were approved as proposed:
   what makes Claude and ChatGPT start the OAuth login.
 - MCP elicitation for publish confirmations is not used yet: the server is stateless, so every
   `business:publish` tool runs preview → `confirm_token` → commit.
+
+## Implementation notes (phase 2 PR)
+
+Built: `recurring_series` + `publish_series`, `attendees`, `apply_to_gig` (+ applications for
+the poster), tracked links (`my_link`, `my_results`, `event_link_results`), `promoter_dashboard`,
+the influencer flag, `promo_kit`, `propose_giveaway` (+ the organizer's decision). Still out:
+courses + billing, receipts, `message_attendees`. Migration `0051_mcp_links_gigs_giveaways.sql`.
+
+- **Series** reuse the events' `series_id` (as `duplicate_event` does): every date is an ordinary
+  event, so an exception is `update_event` on one date. Rules: every week, every 2 weeks, or
+  monthly on the nth weekday (or the last); an end date or a count (max 52); skip dates.
+- **Attendees**: counts include plan adds, festival sign-ups, tickets and unclaimed ticket stubs;
+  a name only shows when the dancer's profile is public *and* they're on one of the event's
+  public lists (who's going share, attendance visibility, the festival's ticket roster). No emails.
+- **Tracked links** got their own tables instead of `referrals`: a referral is dancer → dancer
+  for one festival with a discount and a credit, and needs both accounts; a link is page → event
+  and counts people before they have an account. `?via=<code>` → `wd_via` cookie (30 days, last
+  touch) → sign-up (register / first magic link), plan add or festival join of that event,
+  paid ticket (Stripe metadata → webhook). Links belong to promoter pages.
+- **Influencer** = the `influencer` entry in a promoter page's `roles` (no new type, no column),
+  editable in the page settings and through `update_business_profile`.
+- **Promo kit** shares the organizer's flyers and caption; it paints the first flyer only when the
+  event has none (and none was tried in the last 4 minutes), and writes a caption only when none
+  fits, cached on the promoter's link. QR codes: `/api/qr/<code>.svg|png`, only for real codes.
+- **Giveaway proposals**: approval creates a live giveaway in the event's city whose link is the
+  proposer's tracked link, so entries count for them.
+

@@ -15,6 +15,7 @@ import {
 import { sendMagicLinkEmail, sendPasswordResetEmail } from '../../utils/email'
 import { generateUsername } from '../../utils/slug'
 import { freeHandle } from '../../utils/handles'
+import { recordLinkAction } from '../../utils/trackedLinks'
 
 // FirebaseScrypt parameters, ported verbatim from wedance-v4
 // (server/api/auth/[...].ts). These MUST match v4 exactly so legacy user
@@ -86,6 +87,9 @@ export const authRouter = router({
         if (input.role) updateSet.role = input.role
         if (input.city) updateSet.city = input.city
 
+        // A first magic link creates the account: a promoter's link may get the credit.
+        const [before] = ctx.viaCode ? await ctx.db.select({ id: dancers.id }).from(dancers).where(eq(dancers.email, input.email)) : [null]
+
         // Upsert: create new user or update existing user's magic token.
         try {
           await ctx.db
@@ -111,9 +115,10 @@ export const authRouter = router({
 
         // Get the dancer name for the email greeting
         const [dancer] = await ctx.db
-          .select({ name: dancers.name })
+          .select({ id: dancers.id, name: dancers.name })
           .from(dancers)
           .where(eq(dancers.email, input.email))
+        if (ctx.viaCode && !before && dancer) await recordLinkAction(ctx.db, ctx.viaCode, 'signup', { dancerId: dancer.id })
 
         const config = useRuntimeConfig()
         const siteUrl = config.siteUrl || 'http://localhost:3000'
@@ -349,6 +354,9 @@ export const authRouter = router({
         })
       }
 
+      // Came through a promoter's tracked link: credit the sign-up.
+      await recordLinkAction(ctx.db, ctx.viaCode, 'signup', { dancerId: dancer.id })
+
       // Booking requests they sent before they had an account become theirs.
       try {
         await ctx.db.update(bookingInquiries).set({ requesterId: dancer.id })
@@ -474,6 +482,15 @@ export const authRouter = router({
         profilePublic: dancer.profilePublic ?? true,
       }
     }),
+
+  // The signed-in dancer's account email. Not part of `me` (which the whole app
+  // reads); connected-app tools that share it with someone the dancer contacts
+  // (booking request, gig post, giveaway entry) fetch it here, under me:read.
+  myEmail: protectedProcedure.query(async ({ ctx }) => {
+    const [d] = await ctx.db.select({ email: dancers.email }).from(dancers).where(eq(dancers.id, ctx.dancerId))
+    if (!d) throw new TRPCError({ code: 'NOT_FOUND', message: 'Account not found.' })
+    return { email: d.email }
+  }),
 
   // GDPR account deletion: permanently remove the dancer and cascade delete or
   // anonymize referencing rows in FK-safe order. All writes execute atomically

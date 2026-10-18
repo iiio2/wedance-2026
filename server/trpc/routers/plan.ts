@@ -6,6 +6,7 @@ import { getReferralDiscountPercent, getEarlyBirdInfo } from '../../utils/ticket
 import { eventPath } from '../../../shared/utils/eventSlug'
 import { festivalPath } from '../../../shared/utils/eventSlug'
 import { discoverDeck, myCourses, recordSwipe, removeSwipe, weekSocials } from '../../utils/myPlanFeeds'
+import { eventIdForFestival, recordLinkAction } from '../../utils/trackedLinks'
 
 export const planRouter = router({
   count: publicProcedure
@@ -95,6 +96,12 @@ export const planRouter = router({
         .insert(planItems)
         .values(values)
         .onConflictDoNothing()
+
+      // Came through a promoter's tracked link for this event: credit the plan add.
+      if (ctx.viaCode && (input.itemType === 'event' || input.itemType === 'festival')) {
+        const eventId = input.itemType === 'event' ? input.itemId : await eventIdForFestival(ctx.db, input.itemId)
+        await recordLinkAction(ctx.db, ctx.viaCode, 'plan_add', { dancerId: ctx.dancerId, eventId })
+      }
 
       // Phase 4 dual-write: also write to the new typed tables so they
       // accumulate data for the switch step. Best-effort — failures here

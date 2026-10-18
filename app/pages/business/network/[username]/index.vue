@@ -23,6 +23,8 @@ const form = reactive({
   instagram: '', website: '', facebook: '',
   photo: null as string | null,
   photos: [] as { url: string }[],
+  // Promoter pages: this promoter is an influencer (their deliverable is content).
+  influencer: false,
 })
 // Venues: their details and rooms.
 const venue = reactive<VenueDetailsValue>({ address: '', venueType: '', floorType: '', capacity: null, amenities: [], openingHours: [], floorPlan: null, contact: {} })
@@ -51,6 +53,7 @@ async function load() {
       photo: p.photo,
       // Older profiles only have the single photo — show it in the gallery.
       photos: p.photos.length ? [...p.photos] : (p.photo ? [{ url: p.photo }] : []),
+      influencer: p.influencer,
     })
     Object.assign(venue, {
       address: p.address, venueType: p.venueType, floorType: p.floorType, capacity: p.capacity,
@@ -107,6 +110,7 @@ async function save() {
       socials,
       photo: form.photo,
       photos: form.photos,
+      ...(profileType.value === 'promoter' ? { influencer: form.influencer } : {}),
       ...(p.type === 'venue' ? {
         address: venue.address, floorType: venue.floorType, venueType: venue.venueType,
         capacity: venue.capacity || null, amenities: venue.amenities, openingHours: venue.openingHours.filter(h => h.hours.trim()),
@@ -198,6 +202,12 @@ const photoHint = computed(() => loaded.value?.type === 'artist'
             <Field label="Dance styles" class="sm:col-span-2">
               <DanceStylePicker v-model="form.styles" />
             </Field>
+            <div v-if="profileType === 'promoter'" class="sm:col-span-2">
+              <Checkbox v-model="form.influencer" class="items-start">
+                <span class="font-bold">I’m an influencer</span>
+                <span class="block text-muted-foreground">I promote events with my own posts and stories. Promo kits (flyer, caption, your tracked link and QR code) are made for you.</span>
+              </Checkbox>
+            </div>
           </div>
         </section>
 

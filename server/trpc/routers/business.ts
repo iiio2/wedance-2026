@@ -117,13 +117,14 @@ export const businessRouter = router({
         city: profiles.city,
         photo: profiles.photo,
         role: profileMembers.role,
+        roles: profiles.roles,
       })
       .from(profileMembers)
       .innerJoin(profiles, eq(profiles.id, profileMembers.profileId))
       .where(eq(profileMembers.dancerId, ctx.dancerId))
       .orderBy(profiles.name)
     // A connected app sees only the profiles it was given.
-    const managed = onlyGranted(ctx, managedRows, (r: any) => r.id).map(({ id: _id, ...r }: any) => r)
+    const managed = onlyGranted(ctx, managedRows, (r: any) => r.id).map(({ id: _id, roles, ...r }: any) => ({ ...r, influencer: r.type === 'promoter' && (roles ?? []).includes('influencer') }))
 
     const claims = await ctx.db
       .select({
@@ -285,6 +286,8 @@ export const businessRouter = router({
         openingHours: (p.openingHours ?? []) as { day: (typeof WEEKDAYS)[number]; hours: string }[],
         floorPlan: (p.floorPlan ?? null) as string | null,
         contact: (p.contact ?? {}) as { phone?: string; email?: string; whatsapp?: string; telegram?: string },
+        // An influencer is a promoter whose deliverable is content (MCP spec, decision 2).
+        influencer: p.type === 'promoter' && ((p.roles ?? []) as string[]).includes('influencer'),
       }
     }),
 
@@ -334,11 +337,22 @@ export const businessRouter = router({
     }),
 
   update: protectedProcedure
-    .input(z.object(editableFields).partial().extend({ username: z.string().min(1) }))
+    .input(z.object(editableFields).partial().extend({
+      username: z.string().min(1),
+      // Promoter pages only: the page posts content (an influencer).
+      influencer: z.boolean().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
       const p = await requireMember(ctx, input.username)
-      const { username: _u, ...fields } = input
+      const { username: _u, influencer, ...fields } = input
       const set: Record<string, unknown> = { ...fields }
+      const type = fields.type ?? p.type
+      if (influencer && type !== 'promoter') throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only promoter pages can be influencers.' })
+      if (influencer !== undefined || type !== 'promoter') {
+        const roles = ((p.roles ?? []) as string[]).filter(r => r !== 'influencer')
+        const next = influencer && type === 'promoter' ? [...roles, 'influencer'] : roles
+        if (next.length !== ((p.roles ?? []) as string[]).length) set.roles = next
+      }
       if (fields.city !== undefined) {
         set.city = fields.city || null
         set.citySlug = await citySlugFor(ctx.db, fields.city || null)

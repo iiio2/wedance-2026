@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { eq, and, or, gte, lt, inArray, isNull, desc, asc, sql } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure, publicProcedure } from '../trpc'
-import { events, profiles, profileMembers, profileClaims, cities, profileSuggestions, bookingInquiries } from '../../database/schema'
+import { events, profiles, profileMembers, profileClaims, cities, profileSuggestions, bookingInquiries, planItems, attendances, festivals, festivalSignups, dancers } from '../../database/schema'
 import { slugify, randomSuffix } from '../../utils/slug'
 import { resolveTimezone, seriesKey } from '../../utils/v3EventSync'
 import { zonedToUtc, eventLocalDate, eventLocalTime, eventLocalWeekday } from '../../../shared/utils/eventTime'
@@ -15,6 +15,8 @@ import { eventPath } from '../../../shared/utils/eventSlug'
 import { flyerStatusFor } from '../../utils/flyer/paint'
 import { asksWaitingFor } from './venueAsks'
 import type { FestivalDetails } from '../../../shared/types/festivalDetails'
+import { seriesDates, weekdayOf, MAX_SERIES } from '../../../shared/utils/recurrence'
+import { randomUUID } from 'node:crypto'
 
 /**
  * Business mode — events a profile runs, and the /business home inbox.
@@ -255,6 +257,109 @@ const listColumns = {
   venueAddress: events.venueAddress, styles: events.styles, agenda: events.agenda, flyerOptions: events.flyerOptions,
 }
 
+// A recurring series (recurring_series): the template event plus the rule.
+// Festivals aren't repeated this way (each edition has its own key and page).
+const seriesInput = eventInput.omit({ festival: true }).extend({
+  hostUsername: z.string().min(1),
+  every: z.enum(['week', '2weeks', 'month']),
+  until: ymd.nullable().optional(),
+  count: z.number().int().min(1).max(MAX_SERIES).nullable().optional(),
+  skip: z.array(ymd).max(MAX_SERIES).default([]),
+  monthWeek: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(-1)]).nullable().optional(),
+}).refine(i => i.until || i.count, { message: 'Give an end date (until) or a number of dates (count).', path: ['until'] })
+type SeriesInput = z.infer<typeof seriesInput>
+
+function planSeries(input: SeriesInput) {
+  try {
+    return seriesDates({ start: input.date, every: input.every, until: input.until, count: input.count, skip: input.skip, monthWeek: input.monthWeek })
+  } catch (e) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: (e as Error).message })
+  }
+}
+
+/** The upcoming, not archived dates of a series run on WeDance. */
+async function seriesRows(db: any, seriesId: string) {
+  return db.select().from(events)
+    .where(and(eq(events.seriesId, seriesId), eq(events.archived, false), sql`${events.hostProfileId} IS NOT NULL`, gte(events.startDate, new Date(Date.now() - 6 * 3600_000))))
+    .orderBy(asc(events.startDate)).limit(MAX_SERIES * 2)
+}
+
+/**
+ * Who's coming to an event, for its team. Counts include everyone (plan adds,
+ * festival sign-ups, tickets, ticket stubs not claimed yet). Names only for
+ * dancers whose profile is public AND who show themselves on one of the
+ * event's public lists: "who's going" (plan share), their attendance
+ * visibility, or the festival's ticket roster. Nobody's email.
+ */
+export async function eventAttendees(db: any, ev: any) {
+  const key: string | null = (ev.festival as any)?.key ?? (ev.isFestival ? ev.slug : null)
+  type Row = { going: boolean; signedUp: boolean; ticket: boolean; visible: boolean }
+  const by = new Map<string, Row>()
+  const row = (id: string) => by.get(id) ?? (by.set(id, { going: false, signedUp: false, ticket: false, visible: false }), by.get(id)!)
+  let stubTickets = 0
+
+  const plans = await db.select({ dancerId: planItems.dancerId, shareGoing: planItems.shareGoing }).from(planItems)
+    .where(or(and(eq(planItems.itemType, 'event'), eq(planItems.itemId, ev.id)), key ? and(eq(planItems.itemType, 'festival'), eq(planItems.itemId, key)) : undefined))
+  for (const p of plans) { const r = row(p.dancerId); r.going = true; if (p.shareGoing) r.visible = true }
+
+  const att = await db.select({ dancerId: attendances.dancerId, status: attendances.status, visibility: attendances.visibility }).from(attendances).where(eq(attendances.eventId, ev.id))
+  for (const a of att) {
+    if (!a.dancerId) { if (a.status === 'ticket_holder') stubTickets++; continue }
+    const r = row(a.dancerId)
+    r.going = true
+    if (a.status === 'ticket_holder') r.ticket = true
+    if (a.visibility !== 'hidden') r.visible = true
+  }
+
+  if (key) {
+    const [f] = await db.select({ id: festivals.id }).from(festivals).where(eq(festivals.slug, key))
+    if (f) {
+      const signups = await db.select({ dancerId: festivalSignups.dancerId, paid: festivalSignups.paidAmount, verified: festivalSignups.verifiedTicketHolder, visibility: festivalSignups.rosterVisibility })
+        .from(festivalSignups).where(eq(festivalSignups.festivalId, f.id))
+      for (const s of signups) {
+        const ticket = s.verified || s.paid > 0
+        if (!s.dancerId) { if (ticket) stubTickets++; continue }
+        const r = row(s.dancerId)
+        r.signedUp = true
+        if (ticket) r.ticket = true
+        // The festival's public roster lists verified ticket holders who didn't hide.
+        if (s.verified && s.visibility !== 'hidden') r.visible = true
+      }
+    }
+  }
+
+  const ids = [...by.keys()]
+  const people = ids.length
+    ? await db.select({ id: dancers.id, name: dancers.name, username: dancers.username, city: dancers.city, profilePublic: dancers.profilePublic }).from(dancers).where(inArray(dancers.id, ids))
+    : []
+  const status = (r: Row) => r.ticket ? 'ticket' : r.signedUp ? 'signed up' : 'going'
+  const named = people
+    .filter((p: any) => p.profilePublic !== false && by.get(p.id)!.visible)
+    .map((p: any) => ({ name: p.name, handle: p.username, city: p.city, status: status(by.get(p.id)!) }))
+    .sort((a: any, b: any) => ['ticket', 'signed up', 'going'].indexOf(a.status) - ['ticket', 'signed up', 'going'].indexOf(b.status) || a.name.localeCompare(b.name))
+  const all = [...by.values()]
+  const total = all.length + stubTickets
+  return {
+    counts: {
+      total,
+      going: all.filter(r => r.going).length,
+      signedUp: all.filter(r => r.signedUp).length,
+      tickets: all.filter(r => r.ticket).length + stubTickets,
+      named: named.length,
+      hidden: total - named.length,
+    },
+    attendees: named,
+  }
+}
+
+const csvCell = (v: unknown) => {
+  const s = String(v ?? '')
+  // Quote everything; neutralise spreadsheet formulas.
+  return `"${(/^[=+\-@]/.test(s) ? `'${s}` : s).replace(/"/g, '""')}"`
+}
+export const attendeesCsv = (rows: { name: string; handle: string | null; city: string | null; status: string }[]) =>
+  ['name,handle,city,status', ...rows.map(r => [r.name, r.handle ?? '', r.city, r.status].map(csvCell).join(','))].join('\n')
+
 export const businessEventsRouter = router({
   // Events of the profiles I manage (optionally one), newest-relevant first.
   list: protectedProcedure
@@ -433,6 +538,93 @@ export const businessEventsRouter = router({
       } catch (err) {
         console.error('[businessEvents.duplicate] insert failed for event', input.id, err)
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Could not repeat the event. Please try again.' })
+      }
+    }),
+
+  // The dates a recurring series would get, without creating anything.
+  seriesPreview: protectedProcedure
+    .input(seriesInput)
+    .query(async ({ ctx, input }) => {
+      const host = await requireMember(ctx, input.hostUsername)
+      const { dates, skipped } = planSeries(input)
+      const loc = await cityInfo(ctx.db, input.city || null)
+      return {
+        host: { username: host.username, name: host.name },
+        name: input.name, type: input.type, every: input.every,
+        startTime: input.startTime, endTime: input.endTime ?? null, timezone: loc.timezone,
+        dates: dates.map(d => ({ date: d, weekday: weekdayOf(d) })),
+        skipped, published: input.published,
+      }
+    }),
+
+  // Create a whole series in one go (weekly classes, a monthly social). Every
+  // date is its own event sharing a seriesId (like duplicate), so exceptions
+  // are ordinary edits of one date. Published straight away only with
+  // business:publish for a connected app.
+  createSeries: protectedProcedure
+    .input(seriesInput)
+    .mutation(async ({ ctx, input }) => {
+      if (input.published) assertScope(ctx, 'business:publish')
+      const host = await requireMember(ctx, input.hostUsername)
+      const { dates, skipped } = planSeries(input)
+      if (!dates.length) throw new TRPCError({ code: 'BAD_REQUEST', message: 'No dates left after the skips.' })
+      const { hostUsername: _h, every: _e, until: _u, count: _c, skip: _s, monthWeek: _m, ...template } = input
+      const firstId = randomUUID()
+      const seriesId = `host-${firstId}`
+      const rows = []
+      for (const [i, date] of dates.entries()) {
+        const row = await toRow(ctx.db, host, { ...template, date, festival: undefined } as EventInput)
+        rows.push({ ...row, ...(i === 0 ? { id: firstId } : {}), hostProfileId: host.id, source: 'wedance-business', seriesId, slug: `${slugify(input.name)}-${randomSuffix(5)}` })
+      }
+      const created = await ctx.db.insert(events).values(rows).returning({ id: events.id, startDate: events.startDate, timezone: events.timezone })
+      created.sort((a: any, b: any) => +new Date(a.startDate) - +new Date(b.startDate))
+      return {
+        seriesId,
+        published: input.published,
+        skipped,
+        created: created.map((e: any) => ({ id: e.id, date: eventLocalDate(e.startDate, e.timezone), startTime: eventLocalTime(e.startDate, e.timezone) })),
+      }
+    }),
+
+  // The dates still to come of a series (for publish_series and exceptions).
+  series: protectedProcedure
+    .input(z.object({ seriesId: z.string().min(1).max(80) }))
+    .query(async ({ ctx, input }) => {
+      const rows = await seriesRows(ctx.db, input.seriesId)
+      if (!rows.length) throw new TRPCError({ code: 'NOT_FOUND', message: 'No upcoming dates in that series.' })
+      await requireEventManager(ctx, rows[0].id)
+      return {
+        seriesId: input.seriesId, name: rows[0].name,
+        dates: rows.map((e: any) => ({ id: e.id, date: eventLocalDate(e.startDate, e.timezone), weekday: eventLocalWeekday(e.startDate, e.timezone), startTime: eventLocalTime(e.startDate, e.timezone), published: e.published })),
+      }
+    }),
+
+  // Publish (or take back to draft) every date still to come of a series.
+  publishSeries: protectedProcedure
+    .input(z.object({ seriesId: z.string().min(1).max(80), published: z.boolean().default(true) }))
+    .mutation(async ({ ctx, input }) => {
+      assertScope(ctx, 'business:publish')
+      const rows = await seriesRows(ctx.db, input.seriesId)
+      if (!rows.length) throw new TRPCError({ code: 'NOT_FOUND', message: 'No upcoming dates in that series.' })
+      // One host for the whole series; check every distinct one anyway.
+      for (const hostId of new Set(rows.map((r: any) => r.hostProfileId))) await requireEventManager(ctx, rows.find((r: any) => r.hostProfileId === hostId)!.id)
+      const ids = rows.filter((r: any) => r.published !== input.published).map((r: any) => r.id)
+      if (ids.length) await ctx.db.update(events).set({ published: input.published, updatedAt: new Date(), editedAt: new Date(), editedBy: ctx.dancerId }).where(inArray(events.id, ids))
+      return { changed: ids.length, published: input.published, dates: rows.length }
+    }),
+
+  // Who's coming (plan adds, sign-ups, tickets): counts always, names only
+  // where the dancer made their going public. Optional CSV of the named list.
+  attendees: protectedProcedure
+    .input(z.object({ id: z.string().uuid(), csv: z.boolean().default(false) }))
+    .query(async ({ ctx, input }) => {
+      const ev = await requireEventManager(ctx, input.id)
+      const r = await eventAttendees(ctx.db, ev)
+      return {
+        event: { id: ev.id, name: ev.name, date: ev.startDate ? eventLocalDate(ev.startDate, ev.timezone || 'Europe/Berlin') : null },
+        ...r,
+        summary: r.counts.hidden ? `${r.counts.hidden} of ${r.counts.total} aren’t named: they keep their plans private (or haven’t claimed their ticket yet).` : null,
+        csv: input.csv ? attendeesCsv(r.attendees) : null,
       }
     }),
 

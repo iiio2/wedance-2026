@@ -6,6 +6,7 @@ import { router, publicProcedure, protectedProcedure } from '../trpc'
 import { festivals, festivalSignups, dancers, referrals } from '../../database/schema'
 import { getTicketPriceCents, getReferralDiscountPercent } from '../../utils/ticket-prices'
 import { festivalPath } from '../../../shared/utils/eventSlug'
+import { eventIdForFestival, recordLinkAction } from '../../utils/trackedLinks'
 
 function getStripe() {
   const config = useRuntimeConfig()
@@ -112,6 +113,9 @@ export const festivalSignupRouter = router({
         throw e
       }
 
+      if (ctx.viaCode) {
+        await recordLinkAction(ctx.db, ctx.viaCode, 'plan_add', { dancerId: ctx.dancerId, eventId: await eventIdForFestival(ctx.db, input.festivalSlug) })
+      }
       return { joined: true }
     }),
 
@@ -360,6 +364,8 @@ export const festivalSignupRouter = router({
           amountCents: String(chargedCents),
           ...(referrerId ? { referrerId, referralDiscount: String(refereeDiscountCents) } : {}),
           ...(appliedCreditCents > 0 ? { referrerCredit: String(appliedCreditCents) } : {}),
+          // A promoter's tracked link the buyer came through: credited when paid.
+          ...(ctx.viaCode ? { via: ctx.viaCode } : {}),
         },
         success_url: `${config.siteUrl}${festivalPath(input.festivalSlug)}?payment=success`,
         cancel_url: `${config.siteUrl}${festivalPath(input.festivalSlug)}?payment=cancel`,

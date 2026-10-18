@@ -370,3 +370,54 @@ export async function sendSiteWelcomeEmail(params: {
     </div>`,
   })
 }
+
+/** Gigs (MCP phase 2): someone applied to a gig role. Goes to the gig's contact email. */
+export async function sendGigApplicationEmail(params: {
+  to: string
+  gigTitle: string
+  applicant: { name: string; email: string; page?: string | null }
+  message: string
+  link: string
+}) {
+  const config = useRuntimeConfig()
+  const subject = `${params.applicant.name} applied: ${params.gigTitle}`
+  if (!config.resendApiKey) {
+    console.log(`\n✉️  ${params.to}: ${subject} (reply to ${params.applicant.email}) → ${params.link}\n`)
+    return
+  }
+  await getResend().emails.send({
+    from: config.resendFromEmail || 'WeDance <noreply@wedance.vip>',
+    to: params.to,
+    replyTo: params.applicant.email,
+    subject,
+    html: `<div style="font-family: sans-serif; max-width: 460px; margin: 0 auto; padding: 20px;">
+      <p><strong>${escapeHtml(params.applicant.name)}</strong>${params.applicant.page ? ` (<a href="${params.applicant.page}">their page</a>)` : ''} applied to your gig <strong>${escapeHtml(params.gigTitle)}</strong> on WeDance.</p>
+      <p style="white-space: pre-line; border-left: 3px solid #ddd; padding-left: 12px; color: #333;">${escapeHtml(params.message)}</p>
+      <p>Reply to this email to answer them, or accept or decline on WeDance.</p>
+      <a href="${params.link}" style="display: inline-block; background: #000; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">See applications</a>
+    </div>`,
+  })
+}
+
+/** Gigs: the poster accepted or declined an application. */
+export async function sendGigDecisionEmail(params: { to: string; name: string; gigTitle: string; accepted: boolean; poster: { name: string; email: string }; link: string }) {
+  const config = useRuntimeConfig()
+  const subject = params.accepted ? `You’re in: ${params.gigTitle}` : `Your application: ${params.gigTitle}`
+  if (!config.resendApiKey) {
+    console.log(`\n✉️  ${params.to}: ${subject} → ${params.link}\n`)
+    return
+  }
+  await getResend().emails.send({
+    from: config.resendFromEmail || 'WeDance <noreply@wedance.vip>',
+    to: params.to,
+    replyTo: params.poster.email,
+    subject,
+    html: `<div style="font-family: sans-serif; max-width: 460px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #333;">Hey ${escapeHtml(params.name)}!</h2>
+      <p>${params.accepted
+        ? `<strong>${escapeHtml(params.poster.name)}</strong> accepted your application for <strong>${escapeHtml(params.gigTitle)}</strong>. Reply to this email to sort out the details.`
+        : `<strong>${escapeHtml(params.poster.name)}</strong> went with someone else for <strong>${escapeHtml(params.gigTitle)}</strong>. Thanks for applying, and keep an eye on new gigs.`}</p>
+      <a href="${params.link}" style="display: inline-block; background: #000; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Open gigs</a>
+    </div>`,
+  })
+}

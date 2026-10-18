@@ -117,6 +117,20 @@ async function mergedEvent(t: ToolCtx, id: string, patch: Patch, extra: Record<s
   return { cur, input: { ...form, ...patchToInput(patch), ...extra, id } as any }
 }
 
+// A recurring series: the template's fields (no festival end date) and the rule.
+const { end_date: _ed, ...SERIES_BASE } = PATCH_FIELDS
+const SERIES_FIELDS = {
+  ...SERIES_BASE,
+  name: z.string().trim().min(1).max(160),
+  type: PATCH_FIELDS.type.unwrap(),
+  date: ymd.describe('The first date (YYYY-MM-DD); its weekday is the series’ weekday.'),
+  start_time: hhmm,
+}
+function seriesInput(a: any) {
+  const { profile: host, every, until, count, skip, month_week, published, confirm_token: _c, ...fields } = a
+  return { ...patchToInput(fields), hostUsername: host, every, until: until ?? null, count: count ?? null, skip: skip ?? [], monthWeek: month_week ?? null, published: !!published } as any
+}
+
 // --- the tools ------------------------------------------------------------------
 export const TOOLS: ToolDef[] = [
   // ── Everyone ───────────────────────────────────────────────────────────────
@@ -423,7 +437,8 @@ export const TOOLS: ToolDef[] = [
     },
     run: async (t, a) => {
       const me: any = await t.caller.auth.me()
-      return t.caller.inquiries.send({ handle: a.handle, name: me.name, email: me.email, what: a.what, message: a.message, eventDate: a.date ?? '', city: a.city ?? '', guests: a.guests ?? null, budget: a.budget ?? '', phone: '', organization: '', website: '' })
+      const { email } = await t.caller.auth.myEmail()
+      return t.caller.inquiries.send({ handle: a.handle, name: me.name, email, what: a.what, message: a.message, eventDate: a.date ?? '', city: a.city ?? '', guests: a.guests ?? null, budget: a.budget ?? '', phone: '', organization: '', website: '' })
     },
   },
   {
@@ -437,8 +452,8 @@ export const TOOLS: ToolDef[] = [
     description: 'Enter the dancer into a giveaway with their account email.',
     input: { giveaway_id: z.string().uuid() },
     run: async (t, a) => {
-      const me: any = await t.caller.auth.me()
-      return t.caller.giveaway.enter({ giveawayId: a.giveaway_id, email: me.email })
+      const { email } = await t.caller.auth.myEmail()
+      return t.caller.giveaway.enter({ giveawayId: a.giveaway_id, email })
     },
   },
   {
@@ -465,6 +480,23 @@ export const TOOLS: ToolDef[] = [
       await t.caller.profile.update({ name: a.name, city: a.city, danceStyles: a.styles, role: a.role, bio: a.bio, instagram: a.instagram, website: a.website, profilePublic: a.profile_public })
       return { saved: true }
     },
+  },
+
+  {
+    name: 'apply_to_gig', title: 'Apply to a gig', scopes: ['social:write'], annotations: OUTWARD,
+    description: 'Apply to a gig role (find_gigs, kind "role"): a short message about yourself, optionally as one of your artist pages. The poster gets an email with the message and your account email to reply to.',
+    input: {
+      gig_id: z.string().uuid().describe('Gig id from find_gigs.'),
+      message: z.string().min(10).max(2000).describe('Why you: experience, styles, links.'),
+      profile: z.string().min(1).max(200).transform(h => h.replace(/^@/, '')).optional().describe('Apply as this artist page of yours (needs it ticked for this app).'),
+    },
+    run: (t, a) => t.caller.gigs.applyTo({ gigId: a.gig_id, message: a.message, profile: a.profile }),
+  },
+  {
+    name: 'my_gig_applications', title: 'My gig applications', scopes: ['me:read'], annotations: READ,
+    description: 'Gigs the dancer applied to and whether each is pending, accepted or declined.',
+    input: {},
+    run: t => t.caller.gigs.myApplications(),
   },
 
   // ── Organizers, artists, promoters (business) ────────────────────────────────
@@ -712,15 +744,16 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'update_business_profile', title: 'Edit a business page', scopes: ['business:publish'], business: true, annotations: OUTWARD, confirm: true,
-    description: 'Change one of my public pages (artist, venue, organizer, promoter): name, bio, city, styles, photo, address. Preview → confirm.',
+    description: 'Change one of my public pages (artist, venue, organizer, promoter): name, bio, city, styles, photo, address, and for a promoter page the influencer flag. Preview → confirm.',
     input: {
       profile, name: z.string().trim().min(1).max(120).optional(), bio: z.string().max(4000).optional(), city: z.string().max(120).optional(),
       styles: z.array(z.string().trim().min(1).max(40)).max(20).optional(), photo: z.string().url().nullable().optional(), address: z.string().max(300).optional(),
+      influencer: z.boolean().optional().describe('Promoter pages only: true = this promoter is an influencer (their deliverable is content; promo_kit is made for them).'),
       confirm_token: confirmToken,
     },
     preview: async (t, a) => {
       const cur: any = await t.caller.business.get({ username: a.profile })
-      const fields = ['name', 'bio', 'city', 'styles', 'photo', 'address'].filter(k => a[k] !== undefined)
+      const fields = ['name', 'bio', 'city', 'styles', 'photo', 'address', 'influencer'].filter(k => a[k] !== undefined)
       return { page: cur.name, changes: Object.fromEntries(fields.map(k => [k, { from: cur[k], to: a[k] }])) }
     },
     run: async (t, a) => {
@@ -791,8 +824,8 @@ export const TOOLS: ToolDef[] = [
     },
     preview: async (_t, a) => ({ kind: a.kind, title: a.title, by: a.poster_name, where: a.location, when: a.when, pay: a.compensation, effect: 'Publicly listed on /gigs with your account email as contact.' }),
     run: async (t, a) => {
-      const me: any = await t.caller.auth.me()
-      return t.caller.gigs.create({ kind: a.kind, category: a.category, title: a.title, posterName: a.poster_name, posterType: a.poster_type, location: a.location, styles: a.styles, when: a.when, compensation: a.compensation, deadline: a.deadline, contactEmail: me.email, contactUrl: a.contact_url })
+      const { email } = await t.caller.auth.myEmail()
+      return t.caller.gigs.create({ kind: a.kind, category: a.category, title: a.title, posterName: a.poster_name, posterType: a.poster_type, location: a.location, styles: a.styles, when: a.when, compensation: a.compensation, deadline: a.deadline, contactEmail: email, contactUrl: a.contact_url })
     },
   },
   {
@@ -800,6 +833,134 @@ export const TOOLS: ToolDef[] = [
     description: 'Artists a promoter page represents.',
     input: { handle },
     run: async (t, a) => t.caller.entity.promoterRoster({ profileId: await profileId(t, a.handle) }),
+  },
+
+  // ── Phase 2: series, attendees, gig applications ─────────────────────────────
+  {
+    name: 'recurring_series', title: 'Create a recurring series', scopes: ['business:write'], business: true, annotations: WRITE,
+    description: 'Create every date of a recurring event in one call: weekly classes, a party every second week, a social on the nth weekday of the month. Give the first date, the rule and an end (until or count); skip holidays with skip. Each date becomes its own event in one series (fix one date later with update_event). Drafts by default; published: true needs business:publish and runs as preview (the list of dates) → confirm.',
+    input: {
+      profile: profile.describe('Handle of the page that runs the series (see my_profiles).'),
+      ...SERIES_FIELDS,
+      every: z.enum(['week', '2weeks', 'month']).describe('"week", "2weeks", or "month" (the same nth weekday as the first date, e.g. the 3rd Sunday).'),
+      until: ymd.optional().describe('Last possible date (inclusive).'),
+      count: z.number().int().min(1).max(52).optional().describe('How many dates (skipped ones don’t count). Max 52.'),
+      skip: z.array(ymd).max(52).default([]).describe('Dates to leave out (holidays).'),
+      month_week: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(-1)]).optional().describe('every=month only: 1–4 or -1 for the last; default the first date’s.'),
+      published: z.boolean().default(false).describe('true = public right away (preview → confirm).'),
+      confirm_token: confirmToken,
+    },
+    confirm: async (_t, a) => !!a.published,
+    preview: async (t, a) => {
+      const p: any = await t.caller.businessEvents.seriesPreview(seriesInput(a))
+      return { ...p, effect: `Creates ${p.dates.length} public events.` }
+    },
+    run: async (t, a) => {
+      const r: any = await t.caller.businessEvents.createSeries(seriesInput(a))
+      return { ...r, next: r.published ? 'Live. Change one date with update_event.' : 'Drafts. Check them with my_events, then publish_series with the seriesId.' }
+    },
+  },
+  {
+    name: 'publish_series', title: 'Publish a series', scopes: ['business:publish'], business: true, annotations: OUTWARD, confirm: true,
+    description: 'Publish (or take back to draft) every date still to come of a series (seriesId from recurring_series or my_events). Preview (the dates) → confirm.',
+    input: { series_id: z.string().min(1).max(80), published: z.boolean().default(true), confirm_token: confirmToken },
+    preview: async (t, a) => {
+      const s: any = await t.caller.businessEvents.series({ seriesId: a.series_id })
+      return { action: a.published ? 'publish' : 'unpublish', series: s.name, dates: s.dates.map((d: any) => `${d.weekday} ${d.date} ${d.startTime}${d.published === a.published ? ' (already)' : ''}`) }
+    },
+    run: (t, a) => t.caller.businessEvents.publishSeries({ seriesId: a.series_id, published: a.published }),
+  },
+  {
+    name: 'attendees', title: 'Who’s coming to my event', scopes: ['business:read'], business: true, annotations: READ,
+    description: 'Who added an event of my pages to their plan, signed up or bought a ticket. Counts always include everyone; names only for dancers who made their going public. csv: true adds a CSV of the named list.',
+    input: { event_id: eventId, csv: z.boolean().default(false) },
+    run: (t, a) => t.caller.businessEvents.attendees({ id: a.event_id, csv: a.csv }),
+  },
+  {
+    name: 'gig_applications', title: 'Applications to my gigs', scopes: ['business:read'], business: true, annotations: READ,
+    description: 'Gigs I (or my pages) posted, each with the artists who applied: message, page, email, status.',
+    input: { gig_id: z.string().uuid().optional() },
+    run: (t, a) => t.caller.gigs.applications(a.gig_id ? { gigId: a.gig_id } : undefined),
+  },
+  {
+    name: 'decide_gig_application', title: 'Accept or decline a gig application', scopes: ['business:publish'], business: true, annotations: OUTWARD, confirm: true,
+    description: 'Accept or decline an artist’s application to my gig; they get an email. Preview → confirm.',
+    input: { application_id: z.string().uuid(), decision: z.enum(['accepted', 'declined']), confirm_token: confirmToken },
+    preview: async (t, a) => {
+      const gigs: any[] = await t.caller.gigs.applications()
+      for (const g of gigs) {
+        const app = g.applications.find((x: any) => x.id === a.application_id)
+        if (app) return { gig: g.title, applicant: app.applicant.name, page: app.page?.name ?? null, current: app.status, decision: a.decision, effect: `${app.applicant.name} gets an email.` }
+      }
+      throw new Error('No such application on your gigs.')
+    },
+    run: (t, a) => t.caller.gigs.decideApplication({ applicationId: a.application_id, decision: a.decision }),
+  },
+
+  // ── Phase 2: promoters and influencers ───────────────────────────────────────
+  {
+    name: 'my_link', title: 'My tracked link for an event', scopes: ['business:read'], business: true, annotations: IDEMPOTENT,
+    description: 'My personal link to a published event for one of my promoter pages, with a QR code (SVG and PNG URLs). Visits, sign-ups, plan adds and tickets through it count in my_results. The same link every time.',
+    input: { event_id: eventId, profile: profile.describe('Your promoter page (see my_profiles).') },
+    run: (t, a) => t.caller.referral.myLink({ eventId: a.event_id, profile: a.profile }),
+  },
+  {
+    name: 'my_results', title: 'What my links brought', scopes: ['business:read'], business: true, annotations: READ,
+    description: 'Per tracked link (promoter page + event): visits, sign-ups, plan adds and tickets, plus totals. Optionally one page or one event.',
+    input: { profile: profile.optional(), event_id: eventId.optional() },
+    run: (t, a) => t.caller.referral.myResults({ profile: a.profile, eventId: a.event_id }),
+  },
+  {
+    name: 'promoter_dashboard', title: 'Promoter dashboard', scopes: ['business:read'], business: true, annotations: READ,
+    description: 'One promoter page at a glance: totals, the events it promotes (upcoming and past, each with results), roster size, its giveaway proposals, and whether it is an influencer.',
+    input: { profile: profile.describe('Your promoter page.') },
+    run: (t, a) => t.caller.referral.promoterDashboard({ profile: a.profile }),
+  },
+  {
+    name: 'event_link_results', title: 'Promoter results for my event', scopes: ['business:read'], business: true, annotations: READ,
+    description: 'For an event of my pages: every promoter’s tracked link and what it brought (visits, sign-ups, plan adds, tickets).',
+    input: { event_id: eventId },
+    run: (t, a) => t.caller.referral.eventLinkResults({ eventId: a.event_id }),
+  },
+  {
+    name: 'promo_kit', title: 'Promo kit for an event', scopes: ['business:read'], business: true,
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: 'Everything to promote a published event: the flyer (story 9:16 and feed 4:5 URLs), a caption in the event’s languages, hashtags, and for a promoter page its tracked link and QR code. If the event has no flyer at all, one is painted (about a minute; poll flyer_status or call again). The event’s own team can use any of their pages (no tracked link then).',
+    input: {
+      event_id: eventId, profile: profile.describe('Your promoter page, or a page of the event’s team.'),
+      language: language.optional().describe('Caption language(s); default the event’s.'),
+      paint_if_missing: z.boolean().default(true).describe('false = never start painting a flyer.'),
+    },
+    run: (t, a) => t.caller.referral.promoKit({ eventId: a.event_id, profile: a.profile, language: a.language, paintIfMissing: a.paint_if_missing }),
+  },
+  {
+    name: 'propose_giveaway', title: 'Propose a giveaway', scopes: ['business:write'], business: true, annotations: WRITE,
+    description: 'Propose a giveaway for a published event (e.g. "2 full passes") from one of my pages. Nothing goes public: the event’s organizer approves it, then it runs on WeDance in the event’s city and points at the event through my tracked link.',
+    input: {
+      event_id: eventId, profile: profile.describe('Your promoter/influencer page.'),
+      prize: z.string().min(3).max(200).describe('What people can win, e.g. "2 full passes".'),
+      description: z.string().max(1000).optional(), sponsor_name: z.string().max(120).optional().describe('Who gives the prize (default: your page).'),
+      ends_on: ymd.optional().describe('Last day to enter (default: the event’s start).'),
+    },
+    run: (t, a) => t.caller.giveaway.propose({ eventId: a.event_id, profile: a.profile, prize: a.prize, description: a.description ?? '', sponsorName: a.sponsor_name, endsOn: a.ends_on }),
+  },
+  {
+    name: 'giveaway_proposals', title: 'Giveaway proposals for my events', scopes: ['business:read'], business: true, annotations: READ,
+    description: 'Giveaways promoters and influencers proposed for events of my pages (all, or one event), with their status.',
+    input: { event_id: eventId.optional(), status: z.enum(['pending', 'approved', 'declined']).optional() },
+    run: (t, a) => t.caller.giveaway.proposals({ eventId: a.event_id, status: a.status }),
+  },
+  {
+    name: 'decide_giveaway_proposal', title: 'Approve or decline a giveaway', scopes: ['business:publish'], business: true, annotations: OUTWARD, confirm: true,
+    description: 'Approve a proposed giveaway for my event (it goes live on WeDance in the event’s city until ends_on or the event’s start) or decline it. Preview → confirm.',
+    input: { proposal_id: z.string().uuid(), approve: z.boolean(), ends_on: ymd.optional(), note: z.string().max(500).optional(), confirm_token: confirmToken },
+    preview: async (t, a) => {
+      const all: any[] = await t.caller.giveaway.proposals()
+      const p = all.find(x => x.id === a.proposal_id)
+      if (!p) throw new Error('No such proposal for your events.')
+      return { event: p.event.name, prize: p.prize, by: p.page.name, status: p.status, decision: a.approve ? 'approve: a public giveaway goes live' : 'decline', endsOn: a.ends_on ?? null }
+    },
+    run: (t, a) => t.caller.giveaway.decideProposal({ proposalId: a.proposal_id, approve: a.approve, endsOn: a.ends_on, note: a.note }),
   },
 
   // ── Admin (WeDance admins on an allowlisted app only) ─────────────────────────

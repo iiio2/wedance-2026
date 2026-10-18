@@ -7,11 +7,11 @@ const { data } = await useFetch('/api/mcp-tools', { key: 'mcp-tools' })
 
 type Tool = NonNullable<typeof data.value>['tools'][number]
 const group = (t: Tool) => t.scopes.includes('admin') ? 'Admin'
-  : t.business ? 'Organizers, artists, promoters'
+  : t.business ? 'Organizers, artists, promoters, influencers'
   : t.scopes.length ? 'Dancers'
   : 'Everyone (no sign-in)'
 const groups = computed(() => {
-  const order = ['Everyone (no sign-in)', 'Dancers', 'Organizers, artists, promoters', 'Admin']
+  const order = ['Everyone (no sign-in)', 'Dancers', 'Organizers, artists, promoters, influencers', 'Admin']
   const by = new Map<string, Tool[]>(order.map(o => [o, []]))
   for (const t of data.value?.tools ?? []) by.get(group(t))!.push(t)
   return order.map(o => ({ title: o, tools: by.get(o)! })).filter(g => g.tools.length)
@@ -36,7 +36,7 @@ const inspector = `npx @modelcontextprotocol/inspector --cli https://2026.wedanc
     eyebrow="Developers"
     site="WeDance Docs"
     title="MCP server reference"
-    lead="One MCP server for dancers, organizers, artists and promoters. Every tool is a thin adapter over the same tRPC procedures the web app uses, so permissions and validation are identical."
+    lead="One MCP server for dancers, organizers, artists, promoters and influencers. Every tool is a thin adapter over the same tRPC procedures the web app uses, so permissions and validation are identical."
   >
     <DesignSection id="endpoints" title="Endpoints">
       <div class="overflow-x-auto">
@@ -60,7 +60,9 @@ const inspector = `npx @modelcontextprotocol/inspector --cli https://2026.wedanc
         <li><strong class="text-foreground">Two-step publishing.</strong> Tools marked “confirm” return a preview and a <code class="font-mono text-[13px]">confirm_token</code> (10 minutes, single use, bound to the connection, the tool and the arguments). Call again with it after the user agrees.</li>
         <li><strong class="text-foreground">User text is data.</strong> Free text written by people comes as <code class="font-mono text-[13px]">{"untrusted_text": …}</code> inside a <code class="font-mono text-[13px]">&lt;wedance-data&gt;</code> block.</li>
         <li><strong class="text-foreground">No payments.</strong> Ticket tools return a Stripe checkout link the person opens.</li>
-        <li><strong class="text-foreground">Async flyers.</strong> make_flyer, flyer_variants and fix_flyer return a batch_id; poll flyer_status.</li>
+        <li><strong class="text-foreground">Async flyers.</strong> make_flyer, flyer_variants and fix_flyer return a batch_id; poll flyer_status. promo_kit paints the first flyer of an event only when it has none.</li>
+        <li><strong class="text-foreground">Tracked links.</strong> my_link gives a promoter page one link per event (<code class="font-mono text-[13px]">?via=&lt;code&gt;</code>, QR at <code class="font-mono text-[13px]">/api/qr/&lt;code&gt;.svg</code>). Visits, sign-ups, plan adds and tickets through it show in my_results and, for the organizer, event_link_results.</li>
+        <li><strong class="text-foreground">Attendees respect privacy.</strong> attendees counts everyone but names only dancers who made their going public; never emails.</li>
         <li><strong class="text-foreground">Audited and rate limited.</strong> Every call is logged (input hash, never the input) and limited per connection; anonymous calls per IP.</li>
       </ul>
     </DesignSection>

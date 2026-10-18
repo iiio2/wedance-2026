@@ -31,6 +31,9 @@ export interface Context {
   oauthGrantId?: string | null
   // Our public origin for this request (OAuth issuer / MCP resource).
   origin?: string | null
+  // The promoter tracked link in the visitor's `wd_via` cookie (web only):
+  // sign-ups, plan adds and tickets credit it (server/utils/trackedLinks.ts).
+  viaCode?: string | null
 }
 
 export interface ContextExtra {
@@ -40,6 +43,7 @@ export interface ContextExtra {
   // audience-bound: one presented anywhere else is ignored (RFC 8707).
   resource?: string | null
   origin?: string | null
+  viaCode?: string | null
 }
 
 export async function createContext(
@@ -111,5 +115,5 @@ export async function createContext(
     if (d) viewAs = d
   }
 
-  return { db, dancerId, isAdmin, voterSessionId: extra?.voterSessionId ?? null, waitUntil: extra?.waitUntil, viewAs, origin: extra?.origin ?? null }
+  return { db, dancerId, isAdmin, voterSessionId: extra?.voterSessionId ?? null, waitUntil: extra?.waitUntil, viewAs, origin: extra?.origin ?? null, viaCode: extra?.viaCode ?? null }
 }
