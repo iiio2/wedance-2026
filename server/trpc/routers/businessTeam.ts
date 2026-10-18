@@ -4,7 +4,7 @@ import { alias } from 'drizzle-orm/pg-core'
 import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure, adminProcedure } from '../trpc'
 import { profiles, profileMembers, profileClaims, profileAccessLog, dancers } from '../../database/schema'
-import { profileByHandle, membershipOf, requireOwner, keepAnOwner, grant, logAccess } from '../../utils/profileAccess'
+import { profileByHandle, membershipOf, requireOwner, keepAnOwner, grant, logAccess, assertProfileGranted } from '../../utils/profileAccess'
 import { sendAccessDecisionEmail, sendInfoRequiredEmail } from '../../utils/email'
 
 /**
@@ -56,7 +56,7 @@ export async function joinRequestsForOwner(db: any, dancerId: string) {
     .where(and(eq(profileMembers.dancerId, dancerId), eq(profileMembers.role, 'owner')))
   if (!owned.length) return []
   return db.select({
-    id: profileClaims.id, profileName: profiles.name, profileUsername: profiles.username,
+    id: profileClaims.id, profileId: profiles.id, profileName: profiles.name, profileUsername: profiles.username,
     dancerName: dancers.name, requestedRole: profileClaims.requestedRole, title: profileClaims.title,
   })
     .from(profileClaims)
@@ -110,6 +110,7 @@ export const businessTeamRouter = router({
       const p = await profileByHandle(ctx.db, input.username)
       const me = await membershipOf(ctx.db, p.id, ctx.dancerId)
       if (!me && !ctx.isAdmin) throw new TRPCError({ code: 'FORBIDDEN', message: 'You don’t manage this profile.' })
+      assertProfileGranted(ctx, p.id)
       const isOwner = me?.role === 'owner' || !!ctx.isAdmin
       const members = await ctx.db
         .select({ dancerId: profileMembers.dancerId, role: profileMembers.role, title: profileMembers.title, name: dancers.name, username: dancers.username, photo: dancers.photo, since: profileMembers.createdAt })

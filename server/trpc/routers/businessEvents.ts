@@ -7,6 +7,8 @@ import { slugify, randomSuffix } from '../../utils/slug'
 import { resolveTimezone, seriesKey } from '../../utils/v3EventSync'
 import { zonedToUtc, eventLocalDate, eventLocalTime, eventLocalWeekday } from '../../../shared/utils/eventTime'
 import { requireMember, linksInstagram } from './business'
+import { onlyGranted, type GrantCtx } from '../../utils/profileAccess'
+import { assertScope } from '../scopes'
 import { parseInstagramHandle, handleFromInstagram, instagramUrl } from '../../../shared/utils/instagram'
 import { joinRequestsForOwner } from './businessTeam'
 import { eventPath } from '../../../shared/utils/eventSlug'
@@ -107,12 +109,14 @@ const eventInput = z.object({
 })
 type EventInput = z.infer<typeof eventInput>
 
-async function profilesIManage(ctx: { db: any; dancerId: string }) {
-  return ctx.db
+async function profilesIManage(ctx: { db: any; dancerId: string } & GrantCtx) {
+  const rows = await ctx.db
     .select({ id: profiles.id, username: profiles.username, name: profiles.name, type: profiles.type })
     .from(profileMembers)
     .innerJoin(profiles, eq(profiles.id, profileMembers.profileId))
     .where(eq(profileMembers.dancerId, ctx.dancerId))
+  // A connected app sees only the profiles it was given.
+  return onlyGranted(ctx, rows, (r: any) => r.id)
 }
 
 // The profile that runs an event: its host; for a synced event (no host yet),
@@ -131,16 +135,19 @@ export async function eventHostProfile(db: any, ev: any): Promise<{ id: string; 
 
 // Every event is editable. A hosted event: by its host's managers. A synced
 // event: by the managers of its organizer's or venue's profile. Admins: any.
-export async function requireEventManager(ctx: { db: any; dancerId: string; isAdmin?: boolean }, id: string) {
+export async function requireEventManager(ctx: { db: any; dancerId: string; isAdmin?: boolean } & GrantCtx, id: string) {
   const [ev] = await ctx.db.select().from(events).where(eq(events.id, id))
   if (!ev) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found.' })
   if (ctx.isAdmin) return ev
   const handles = [ev.organizerUsername, ev.venueUsername].filter(Boolean) as string[]
-  const candidates: string[] = ev.hostProfileId
+  const all: string[] = ev.hostProfileId
     ? [ev.hostProfileId]
     : handles.length
       ? (await ctx.db.select({ id: profiles.id }).from(profiles).where(inArray(profiles.username, handles))).map((p: any) => p.id)
       : []
+  // A connected app may manage it only through a profile it was given.
+  const candidates = onlyGranted(ctx, all, id => id)
+  if (all.length && !candidates.length) throw new TRPCError({ code: 'FORBIDDEN', message: 'This app wasn’t given access to the profile that runs this event. Reconnect it and tick the profile on the consent screen.' })
   const [m] = candidates.length
     ? await ctx.db.select({ id: profileMembers.id }).from(profileMembers)
       .where(and(inArray(profileMembers.profileId, candidates), eq(profileMembers.dancerId, ctx.dancerId)))
@@ -348,6 +355,8 @@ export const businessEventsRouter = router({
   create: protectedProcedure
     .input(eventInput.extend({ hostUsername: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      // A connected app publishes only with business:publish.
+      if (input.published) assertScope(ctx, 'business:publish')
       const host = await requireMember(ctx, input.hostUsername)
       const row = await toRow(ctx.db, host, input)
       const slug = `${slugify(input.name)}-${randomSuffix(5)}`
@@ -362,6 +371,8 @@ export const businessEventsRouter = router({
     .input(eventInput.extend({ id: z.string().uuid(), hostUsername: z.string().min(1).optional() }))
     .mutation(async ({ ctx, input }) => {
       const ev = await requireEventManager(ctx, input.id)
+      // Publishing, or changing an event that's already live, is public.
+      if (input.published || ev.published) assertScope(ctx, 'business:publish')
       let host: { id: string; username: string; type: string; name: string } | null
       let hostProfileId: string | null
       if (input.hostUsername) {
@@ -389,6 +400,8 @@ export const businessEventsRouter = router({
     .input(z.object({ id: z.string().uuid(), weeks: z.number().int().min(1).max(12) }))
     .mutation(async ({ ctx, input }) => {
       const ev = await requireEventManager(ctx, input.id)
+      // Copies keep the source's published state: copying a live event publishes.
+      if (ev.published) assertScope(ctx, 'business:publish')
       const seriesId = ev.seriesId ?? `host-${ev.id}`
       if (!ev.seriesId) await ctx.db.update(events).set({ seriesId }).where(eq(events.id, ev.id))
       const { id: _i, slug: _s, sourceId: _si, createdAt: _c, syncedAt: _y, editedAt: _ea, editedBy: _eb, ...copy } = ev
@@ -603,7 +616,7 @@ export const businessEventsRouter = router({
     type Item = { kind: string; tone: 'warning' | 'info' | 'danger' | 'neutral'; title: string; detail?: string; to: string }
     const needs: Item[] = []
 
-    const claims = await ctx.db
+    const claims = ctx.grantedProfileIds && !ctx.isAdmin ? [] : await ctx.db
       .select({ status: profileClaims.status, name: profiles.name, username: profiles.username })
       .from(profileClaims).innerJoin(profiles, eq(profiles.id, profileClaims.profileId))
       .where(and(eq(profileClaims.dancerId, ctx.dancerId), inArray(profileClaims.status, ['pending', 'rejected'])))
@@ -646,7 +659,8 @@ export const businessEventsRouter = router({
         : { kind: 'lineup-ask', tone: 'info', title: `${a.eventName}: is ${a.profileName} in?`, detail: `${when}you’re in their line-up. Confirm, check your programme and the posts about you.`, to: `/confirm/${a.token}` })
     }
 
-    for (const j of await joinRequestsForOwner(ctx.db, ctx.dancerId)) {
+    const mineIds = new Set(mine.map((p: any) => p.id))
+    for (const j of (await joinRequestsForOwner(ctx.db, ctx.dancerId)).filter((j: any) => mineIds.has(j.profileId))) {
       needs.push({ kind: 'join', tone: 'info', title: `${j.dancerName} wants to join ${j.profileName}`, detail: `As ${j.requestedRole}${j.title ? ` · ${j.title}` : ''}. Approve or decline.`, to: `/business/network/${j.profileUsername}/team` })
     }
 

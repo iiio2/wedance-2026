@@ -44,6 +44,7 @@ const headlines: Record<string, string> = {
   partner: 'Join to find a dance partner',
   social: 'Join the community',
   booking: 'Make your WeDance account',
+  connect: 'Sign in to connect the app',
 }
 
 type Mode = 'login' | 'register' | 'recovery'
@@ -114,7 +115,7 @@ watch(() => props.open, (open) => {
     resetForm()
   } else {
     // signin → login; any "join" action → register.
-    mode.value = props.action === 'signin' ? 'login' : 'register'
+    mode.value = props.action === 'signin' || props.action === 'connect' ? 'login' : 'register'
     applyPrefill()
   }
 })

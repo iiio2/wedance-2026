@@ -18,8 +18,8 @@ export const DOMAINS: Domain[] = [
   {
     id: 'identity',
     title: 'Identity & auth',
-    summary: 'Dancer accounts, credentials and login sessions.',
-    tables: ['dancers', 'sessions'],
+    summary: 'Dancer accounts, credentials and login sessions, and the apps (MCP assistants) dancers connect via OAuth.',
+    tables: ['dancers', 'sessions', 'oauthClients', 'oauthGrants', 'oauthCodes', 'oauthTokens', 'mcpAudit', 'mcpRateLimits'],
   },
   {
     id: 'festivals',

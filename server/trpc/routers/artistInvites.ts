@@ -7,7 +7,7 @@ import { sendInviteEmail } from '../../utils/email'
 import { eventLocalDate, eventLocalTime } from '../../../shared/utils/eventTime'
 import { requireEventManager } from './businessEvents'
 import { citySlugFor } from './business'
-import { grant, logAccess } from '../../utils/profileAccess'
+import { grant, logAccess, assertProfileGranted } from '../../utils/profileAccess'
 import { instagramUrl, parseInstagramHandle } from '../../../shared/utils/instagram'
 import { videoEmbedUrl } from '../../../shared/utils/video'
 import { contactsFor } from '../../../shared/utils/contacts'
@@ -85,6 +85,9 @@ async function resolve(ctx: any, input: { token?: string; username?: string }) {
   const managed = await hasTeam(ctx.db, p.id)
   const member = await isMember(ctx.db, p.id, ctx.dancerId)
   if (!input.token && !member && !ctx.isAdmin) throw new TRPCError({ code: 'FORBIDDEN', message: 'You don’t manage this profile.' })
+  // A connected app acts for a page someone runs only when it was given that
+  // page; an unmanaged page is answered with its link, as on the web.
+  if (managed || !input.token) assertProfileGranted(ctx, p.id)
   return { invite, p, managed, member, canAnswer: !managed || member || !!ctx.isAdmin }
 }
 

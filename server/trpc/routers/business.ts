@@ -6,7 +6,7 @@ import { profiles, profileMembers, profileClaims, dancers, cities, events, booka
 import { WEEKDAYS } from '../../../shared/types/venueDetails'
 import { slugify, randomSuffix } from '../../utils/slug'
 import { parseInstagramHandle, instagramUrl } from '../../../shared/utils/instagram'
-import { grant, logAccess } from '../../utils/profileAccess'
+import { grant, logAccess, assertProfileGranted, onlyGranted, type GrantCtx } from '../../utils/profileAccess'
 import { notifyDecision, notifyInfoRequired } from './businessTeam'
 
 /**
@@ -50,10 +50,11 @@ const editableFields = {
 }
 
 // Membership check shared by get/update. Admins may manage any profile.
-export async function requireMember(ctx: { db: any; dancerId: string; isAdmin?: boolean }, username: string) {
+export async function requireMember(ctx: { db: any; dancerId: string; isAdmin?: boolean } & GrantCtx, username: string) {
   const [p] = await ctx.db.select().from(profiles).where(eq(profiles.username, username))
   if (!p) throw new TRPCError({ code: 'NOT_FOUND', message: 'Profile not found.' })
   if (ctx.isAdmin) return p
+  assertProfileGranted(ctx, p.id)
   const [m] = await ctx.db
     .select({ role: profileMembers.role })
     .from(profileMembers)
@@ -107,8 +108,9 @@ export const businessRouter = router({
 
   // Profiles I manage + my claim requests that are still open or were rejected.
   myProfiles: protectedProcedure.query(async ({ ctx }) => {
-    const managed = await ctx.db
+    const managedRows = await ctx.db
       .select({
+        id: profiles.id,
         username: profiles.username,
         name: profiles.name,
         type: profiles.type,
@@ -120,6 +122,8 @@ export const businessRouter = router({
       .innerJoin(profiles, eq(profiles.id, profileMembers.profileId))
       .where(eq(profileMembers.dancerId, ctx.dancerId))
       .orderBy(profiles.name)
+    // A connected app sees only the profiles it was given.
+    const managed = onlyGranted(ctx, managedRows, (r: any) => r.id).map(({ id: _id, ...r }: any) => r)
 
     const claims = await ctx.db
       .select({
@@ -137,7 +141,8 @@ export const businessRouter = router({
       .where(and(eq(profileClaims.dancerId, ctx.dancerId), inArray(profileClaims.status, ['pending', 'rejected', 'info_required'])))
       .orderBy(desc(profileClaims.createdAt))
 
-    return { managed, claims }
+    // Claims are about pages not managed yet: not shown to connected apps.
+    return { managed, claims: ctx.grantedProfileIds && !ctx.isAdmin ? [] : claims }
   }),
 
   // Find an existing profile to claim (by name or handle).

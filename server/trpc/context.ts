@@ -2,6 +2,8 @@ import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch'
 import { eq, and, gt } from 'drizzle-orm'
 import { useDb } from '../utils/db'
 import { dancers, sessions } from '../database/schema'
+import { ACCESS_PREFIX } from '../oauth/crypto'
+import { resolveAccessToken } from '../oauth/tokens'
 
 export interface Context {
   db: ReturnType<typeof useDb>
@@ -19,17 +21,60 @@ export interface Context {
   // Admin "view as": an admin opened /business as another user (x-wedance-view-as).
   // protectedProcedure then runs everything as that user (admin rights kept).
   viewAs?: { id: string; name: string } | null
+  // A connected app's OAuth token (MCP). Null/absent for web sessions, which
+  // may do everything the dancer may do. With a token: the scopes the dancer
+  // allowed (checked per procedure, server/trpc/scopes.ts) and the business
+  // profiles the app may act for (checked in the profile access helpers).
+  scopes?: string[] | null
+  grantedProfileIds?: string[] | null
+  oauthClientId?: string | null
+  oauthGrantId?: string | null
+  // Our public origin for this request (OAuth issuer / MCP resource).
+  origin?: string | null
+}
+
+export interface ContextExtra {
+  voterSessionId?: string | null
+  waitUntil?: (p: Promise<unknown>) => void
+  // The resource this request is for (`${origin}/mcp`). OAuth access tokens are
+  // audience-bound: one presented anywhere else is ignored (RFC 8707).
+  resource?: string | null
+  origin?: string | null
 }
 
 export async function createContext(
   opts: FetchCreateContextFnOptions,
-  extra?: { voterSessionId?: string | null; waitUntil?: (p: Promise<unknown>) => void },
+  extra?: ContextExtra,
 ): Promise<Context> {
   const db = useDb()
 
   const authHeader = opts.req.headers.get('authorization')
   let dancerId: string | null = null
   let isAdmin = false
+
+  // A connected app (MCP): an OAuth access token, valid only for its resource.
+  if (authHeader?.startsWith(`Bearer ${ACCESS_PREFIX}`)) {
+    const auth = await resolveAccessToken(db, authHeader.slice(7), extra?.resource)
+    if (!auth) {
+      // Unknown, expired, revoked or for another resource: anonymous, and
+      // still scoped (empty) so nothing beyond public reads runs.
+      return { db, dancerId: null, isAdmin: false, scopes: [], grantedProfileIds: [], origin: extra?.origin ?? null, voterSessionId: null, waitUntil: extra?.waitUntil }
+    }
+    return {
+      db,
+      dancerId: auth.dancerId,
+      isAdmin: auth.isAdmin,
+      scopes: auth.scopes,
+      grantedProfileIds: auth.grantedProfileIds,
+      oauthClientId: auth.clientId,
+      oauthGrantId: auth.grantId,
+      origin: extra?.origin ?? null,
+      // City-video votes from an app dedupe per connection.
+      voterSessionId: `mcp:${auth.grantId}`,
+      waitUntil: extra?.waitUntil,
+      viewAs: null,
+    }
+  }
 
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7)
@@ -66,5 +111,5 @@ export async function createContext(
     if (d) viewAs = d
   }
 
-  return { db, dancerId, isAdmin, voterSessionId: extra?.voterSessionId ?? null, waitUntil: extra?.waitUntil, viewAs }
+  return { db, dancerId, isAdmin, voterSessionId: extra?.voterSessionId ?? null, waitUntil: extra?.waitUntil, viewAs, origin: extra?.origin ?? null }
 }

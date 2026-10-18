@@ -57,6 +57,18 @@ export default defineNuxtConfig({
     '/my-year': { ssr: false },
     '/my-plan': { ssr: false },
     '/settings': { ssr: false },
+    '/settings/**': { ssr: false },
+    // Connected apps (MCP): the consent screen runs on the client session and
+    // must never be framed (clickjacking), cached or leak its URL in a Referer.
+    '/oauth/authorize': {
+      ssr: false,
+      headers: {
+        'Content-Security-Policy': "frame-ancestors 'none'",
+        'X-Frame-Options': 'DENY',
+        'Cache-Control': 'no-store',
+        'Referrer-Policy': 'no-referrer',
+      },
+    },
   },
   nitro: {
     preset: 'vercel',

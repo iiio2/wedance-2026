@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server'
 import { router, publicProcedure } from '../trpc'
 import { events, cities } from '../../database/schema'
 import { festivalView } from '../../utils/festivalView'
+import { listFestivals } from '../../utils/festivalListing'
 import { publicEventWhere } from '../../utils/eventLookup'
 
 /**
@@ -146,6 +147,10 @@ export const eventsRouter = router({
       if (!ev) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found.' })
       return ev
     }),
+
+  // Upcoming festivals, congresses and weekenders, soonest first (the
+  // /festivals directory, same query as /api/festivals).
+  festivals: publicProcedure.query(async ({ ctx }) => listFestivals(ctx.db)),
 
   // A festival event in the shape the festival page renders (Festival,
   // workshops, teachers — app/types/festival.ts), built from the event, its

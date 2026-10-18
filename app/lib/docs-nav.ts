@@ -35,6 +35,13 @@ export const hubNav: DocSection[] = [
     ],
   },
   {
+    title: 'Assistants (MCP)',
+    items: [
+      { title: 'Connect Claude / ChatGPT', to: '/docs/connect-ai', status: 'beta', summary: 'Add WeDance to your assistant and choose what it may do.' },
+      { title: 'MCP server reference', to: '/docs/mcp', status: 'beta', summary: 'Endpoints, scopes and every tool, for developers.' },
+    ],
+  },
+  {
     title: 'Sections',
     items: [
       { title: 'Design system', to: '/docs/design', status: 'stable', summary: 'Tokens, components and patterns.' },

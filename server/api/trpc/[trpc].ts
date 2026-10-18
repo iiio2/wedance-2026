@@ -1,6 +1,7 @@
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch'
 import { appRouter } from '../../trpc'
 import { createContext } from '../../trpc/context'
+import { requestOrigin } from '../../oauth/http'
 
 const VOTE_SID_COOKIE = 'wd_vote_sid'
 
@@ -26,7 +27,8 @@ export default defineEventHandler(async (event) => {
     req: request,
     router: appRouter,
     // Long work (painting a flyer) keeps running after the response, on Vercel too.
-    createContext: (opts) => createContext(opts, { voterSessionId, waitUntil: p => event.waitUntil(p) }),
+    // No `resource`: connected apps' tokens are for /mcp only and are ignored here.
+    createContext: (opts) => createContext(opts, { voterSessionId, waitUntil: p => event.waitUntil(p), origin: requestOrigin(event) }),
   })
 
   // Use sendWebResponse to correctly forward the tRPC Response to the client

@@ -13,6 +13,31 @@ import { profiles, profileMembers, profileAccessLog } from '../database/schema'
 export type Role = 'owner' | 'editor' | 'moderator'
 export type Db = any
 
+/**
+ * A connected app (MCP token) acts only for the business profiles the dancer
+ * ticked on the consent screen. Web sessions (`grantedProfileIds` null) and
+ * admins on the allowlisted admin app are not limited. Every profile access
+ * helper below (and requireMember / requireEventManager) runs this, so the
+ * grant holds inside tRPC, not only in the MCP adapter.
+ */
+export interface GrantCtx { grantedProfileIds?: readonly string[] | null; isAdmin?: boolean }
+
+export function isProfileGranted(ctx: GrantCtx, profileId: string) {
+  return !ctx.grantedProfileIds || !!ctx.isAdmin || ctx.grantedProfileIds.includes(profileId)
+}
+
+export function assertProfileGranted(ctx: GrantCtx, profileId: string) {
+  if (!isProfileGranted(ctx, profileId)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'This app wasn’t given access to this profile. Reconnect it and tick the profile on the consent screen.' })
+  }
+}
+
+/** Keep only the rows whose profile the app may act for. */
+export function onlyGranted<T>(ctx: GrantCtx, rows: T[], idOf: (row: T) => string): T[] {
+  if (!ctx.grantedProfileIds || ctx.isAdmin) return rows
+  return rows.filter(r => ctx.grantedProfileIds!.includes(idOf(r)))
+}
+
 export async function profileByHandle(db: Db, username: string) {
   const [p] = await db.select().from(profiles).where(eq(profiles.username, username))
   if (!p) throw new TRPCError({ code: 'NOT_FOUND', message: 'Profile not found.' })
@@ -32,9 +57,10 @@ export async function ownerCount(db: Db, profileId: string) {
 }
 
 /** Owners (and WeDance admins) manage the team. */
-export async function requireOwner(ctx: { db: Db; dancerId: string; isAdmin?: boolean }, username: string) {
+export async function requireOwner(ctx: { db: Db; dancerId: string; isAdmin?: boolean } & GrantCtx, username: string) {
   const p = await profileByHandle(ctx.db, username)
   if (ctx.isAdmin) return p
+  assertProfileGranted(ctx, p.id)
   const m = await membershipOf(ctx.db, p.id, ctx.dancerId)
   if (m?.role !== 'owner') throw new TRPCError({ code: 'FORBIDDEN', message: 'Only owners can manage the team.' })
   return p
@@ -68,11 +94,12 @@ export async function grant(db: Db, profileId: string, dancerId: string, role: R
 const roleRank: Record<Role, number> = { owner: 3, editor: 2, moderator: 1 }
 
 export async function requireProfileRole(
-  ctx: { db: Db; dancerId: string; isAdmin?: boolean },
+  ctx: { db: Db; dancerId: string; isAdmin?: boolean } & GrantCtx,
   profileId: string,
   minimumRole: Role,
 ) {
   if (ctx.isAdmin) return
+  assertProfileGranted(ctx, profileId)
   const m = await membershipOf(ctx.db, profileId, ctx.dancerId)
   if (!m || roleRank[m.role as Role] < roleRank[minimumRole]) {
     throw new TRPCError({ code: 'FORBIDDEN', message: `Requires ${minimumRole} role or higher on this profile.` })

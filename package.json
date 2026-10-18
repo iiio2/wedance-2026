@@ -29,6 +29,7 @@
     "seed:pinakothek": "bun scripts/seed-pinakothek.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@neondatabase/serverless": "^1.0.2",
     "@sentry/nuxt": "^10.67.0",
     "@tailwindcss/vite": "^4.2.1",
