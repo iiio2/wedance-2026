@@ -4,7 +4,7 @@ import { TRPCError } from '@trpc/server'
 import { router, publicProcedure } from '../trpc'
 import { events, cities } from '../../database/schema'
 import { festivalView } from '../../utils/festivalView'
-import { eventKey } from '../../../shared/utils/eventSlug'
+import { publicEventWhere } from '../../utils/eventLookup'
 
 /**
  * Public dated events from the `events` table — today the live mirror of
@@ -118,10 +118,6 @@ export const eventsRouter = router({
   get: publicProcedure
     .input(z.object({ id: z.string().min(1).max(200) }))
     .query(async ({ ctx, input }) => {
-      const key = eventKey(input.id)
-      const exact = key && 'id' in key
-        ? eq(events.id, key.id)
-        : or(eq(events.slug, input.id), sql`${events.festival}->>'key' = ${input.id}`)
       const extra = {
         description: events.description,
         link: events.link,
@@ -142,8 +138,11 @@ export const eventsRouter = router({
         agenda: events.agenda,
         festival: events.festival,
       }
-      let [ev] = await selectCards(ctx.db, and(exact, eq(events.published, true)), 1, extra)
-      if (!ev && key && 'short' in key) [ev] = await selectCards(ctx.db, and(sql`${events.id}::text LIKE ${`${key.short}%`}`, eq(events.published, true)), 1, extra)
+      let ev: any
+      for (const where of publicEventWhere(input.id)) {
+        ;[ev] = await selectCards(ctx.db, where, 1, extra)
+        if (ev) break
+      }
       if (!ev) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found.' })
       return ev
     }),
