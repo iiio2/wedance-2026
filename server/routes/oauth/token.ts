@@ -1,4 +1,4 @@
-import { defineEventHandler, getHeader, getMethod, setResponseStatus } from 'h3'
+import { defineEventHandler, getHeader, setResponseStatus } from 'h3'
 import { allowCors, limitOAuthIp, noStore, oauthErrorResponse, readParams } from '../../oauth/http'
 import { OAuthError } from '../../oauth/errors'
 import { authenticateClient } from '../../oauth/clients'
@@ -8,7 +8,7 @@ import { useDb } from '../../utils/db'
 // Token endpoint: authorization_code (PKCE S256) and refresh_token (rotating).
 export default defineEventHandler(async (event) => {
   allowCors(event, 'POST, OPTIONS')
-  const method = getMethod(event)
+  const method = event.method
   if (method === 'OPTIONS') { setResponseStatus(event, 204); return '' }
   try {
     if (method !== 'POST') throw new OAuthError('invalid_request', 'Use POST', 405)

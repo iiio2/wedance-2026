@@ -1,4 +1,4 @@
-import { getHeader, getMethod, sendWebResponse, setResponseHeaders, setResponseStatus, toWebRequest, type H3Event } from 'h3'
+import { getHeader, sendWebResponse, setResponseHeaders, setResponseStatus, toWebRequest, type H3Event } from 'h3'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import { createContext, type Context } from '../trpc/context'
 import { allowCors, clientIp, requestOrigin } from '../oauth/http'
@@ -44,7 +44,7 @@ async function serve(event: H3Event, req: Request, ctx: Context, origin: string)
 /** Shared preamble: CORS, preflight, and the only method stateless MCP needs (POST). */
 function preflight(event: H3Event): unknown | undefined {
   allowCors(event, 'POST, GET, DELETE, OPTIONS')
-  const method = getMethod(event)
+  const method = event.method
   if (method === 'OPTIONS') { setResponseStatus(event, 204); return '' }
   if (method !== 'POST') {
     setResponseHeaders(event, { Allow: 'POST, OPTIONS' })
