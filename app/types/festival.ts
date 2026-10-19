@@ -13,6 +13,8 @@ export interface Festival {
   slug: string
   startDate: string
   endDate: string
+  /** IANA zone the event happens in (dated events); day counts use it. */
+  timezone?: string | null
   description: string
   logo: string
   /** The event's flyer (its cover), shown in About. */

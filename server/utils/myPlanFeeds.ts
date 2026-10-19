@@ -156,7 +156,12 @@ export function stylesForDancer(eventStyles: string[], myStyles: readonly string
  * Courses (metadata type 'class') have their own section and are left out.
  * Suggestions never appear here; discovery lives on the city page.
  */
-export async function weekSocials(db: Db, dancerId: string, now = new Date(), days = 7): Promise<{ socials: WeekSocial[] }> {
+export async function weekSocials(db: Db, dancerId: string, now = new Date(), days = 7): Promise<{ socials: WeekSocial[]; citySlug: string }> {
+  const [me] = await db.select({ danceStyles: dancers.danceStyles, city: dancers.city }).from(dancers).where(eq(dancers.id, dancerId))
+  // The section's "Full week" link: the dancer's city page, by its real slug
+  // ("München" → munich), for any city — not only the ones with a mock page.
+  const citySlug = await citySlugFor(db, me?.city as string | null)
+
   const planRows = await db
     .select({ itemId: planItems.itemId, metadata: planItems.metadata })
     .from(planItems)
@@ -165,7 +170,7 @@ export async function weekSocials(db: Db, dancerId: string, now = new Date(), da
     .filter((r: any) => (r.metadata as Record<string, string> | null)?.type !== 'class')
     .map((r: any) => r.itemId as string)
     .filter((id: string) => UUID_RE.test(id))
-  if (!plannedIds.length) return { socials: [] }
+  if (!plannedIds.length) return { socials: [], citySlug }
 
   // Courses (v3 type 'Course') have their own section, however they were added.
   const planned: Array<{ id: string; seriesId: string | null }> = (await db
@@ -173,7 +178,7 @@ export async function weekSocials(db: Db, dancerId: string, now = new Date(), da
     .from(events)
     .where(inArray(events.id, plannedIds)))
     .filter((p: any) => !isClassType(p.type))
-  if (!planned.length) return { socials: [] }
+  if (!planned.length) return { socials: [], citySlug }
   const seriesIds = [...new Set(planned.map(p => p.seriesId).filter(Boolean) as string[])]
 
   const until = new Date(now.getTime() + days * DAY)
@@ -205,7 +210,6 @@ export async function weekSocials(db: Db, dancerId: string, now = new Date(), da
   const picks = resolveWeekOccurrences(planned, rows)
   const byId = new Map<string, any>(rows.map((r: any) => [r.id, r]))
 
-  const [me] = await db.select({ danceStyles: dancers.danceStyles }).from(dancers).where(eq(dancers.id, dancerId))
   const myStyles = (me?.danceStyles as string[] | null) ?? []
   const friendIds = await friendIdsOf(db, dancerId)
   const counts = await friendsGoingCounts(db, friendIds, 'event', picks.map(p => p.eventId))
@@ -229,7 +233,7 @@ export async function weekSocials(db: Db, dancerId: string, now = new Date(), da
     })
     .sort((a, b) => a.startDate.localeCompare(b.startDate))
 
-  return { socials }
+  return { socials, citySlug }
 }
 
 // ---------------------------------------------------------------------------

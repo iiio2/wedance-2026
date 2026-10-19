@@ -63,9 +63,9 @@ const isActive = (item: { to: string; exact: boolean }) =>
     <!-- Sidebar (desktop) / top bar (mobile) -->
     <aside class="md:w-60 md:min-h-screen md:border-r border-b md:border-b-0 border-border shrink-0 md:sticky md:top-0 md:h-screen flex md:flex-col bg-card/55">
       <div class="px-4 py-4 md:py-6 flex md:block items-center justify-between w-full">
-        <NuxtLink to="/" class="inline-flex items-center gap-2">
-          <Brand />
-        </NuxtLink>
+        <!-- Brand is the home link itself; wrapping it in another NuxtLink nested <a>
+             in <a>, which the HTML parser splits, so every page mismatched on hydration. -->
+        <Brand />
         <div class="hidden md:block mt-6 text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Admin</div>
       </div>
 

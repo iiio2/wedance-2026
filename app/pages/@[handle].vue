@@ -16,6 +16,7 @@ import { eventLocalDate, eventLocalTime } from '#shared/utils/eventTime'
 import { bookingRequestSchema } from '#shared/validation'
 import { MapPin, Instagram, Youtube, Globe, Facebook, LayoutGrid, ArrowLeft, Check, Calendar, ScrollText, ShieldCheck, Trees, Plus, Heart, Send } from 'lucide-vue-next'
 import { eventPath } from '#shared/utils/eventSlug'
+import { initialsOf } from '#shared/utils/initials'
 
 definePageMeta({ layout: false })
 
@@ -168,10 +169,7 @@ const typeLabel: Record<string, string> = { venue: 'Venue', artist: 'Artist', or
 const isPromoter = computed(() => profile.value?.type === 'promoter')
 const socialIcon: Record<string, any> = { instagram: Instagram, youtube: Youtube, facebook: Facebook, website: Globe }
 const langLabel: Record<string, string> = { en: 'English', es: 'Spanish', de: 'German', fr: 'French', pt: 'Portuguese', it: 'Italian', ru: 'Russian', hu: 'Hungarian', sl: 'Slovenian' }
-const initials = computed(() => {
-  const n = (profile.value?.name || '').trim()
-  return n ? n.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') : '?'
-})
+const initials = computed(() => initialsOf(profile.value?.name))
 function fmtDate(d: any) { if (!d) return 'Date TBD'; try { return new Date(d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) } catch { return String(d) } }
 
 // --- Booking modal (a booking IS a scheduled event — collect enough info) ---

@@ -29,6 +29,8 @@ useHead({
 // `useTRPC` composable — calling it threw "useTRPC is not defined" on load).
 const { $trpc } = useNuxtApp()
 const { isSignedIn } = useAuth()
+// The hero is server-rendered: branch on what SSR can know too (see useAppearsSignedIn).
+const appearsSignedIn = useAppearsSignedIn()
 
 const route = useRoute()
 const kindParam = (Array.isArray(route.query.kind) ? route.query.kind[0] : route.query.kind) || ''
@@ -271,7 +273,7 @@ const chipInk = (c: string, alpha = 0.094) => readableOn(c, mixHex(c, '#fff', al
 
         <div class="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Button
-            v-if="isSignedIn"
+            v-if="appearsSignedIn"
             type="button"
             variant="cta"
             size="lg"

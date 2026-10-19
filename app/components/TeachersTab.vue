@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Teacher, Workshop } from '~/types/festival'
+import { initialsOf } from '#shared/utils/initials'
 
 const props = defineProps<{
   teachers: Teacher[]
@@ -25,7 +26,7 @@ function workshopsFor(teacher: Teacher): Workshop[] {
         <div class="flex gap-4 items-center">
           <Avatar class="h-14 w-14">
             <AvatarImage :src="teacher.photo" :alt="teacher.name" />
-            <AvatarFallback>{{ teacher.name.slice(0, 2) }}</AvatarFallback>
+            <AvatarFallback>{{ initialsOf(teacher.name) }}</AvatarFallback>
           </Avatar>
           <div>
             <h3 class="font-semibold">{{ teacher.name }}</h3>

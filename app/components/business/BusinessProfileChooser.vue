@@ -5,6 +5,7 @@
  * away; otherwise pick one.
  */
 import { ChevronRight } from 'lucide-vue-next'
+import { initialOf } from '#shared/utils/initials'
 
 const props = defineProps<{ section: 'website' | 'contacts'; eyebrow: string; title: string; description: string }>()
 const { $trpc } = useNuxtApp()
@@ -34,7 +35,7 @@ onMounted(async () => {
         <li v-for="p in profiles" :key="p.username">
           <NuxtLink :to="`/business/network/${p.username}/${section}`" class="flex items-center gap-3 p-4 hover:bg-accent">
             <img v-if="p.photo" :src="p.photo" alt="" class="size-10 rounded-full object-cover">
-            <span v-else class="grid size-10 place-items-center rounded-full bg-primary/15 font-bold text-primary">{{ p.name.slice(0, 1) }}</span>
+            <span v-else class="grid size-10 place-items-center rounded-full bg-primary/15 font-bold text-primary">{{ initialOf(p.name) }}</span>
             <span class="min-w-0 flex-1">
               <span class="block truncate font-bold">{{ p.name }}</span>
               <span class="block text-xs text-muted-foreground">@{{ p.username }}<template v-if="p.city"> · {{ p.city }}</template></span>

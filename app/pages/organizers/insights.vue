@@ -18,6 +18,9 @@ useHead({
 
 const { $trpc } = useNuxtApp()
 const { isSignedIn, isLoading } = useAuth()
+// SSR never runs auth init (isLoading stays true there) but the client settles
+// it before hydrating — hold "Loading…" until hydration so both render the same.
+const hydrated = useHydrated()
 const route = useRoute()
 const router = useRouter()
 
@@ -83,7 +86,7 @@ watch([isLoading, isSignedIn], ([loadingNow, signedIn]) => {
         Who is actually coming — so you can plan a program that fits them.
       </p>
 
-      <div v-if="isLoading || loadingList" class="mt-10 flex items-center gap-2 text-sm font-sans">
+      <div v-if="!hydrated || isLoading || loadingList" class="mt-10 flex items-center gap-2 text-sm font-sans">
         <Loader2 class="size-4 animate-spin" aria-hidden="true" /> Loading…
       </div>
 

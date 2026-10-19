@@ -107,6 +107,10 @@ describe.skipIf(!DATABASE_URL)('my-plan feeds', () => {
       expect(await weekIds()).toEqual([])
     })
 
+    it('returns the dancer\'s city slug for the "Full week" link, plan or no plan', async () => {
+      expect((await caller(ids.me!).plan.weekSocials()).citySlug).toBe(CITY_SLUG)
+    })
+
     it('shows a planned event this week, with its date, time zone and friends going', async () => {
       const me = caller(ids.me!)
       await me.plan.add({ itemType: 'event', itemId: ids.socialSoon! })

@@ -2,6 +2,7 @@
 import type { YearPlanFestival, DanceRole } from '~/types/festival'
 import { UserPlus, Check, Calendar, MapPin, ChevronRight, Heart, Gift, ArrowRight, Globe, Music, Sparkles } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
+import { initialOf, initialsOf } from '#shared/utils/initials'
 
 const props = defineProps<{
   sharer: { name: string; photo: string; role: DanceRole }
@@ -106,7 +107,7 @@ function formatDateRange(start: string, end: string): string {
         class="w-16 h-16 rounded-full flex items-center justify-center text-lg font-bold text-white mx-auto border-2"
         style="border-color:color-mix(in srgb, var(--wd-red-600) 26.7%, transparent); background:var(--wd-red-600);"
       >
-        {{ sharer.name.split(' ').map(w => w.charAt(0)).join('').toUpperCase().slice(0, 2) }}
+        {{ initialsOf(sharer.name, 2, '') }}
       </div>
       <div>
         <h1 class="text-xl font-bold font-display text-foreground">{{ sharer.name }}'s 2026 Dance Year</h1>
@@ -244,7 +245,7 @@ function formatDateRange(start: string, end: string): string {
                 class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0"
                 :style="{ background: f.accentColor || WD.amber600 }"
               >
-                {{ f.name.charAt(0) }}
+                {{ initialOf(f.name) }}
               </div>
               <div class="flex-1 min-w-0">
                 <h4 class="text-sm font-bold leading-tight font-display text-foreground">{{ f.name }}</h4>

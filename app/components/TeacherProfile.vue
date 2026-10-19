@@ -8,6 +8,7 @@
 import type { Teacher } from '~/types/festival'
 import { Instagram, Youtube, Globe, ArrowRight, X } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
+import { initialsOf } from '#shared/utils/initials'
 
 const props = defineProps<{
   teacher: Teacher
@@ -30,14 +31,7 @@ const platformIcon: Record<string, any> = {
 const profileHref = computed(() => (props.teacher.id ? `/@${props.teacher.id}` : null))
 
 const imgError = ref(false)
-const initials = computed(() =>
-  props.teacher.name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase(),
-)
+const initials = computed(() => initialsOf(props.teacher.name, 2, ''))
 
 function toEmbedUrl(url: string): string {
   const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&/?]+)/)

@@ -4,6 +4,7 @@ import { Link, Gift, Copy, Check } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 import { WD } from '~/lib/brand'
+import { initialOf } from '#shared/utils/initials'
 
 const props = defineProps<{
   open: boolean
@@ -152,7 +153,7 @@ async function nativeShare() {
                 class="w-6 h-6 rounded flex items-center justify-center text-eyebrow font-bold text-white shrink-0"
                 :style="{ background: f.accentColor || WD.amber600 }"
               >
-                {{ f.name.charAt(0) }}
+                {{ initialOf(f.name) }}
               </div>
               <span class="font-medium flex-1 truncate">{{ f.name }}</span>
               <span class="text-muted-foreground shrink-0">{{ formatDateRange(f.startDate, f.endDate) }}</span>

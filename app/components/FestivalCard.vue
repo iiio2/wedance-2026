@@ -13,6 +13,7 @@ import { daysUntil } from '#shared/utils/festivalDateFormatter'
 import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
 import { readableAccent } from '~/lib/accent'
+import { initialOf, initialsOf } from '#shared/utils/initials'
 
 export interface FestivalCardData {
   /** The festival's page, /events/<name>-<short id>. */
@@ -43,10 +44,6 @@ defineEmits<{ pick: [] }>()
 
 const accent = computed(() => props.festival.accentColor || WD.amber600)
 const buttonAccent = computed(() => readableAccent(accent.value))
-
-function initials(name: string) {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('')
-}
 
 const location = computed(() => [props.festival.city, props.festival.country].filter(Boolean).join(', ') || 'TBA')
 
@@ -85,7 +82,7 @@ const dateRange = computed(() => {
           :style="{ background: accent }"
           aria-hidden="true"
         >
-          {{ festival.name.charAt(0) }}
+          {{ initialOf(festival.name) }}
         </div>
 
         <div class="flex-1 min-w-0">
@@ -130,7 +127,7 @@ const dateRange = computed(() => {
                     class="w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white"
                     :style="{ background: buttonAccent }"
                   >
-                    {{ initials(a.name) }}
+                    {{ initialsOf(a.name) }}
                   </div>
                 </template>
                 <div

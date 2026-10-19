@@ -11,6 +11,7 @@ import { Field } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
 import { WD } from '~/lib/brand'
 import { readableOn } from '~/lib/contrast'
+import { initialOf } from '#shared/utils/initials'
 
 definePageMeta({ layout: false })
 
@@ -201,7 +202,7 @@ const NuxtLinkC = resolveComponent('NuxtLink')
             class="absolute inset-0 flex items-center justify-center text-5xl font-bold text-white"
             :style="{ background: accents[i % accents.length] }"
           >
-            {{ a.name.charAt(0) }}
+            {{ initialOf(a.name) }}
           </div>
 
           <!-- Following indicator -->

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Teacher } from '~/types/festival'
+import { initialsOf } from '#shared/utils/initials'
 
 defineProps<{
   teachers: Teacher[]
@@ -20,12 +21,7 @@ function onImgError(id: string) {
   failedPhotos.value.add(id)
 }
 function teacherInitials(name: string) {
-  return name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
+  return initialsOf(name, 2, '')
 }
 </script>
 

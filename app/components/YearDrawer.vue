@@ -3,6 +3,7 @@ import { X, CalendarDays, Save, MapPin, Calendar, Check, ChevronDown, Target, Wa
 import { Button } from '~/components/ui/button'
 import { GoalSchema, validateForm } from '#shared/validation'
 import { festivalPath } from '#shared/utils/eventSlug'
+import { initialOf } from '#shared/utils/initials'
 
 interface FestivalSummary {
   slug: string
@@ -224,7 +225,7 @@ const simpleChecklistItems = [
                   class="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-tag font-bold text-white"
                   :style="{ backgroundColor: f.accentColor }"
                 >
-                  {{ f.name.charAt(0) }}
+                  {{ initialOf(f.name) }}
                 </div>
                 <div class="min-w-0">
                   <p class="text-xs font-medium leading-tight">{{ f.name }}</p>

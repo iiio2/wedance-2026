@@ -5,6 +5,7 @@
  * all venues (used on the Private-events page). Client-side fetch. Hidden if none.
  */
 import { LayoutGrid, ArrowUpRight, MapPin } from 'lucide-vue-next'
+import { initialsOf } from '#shared/utils/initials'
 
 const props = defineProps<{ citySlug?: string; cityName?: string; hideHeading?: boolean }>()
 const { $trpc } = useNuxtApp()
@@ -22,7 +23,7 @@ async function load() {
 onMounted(load)
 
 function initials(name: string) {
-  return (name || '').trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?'
+  return initialsOf(name)
 }
 </script>
 

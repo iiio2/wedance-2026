@@ -20,6 +20,8 @@ import * as caribbeanUrbanFire from '~/data/mock-caribbean-urban-fire'
 import { WD } from '~/lib/brand'
 import { previewOnlyFestivals } from '~/data/mock-preview-festivals'
 import { eventPath, festivalPath } from '#shared/utils/eventSlug'
+import { citySlug as toCitySlug } from '#shared/utils/citySearch'
+import { initialOf } from '#shared/utils/initials'
 
 definePageMeta({ layout: false })
 
@@ -90,18 +92,15 @@ const stylesLabel = computed(() => {
   return `${s[0]}, ${s[1]} +${s.length - 2}`
 })
 
-// "Full week" link → the user's city page when we have one, else the cities
-// index. Only munich/berlin have dedicated pages in the current mock data.
-const CITY_PAGES = new Set(['munich', 'berlin'])
+// The dancer's city page — every city has one (/cities/[city] is DB-backed).
+// plan.weekSocials returns the slug the server resolves via the cities table
+// ("München" → munich); until it lands (and in preview) slug the typed name.
+const resolvedCitySlug = ref('')
+const dancerCitySlug = computed(() => resolvedCitySlug.value || toCitySlug(dancerCity.value || ''))
 // Upcoming classes in the city ("Your first class" list on the city page).
-const cityClassesLink = computed(() => {
-  const slug = (dancerCity.value || '').trim().toLowerCase()
-  return CITY_PAGES.has(slug) ? `/cities/${slug}?taster=1#taster` : '/cities'
-})
-const citySocialsLink = computed(() => {
-  const slug = (dancerCity.value || '').trim().toLowerCase()
-  return CITY_PAGES.has(slug) ? `/cities/${slug}` : '/cities'
-})
+const cityClassesLink = computed(() => dancerCitySlug.value ? `/cities/${dancerCitySlug.value}?taster=1#taster` : '/cities')
+// "Full week" → the city's week.
+const citySocialsLink = computed(() => dancerCitySlug.value ? `/cities/${dancerCitySlug.value}` : '/cities')
 
 // Catalogue of festivals — same source /festivals uses. Extract to a
 // composable once this data starts to matter.
@@ -253,12 +252,15 @@ function daysUntilLabel(dateStr: string) {
 // Short label for the year-at-a-glance strip. Prefer the "brand short"
 // (initials of significant words), fall back to first 3 chars.
 function shortLabel(name: string) {
-  const words = name
+  // NFKC: styled titles ("𝐆𝐋𝐎𝐁𝐀𝐋 …") read as plain letters, not half-characters.
+  const plain = name.normalize('NFKC')
+  const words = plain
     .replace(/[¡¿!?().,]/g, '')
     .split(/\s+/)
     .filter(w => w.length > 2 && !/^(the|and|of|de|la|el|los|las|for|with|to|in|on|at|by)$/i.test(w))
-  if (words.length >= 2) return words.map(w => w[0]).join('').slice(0, 3).toUpperCase()
-  return (name.replace(/[^A-Za-z0-9]/g, '').slice(0, 3) || '?').toUpperCase()
+  // Array.from: cut by characters, not UTF-16 units (an unfolded astral letter is two).
+  if (words.length >= 2) return Array.from(words.map(w => initialOf(w, '')).join('')).slice(0, 3).join('').toUpperCase()
+  return (plain.replace(/[^A-Za-z0-9]/g, '').slice(0, 3) || '?').toUpperCase()
 }
 
 const MONTH_LABELS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -310,9 +312,13 @@ onMounted(() => {
 
 // Refetch hangouts and city events when city changes
 watch(() => dancerCity.value, () => {
+  // The old city's slug no longer applies; weekSocials re-resolves the new one
+  // (and refetches city events if it differs from the typed-name guess).
+  resolvedCitySlug.value = ''
   if (isSignedIn.value && !previewMode.value && dancerCity.value) {
     fetchHangouts()
     loadCityEvents()
+    loadWeekSocials()
   }
 })
 
@@ -842,7 +848,7 @@ const EVENT_TYPE_MAP: Record<string, string> = { Course: 'class', Workshop: 'wor
 // Real upcoming events for the user's city, loaded from DB.
 const realCityEvents = ref<CityEvent[]>([])
 async function loadCityEvents() {
-  const citySlug = (dancerCity.value || '').trim().toLowerCase()
+  const citySlug = dancerCitySlug.value
   if (!citySlug) return
   try {
     const rows = await $trpc.events.byCity.query({ citySlug })
@@ -990,7 +996,11 @@ function shortDayDate(iso: string): string {
 async function loadWeekSocials() {
   if (previewMode.value || !isSignedIn.value) return
   try {
-    const { socials: rows } = await $trpc.plan.weekSocials.query()
+    const { socials: rows, citySlug } = await $trpc.plan.weekSocials.query()
+    const guessed = dancerCitySlug.value
+    resolvedCitySlug.value = citySlug || ''
+    // The typed name slugged differently ("münchen") — refetch with the real slug.
+    if (dancerCitySlug.value && dancerCitySlug.value !== guessed) loadCityEvents()
     socials.value = rows.map((e) => {
       const tz = e.timezone || undefined
       const style = e.styles[0] || e.type || ''
@@ -2087,7 +2097,7 @@ function cardSummary(f: CatalogueEntry) {
                 class="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white shadow-sm"
                 :style="{ background: f.accentColor }"
               >
-                {{ f.name.charAt(0) }}
+                {{ initialOf(f.name) }}
               </div>
             </div>
 

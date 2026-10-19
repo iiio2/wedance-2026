@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { candidates, handleSlug, pickHandle, unreadable } from './handles'
+import { PgDialect } from 'drizzle-orm/pg-core'
+import { candidates, freeHandle, handleSlug, pickHandle, unreadable } from './handles'
 
 describe('unreadable', () => {
   it('spots handles nobody could say', () => {
@@ -30,5 +31,41 @@ describe('picking a handle', () => {
     expect(handleSlug('Niranjan 9876543210')).toBe('niranjan')
     expect(handleSlug('01772359159')).toBe('')
     expect(handleSlug('Zentnerstraße 39, 80798')).toBe('zentnerstrasse-39-80798')
+  })
+})
+
+// Signup must not die on a best-effort availability check (the username column
+// is unique and register retries): one broken source — a column missing on a
+// drifted DB, a malformed row — only drops what that source would have added.
+describe('freeHandle', () => {
+  /** A db stub: each query's SQL text decides its rows, or throws. */
+  const stubDb = (answer: (text: string) => string[] | Error) => ({
+    execute: async (q: any) => {
+      const text = new PgDialect().sqlToQuery(q).sql
+      const out = answer(text)
+      if (out instanceof Error) throw out
+      return { rows: out.map(h => ({ h })) }
+    },
+  })
+
+  it('skips taken handles from every source', async () => {
+    const db = stubDb(t => t.includes('old_usernames') ? ['adam'] : t.includes('oldHandles') ? ['adam-munich'] : t.includes('from profiles') ? ['adam-2'] : [])
+    expect(await freeHandle(db, 'Adam', 'Munich')).toBe('adam-3')
+  })
+
+  it('still signs up when dancers.old_usernames is missing (the "Failed query" on create account)', async () => {
+    const db = stubDb(t => t.includes('old_usernames') ? new Error('column "old_usernames" does not exist') : t.includes('from dancers') ? ['adam'] : [])
+    expect(await freeHandle(db, 'Adam')).toBe('adam-2')
+  })
+
+  it('falls back to a random suffix only when current handles cannot be read', async () => {
+    const db = stubDb(t => t.includes('from dancers where') ? new Error('connection reset') : [])
+    expect(await freeHandle(db, 'Adam')).toMatch(/^adam-[0-9a-f]{5}$/)
+  })
+
+  it('guards each old-handles list against non-array JSON', async () => {
+    const seen: string[] = []
+    await freeHandle(stubDb((t) => { seen.push(t); return [] }), 'Adam')
+    for (const t of seen.filter(t => t.includes('jsonb_array_elements_text'))) expect(t).toContain("jsonb_typeof")
   })
 })

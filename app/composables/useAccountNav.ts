@@ -1,4 +1,5 @@
 import { CalendarDays, User, Settings, Briefcase, Music, ShieldCheck } from 'lucide-vue-next'
+import { initialOf } from '#shared/utils/initials'
 
 export type NavMode = 'dance' | 'business' | 'admin'
 
@@ -9,8 +10,7 @@ export type NavMode = 'dance' | 'business' | 'admin'
  * sides — Dancing, Business, and Admin for admins — never the current one.
  */
 export function useAccountNav(mode: NavMode) {
-  const { isSignedIn, isLoading, authHint, dancerName, username, photo, isAdmin, signOut } = useAuth()
-  const sessionCookie = useCookie('wedance-session')
+  const { authHint, dancerName, username, photo, isAdmin, signOut } = useAuth()
 
   // Show signed-in UI during SSR/loading when both session + hint cookies exist,
   // so the header doesn't blink "Sign in" on page refresh.
@@ -18,14 +18,11 @@ export function useAccountNav(mode: NavMode) {
   // auth plugin restores name/photo/session from localStorage before mount, and
   // showing those on the first client pass mismatched the SSR header.
   const hydrated = useHydrated()
-  const hinted = computed(() => !!authHint.value && !!sessionCookie.value)
-  const appearsSignedIn = computed(() =>
-    hydrated.value ? isSignedIn.value || (isLoading.value && hinted.value) : hinted.value,
-  )
+  const appearsSignedIn = useAppearsSignedIn()
   const displayName = computed(() => (hydrated.value && dancerName.value) || authHint.value?.name || 'Profile')
   const displayUsername = computed(() => (hydrated.value && username.value) || authHint.value?.username || null)
   const avatar = computed(() => (hydrated.value && photo.value) || authHint.value?.photo || null)
-  const initial = computed(() => displayName.value.trim().charAt(0).toUpperCase() || '?')
+  const initial = computed(() => initialOf(displayName.value))
   const profileTo = computed(() => displayUsername.value ? `/u/${displayUsername.value}` : '/settings')
 
   const accountLinks = computed(() => [
