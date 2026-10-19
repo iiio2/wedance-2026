@@ -77,11 +77,26 @@ export async function freeHandle(db: any, name: string, city?: string | null): P
   const like = `${root}%`
   // Can't check (no raw SQL here): the old way, name + a random suffix.
   if (typeof db?.execute !== 'function') return `${root}-${crypto.randomUUID().slice(0, 5)}`
-  const res: any = await db.execute(sql`
-    select lower(username) as h from dancers where lower(username) like ${like}
-    union select lower(x) from dancers, jsonb_array_elements_text(old_usernames) x where lower(x) like ${like}
-    union select lower(username) from profiles where lower(username) like ${like}
-    union select lower(x) from profiles, jsonb_array_elements_text(coalesce(source_ref->'oldHandles', '[]'::jsonb)) x where lower(x) like ${like}`)
-  const taken = new Set<string>([...RESERVED, ...((res.rows ?? res) as any[]).map(r => r.h)])
+  // Old handles only keep redirects working; a non-array value (JSON null, a
+  // string) reads as none instead of throwing "cannot extract elements".
+  const arrayOrEmpty = (col: any) => sql`case when jsonb_typeof(${col}) = 'array' then ${col} else '[]'::jsonb end`
+  const current = [
+    sql`select lower(username) as h from dancers where lower(username) like ${like}`,
+    sql`select lower(username) as h from profiles where lower(username) like ${like}`,
+  ]
+  const old = [
+    sql`select lower(x) as h from dancers, jsonb_array_elements_text(${arrayOrEmpty(sql`old_usernames`)}) x where lower(x) like ${like}`,
+    sql`select lower(x) as h from profiles, jsonb_array_elements_text(${arrayOrEmpty(sql`source_ref->'oldHandles'`)}) x where lower(x) like ${like}`,
+  ]
+  // Each source on its own: this check is best-effort (username is unique and
+  // register retries), so one failing source must not fail the signup — a DB
+  // missing dancers.old_usernames did ("Failed query … on create account").
+  const read = (q: any) => db.execute(q)
+    .then((res: any) => ((res.rows ?? res) as any[]).map(r => String(r.h)))
+    .catch((err: unknown) => { console.warn('[freeHandle] handle lookup failed:', (err as Error)?.message ?? err); return null })
+  const [rows, oldRows] = await Promise.all([Promise.all(current.map(read)), Promise.all(old.map(read))])
+  // Without the current handles a pick could collide: the old way, name + a random suffix.
+  if (rows.some(r => r === null)) return `${root}-${crypto.randomUUID().slice(0, 5)}`
+  const taken = new Set<string>([...RESERVED, ...rows.flat() as string[], ...oldRows.flatMap(r => r ?? [])])
   return pickHandle(wanted, taken, root)
 }

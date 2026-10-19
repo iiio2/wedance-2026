@@ -26,6 +26,7 @@ import { Button } from '~/components/ui/button'
 import { Field } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
 import { CityCombobox } from '~/components/ui/city-combobox'
+import { initialOf } from '#shared/utils/initials'
 
 const props = defineProps<{
   rideShares: RideShare[]
@@ -230,7 +231,7 @@ function badgeFor(key: string): string | null {
           <p class="text-eyebrow font-bold uppercase tracking-widest font-sans text-secondary">Others sharing rides</p>
           <div v-for="ride in rideShares" :key="ride.id" class="flex items-center gap-2.5 py-1.5 px-2 rounded-lg" style="background:color-mix(in srgb, var(--wd-brown-900) 2%, transparent);">
             <img v-if="ride.dancerPhoto && !failedRidePhotos.has(ride.id)" :src="ride.dancerPhoto" :alt="ride.dancerName" class="w-8 h-8 rounded-full shrink-0 object-cover" @error="failedRidePhotos.add(ride.id)">
-            <span v-else class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-[11px] font-bold uppercase" style="background:color-mix(in srgb, var(--wd-cyan-600) 9.4%, transparent); color:var(--wd-cyan-600);">{{ ride.dancerName.charAt(0) }}</span>
+            <span v-else class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-[11px] font-bold uppercase" style="background:color-mix(in srgb, var(--wd-cyan-600) 9.4%, transparent); color:var(--wd-cyan-600);">{{ initialOf(ride.dancerName) }}</span>
             <div class="min-w-0 flex-1 text-xs font-sans text-muted-foreground">
               <span class="font-bold text-foreground">{{ ride.dancerName }}</span>
               <span class="ml-1">
@@ -287,7 +288,7 @@ function badgeFor(key: string): string | null {
           <p class="text-eyebrow font-bold uppercase tracking-widest font-sans text-secondary">Others looking for roommates</p>
           <div v-for="person in roommateOthers" :key="person.username || person.name" class="flex items-center gap-2.5 py-1.5 px-2 rounded-lg" style="background:color-mix(in srgb, var(--wd-brown-900) 2%, transparent);">
             <img v-if="person.photo" :src="person.photo" :alt="person.name" class="w-8 h-8 rounded-full shrink-0 object-cover">
-            <span v-else class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold" :style="{ background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: GREEN_CHIP }">{{ person.name.charAt(0) }}</span>
+            <span v-else class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold" :style="{ background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: GREEN_CHIP }">{{ initialOf(person.name) }}</span>
             <div class="min-w-0 flex-1 text-xs font-sans text-muted-foreground">
               <component :is="person.username ? 'a' : 'span'" :href="person.username ? `/u/${person.username}` : undefined" class="font-bold text-foreground" :class="person.username ? 'underline underline-offset-2' : ''">{{ person.name }}</component>
               <span v-if="person.city" class="ml-1 inline-flex items-center gap-0.5"><MapPin class="w-3 h-3 inline text-secondary" aria-hidden="true" />{{ person.city }}</span>

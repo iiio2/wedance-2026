@@ -19,6 +19,7 @@
  */
 import { ArrowRight, MapPin, Calendar, Compass, GraduationCap, Users, Plane, Mic, PartyPopper, Ticket } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
+import { initialOf } from '#shared/utils/initials'
 
 definePageMeta({ layout: false })
 
@@ -118,7 +119,7 @@ const proofEvent = computed(() => {
   return { ...proofData.value, dateStr }
 })
 
-function avatarInitial(name: string) { return name.charAt(0).toUpperCase() }
+function avatarInitial(name: string) { return initialOf(name) }
 function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length] }
 </script>
 
@@ -377,7 +378,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                   </template>
                   <template v-else>
                     <li v-for="a in FALLBACK_ATTENDEES" :key="a.n" class="flex items-center gap-2 p-1">
-                      <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow" :style="{background: a.col}">{{ a.n.charAt(0) }}</div>
+                      <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow" :style="{background: a.col}">{{ initialOf(a.n) }}</div>
                       <div class="min-w-0">
                         <div class="text-sm font-bold truncate">{{ a.n }}</div>
                         <div class="text-eyebrow text-secondary">{{ a.c }}</div>

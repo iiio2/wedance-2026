@@ -186,6 +186,7 @@ const asFestival = computed(() => ({
   accentColor: accent.value,
   startDate: ev.value.startDate || ev.value.eventDate,
   endDate: ev.value.endDate || ev.value.eventDate,
+  timezone: ev.value.timezone || null,
   venue: { name: [ev.value.spaceName, ev.value.venueName].filter(Boolean).join(' · ') },
   attendeeCount: liveGoingCount.value,
   socialLinks: [] as any[],

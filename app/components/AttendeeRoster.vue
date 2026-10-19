@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Users } from 'lucide-vue-next'
+import { initialsOf } from '#shared/utils/initials'
 // Public verified-attendee roster for a festival.
 //
 // Calls `festivalSignup.publicRoster` and renders the response in two parts:
@@ -62,13 +63,7 @@ watch(() => props.festivalSlug, (next, prev) => {
 defineExpose({ refresh: load })
 
 function initials(name: string | null): string {
-  if (!name) return '?'
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(p => p[0]?.toUpperCase() ?? '')
-    .join('')
+  return initialsOf(name)
 }
 </script>
 

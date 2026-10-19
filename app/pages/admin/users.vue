@@ -5,6 +5,7 @@
  * Business and act as them ("view as", see useViewAs).
  */
 import { Search, Eye, ExternalLink, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { initialOf } from '#shared/utils/initials'
 
 definePageMeta({ layout: 'admin' })
 useHead({ title: 'Users | Admin | WeDance' })
@@ -67,7 +68,7 @@ const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', or
       <ul class="divide-y">
         <li v-for="u in data.rows" :key="u.id" class="flex flex-wrap items-center gap-3 px-4 py-3">
           <img v-if="u.photo" :src="u.photo" alt="" class="size-9 shrink-0 rounded-full object-cover">
-          <span v-else class="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">{{ u.name.slice(0, 1).toUpperCase() }}</span>
+          <span v-else class="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">{{ initialOf(u.name) }}</span>
           <div class="min-w-[12rem] flex-1">
             <div class="flex flex-wrap items-center gap-2">
               <button type="button" class="text-left text-sm font-bold hover:underline focus-visible:shadow-wd-focus" :title="`See ${u.name}’s Business`" @click="openBusiness(u)">{{ u.name }}</button>

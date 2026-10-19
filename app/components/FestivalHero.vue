@@ -4,6 +4,7 @@ import { Instagram, Globe, Facebook, Users, Star, Ticket, Check, Plus } from 'lu
 import { daysUntil as formatDaysUntil } from '#shared/utils/festivalDateFormatter'
 import { accentText, readableAccent } from '~/lib/accent'
 import { Button } from '~/components/ui/button'
+import { initialOf } from '#shared/utils/initials'
 
 // Shared hero for festivals AND events (an event is just a smaller festival).
 // `reviewTargetType` + `entityLabel` let the same hero serve either.
@@ -48,11 +49,17 @@ const dateRange = computed(() => {
   if (props.dateLabel) return props.dateLabel
   const start = new Date(props.festival.startDate)
   const end = new Date(props.festival.endDate)
+  // Never the viewer's zone (SSR runs in UTC; west of UTC a date-only
+  // "2026-05-01" read back locally is Apr 30): date-only strings parse as UTC
+  // midnight so read them in UTC, datetimes in the event's own zone.
+  const timeZone = String(props.festival.startDate).includes('T') ? (props.festival.timezone || 'Europe/Berlin') : 'UTC'
+  const fmt = (d: Date, o: Intl.DateTimeFormatOptions) => d.toLocaleDateString('en-US', { ...o, timeZone })
+  const day = { year: 'numeric', month: 'numeric', day: 'numeric' } as const
   // Single-day (events) → one date; multi-day (festivals) → a range.
-  if (start.toDateString() === end.toDateString()) {
-    return start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+  if (fmt(start, day) === fmt(end, day)) {
+    return fmt(start, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
   }
-  return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+  return `${fmt(start, { month: 'short', day: 'numeric' })} – ${fmt(end, { month: 'short', day: 'numeric', year: 'numeric' })}`
 })
 
 const platformIcon: Record<string, any> = {
@@ -61,7 +68,7 @@ const platformIcon: Record<string, any> = {
   website: Globe,
 }
 
-const daysUntil = computed(() => formatDaysUntil(props.festival.startDate))
+const daysUntil = computed(() => formatDaysUntil(props.festival.startDate, props.festival.timezone))
 
 // Accent text on its own tint / white-on-accent buttons, darkened only when the
 // festival colour is too light for 4.5:1.
@@ -112,7 +119,7 @@ const rays = Array.from({ length: 24 }, (_, i) => {
             class="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold text-white border-4 border-background"
             :style="{ background: festival.accentColor, boxShadow: '4px 5px 0 -1px ' + festival.accentColor }"
           >
-            {{ festival.name.charAt(0) }}
+            {{ initialOf(festival.name) }}
           </div>
         </div>
 

@@ -65,9 +65,9 @@ const isActive = (item: { match: (p: string) => boolean }) => item.match(route.p
     <!-- Phones: logo and profile switcher share the first row, the menu is the second. -->
     <aside class="md:w-60 md:min-h-screen md:border-r border-b md:border-b-0 border-border shrink-0 md:sticky md:top-0 md:h-screen grid grid-cols-[auto_minmax(0,1fr)] items-center md:flex md:flex-col md:items-stretch bg-card/55">
       <div class="px-4 py-3 md:py-6 flex md:block items-center justify-between md:w-full">
-        <NuxtLink to="/" class="inline-flex items-center gap-2">
-          <Brand />
-        </NuxtLink>
+        <!-- Brand is the home link itself; wrapping it in another NuxtLink nested <a>
+             in <a>, which the HTML parser splits, so every page mismatched on hydration. -->
+        <Brand />
         <div class="hidden md:block mt-6 text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Business</div>
       </div>
 

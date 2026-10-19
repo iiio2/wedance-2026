@@ -22,6 +22,7 @@ import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
 import { readableOn } from '~/lib/contrast'
 import { eventPath } from '#shared/utils/eventSlug'
+import { initialOf } from '#shared/utils/initials'
 
 definePageMeta({ layout: false })
 
@@ -896,7 +897,7 @@ onMounted(() => {
                   class="w-14 h-14 rounded-full shrink-0 flex items-center justify-center text-xl font-bold text-white shadow-sm"
                   :style="{ background: f.accentColor }"
                 >
-                  {{ f.name.charAt(0) }}
+                  {{ initialOf(f.name) }}
                 </div>
                 <div class="flex-1 min-w-0">
                   <h3 class="font-bold text-lg leading-tight text-foreground">

@@ -2,6 +2,7 @@
 import type { YearPlanFestival, YearStats } from '~/types/festival'
 import { Calendar, MapPin, Users, Ticket, Clock, ChevronRight, Share2, Sparkles, ExternalLink, Trophy, Globe, Music, Flame } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
+import { initialOf } from '#shared/utils/initials'
 
 const props = defineProps<{
   festivals: YearPlanFestival[]
@@ -268,7 +269,7 @@ const ticketStatusClass: Record<string, string> = {
                 class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0"
                 :style="{ background: f.accentColor || WD.amber600 }"
               >
-                {{ f.name.charAt(0) }}
+                {{ initialOf(f.name) }}
               </div>
               <div class="flex-1 min-w-0">
                 <h3 class="text-sm font-bold leading-tight font-display text-foreground">
@@ -347,7 +348,7 @@ const ticketStatusClass: Record<string, string> = {
                       v-else
                       class="w-6 h-6 rounded-full border-2 border-wd-cream bg-secondary flex items-center justify-center text-eyebrow font-bold text-white"
                     >
-                      {{ friend.name.charAt(0).toUpperCase() }}
+                      {{ initialOf(friend.name) }}
                     </div>
                   </template>
                 </div>
@@ -391,7 +392,7 @@ const ticketStatusClass: Record<string, string> = {
             :style="{ background: f.accentColor || WD.amber600 }"
             @click="emit('open-festival', f.slug)"
           >
-            {{ f.name.charAt(0) }}
+            {{ initialOf(f.name) }}
           </div>
           <div class="flex-1 min-w-0">
             <h4 class="text-sm font-bold font-display text-foreground">

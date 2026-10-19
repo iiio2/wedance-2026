@@ -10,7 +10,7 @@
  * not local copies. If the source functions break, this test WILL fail.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { hasEventEnded, daysUntil } from './festivalDateFormatter'
 
 // Mock date: 2026-09-23 (fixed "today" for deterministic tests)
@@ -107,5 +107,37 @@ describe('Festival board (RAZ-175)', () => {
       .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
 
     expect(result.map(f => f.slug)).toEqual(['near-future', 'far-future'])
+  })
+})
+
+// SSR (Vercel, UTC) and the browser (the dancer's zone) must agree, or the
+// label hydrates differently around midnight.
+describe('daysUntil — datetimes count days in the event zone, not the runtime zone', () => {
+  const originalTz = process.env.TZ
+  // 23:30 UTC on the 20th = 01:30 on the 21st in Munich.
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-10-20T23:30:00Z'))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    process.env.TZ = originalTz
+  })
+
+  it('reads the same in UTC and in Munich', () => {
+    const event = '2026-10-21T19:00:00.000Z' // 21:00 on the 21st in Munich
+    const labels = ['UTC', 'Europe/Berlin', 'America/New_York', 'Asia/Dhaka'].map((tz) => {
+      process.env.TZ = tz
+      return daysUntil(event)
+    })
+    expect(new Set(labels)).toEqual(new Set(['Today']))
+  })
+
+  it('uses the event timezone when given', () => {
+    // "Now" is 19:30 on the 20th in New York, 01:30 on the 21st in Munich.
+    // 05:00Z on the 21st is 01:00 that night in New York, 07:00 in Munich.
+    expect(daysUntil('2026-10-21T05:00:00.000Z', 'America/New_York')).toBe('Tomorrow')
+    expect(daysUntil('2026-10-21T05:00:00.000Z', 'Europe/Berlin')).toBe('Today')
+    expect(daysUntil('2026-10-21T05:00:00.000Z')).toBe('Today') // default zone: Europe/Berlin
   })
 })

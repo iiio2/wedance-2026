@@ -524,6 +524,7 @@ function joinActivity(id: string) {
 
 // Event-linked hangouts (user-created dinners, coffee, bars, etc.)
 import type { EventHangout, HangoutKind } from '~/components/ActivitiesTab.vue'
+import { initialOf } from '#shared/utils/initials'
 const eventHangouts = ref<EventHangout[]>([])
 
 async function loadEventHangouts() {
@@ -1110,7 +1111,7 @@ useHead({
               class="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-eyebrow font-bold text-white"
               :style="{ background: festival.accentColor }"
             >
-              {{ festival.name.charAt(0) }}
+              {{ initialOf(festival.name) }}
             </div>
             <span class="text-sm font-bold whitespace-nowrap hidden sm:inline font-display text-foreground">
               {{ festival.name }}

@@ -86,10 +86,14 @@ async function refreshStatus() {
   }
 }
 
-// Wait for auth init to complete before deciding which path to take.
-watch(authLoading, (loading) => {
-  if (!loading) refreshStatus()
-}, { immediate: true })
+// Wait for auth init to complete before deciding which path to take — and
+// for hydration: SSR never runs auth init (it renders 'loading'), while the
+// client settles it before hydrating, so deciding during setup mismatched.
+onMounted(() => {
+  watch(authLoading, (loading) => {
+    if (!loading) refreshStatus()
+  }, { immediate: true })
+})
 
 async function handleSignIn() {
   signInError.value = ''

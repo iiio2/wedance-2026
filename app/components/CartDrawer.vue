@@ -4,6 +4,7 @@ import { X, ClipboardList, Save, Check, Ticket, CalendarPlus, MapPin, Car, Shirt
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { RidePostSchema } from '#shared/validation'
+import { initialOf } from '#shared/utils/initials'
 
 const props = defineProps<{
   workshops: Workshop[]
@@ -764,7 +765,7 @@ const googleMapsUrl = computed(() => {
               <p class="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Others sharing rides</p>
               <div v-for="ride in rides" :key="ride.id" class="flex items-center gap-2 py-1">
                 <img v-if="ride.dancerPhoto && !failedRidePhotos.has(ride.id)" :src="ride.dancerPhoto" :alt="ride.dancerName" class="w-6 h-6 rounded-full object-cover" @error="failedRidePhotos.add(ride.id)" />
-                <span v-else class="w-6 h-6 rounded-full shrink-0 inline-flex items-center justify-center text-[9px] font-bold uppercase bg-secondary text-secondary-foreground">{{ ride.dancerName.charAt(0) }}</span>
+                <span v-else class="w-6 h-6 rounded-full shrink-0 inline-flex items-center justify-center text-[9px] font-bold uppercase bg-secondary text-secondary-foreground">{{ initialOf(ride.dancerName) }}</span>
                 <div class="min-w-0 flex-1">
                   <span class="text-xs font-medium">{{ ride.dancerName }}</span>
                   <span class="text-[10px] text-muted-foreground ml-1">

@@ -7,6 +7,7 @@
  */
 import { ShieldCheck, ArrowLeft, Check, X, ScrollText, Clock, History, Trophy, Users, Plus, Inbox, Calendar } from 'lucide-vue-next'
 import { NominationSchema } from '#shared/validation'
+import { initialOf } from '#shared/utils/initials'
 
 definePageMeta({ layout: false })
 
@@ -215,7 +216,7 @@ onMounted(resolve)
           <div v-for="c in candidates" :key="c.id" class="rounded-2xl bg-card border p-5" :class="c.id===election.winnerCandidateId ? 'border-success/35' : 'border-primary/20'">
             <div class="flex items-start gap-3">
               <img v-if="c.photo" :src="c.photo" :alt="c.name" class="size-11 rounded-full object-cover border-2 border-primary/20">
-              <div v-else class="size-11 rounded-full flex items-center justify-center text-white font-bold bg-linear-135/srgb from-wd-red-600 to-wd-orange-500">{{ (c.name||'?').slice(0,1) }}</div>
+              <div v-else class="size-11 rounded-full flex items-center justify-center text-white font-bold bg-linear-135/srgb from-wd-red-600 to-wd-orange-500">{{ initialOf(c.name) }}</div>
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
                   <span class="font-bold text-foreground">{{ c.name }}</span>
@@ -287,7 +288,7 @@ onMounted(resolve)
           <div v-for="(v, i) in ledger" :key="i" class="flex items-center gap-3 px-4 py-2.5 text-sm">
             <template v-if="v.voter">
               <img v-if="v.voter.photo" :src="v.voter.photo" class="size-6 rounded-full object-cover" :alt="v.voter.name">
-              <div v-else class="size-6 rounded-full flex items-center justify-center text-eyebrow text-white font-bold bg-secondary">{{ (v.voter.name||'?').slice(0,1) }}</div>
+              <div v-else class="size-6 rounded-full flex items-center justify-center text-eyebrow text-white font-bold bg-secondary">{{ initialOf(v.voter.name) }}</div>
               <span class="text-foreground">{{ v.voter.name }}</span>
             </template>
             <template v-else>

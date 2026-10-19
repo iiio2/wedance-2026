@@ -14,6 +14,7 @@ import { Button } from '~/components/ui/button'
 import { Field } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
 import { CityCombobox } from '~/components/ui/city-combobox'
+import { initialOf } from '#shared/utils/initials'
 
 const props = defineProps<{
   festivalSlug: string
@@ -128,7 +129,7 @@ function onPhotoError(rideId: string) {
               @error="onPhotoError(ride.id)"
             >
             <span v-else class="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-eyebrow font-bold" :style="{ background: 'color-mix(in srgb, var(--wd-cyan-600) 9.4%, transparent)', color: CYAN_CHIP }">
-              {{ ride.dancerName.charAt(0) }}
+              {{ initialOf(ride.dancerName) }}
             </span>
             <div class="min-w-0 flex-1 text-xs font-sans text-muted-foreground">
               <span class="font-bold text-foreground">{{ ride.dancerName }}</span>

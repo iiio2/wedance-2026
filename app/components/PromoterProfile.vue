@@ -17,6 +17,7 @@ import {
 } from 'lucide-vue-next'
 import { eventLocalDate, eventLocalTime } from '#shared/utils/eventTime'
 import { eventPath } from '#shared/utils/eventSlug'
+import { initialsOf } from '#shared/utils/initials'
 
 const props = defineProps<{
   profile: {
@@ -186,7 +187,7 @@ function resetBooking() {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
-const initials = (name: string) => name.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('')
+const initials = (name: string) => initialsOf(name, 2, '')
 </script>
 
 <template>

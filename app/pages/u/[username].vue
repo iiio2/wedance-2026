@@ -9,6 +9,7 @@
  */
 import { MapPin, Pencil, ArrowLeft, Instagram, Youtube, Globe, Play, EyeOff, Calendar } from 'lucide-vue-next'
 import { festivalPath } from '#shared/utils/eventSlug'
+import { initialsOf } from '#shared/utils/initials'
 
 definePageMeta({ layout: false })
 
@@ -72,11 +73,7 @@ const roleLabel: Record<string, string> = {
   both: 'Lead & Follow',
 }
 
-const initials = computed(() => {
-  const n = (profile.value?.name || '').trim()
-  if (!n) return '?'
-  return n.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('')
-})
+const initials = computed(() => initialsOf(profile.value?.name))
 
 // Normalize a social value (full URL or bare handle) into a link.
 function normalizeUrl(v: string | null | undefined, base: string): string | null {

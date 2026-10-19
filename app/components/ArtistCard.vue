@@ -16,6 +16,7 @@ import { Plane, ArrowRight } from 'lucide-vue-next'
 import type { Teacher } from '~/types/festival'
 import { placeFlag, type Language } from '~/data/artists'
 import { accentText } from '~/lib/accent'
+import { initialsOf } from '#shared/utils/initials'
 
 const props = withDefaults(defineProps<{
   artist: Teacher
@@ -42,14 +43,7 @@ const emit = defineEmits<{ select: [] }>()
 const profileHref = computed(() => `/@${props.artist.id}`)
 
 const imgError = ref(false)
-const initials = computed(() =>
-  props.artist.name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase(),
-)
+const initials = computed(() => initialsOf(props.artist.name, 2, ''))
 
 // Root is a link (whole card → profile) unless selectable (festival
 // lineup), where it's a plain box holding a stretched button + a link.

@@ -13,6 +13,7 @@
  * "I'd like to dance with you there." Mutual waves = festival friends.
  */
 import { Users, Eye, EyeOff, Hand } from 'lucide-vue-next'
+import { initialsOf } from '#shared/utils/initials'
 
 const props = withDefaults(defineProps<{
   /** Legacy shorthand — sets itemType='festival', itemId=festivalSlug */
@@ -157,12 +158,7 @@ watch([isSignedIn, isInPlan], () => {
 })
 
 function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(p => p[0]?.toUpperCase() ?? '')
-    .join('')
+  return initialsOf(name, 2, '')
 }
 </script>
 
