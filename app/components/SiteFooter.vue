@@ -31,6 +31,7 @@ const columns = [
       { to: '/for-sponsors', label: 'For sponsors' },
       { to: '/press', label: 'Press' },
       { to: '/whats-new', label: 'What’s new' },
+      { to: '/open', label: 'Open metrics' },
     ],
   },
 ]

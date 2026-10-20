@@ -101,6 +101,10 @@ useHead({
         <p class="mt-4 text-xs italic text-secondary font-sans">
           Journalists: need a specific figure that isn't listed here? Email us and we'll get you a sourced number.
         </p>
+        <p class="mt-2 text-sm font-sans text-muted-foreground">
+          Live usage numbers:
+          <NuxtLink to="/open" class="font-bold text-wd-cyan-600 hover:underline">Open metrics</NuxtLink>
+        </p>
       </div>
     </section>
 

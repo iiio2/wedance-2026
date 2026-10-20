@@ -38,6 +38,15 @@ const willCover = [
           <span class="text-primary">·</span> {{ item }}
         </li>
       </ul>
+
+      <h2 class="mt-10 text-2xl leading-tight text-foreground">Analytics in use today</h2>
+      <p class="mt-3 text-sm leading-relaxed text-muted-foreground font-sans">
+        We use PostHog, hosted in the EU, for product analytics and session replay (form inputs are masked).
+        Analytics receives an anonymous account id and non-identifying properties such as your city — never
+        your name or email. For searches we record only the length of the query, not the text. Sign-ups,
+        logins and similar conversions are also counted on our server. Our aggregate numbers are public on
+        <NuxtLink to="/open" class="font-bold text-wd-red-800 hover:underline">Open metrics</NuxtLink>.
+      </p>
     </section>
     </main>
 

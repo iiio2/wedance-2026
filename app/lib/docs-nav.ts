@@ -54,6 +54,7 @@ export const hubNav: DocSection[] = [
       { title: 'Contributing', to: CONTRIBUTING_URL, status: 'stable', summary: 'How to propose a change.' },
       { title: 'Issues', to: ISSUES_URL, status: 'stable', summary: 'Report a bug or suggest a feature.' },
       { title: 'Governance', to: GOVERNANCE_URL, status: 'stable', summary: 'The WeDance organisation\'s living docs.' },
+      { title: 'Open metrics', to: '/open', status: 'stable', summary: 'Our real usage numbers, on a public dashboard.' },
     ],
   },
 ]

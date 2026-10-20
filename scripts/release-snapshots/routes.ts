@@ -17,6 +17,7 @@ export const SNAPSHOT_ROUTES: { path: string, name: string }[] = [
   { path: '/for-events', name: 'for-events' },
   { path: '/for-organizers', name: 'for-organizers' },
   { path: '/design', name: 'design-system' },
+  { path: '/open', name: 'open-metrics' },
 ]
 
 export const SNAPSHOT_VIEWPORTS = [
