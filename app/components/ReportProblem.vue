@@ -182,7 +182,7 @@ async function submit() {
   <!-- Floating trigger (bottom-left to stay clear of the plan/cart sidebar) -->
   <Button
     v-show="!capturing"
-    class="fixed left-4 bottom-[calc(1rem+var(--wd-tabbar-h,0px))] z-40 h-auto gap-2 rounded-full pl-3 pr-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-foreground hover:bg-foreground/90 shadow-[0_4px_14px_rgba(59,31,13,0.35)]"
+    class="fixed left-4 bottom-[calc(1rem+var(--wd-tabbar-h,0px))] z-40 h-auto gap-2 rounded-full pl-3 pr-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-foreground hover:bg-foreground/90 shadow-wd-float"
     aria-label="Talk to us"
     @click="openHub"
   >
@@ -193,7 +193,7 @@ async function submit() {
   <!-- Hidden (not closed) while capturing, so the form keeps its state. -->
   <Dialog :open="open && !capturing" @update:open="(v: boolean) => { if (!capturing) open = v }">
     <DialogContent
-      class="sm:max-w-md border-0 p-0 overflow-hidden [&>button]:top-6 [&>button]:right-5 bg-background text-foreground font-display"
+      class="sm:max-w-md border-0 p-0 overflow-hidden [&>button]:top-6 [&>button]:right-5 bg-background text-foreground"
     >
       <div class="h-1.5" :class="hubChoice === 'idea' ? 'bg-secondary' : 'bg-primary'" />
 
@@ -205,7 +205,7 @@ async function submit() {
             <DialogTitle class="text-2xl leading-tight text-foreground font-display">
               {{ hubChoice === 'idea' ? 'Idea received' : 'Report sent' }} 🎉
             </DialogTitle>
-            <DialogDescription class="text-muted-foreground font-sans">
+            <DialogDescription class="text-muted-foreground">
               <template v-if="hubChoice === 'idea'">
                 Our team will sketch it and email you the options. You pick what you like — we build it.
               </template>
@@ -214,10 +214,10 @@ async function submit() {
               </template>
             </DialogDescription>
           </DialogHeader>
-          <p class="mt-3 text-xs text-muted-foreground font-sans">
+          <p class="mt-3 text-xs text-muted-foreground">
             Reference: <span class="font-mono select-all">{{ doneId.slice(0, 8) }}</span>
           </p>
-          <Button variant="pill" size="lg" class="mt-5 w-full px-5 font-sans" @click="open = false">
+          <Button variant="pill" size="lg" class="mt-5 w-full px-5" @click="open = false">
             <Check /> Done
           </Button>
         </template>
@@ -229,7 +229,7 @@ async function submit() {
             <DialogTitle class="text-2xl leading-tight text-foreground font-display">
               Talk to us
             </DialogTitle>
-            <DialogDescription class="text-muted-foreground font-sans">
+            <DialogDescription class="text-muted-foreground">
               This is an open-source project. You don't need to be a developer to shape it.
             </DialogDescription>
           </DialogHeader>
@@ -260,7 +260,7 @@ async function submit() {
 
         <!-- ═══════ Bug form ═══════ -->
         <template v-else-if="hubChoice === 'bug'">
-          <button class="text-xs text-muted-foreground hover:text-foreground mb-2 flex items-center gap-1 font-sans" @click="hubChoice = null">
+          <button class="text-xs text-muted-foreground hover:text-foreground mb-2 flex items-center gap-1" @click="hubChoice = null">
             &larr; Back
           </button>
 
@@ -269,7 +269,7 @@ async function submit() {
             <DialogTitle class="text-2xl leading-tight text-foreground font-display">
               Report a problem
             </DialogTitle>
-            <DialogDescription class="text-muted-foreground font-sans">
+            <DialogDescription class="text-muted-foreground">
               Tell us what went wrong. We'll attach technical details (and a screenshot, if you take one) to help us fix it fast.
             </DialogDescription>
           </DialogHeader>
@@ -296,7 +296,7 @@ async function submit() {
 
             <!-- Screenshot status -->
             <div
-              class="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-xs bg-card border border-border text-muted-foreground font-sans"
+              class="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-xs bg-card border border-border text-muted-foreground"
             >
               <img
                 v-if="screenshotUrl"
@@ -327,11 +327,11 @@ async function submit() {
               </Button>
             </div>
 
-            <p v-if="error" role="alert" class="text-sm font-bold text-primary font-sans">
+            <p v-if="error" role="alert" class="text-sm font-bold text-primary">
               {{ error }}
             </p>
 
-            <Button type="submit" variant="pill" size="lg" class="w-full px-5 font-sans" :loading="submitting">
+            <Button type="submit" variant="pill" size="lg" class="w-full px-5" :loading="submitting">
               <Send /> {{ submitting ? 'Sending…' : 'Send report' }}
             </Button>
           </form>
@@ -339,7 +339,7 @@ async function submit() {
 
         <!-- ═══════ Idea form ═══════ -->
         <template v-else>
-          <button class="text-xs text-muted-foreground hover:text-foreground mb-2 flex items-center gap-1 font-sans" @click="hubChoice = null">
+          <button class="text-xs text-muted-foreground hover:text-foreground mb-2 flex items-center gap-1" @click="hubChoice = null">
             &larr; Back
           </button>
 
@@ -348,7 +348,7 @@ async function submit() {
             <DialogTitle class="text-2xl leading-tight text-foreground font-display">
               Share an idea
             </DialogTitle>
-            <DialogDescription class="text-muted-foreground font-sans">
+            <DialogDescription class="text-muted-foreground">
               Describe what you'd like. Our agents will build a sketch and email you options to choose from.
             </DialogDescription>
           </DialogHeader>
@@ -378,9 +378,9 @@ async function submit() {
 
             <!-- Pipeline preview -->
             <div class="rounded-2xl border border-secondary/30 bg-secondary/5 p-3">
-              <p class="text-xs font-bold text-secondary uppercase tracking-wider mb-2 font-sans">What happens next</p>
+              <p class="text-xs font-bold text-secondary uppercase tracking-wider mb-2">What happens next</p>
               <ol class="space-y-2">
-                <li v-for="(step, i) in PIPELINE_STEPS" :key="i" class="flex items-center gap-2 text-xs font-sans">
+                <li v-for="(step, i) in PIPELINE_STEPS" :key="i" class="flex items-center gap-2 text-xs">
                   <span class="w-5 h-5 rounded-full bg-background border border-border grid place-items-center text-[10px] font-bold text-muted-foreground shrink-0">{{ i + 1 }}</span>
                   <component :is="step.icon" class="w-3.5 h-3.5 shrink-0" :class="step.color" />
                   <span>{{ step.label }}</span>
@@ -388,11 +388,11 @@ async function submit() {
               </ol>
             </div>
 
-            <p v-if="error" role="alert" class="text-sm font-bold text-primary font-sans">
+            <p v-if="error" role="alert" class="text-sm font-bold text-primary">
               {{ error }}
             </p>
 
-            <Button type="submit" variant="pill" size="lg" class="w-full px-5 bg-secondary hover:bg-secondary/90 font-sans" :loading="submitting">
+            <Button type="submit" variant="pill" size="lg" class="w-full px-5 bg-secondary hover:bg-secondary/90" :loading="submitting">
               <Sparkles /> {{ submitting ? 'Sending…' : 'Send idea' }}
             </Button>
           </form>
