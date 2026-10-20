@@ -89,6 +89,10 @@ const typeStyle: Record<EventType, { label: string; color: string }> = {
   practica: { label: 'Practica', color: WD.amber500 },
   workshop: { label: 'Workshop', color: WD.purple500 },
 }
+// Concert/Show group as social but keep their own chip (same colours as EventSchedule).
+const labelColor: Record<string, string> = { Concert: WD.pink500, Show: WD.violet600 }
+const chipLabel = (e: CityEvent) => e.typeLabel ?? typeStyle[e.type]?.label ?? e.type
+const chipColor = (e: CityEvent) => (e.typeLabel && labelColor[e.typeLabel]) || typeStyle[e.type]?.color || WD.brown700
 
 // Style accent color — resolved from the shared getStyleColors util.
 // Falls back to a warm neutral if the util returns a non-color class.
@@ -193,9 +197,9 @@ function eventHref(e: CityEvent): string | undefined {
             <div class="flex items-center flex-wrap gap-2">
               <span
                 class="inline-flex items-center text-tag font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
-                :style="{ background: typeStyle[e.type as EventType]?.color + '18', color: chipInk(typeStyle[e.type as EventType]?.color || WD.brown700) }"
+                :style="{ background: chipColor(e) + '18', color: chipInk(chipColor(e)) }"
               >
-                {{ typeStyle[e.type as EventType]?.label ?? e.type }}
+                {{ chipLabel(e) }}
               </span>
               <DanceStyleChips v-if="e.style" :styles="[e.style]" />
             </div>

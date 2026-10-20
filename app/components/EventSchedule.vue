@@ -19,6 +19,7 @@ const { weekPlanIds, toggleEvent } = useWeekPlan()
 
 const typeColor: Record<string, string> = {
   Social: WD.red600, Party: WD.red600, Class: WD.cyan600, Practica: WD.amber500, Workshop: WD.purple500,
+  Concert: WD.pink500, Show: WD.violet600,
 }
 const styleColor: Record<string, string> = {
   salsa: WD.red600, bachata: WD.purple500, kizomba: WD.pink500, timba: WD.amber500,
