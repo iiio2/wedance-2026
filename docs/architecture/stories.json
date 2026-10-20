@@ -3597,12 +3597,10 @@
       "tables": [
         "dancers"
       ],
-      "procedures": [
-        "feedback.report"
-      ],
+      "procedures": [],
       "routes": [],
-      "evidence": "app/components/ReportProblem.vue:7; server/trpc/routers/feedback.ts:162",
-      "notes": "Linear state: In Review. No Linear project (user-report, In Review: screenshot not captured); journey inferred. Reports become Linear issues, not DB rows; the bug reports in this inventory came through this pipeline."
+      "evidence": "app/components/ReportProblem.vue:1; app/lib/sentry-feedback.ts:1; app/lib/screen-capture.ts:1",
+      "notes": "Linear state: In Review. No Linear project; journey inferred. Since 2026-10 reports go to Sentry User Feedback (tag feedback_type=bug|idea) with the Session Replay linked and an optional getDisplayMedia screenshot attached — not Linear issues, not DB rows. The bug reports in this inventory came through the earlier Linear pipeline."
     },
     {
       "id": "RAZ-275",

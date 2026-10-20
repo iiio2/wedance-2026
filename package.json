@@ -41,7 +41,6 @@
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.1",
     "firebase-scrypt": "^2.2.0",
-    "html2canvas": "^1.4.1",
     "lucide-vue-next": "^0.577.0",
     "nuxt": "^4.4.2",
     "posthog-js": "^1.400.1",

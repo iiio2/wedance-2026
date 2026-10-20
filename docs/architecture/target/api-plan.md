@@ -220,7 +220,7 @@ ADR-004) · `admin`. `+RL` = rate-limited.
 | Target | Kind | Auth | Input → output | Stories | Today · status |
 |---|---|---|---|---|---|
 | inbound.inquiry | mutation | public +RL | `{ eventType?, date?, city?, guests?, needs, name?, email }` → `{ id }` | RAZ-57, RAZ-63, RAZ-68, RAZ-73, RAZ-78, RAZ-81, RAZ-90, RAZ-96, RAZ-101, RAZ-107, RAZ-114, RAZ-138, RAZ-143 | feedback.inquiry · change (stored, outbox to Linear) |
-| inbound.report | mutation | public +RL | `{ description, email?, context, screenshotUrl? }` → `{ id }` | RAZ-272 | feedback.report · change (stored; screenshot uploaded separately) |
+| ~~inbound.report~~ | — | — | — | RAZ-272 | dropped: the "Talk to us" widget submits straight to Sentry User Feedback from the client (no tRPC procedure); `feedback.reporter` (protected query) only supplies the signed-in dancer's name + email |
 
 ## organizer
 

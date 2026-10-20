@@ -12,8 +12,11 @@ date: 2026-10-12
   lost; the customer's name and email live only in a third-party tracker. Thirteen
   built stories route through it (RAZ-57, RAZ-63, RAZ-68, RAZ-73, RAZ-78, RAZ-81,
   RAZ-90, RAZ-96, RAZ-101, RAZ-107, RAZ-114, RAZ-138, RAZ-143).
-- **Problem reports** (`feedback.report`, `feedback.ts:162-248`) are the same:
-  Linear only, including a screenshot of up to 6.5 MB.
+- **Problem reports** (`feedback.report`) were the same: Linear only, including
+  a screenshot of up to 6.5 MB. _Update 2026-10-20: superseded — the "Talk to us"
+  widget now submits to Sentry User Feedback from the client (replay linked,
+  screenshot as an attachment) and `feedback.report` was removed, so problem
+  reports are out of scope for the `inbound_requests` table below._
 - **Gig applications are `mailto:` links** to `gigs.contact_email` (RAZ-41 notes);
   nothing is recorded, "confirmation sent" is client-side, and the poster's email
   is public (ADR-003).

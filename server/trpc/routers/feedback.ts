@@ -1,54 +1,30 @@
 import { z } from 'zod'
 import { eq } from 'drizzle-orm'
-import { router, publicProcedure } from '../trpc'
+import { router, publicProcedure, protectedProcedure } from '../trpc'
 import { dancers } from '../../database/schema'
 import { trackServer } from '../../utils/posthog'
 
 /**
- * User problem reports → Linear.
+ * Feedback router.
  *
- * The "Report a problem" widget (app/components/ReportProblem.vue) collects a
- * free-text description plus a rich context bundle (URL, route, device, recent
- * client console errors, Sentry replay link, etc.) and an optional html2canvas
- * screenshot. This mutation files it as an issue in Linear team WED with the
- * `user-report` label, in the team's triage state and the WeDance Support
- * project, and embeds the screenshot
- * inline via Linear's file upload.
+ * - `inquiry` — the "Tell us about your event" form on /for-events → a Linear
+ *   issue in team WED (`user-report` label, triage state). Requires
+ *   LINEAR_API_KEY (Personal API key, same one wedance-org uses); unset → the
+ *   mutation throws a clean error.
+ * - `reporter` — the signed-in dancer's own name + email, read from the
+ *   server-trusted session, so the "Talk to us" widget can attach a reply-to
+ *   address to its Sentry feedback.
  *
- * User identity (id / email / name) is taken from the *server-trusted* session,
- * never from the client, so a report can't be spoofed to look like another user.
- *
- * Requires LINEAR_API_KEY (Personal API key, same one wedance-org uses). If it
- * is unset the mutation throws a clean error and the widget shows a fallback.
+ * The "Talk to us" widget itself (bug reports + ideas, app/components/
+ * ReportProblem.vue) no longer goes through the server: it submits straight
+ * to Sentry User Feedback (app/lib/sentry-feedback.ts), with the screenshot as
+ * an attachment and the Session Replay linked.
  */
 
 // Wedance (WED) team — same id wedance-org/api/comment.js files objections into.
 const TEAM_ID = '9fc5052b-a799-4b60-99b5-300512ddd275'
-// "WeDance Support" project — every problem report lands here (RAZ-425).
-const SUPPORT_PROJECT_ID = 'ff24241d-28fe-4f2e-92c2-b220340dbe18'
 const LABEL_NAME = 'user-report'
 const LABEL_COLOR = '#eb5757'
-const IDEA_LABEL_NAME = 'user-idea'
-const IDEA_LABEL_COLOR = '#f5a623'
-
-const ContextSchema = z.object({
-  url: z.string().max(2000).optional(),
-  routePath: z.string().max(500).optional(),
-  userAgent: z.string().max(600).optional(),
-  viewport: z.string().max(40).optional(),
-  screen: z.string().max(40).optional(),
-  devicePixelRatio: z.number().optional(),
-  language: z.string().max(40).optional(),
-  timezone: z.string().max(80).optional(),
-  referrer: z.string().max(2000).optional(),
-  appVersion: z.string().max(80).optional(),
-  online: z.boolean().optional(),
-  consoleErrors: z.array(z.string().max(2000)).max(30).optional(),
-  sentryReplayUrl: z.string().max(600).optional(),
-  sentryReplayId: z.string().max(200).optional(),
-  sentryLastEventId: z.string().max(200).optional(),
-  posthogSessionUrl: z.string().max(600).optional(),
-})
 
 async function linear<T = any>(query: string, variables: Record<string, unknown>): Promise<T> {
   const key = process.env.LINEAR_API_KEY
@@ -73,35 +49,6 @@ async function linear<T = any>(query: string, variables: Record<string, unknown>
   return j.data as T
 }
 
-type CreatedIssue = { issueCreate: { success: boolean; issue: { id: string; identifier: string; url: string } } }
-
-const ISSUE_CREATE = `mutation($i:IssueCreateInput!){ issueCreate(input:$i){ success issue{ id identifier url } } }`
-
-// File the issue; if Linear rejects the full payload, file a minimal one and attach
-// the rest as a comment, so a user's report is never lost (RAZ-618).
-async function createIssueResilient(
-  full: Record<string, unknown>,
-  minimal: Record<string, unknown>,
-  rest: string,
-): Promise<CreatedIssue['issueCreate']> {
-  try {
-    return (await linear<CreatedIssue>(ISSUE_CREATE, { i: full })).issueCreate
-  } catch (e) {
-    console.error('[feedback] issueCreate failed, retrying minimal:', (e as Error).message)
-  }
-  const created = (await linear<CreatedIssue>(ISSUE_CREATE, { i: minimal })).issueCreate
-  if (created.issue?.id && rest) {
-    try {
-      await linear(`mutation($i:CommentCreateInput!){ commentCreate(input:$i){ success } }`, {
-        i: { issueId: created.issue.id, body: rest.slice(0, 50_000) },
-      })
-    } catch (e) {
-      console.error('[feedback] context comment failed:', (e as Error).message)
-    }
-  }
-  return created
-}
-
 // Find (or create) a label on the team, return its id.
 async function ensureLabelId(name: string = LABEL_NAME, color: string = LABEL_COLOR): Promise<string | null> {
   try {
@@ -123,38 +70,6 @@ async function triageStateId(): Promise<string | null> {
     const q = `query($t:String!){ team(id:$t){ states{ nodes{ id type } } } }`
     const d = await linear<{ team: { states: { nodes: { id: string; type: string }[] } } }>(q, { t: TEAM_ID })
     return d.team.states.nodes.find((x) => x.type === 'triage')?.id ?? null
-  } catch {
-    return null
-  }
-}
-
-// Upload a data-URL screenshot to Linear, return the public asset URL to embed.
-async function uploadScreenshot(dataUrl: string): Promise<string | null> {
-  try {
-    const match = /^data:(image\/[a-z+]+);base64,(.+)$/i.exec(dataUrl)
-    if (!match) return null
-    const contentType = match[1]!
-    const buffer = Buffer.from(match[2]!, 'base64')
-    const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') || 'png'
-    const filename = `report-${Date.now()}.${ext}`
-
-    const d = await linear<{
-      fileUpload: {
-        success: boolean
-        uploadFile: { uploadUrl: string; assetUrl: string; headers: { key: string; value: string }[] }
-      }
-    }>(
-      `mutation($ct:String!,$fn:String!,$sz:Int!){ fileUpload(contentType:$ct, filename:$fn, size:$sz){ success uploadFile{ uploadUrl assetUrl headers{ key value } } } }`,
-      { ct: contentType, fn: filename, sz: buffer.length },
-    )
-    const uf = d.fileUpload?.uploadFile
-    if (!d.fileUpload?.success || !uf) return null
-
-    const headers: Record<string, string> = { 'Content-Type': contentType }
-    for (const h of uf.headers || []) headers[h.key] = h.value
-    const put = await fetch(uf.uploadUrl, { method: 'PUT', headers, body: buffer })
-    if (!put.ok) return null
-    return uf.assetUrl
   } catch {
     return null
   }
@@ -205,106 +120,11 @@ export const feedbackRouter = router({
       return { ok: d.issueCreate.success }
     }),
 
-  report: publicProcedure
-    .input(
-      z.object({
-        type: z.enum(['bug', 'idea']).default('bug'),
-        description: z.string().min(1, 'Please describe the problem').max(5000),
-        email: z.string().email().optional().or(z.literal('')),
-        context: ContextSchema.optional(),
-        // data URL (image/jpeg) from html2canvas; capped ~6MB.
-        screenshot: z.string().max(6_500_000).optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const isIdea = input.type === 'idea'
-
-      // Server-trusted reporter identity from the session (never the client).
-      let reporter = 'Anonymous visitor'
-      let reporterEmail = (input.email || '').trim()
-      if (ctx.dancerId) {
-        const [d] = await ctx.db
-          .select({ name: dancers.name, email: dancers.email })
-          .from(dancers)
-          .where(eq(dancers.id, ctx.dancerId))
-        if (d) {
-          reporter = d.name || 'Signed-in dancer'
-          reporterEmail = d.email || reporterEmail
-        }
-      }
-
-      const c = input.context ?? {}
-      const desc = input.description.trim()
-      // Slice by code point so an emoji is never cut in half.
-      const chars = Array.from(desc)
-      const title = `${isIdea ? '💡' : '🐞'} ${chars.slice(0, 70).join('')}${chars.length > 70 ? '…' : ''}`
-
-      // Upload screenshot first so we can embed it inline in the description.
-      const assetUrl = input.screenshot ? await uploadScreenshot(input.screenshot) : null
-
-      const lines: string[] = [
-        desc,
-        '',
-        '---',
-        `**${isIdea ? 'Submitted' : 'Reported'} by:** ${reporter}${reporterEmail ? ` · ${reporterEmail}` : ''}${ctx.dancerId ? ` · dancer \`${ctx.dancerId}\`` : ' · not signed in'}`,
-      ]
-      if (c.url) lines.push(`**Page:** ${c.url}`)
-      if (c.routePath) lines.push(`**Route:** \`${c.routePath}\``)
-      if (c.referrer) lines.push(`**Referrer:** ${c.referrer}`)
-
-      const env: string[] = []
-      if (c.userAgent) env.push(`UA: ${c.userAgent}`)
-      if (c.viewport) env.push(`viewport ${c.viewport}`)
-      if (c.screen) env.push(`screen ${c.screen}`)
-      if (c.devicePixelRatio) env.push(`dpr ${c.devicePixelRatio}`)
-      if (c.language) env.push(`lang ${c.language}`)
-      if (c.timezone) env.push(`tz ${c.timezone}`)
-      if (typeof c.online === 'boolean') env.push(c.online ? 'online' : 'OFFLINE')
-      if (c.appVersion) env.push(`build ${c.appVersion}`)
-      if (env.length) lines.push(`**Environment:** ${env.join(' · ')}`)
-
-      if (c.sentryReplayUrl) lines.push(`**Sentry replay:** ${c.sentryReplayUrl}`)
-      else if (c.sentryReplayId) lines.push(`**Sentry replay id:** \`${c.sentryReplayId}\``)
-      if (c.sentryLastEventId) lines.push(`**Sentry last event:** \`${c.sentryLastEventId}\``)
-      if (c.posthogSessionUrl) lines.push(`**PostHog session:** ${c.posthogSessionUrl}`)
-
-      if (c.consoleErrors?.length) {
-        lines.push('', '**Recent client errors:**', '```', ...c.consoleErrors.slice(-15), '```')
-      }
-
-      if (assetUrl) lines.push('', '**Screenshot:**', '', `![screenshot](${assetUrl})`)
-
-      const widgetName = isIdea ? 'Share an idea' : 'Report a problem'
-      lines.push('', '---', `_Filed automatically from the “${widgetName}” widget on 2026.wedance.vip._`)
-
-      const [labelId, stateId] = await Promise.all([
-        ensureLabelId(isIdea ? IDEA_LABEL_NAME : LABEL_NAME, isIdea ? IDEA_LABEL_COLOR : LABEL_COLOR),
-        triageStateId(),
-      ])
-      const issueInput: Record<string, unknown> = {
-        teamId: TEAM_ID,
-        projectId: SUPPORT_PROJECT_ID,
-        title,
-        description: lines.join('\n'),
-        priority: isIdea ? 4 : 3,
-      }
-      if (labelId) issueInput.labelIds = [labelId]
-      if (stateId) issueInput.stateId = stateId
-
-      // Fallback: the user's words + who sent it, in the Support project. Everything
-      // else (page, device, console errors, screenshot) follows as a comment.
-      const minimalInput: Record<string, unknown> = {
-        teamId: TEAM_ID,
-        projectId: SUPPORT_PROJECT_ID,
-        title,
-        description: lines.slice(0, 4).join('\n'),
-      }
-      const created = await createIssueResilient(issueInput, minimalInput, lines.slice(4).join('\n'))
-
-      return {
-        ok: created.success,
-        identifier: created.issue.identifier,
-        url: created.issue.url,
-      }
-    }),
+  reporter: protectedProcedure.query(async ({ ctx }) => {
+    const [d] = await ctx.db
+      .select({ name: dancers.name, email: dancers.email })
+      .from(dancers)
+      .where(eq(dancers.id, ctx.dancerId))
+    return { name: d?.name || null, email: d?.email || null }
+  }),
 })

@@ -23,7 +23,7 @@ WeDance 2026 is a Nuxt 4 + tRPC + Drizzle/Neon dance-community platform with abo
 1. `main` is never red for more than one working day: 0 failing and 0 unexplained skipped tests by 2026-11-01 (baseline: 3 failing, 15 skipped).
 2. Every PR runs unit tests and a smoke E2E suite as a **required** GitHub check by 2026-11-01 (baseline: no CI).
 3. All 8 user journeys (C1–C8) have at least one passing E2E test by 2027-01-31; the 4 CRITICAL flows by 2026-12-06 (baseline: 0 of 8).
-4. Escaped defects (Linear `user-report` + `Bug`, excluding test/duplicate) fall from ~7.5/month to under 4/month by 2027-01-31, and sign-in/access-control escapes to 0/month.
+4. Escaped defects (Linear `user-report` + `Bug` and, since 2026-10, Sentry User Feedback with `feedback_type:bug` — excluding test/duplicate) fall from ~7.5/month to under 4/month by 2027-01-31, and sign-in/access-control escapes to 0/month.
 
 ### 3. Test Levels & Types
 
@@ -229,7 +229,7 @@ Merging is automated: Forge's Linear gate merges a PR when it has no conflicts a
 | PR gate duration | Push to green/red on the `test` check | no CI | < 10 min | Weekly |
 | Flakiness rate | % of CI runs that fail then pass on rerun with no code change | unknown | < 2 % | Weekly |
 | Router coverage | Line coverage on `server/trpc/routers/` | 14 of 24 routers tested; % unmeasured | All 24 routers have tests; ≥ 80 % lines on `auth`, `festivalSignup`, `booking`, webhooks | Monthly |
-| Time to fix escaped defects | Linear created → merged for `user-report` bugs in CRITICAL/HIGH flows | to be measured in Phase 1 | < 2 working days | Monthly |
+| Time to fix escaped defects | Reported (Sentry feedback `feedback_type:bug`; Linear `user-report` before 2026-10) → merged, for bugs in CRITICAL/HIGH flows | to be measured in Phase 1 | < 2 working days | Monthly |
 | Production smoke pass rate | Deploys whose smoke passes first time | none | ≥ 95 % | Monthly |
 
 Targets are set from the measured baseline, not from industry averages. Track trends, investigate spikes (a sudden flakiness jump is usually infrastructure, not carelessness), and never use these numbers to judge individual contributors or agents. Data sources: GitHub Actions (CI metrics), Vitest coverage reports, Linear labels (escapes, time to fix), Sentry (production errors).
