@@ -6,6 +6,7 @@ import { profiles, profileMembers, profileInvites, events } from '../../database
 import { requireEventManager } from './businessEvents'
 import type { VenueRequest, VenueTerms } from '../../../shared/types/venueAsk'
 import { contactsFor } from '../../../shared/utils/contacts'
+import { eventGroup, trackServer } from '../../utils/posthog'
 
 /**
  * Asking venues through WeDance — the venue twin of the artist link. The
@@ -36,7 +37,7 @@ export const venueAsksRouter = router({
   ask: protectedProcedure
     .input(z.object({ eventId: z.string().uuid(), venue: z.string().min(1).max(200), request: requestInput }))
     .mutation(async ({ ctx, input }) => {
-      await requireEventManager(ctx, input.eventId)
+      const managed = await requireEventManager(ctx, input.eventId)
       const [v] = await ctx.db.select({ id: profiles.id, type: profiles.type, name: profiles.name, username: profiles.username, city: profiles.city, socials: profiles.socials, contact: profiles.contact, mapUrl: profiles.mapUrl }).from(profiles).where(eq(profiles.username, input.venue))
       if (!v || v.type !== 'venue') throw new TRPCError({ code: 'NOT_FOUND', message: 'That venue isn’t on WeDance.' })
       const request: VenueRequest = { guests: input.request.guests ?? null, needs: input.request.needs, note: input.request.note }
@@ -48,7 +49,9 @@ export const venueAsksRouter = router({
       const site = (useRuntimeConfig().siteUrl || 'https://2026.wedance.vip').replace(/\/$/, '')
       const [e] = await ctx.db.select({ name: events.name, hostProfileId: events.hostProfileId }).from(events).where(eq(events.id, input.eventId))
       const [h] = e?.hostProfileId ? await ctx.db.select({ name: profiles.name }).from(profiles).where(eq(profiles.id, e.hostProfileId)) : [null]
-      return { url: `${site}/confirm/${t}`, eventName: e?.name ?? '', host: h?.name ?? null, venueName: v.name, managed: await hasTeam(ctx.db, v.id), answered: !!existing && existing.status !== 'invited', notifiedAt: existing?.notifiedAt ?? null, contacts: contactsFor(v), handle: v.username }
+      const venueManaged = await hasTeam(ctx.db, v.id)
+      trackServer(ctx, 'venue_ask_sent', { event_id: input.eventId, venue: v.username, updated: !!existing, guests: input.request.guests ?? null, needs_count: input.request.needs.length, venue_managed: venueManaged, ...eventGroup(managed) })
+      return { url: `${site}/confirm/${t}`, eventName: e?.name ?? '', host: h?.name ?? null, venueName: v.name, managed: venueManaged, answered: !!existing && existing.status !== 'invited', notifiedAt: existing?.notifiedAt ?? null, contacts: contactsFor(v), handle: v.username }
     }),
 
   // The venues asked for this event and their answers, for the editor.
@@ -76,7 +79,7 @@ export const venueAsksRouter = router({
   book: protectedProcedure
     .input(z.object({ eventId: z.string().uuid(), venue: z.string().min(1).max(200) }))
     .mutation(async ({ ctx, input }) => {
-      await requireEventManager(ctx, input.eventId)
+      const managed = await requireEventManager(ctx, input.eventId)
       const [v] = await ctx.db.select({ id: profiles.id, username: profiles.username, name: profiles.name, address: profiles.address }).from(profiles).where(eq(profiles.username, input.venue))
       if (!v) throw new TRPCError({ code: 'NOT_FOUND', message: 'That venue isn’t on WeDance.' })
       const [mine] = await ctx.db.select({ id: profileInvites.id }).from(profileInvites)
@@ -87,6 +90,7 @@ export const venueAsksRouter = router({
         .where(and(eq(profileInvites.eventId, input.eventId), eq(profileInvites.kind, 'venue'), ne(profileInvites.id, mine.id)))
       // The event's venue, as saving the editor with this venue would set it.
       await ctx.db.update(events).set({ venueUsername: v.username, venueName: v.name, venueAddress: v.address ?? null, updatedAt: new Date() }).where(eq(events.id, input.eventId))
+      trackServer(ctx, 'venue_ask_booked', { event_id: input.eventId, venue: v.username, ...eventGroup(managed) })
       return { username: v.username, name: v.name }
     }),
 
@@ -94,9 +98,10 @@ export const venueAsksRouter = router({
   unbook: protectedProcedure
     .input(z.object({ eventId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      await requireEventManager(ctx, input.eventId)
+      const managed = await requireEventManager(ctx, input.eventId)
       await ctx.db.update(profileInvites).set({ outcome: null })
         .where(and(eq(profileInvites.eventId, input.eventId), eq(profileInvites.kind, 'venue')))
+      trackServer(ctx, 'venue_ask_unbooked', { event_id: input.eventId, ...eventGroup(managed) })
       return { ok: true }
     }),
 })

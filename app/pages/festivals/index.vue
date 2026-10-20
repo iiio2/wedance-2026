@@ -51,8 +51,8 @@ function onPick(f: FestivalRow) {
     showSignUp.value = true
     return
   }
-  if (f.planType === 'festival') toggleFestival(f.planId)
-  else toggleEvent(f.planId)
+  if (f.planType === 'festival') toggleFestival(f.planId, { surface: 'festivals' })
+  else toggleEvent(f.planId, { event_type: 'festival', surface: 'festivals' })
 }
 
 // Festivals from DB (SSR — no spinner). Past festivals already excluded

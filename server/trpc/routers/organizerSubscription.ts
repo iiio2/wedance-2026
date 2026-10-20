@@ -4,7 +4,7 @@ import Stripe from 'stripe'
 import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure, publicProcedure } from '../trpc'
 import { organizerSubscriptions, profiles, profileMembers, dancers } from '../../database/schema'
-import { trackServer } from '../../utils/posthog'
+import { profileGroup, trackServer } from '../../utils/posthog'
 
 function getStripe() {
   const config = useRuntimeConfig()
@@ -56,7 +56,7 @@ export const organizerSubscriptionRouter = router({
 
       // Verify the caller manages this profile
       const [profile] = await ctx.db
-        .select({ id: profiles.id, name: profiles.name, type: profiles.type })
+        .select({ id: profiles.id, name: profiles.name, type: profiles.type, username: profiles.username })
         .from(profiles)
         .where(eq(profiles.id, input.profileId))
 
@@ -114,7 +114,7 @@ export const organizerSubscriptionRouter = router({
         cancel_url: `${config.siteUrl}/organizers`,
       })
 
-      trackServer(ctx, 'subscription_checkout_started', { plan: 'network', profile_type: profile.type })
+      trackServer(ctx, 'subscription_checkout_started', { plan: 'network', profile_type: profile.type, ...profileGroup(profile.username) })
       return { checkoutUrl: session.url }
     }),
 })

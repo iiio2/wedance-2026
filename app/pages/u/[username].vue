@@ -34,6 +34,14 @@ async function load() {
   failed.value = false
   try {
     profile.value = await $trpc.profile.getByUsername.query({ username: username.value })
+    // A dancer is a person: no handle in the event, only the kind of view.
+    useTrack().trackOnce(username.value, 'profile_viewed', {
+      profile_type: 'dancer',
+      city: profile.value?.city || null,
+      claimed: true,
+      own: !!profile.value?.isOwner,
+      surface: 'u',
+    })
     // Fetch their year plan (non-blocking, non-critical)
     $trpc.plan.sharedPlan.query({ username: username.value }).then((result) => {
       yearPlan.value = result

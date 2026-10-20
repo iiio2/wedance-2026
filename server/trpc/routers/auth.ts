@@ -16,7 +16,7 @@ import { sendMagicLinkEmail, sendPasswordResetEmail } from '../../utils/email'
 import { generateUsername } from '../../utils/slug'
 import { freeHandle } from '../../utils/handles'
 import { recordLinkAction } from '../../utils/trackedLinks'
-import { trackServer } from '../../utils/posthog'
+import { hoursBetween, trackServer } from '../../utils/posthog'
 import { isMagicLinkSignup } from '../../utils/magicLinkSignup'
 
 // FirebaseScrypt parameters, ported verbatim from wedance-v4
@@ -551,7 +551,7 @@ export const authRouter = router({
       try {
         // Get dancer email and dependent IDs first (before batch, since batch doesn't support dependent queries)
         const [dancer] = await ctx.db
-          .select({ email: dancers.email })
+          .select({ email: dancers.email, createdAt: dancers.createdAt })
           .from(dancers)
           .where(eq(dancers.id, dancerId))
 
@@ -697,6 +697,10 @@ export const authRouter = router({
         // Execute all statements atomically in one batch (neon-http driver)
         await ctx.db.batch(statements as any)
 
+        // Churn signal. Sent anonymously (no person profile): the account is
+        // gone, so the event must not re-attach to — or recreate — the person.
+        const hours = hoursBetween(dancer.createdAt)
+        trackServer(ctx, 'account_deleted', { days_since_signup: hours === null ? null : Math.floor(hours / 24) }, { distinctId: null })
         return { ok: true, deleted: true }
       } catch (error) {
         console.error('Account deletion error:', error)

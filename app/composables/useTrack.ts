@@ -17,6 +17,7 @@ type PosthogLike = {
   capture: (event: string, props?: TrackProps) => unknown
   identify: (id: string, props?: TrackProps) => unknown
   setPersonProperties?: (props: TrackProps) => unknown
+  group?: (type: string, key: string, props?: TrackProps) => unknown
   reset: () => unknown
   get_distinct_id?: () => string
   get_session_replay_url?: (o?: { withTimestamp?: boolean }) => string
@@ -60,6 +61,15 @@ export function createTracker(ph: PosthogLike, isClient = true, recent: Map<stri
     ph.identify(distinctId, props)
   }
 
+  // PostHog group analytics: tie this session's events to an organisation
+  // (an organiser/venue/artist profile the dancer manages), so insights can
+  // count organisations instead of people. Re-calling with the same key is
+  // cheap (posthog-js only re-sends when the key changes).
+  const group = (type: string, key: string | null | undefined, props?: TrackProps) => {
+    if (!ready() || !key) return
+    ph.group?.(type, key, props)
+  }
+
   // Clear identity on sign-out so events aren't attributed across accounts.
   const reset = () => {
     if (!ready()) return
@@ -77,7 +87,7 @@ export function createTracker(ph: PosthogLike, isClient = true, recent: Map<stri
     }
   }
 
-  return { track, trackOnce, identify, reset, sessionReplayUrl }
+  return { track, trackOnce, identify, group, reset, sessionReplayUrl }
 }
 
 const recentViews = new Map<string, number>()

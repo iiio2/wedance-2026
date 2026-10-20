@@ -98,7 +98,7 @@ const groups = computed(() => {
           class="relative z-10 h-auto text-xs font-bold px-3 py-1.5 rounded-full transition-all shrink-0 gap-1 [&_svg]:size-3"
           :aria-pressed="weekPlanIds?.has(e.id) ? 'true' : 'false'"
           :style="weekPlanIds?.has(e.id) ? { background: ink(accent(e.styles?.[0] || '')), color: 'white' } : { background: 'white', color: ink(accent(e.styles?.[0] || '')), border: '1.5px solid ' + accent(e.styles?.[0] || '') + '55' }"
-          @click="toggleEvent(e.id)"
+          @click="toggleEvent(e.id, { event_type: e.eventType ?? null, city: e.citySlug ?? null, surface: 'schedule' })"
         >
           <component :is="weekPlanIds?.has(e.id) ? Check : Plus" aria-hidden="true" />{{ weekPlanIds?.has(e.id) ? 'Going!' : 'Going?' }}
         </Button>

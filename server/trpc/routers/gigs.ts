@@ -8,6 +8,7 @@ import { onlyGranted } from '../../utils/profileAccess'
 import { assertScope } from '../scopes'
 import { siteOrigin } from '../../oauth/config'
 import { sendGigApplicationEmail, sendGigDecisionEmail } from '../../utils/email'
+import { hoursBetween, profileGroup, trackServer } from '../../utils/posthog'
 
 /** Gigs this dancer answers for: posted by them, or by a page they run (and the app may use). */
 async function gigsIManage(ctx: any, gigIds?: string[]) {
@@ -153,6 +154,7 @@ export const gigsRouter = router({
           applicant: { name: page?.name ?? me.name, email: me.email, page: page ? `${origin}/@${page.username}` : null },
         })
       } catch (e) { console.error('[gigs.applyTo] email failed', (e as Error).message) }
+      trackServer(ctx, 'gig_applied', { gig_id: gig.id, category: gig.category, as_profile: !!page, reapplied: !!existing, ...profileGroup(page?.username) })
       return { applied: true, id: app!.id, status: app!.status, gig: gig.title }
     }),
 
@@ -203,6 +205,7 @@ export const gigsRouter = router({
         const [who] = await ctx.db.select({ name: dancers.name, email: dancers.email }).from(dancers).where(eq(dancers.id, app.dancerId))
         if (who) await sendGigDecisionEmail({ to: who.email, name: who.name, gigTitle: gig.title, accepted: input.decision === 'accepted', poster: { name: gig.posterName, email: gig.contactEmail }, link: `${ctx.origin || siteOrigin()}/gigs` })
       } catch (e) { console.error('[gigs.decideApplication] email failed', (e as Error).message) }
+      trackServer(ctx, 'gig_application_decided', { gig_id: gig.id, category: gig.category, decision: input.decision, hours_to_decide: hoursBetween(app.createdAt) })
       return { id: app.id, status: input.decision }
     }),
 

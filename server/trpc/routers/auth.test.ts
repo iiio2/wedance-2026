@@ -68,6 +68,13 @@ vi.mock('../../utils/email', () => ({
   sendPasswordResetEmail: (...args: any[]) => mockSendPasswordReset(...args),
 }))
 
+// Spy on server analytics (still a no-op: the real helper is unkeyed under vitest).
+const trackServerSpy = vi.fn()
+vi.mock('../../utils/posthog', async (orig) => {
+  const real = await orig<typeof import('../../utils/posthog')>()
+  return { ...real, trackServer: (...args: any[]) => trackServerSpy(...args) }
+})
+
 // Mock Nuxt's useRuntimeConfig (auto-imported in the auth router).
 vi.stubGlobal('useRuntimeConfig', () => ({ siteUrl: 'http://localhost:3000' }))
 
@@ -808,6 +815,19 @@ describe('auth.deleteAccount', () => {
     const db = new FakeDb()
     await expect(createCaller(db).auth.deleteAccount())
       .rejects.toMatchObject({ code: 'UNAUTHORIZED' })
+  })
+
+  it('sends server_account_deleted anonymously, with days since sign-up only', async () => {
+    const db = new FakeDb()
+    const reg = await createCaller(db).auth.register({ name: 'Churn User', email: 'churn@example.com', password: 'password123' })
+    const row = db.dancers.find(d => d.id === reg.dancerId)!
+    row.createdAt = new Date(Date.now() - 3 * 86_400_000 - 3_600_000)
+    trackServerSpy.mockClear()
+    await createCaller(db, { dancerId: reg.dancerId }).auth.deleteAccount()
+    const call = trackServerSpy.mock.calls.find(c => c[1] === 'account_deleted')
+    expect(call).toBeTruthy()
+    expect(call![2]).toEqual({ days_since_signup: 3 })
+    expect(call![3]).toEqual({ distinctId: null })
   })
 
   it('deletes a dancer and their sessions in a transaction', async () => {

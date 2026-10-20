@@ -104,6 +104,8 @@ onMounted(() => {
   if (isSharedView.value && sharerUsername.value) {
     $trpc.plan.sharedPlan.query({ username: sharerUsername.value }).then((result) => {
       sharedData.value = result
+      // The receiving end of plan_shared (no sharer handle: it's a person).
+      if (result) useTrack().trackOnce(sharerUsername.value, 'shared_plan_viewed', { object: 'year', signed_in: isSignedIn.value, festivals: result.festivals.length, has_referral: !!route.query.ref })
       if (result?.festivals.length) {
         fetchGoingBatch(result.festivals.map(f => f.slug))
       }
@@ -331,7 +333,7 @@ function onAddFestival(slug: string) {
     return
   }
   const { addFestival } = useYearPlan()
-  addFestival(slug)
+  addFestival(slug, { surface: 'my-year' })
 }
 
 function onAddFriend() {

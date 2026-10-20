@@ -229,7 +229,7 @@ const ticketStatusClass: Record<string, string> = {
           accent="var(--wd-amber-700)"
           class="relative z-10 shrink-0"
         >
-          <a :href="f.ticketUrl" target="_blank" rel="noopener" @click.stop>
+          <a :href="f.ticketUrl" target="_blank" rel="noopener" data-outbound-kind="ticket" data-object-type="festival" :data-object-id="f.slug" @click.stop>
             Buy
             <ExternalLink class="w-3 h-3" aria-hidden="true" />
           </a>

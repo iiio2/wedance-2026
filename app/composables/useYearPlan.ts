@@ -22,14 +22,16 @@ export function useYearPlan() {
       })
   }
 
-  function addFestival(slug: string) {
+  function addFestival(slug: string, ctx: { surface?: string } = {}) {
     const next = new Set(yearPlanIds.value)
     next.add(slug)
     yearPlanIds.value = next
     // CUJ: "Plan a festival year" — festival added to the year plan.
     useTrack().track('year_plan_add', {
       festival_slug: slug,
+      festival: slug,
       year_count: next.size,
+      ...ctx,
     })
     const { $trpc } = useNuxtApp()
     $trpc.plan.add
@@ -60,11 +62,11 @@ export function useYearPlan() {
       })
   }
 
-  function toggleFestival(slug: string) {
+  function toggleFestival(slug: string, ctx: { surface?: string } = {}) {
     if (yearPlanIds.value.has(slug)) {
       removeFestival(slug)
     } else {
-      addFestival(slug)
+      addFestival(slug, ctx)
     }
   }
 

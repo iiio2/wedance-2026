@@ -17,7 +17,7 @@ import { asksWaitingFor } from './venueAsks'
 import type { FestivalDetails } from '../../../shared/types/festivalDetails'
 import { seriesDates, weekdayOf, MAX_SERIES } from '../../../shared/utils/recurrence'
 import { randomUUID } from 'node:crypto'
-import { trackServer } from '../../utils/posthog'
+import { profileGroup, trackServer } from '../../utils/posthog'
 
 /**
  * Business mode — events a profile runs, and the /business home inbox.
@@ -470,7 +470,7 @@ export const businessEventsRouter = router({
         // A new festival's permanent key is its first slug.
         .values({ ...row, hostProfileId: host.id, source: 'wedance-business', slug, ...(input.festival ? { festival: { ...input.festival, key: slug } } : {}) })
         .returning({ id: events.id })
-      const props = { event_id: ev!.id, is_festival: !!input.festival, host_type: host.type, city: input.city || null }
+      const props = { event_id: ev!.id, is_festival: !!input.festival, host_type: host.type, city: input.city || null, ...profileGroup(host.username) }
       trackServer(ctx, 'event_created', { ...props, published: !!input.published })
       if (input.published) trackServer(ctx, 'event_published', props)
       return { id: ev!.id }
@@ -501,7 +501,7 @@ export const businessEventsRouter = router({
         hostProfileId,
       }).where(eq(events.id, ev.id))
       // Draft → live is the publish conversion (re-saving a live event is not).
-      if (input.published && !ev.published) trackServer(ctx, 'event_published', { event_id: ev.id, is_festival: !!input.festival, host_type: host?.type ?? null, city: input.city || null })
+      if (input.published && !ev.published) trackServer(ctx, 'event_published', { event_id: ev.id, is_festival: !!input.festival, host_type: host?.type ?? null, city: input.city || null, ...profileGroup(host?.username) })
       return { saved: true }
     }),
 
@@ -584,7 +584,7 @@ export const businessEventsRouter = router({
       }
       const created = await ctx.db.insert(events).values(rows).returning({ id: events.id, startDate: events.startDate, timezone: events.timezone })
       created.sort((a: any, b: any) => +new Date(a.startDate) - +new Date(b.startDate))
-      const props = { event_id: firstId, series_id: seriesId, dates: created.length, is_festival: false, host_type: host.type, city: input.city || null }
+      const props = { event_id: firstId, series_id: seriesId, dates: created.length, is_festival: false, host_type: host.type, city: input.city || null, ...profileGroup(host.username) }
       trackServer(ctx, 'event_created', { ...props, published: !!input.published })
       if (input.published) trackServer(ctx, 'event_published', props)
       return {

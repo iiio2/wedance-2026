@@ -83,6 +83,13 @@ function teacherFor(workshop: Workshop): Teacher | undefined {
 
 const roleLabel: Record<DanceRole, string> = { lead: 'Lead', follow: 'Follow' }
 
+// plan_shared (C4) — the share intent; referral_link_shared for the
+// referral link. (`shared_plan_signup` is the sign-up end, not the share.)
+function trackShare(kind: 'plan' | 'referral', method: 'copy' | 'native') {
+  if (kind === 'referral') useTrack().track('referral_link_shared', { method, festival: props.festivalSlug, surface: 'share-modal' })
+  else useTrack().track('plan_shared', { object: 'festival', method, festival: props.festivalSlug, workshops: planned.value.length, surface: 'share-modal' })
+}
+
 async function copyLink(url: string) {
   try {
     await navigator.clipboard.writeText(url)
@@ -94,12 +101,7 @@ async function copyLink(url: string) {
 }
 
 async function nativeShare() {
-  useTrack().track('shared_plan_signup', {
-    surface: 'share-modal',
-    slug: props.festivalSlug,
-    workshopCount: planned.value.length,
-    method: navigator.share ? 'native' : 'clipboard',
-  })
+  trackShare('plan', navigator.share ? 'native' : 'copy')
   if (navigator.share) {
     try {
       await navigator.share({
@@ -147,7 +149,7 @@ async function nativeShare() {
               size="sm"
               variant="outline"
               class="shrink-0"
-              @click="copyLink(shareUrl)"
+              @click="trackShare('plan', 'copy'); copyLink(shareUrl)"
             >
               <component :is="copied ? Check : Copy" class="w-3.5 h-3.5 mr-1" />
               {{ copied ? 'Copied!' : 'Copy' }}
@@ -183,7 +185,7 @@ async function nativeShare() {
               size="sm"
               variant="outline"
               class="shrink-0"
-              @click="copyLink(referralUrl)"
+              @click="trackShare('referral', 'copy'); copyLink(referralUrl)"
             >
               <Copy class="w-3.5 h-3.5 mr-1" />
               Copy

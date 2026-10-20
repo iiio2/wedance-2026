@@ -11,6 +11,7 @@ function fakePosthog(distinctId = 'anon-1', loaded = true) {
     reset: vi.fn(() => { id = 'anon-2' }),
     get_distinct_id: () => id,
     get_session_replay_url: vi.fn(() => 'https://eu.posthog.com/replay/abc?t=1'),
+    group: vi.fn(),
   }
 }
 
@@ -63,5 +64,16 @@ describe('useTrack core', () => {
     t.trackOnce('e2', 'event_viewed', { event_id: 'e2' })
     t.trackOnce('e1', 'event_viewed', { event_id: 'e1' }, 0)
     expect(ph.capture).toHaveBeenCalledTimes(3)
+  })
+
+  it('groups the session under an organisation profile, never with an empty key', () => {
+    const ph = fakePosthog()
+    const t = createTracker(ph)
+    t.group('profile', 'salsa-crew', { profile_type: 'organizer' })
+    t.group('profile', '')
+    t.group('profile', null)
+    expect(ph.group).toHaveBeenCalledOnce()
+    expect(ph.group).toHaveBeenCalledWith('profile', 'salsa-crew', { profile_type: 'organizer' })
+    createTracker(fakePosthog('a', false)).group('profile', 'x')
   })
 })

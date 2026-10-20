@@ -20,8 +20,30 @@ const quickPicks = [
 
 const activeVideo = ref<string | null>(null)
 
+// The page isn't a quiz: "started" = the first style video watched, "completed"
+// = a style (or the free taster) chosen. `answers_count` = videos watched.
+const watched = new Set<string>()
+let started = false
+function start(via: 'video' | 'choice', style: string | null) {
+  if (started) return
+  started = true
+  useTrack().track('find_your_dance_started', { style, via })
+}
+
 function playVideo(videoId: string) {
   activeVideo.value = videoId
+  start('video', quickPicks.find(p => p.videoId === videoId)?.style ?? null)
+  watched.add(videoId)
+}
+
+function choose(style: string | null) {
+  start('choice', style)
+  useTrack().track('find_your_dance_completed', {
+    style_chosen: style,
+    taster: !style,
+    answers_count: watched.size,
+    styles_suggested: quickPicks.map(p => p.style),
+  })
 }
 </script>
 
@@ -86,6 +108,7 @@ function playVideo(videoId: string) {
             <div class="mt-1 text-sm text-muted-foreground font-sans">{{ p.blurb }}</div>
             <NuxtLink
               :to="`/cities?style=${p.style}`"
+              @click="choose(p.style)"
               class="mt-4 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white transition-all hover:opacity-90"
               :style="{ background: p.accent }"
             >
@@ -99,6 +122,7 @@ function playVideo(videoId: string) {
       <NuxtLink
         to="/cities?taster=1"
         data-testid="taster-cta"
+        @click="choose(null)"
         class="group mt-8 block rounded-2xl border border-dashed px-5 py-4 text-center transition-all hover:-translate-y-0.5"
         style="border-color:color-mix(in srgb, var(--wd-amber-600) 40%, transparent); background:rgba(255,255,255,0.55);"
       >

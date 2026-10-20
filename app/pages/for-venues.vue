@@ -30,6 +30,8 @@ const props_ = [
 ]
 
 const spaceTypes = ['Dance studios', 'Event halls', 'Bars & clubs', 'Rooftops', 'Cultural spaces', 'Private lofts']
+
+const venueCta = (cta: string) => useTrack().track('venue_cta_click', { surface: 'for-venues', cta })
 </script>
 
 <template>
@@ -102,6 +104,7 @@ const spaceTypes = ['Dance studios', 'Event halls', 'Bars & clubs', 'Rooftops', 
       <Button as-child variant="cta" size="lg" class="mt-8 h-auto min-h-11 whitespace-normal px-7 py-3">
         <a
           href="mailto:hello@wedance.vip?subject=List%20my%20venue%20on%20WeDance&body=Venue%20name%3A%0ACity%3A%0ACapacity%3A%0AWhat%20kind%20of%20space%3A%0AWebsite%20or%20photos%3A%20"
+          @click="venueCta('list_venue')"
         >
           List your venue <ArrowRight aria-hidden="true" />
         </a>
@@ -116,7 +119,7 @@ const spaceTypes = ['Dance studios', 'Event halls', 'Bars & clubs', 'Rooftops', 
       <NuxtLink
         to="/for-organizers"
         class="rounded-2xl bg-white p-6 border flex items-center justify-between gap-4 transition-all hover:-translate-y-0.5 border-border"
-       
+        @click="venueCta('for_organizers')"
       >
         <div>
           <div class="text-lg font-bold text-foreground">Are you an organizer looking for a space?</div>
@@ -131,7 +134,7 @@ const spaceTypes = ['Dance studios', 'Event halls', 'Bars & clubs', 'Rooftops', 
       <NuxtLink
         to="/booking-terms"
         class="rounded-2xl bg-white p-6 border flex items-center justify-between gap-4 transition-all hover:-translate-y-0.5 border-border"
-       
+        @click="venueCta('booking_terms')"
       >
         <div>
           <div class="text-lg font-bold text-foreground">Booking terms</div>

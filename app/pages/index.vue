@@ -27,6 +27,9 @@ useHead({
   title: 'WeDance — Welcome to the dance',
 })
 
+// landing_cta_click (C1): which promise on the landing page people act on.
+const cta = (name: string, section: string) => useTrack().track('landing_cta_click', { cta: name, section })
+
 // The 5-stage dancer journey — each card maps to a real product surface
 // and a real time horizon. Stage 5 (Business) absorbs the old supply-side
 // pitch (organize / teach / DJ / venue) by treating it as the natural
@@ -164,7 +167,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
             </p>
             <div class="mt-8 text-center md:text-left">
               <Button as-child variant="cta" size="lg" class="group h-auto min-h-11 whitespace-normal px-6 py-3">
-                <NuxtLink to="/festivals">
+                <NuxtLink to="/festivals" @click="cta('find_festival', 'hero')">
                   <span class="relative z-10">Find your next festival</span>
                   <ArrowRight class="relative z-10 transition-transform duration-200 ease-out group-hover:translate-x-1 group-active:translate-x-0" aria-hidden="true" />
                 </NuxtLink>
@@ -218,6 +221,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                 v-for="(s, i) in stages"
                 :key="s.label"
                 :to="s.href"
+                @click="cta(s.label.toLowerCase(), 'journey')"
                 class="group relative rounded-2xl bg-white/95 px-5 py-6 flex flex-col hover:-translate-y-1 transition-all"
                 :style="{
                   border: '1px solid ' + [WD.red600, WD.cyan600, WD.green600, WD.amber500, WD.purple500][i] + '55',
@@ -285,6 +289,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                 v-for="(s, i) in stages"
                 :key="s.label"
                 :to="s.href"
+                @click="cta(s.label.toLowerCase(), 'journey')"
                 class="relative flex gap-4 items-start rounded-xl px-4 py-4 ml-12 hover:-translate-y-0.5 transition-transform"
                 :style="{
                   background: 'rgba(255,255,255,0.85)',
@@ -387,7 +392,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                   </template>
                 </ul>
                 <Button as-child variant="pill" class="mt-4 w-full text-xs tracking-widest">
-                  <NuxtLink :to="hasRealProof ? proofData!.link : '/events/bachata-stars-barcelona-2026'">
+                  <NuxtLink :to="hasRealProof ? proofData!.link : '/events/bachata-stars-barcelona-2026'" @click="cta(hasRealProof ? 'see_attendees' : 'get_tickets', 'proof')">
                     {{ hasRealProof ? 'See all attendees' : 'Get tickets ✨' }}
                   </NuxtLink>
                 </Button>
@@ -412,7 +417,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
 
           <div class="grid md:grid-cols-2 gap-6">
             <!-- Private events -->
-            <NuxtLink to="/for-events" class="group rounded-2xl bg-white p-6 sm:p-7 border transition-all hover:-translate-y-1"
+            <NuxtLink to="/for-events" @click="cta('private_events', 'business')" class="group rounded-2xl bg-white p-6 sm:p-7 border transition-all hover:-translate-y-1"
               :style="{ borderColor: 'color-mix(in srgb, var(--wd-amber-500) 33.3%, transparent)', boxShadow: '0 1px 0 color-mix(in srgb, var(--wd-amber-500) 13.3%, transparent), 0 12px 28px rgba(59, 31, 18, 0.06)' }">
               <div class="flex items-center justify-between mb-3">
                 <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-wd-amber-500">Private events</div>
@@ -430,7 +435,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
             </NuxtLink>
 
             <!-- Festival organizers -->
-            <NuxtLink to="/business/events/new?type=Festival" class="group rounded-2xl bg-white p-6 sm:p-7 border transition-all hover:-translate-y-1"
+            <NuxtLink to="/business/events/new?type=Festival" @click="cta('festival_organizers', 'business')" class="group rounded-2xl bg-white p-6 sm:p-7 border transition-all hover:-translate-y-1"
               :style="{ borderColor: 'color-mix(in srgb, var(--wd-cyan-600) 33.3%, transparent)', boxShadow: '0 1px 0 color-mix(in srgb, var(--wd-cyan-600) 13.3%, transparent), 0 12px 28px rgba(59, 31, 18, 0.06)' }">
               <div class="flex items-center justify-between mb-3">
                 <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-wd-cyan-600">Festival organizers</div>
@@ -513,7 +518,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
             is closer than you <span class="text-primary">think.</span>
           </h2>
           <Button as-child variant="cta" size="lg" class="mt-8 h-auto min-h-14 whitespace-normal px-8 py-4 text-base">
-            <NuxtLink to="/festivals">
+            <NuxtLink to="/festivals" @click="cta('find_festival', 'footer')">
               Find your festival <ArrowRight aria-hidden="true" />
             </NuxtLink>
           </Button>

@@ -4,6 +4,7 @@ import { router, protectedProcedure } from '../trpc'
 import { profileContacts, profileSites } from '../../database/schema'
 import { profileSiteSchema, type ProfileSite } from '../../../shared/types/profileSite'
 import { requireMember } from './business'
+import { profileGroup, trackServer } from '../../utils/posthog'
 
 /**
  * A profile's website and contacts, managed on WeDance (RAZ-412):
@@ -31,8 +32,10 @@ export const businessSiteRouter = router({
       const p = await requireMember(ctx, input.username)
       const now = new Date()
       const site = input.site as ProfileSite
+      const [had] = await ctx.db.select({ id: profileSites.profileId }).from(profileSites).where(eq(profileSites.profileId, p.id))
       await ctx.db.insert(profileSites).values({ profileId: p.id, content: site, updatedAt: now, updatedBy: ctx.dancerId })
         .onConflictDoUpdate({ target: profileSites.profileId, set: { content: site, updatedAt: now, updatedBy: ctx.dancerId } })
+      trackServer(ctx, 'site_saved', { profile: p.username, profile_type: p.type, first_save: !had, sections: site.sections?.length ?? 0, locales: site.locales?.length ?? 0, ...profileGroup(p.username) })
       return { updatedAt: now }
     }),
 

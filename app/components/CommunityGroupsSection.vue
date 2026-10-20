@@ -63,6 +63,7 @@ const platformLabel: Record<string, string> = {
         <li v-for="g in groups" :key="g.id" class="relative">
           <div class="group relative">
             <a :href="g.inviteUrl" target="_blank" rel="noopener"
+               data-outbound-kind="community_group" data-object-type="community_group" :data-object-id="g.id" :data-city="citySlug"
                class="flex items-center justify-between gap-3 rounded-xl border p-3 bg-white transition-all hover:-translate-y-0.5 border-wd-green-600/20">
               <div class="min-w-0">
                 <div class="flex items-center gap-1.5">

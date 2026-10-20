@@ -22,12 +22,15 @@ export function useWeekPlan() {
       })
   }
 
-  function addEvent(id: string) {
+  /** Optional analytics context for `week_plan_add` (no PII). */
+  type PlanContext = { event_type?: string | null; city?: string | null; surface?: string }
+
+  function addEvent(id: string, ctx: PlanContext = {}) {
     const next = new Set(weekPlanIds.value)
     next.add(id)
     weekPlanIds.value = next
     // CUJ: "Find a class" — Going! on a class/social (fires from any surface).
-    useTrack().track('week_plan_add', { event_id: id, week_count: next.size })
+    useTrack().track('week_plan_add', { event_id: id, week_count: next.size, ...ctx })
     const { $trpc } = useNuxtApp()
     $trpc.plan.add.mutate({ itemType: 'event', itemId: id }).catch((err) => {
       console.warn('[useWeekPlan] addEvent failed:', err)
@@ -55,11 +58,11 @@ export function useWeekPlan() {
       })
   }
 
-  function toggleEvent(id: string) {
+  function toggleEvent(id: string, ctx: PlanContext = {}) {
     if (weekPlanIds.value.has(id)) {
       removeEvent(id)
     } else {
-      addEvent(id)
+      addEvent(id, ctx)
     }
   }
 

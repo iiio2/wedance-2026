@@ -156,6 +156,16 @@ const styles = [...new Set(workshops.map((w) => w.style))]
 
 // Auth state (needed early for workshop persistence)
 const { isSignedIn, dancerId: myDancerId, danceStyles: myDanceStyles, role: myRole, city: myCity, onboardedAt, completeOnboarding, updateProfile } = useAuth()
+// The receiving end of plan_shared.
+if (import.meta.client && isSharedView.value) {
+  useTrack().trackOnce(`${festival.slug}:${String(route.query.invite ?? 'legacy').slice(0, 64)}`, 'shared_plan_viewed', {
+    object: 'festival',
+    festival: festival.slug,
+    signed_in: isSignedIn.value,
+    workshops: decodedShare.value?.plan?.length ?? null,
+    has_referral: !!route.query.ref,
+  })
+}
 
 if (import.meta.client && sharerDancerId.value) {
   // Show "Following" straight away for someone who already follows the sharer.
@@ -716,7 +726,7 @@ function onPick() {
   }
   const wasGoing = yearPlanIds.value.has(festival.slug)
   liveAttendeeCount.value = Math.max(0, liveAttendeeCount.value + (wasGoing ? -1 : 1))
-  toggleFestival(festival.slug)
+  toggleFestival(festival.slug, { surface: 'festival' })
 }
 
 function onSave() {
@@ -860,6 +870,8 @@ async function startTicketCheckout() {
   checkoutError.value = ''
   useTrack().track('ticket_cta_click', {
     festival: festival.slug,
+    provider: 'stripe',
+    tickets: selectedTickets.value.length,
     ticket: checkoutLabel.value,
     amount: checkoutTotal.value,
   })

@@ -13,6 +13,16 @@ import { DIRECTIONS, LOOK_PROMPT } from '../../../shared/utils/flyer'
 import { LANGUAGES } from '../../../shared/utils/caption'
 
 import { captionContext, writeCaption } from '../../utils/flyer/caption'
+import { eventGroup, trackServer } from '../../utils/posthog'
+
+/**
+ * server_flyer_generated — every paint request (each is an AI image call).
+ * `mode`: paint (new, in a look) / direction (fresh ideas) / again / recompose
+ * (4:5 feed post) / fix / refresh. Keeping one is `server_flyer_kept`.
+ */
+function trackFlyer(ctx: any, ev: any, mode: string, variantCount: number, extra: Record<string, unknown> = {}) {
+  trackServer(ctx, 'flyer_generated', { event_id: ev.id, mode, variant_count: variantCount, ...extra, ...eventGroup(ev) })
+}
 
 /**
  * Business mode — an event's flyer. The event editor is step one (the details
@@ -87,6 +97,7 @@ export const businessFlyersRouter = router({
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e?.message || 'Couldn’t write the caption. Try again.' })
       }
       await ctx.db.update(events).set({ caption, updatedAt: new Date() }).where(eq(events.id, ev.id))
+      trackServer(ctx, 'caption_written', { event_id: ev.id, language: input.language, scope: 'event', count: 1, ...eventGroup(ev) })
       return caption
     }),
 
@@ -174,6 +185,7 @@ export const businessFlyersRouter = router({
         mode: 'paint', lines: src.lines, pictured: src.pictured, createdBy: ctx.dancerId,
       }).returning({ id: eventFlyers.id })
       start(ctx, f!.id)
+      trackFlyer(ctx, ev, 'paint', 1, { saved_look: !!input.lookId, references: input.references?.length ?? 0 })
       return { id: f!.id, batchId }
     }),
 
@@ -206,6 +218,7 @@ export const businessFlyersRouter = router({
         look: { name: d.name, description: `${d.description} ${mood}`, palette: d.palette ?? [], inspiration: input.inspiration ?? null } as any,
       }))).returning({ id: eventFlyers.id })
       for (const r of rows) start(ctx, r.id)
+      trackFlyer(ctx, ev, 'direction', rows.length, { feelings: input.feelings.length })
       return { batchId, ids: rows.map((r: any) => r.id) }
     }),
 
@@ -235,6 +248,7 @@ export const businessFlyersRouter = router({
         lines: src.lines, pictured: src.pictured, createdBy: ctx.dancerId,
       }).returning({ id: eventFlyers.id })
       start(ctx, n!.id)
+      trackFlyer(ctx, ev, 'again', 1)
       return { id: n!.id, batchId: f.batchId }
     }),
 
@@ -242,13 +256,14 @@ export const businessFlyersRouter = router({
   feed: protectedProcedure
     .input(z.object({ flyerId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const { f } = await flyerForManager(ctx, input.flyerId)
+      const { f, ev } = await flyerForManager(ctx, input.flyerId)
       if (!f.url || !['ready', 'checking'].includes(f.status)) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Wait until this flyer is painted.' })
       const [n] = await ctx.db.insert(eventFlyers).values({
         eventId: f.eventId, postId: f.postId, batchId: f.batchId, lookId: f.lookId, look: f.look, mode: 'recompose', baseFlyerId: f.id,
         lines: f.lines, pictured: f.pictured, createdBy: ctx.dancerId,
       }).returning({ id: eventFlyers.id })
       start(ctx, n!.id)
+      trackFlyer(ctx, ev, 'recompose', 1)
       return { id: n!.id, batchId: f.batchId }
     }),
 
@@ -256,13 +271,14 @@ export const businessFlyersRouter = router({
   fix: protectedProcedure
     .input(z.object({ flyerId: z.string().uuid(), notes: z.string().trim().min(2, 'Say what should be different.').max(500) }))
     .mutation(async ({ ctx, input }) => {
-      const { f } = await flyerForManager(ctx, input.flyerId)
+      const { f, ev } = await flyerForManager(ctx, input.flyerId)
       if (!f.url || !['ready', 'checking'].includes(f.status)) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Wait until this flyer is painted.' })
       const [n] = await ctx.db.insert(eventFlyers).values({
         eventId: f.eventId, postId: f.postId, batchId: f.batchId, lookId: f.lookId, look: f.look, mode: 'fix', baseFlyerId: f.id,
         lines: f.lines, pictured: f.pictured, notes: input.notes, createdBy: ctx.dancerId,
       }).returning({ id: eventFlyers.id })
       start(ctx, n!.id)
+      trackFlyer(ctx, ev, 'fix', 1)
       return { id: n!.id, batchId: f.batchId }
     }),
 
@@ -291,6 +307,7 @@ export const businessFlyersRouter = router({
         eventId: ev.id, postId: post.id, batchId, lines: st.source.lines, pictured: st.source.pictured, createdBy: ctx.dancerId, ...values,
       } as any).returning({ id: eventFlyers.id })
       start(ctx, n!.id)
+      trackFlyer(ctx, ev, String(values.mode) === 'refresh' ? 'refresh' : 'paint', 1, { from_kept: !!st.kept })
       return { id: n!.id, batchId }
     }),
 
@@ -335,6 +352,7 @@ export const businessFlyersRouter = router({
       await ctx.db.update(eventFlyers).set({ keptAt: new Date(), lookId, look: { ...(f.look as any), name: input.lookName ?? (f.look as any).name }, updatedAt: new Date() }).where(eq(eventFlyers.id, f.id))
       // No cover yet → the event's flyer is the cover.
       if (!ev.cover && post.kind === 'announcement') await ctx.db.update(events).set({ cover: f.url, updatedAt: new Date() }).where(eq(events.id, ev.id))
+      trackServer(ctx, 'flyer_kept', { event_id: ev.id, mode: f.mode, post_kind: post.kind, new_look: !f.lookId && !!input.lookName, ...eventGroup(ev) })
       return { kept: true, lookId }
     }),
 

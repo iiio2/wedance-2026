@@ -7,6 +7,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   dancers, profiles, profileMembers,
   moderatorElections, electionCandidates, electionVotes, electionVoteHistory, guidelineVersions,
+  bookingRequests,
 } from '../../database/schema'
 
 type FilterFn = (row: Record<string, any>) => boolean
@@ -18,6 +19,13 @@ vi.mock('drizzle-orm', async () => {
   const and = (...p: FilterFn[]): FilterFn => (r) => p.every(f => f(r))
   const inArray = (col: any, arr: any[]): FilterFn => { const k = resolveKey(col); return (r) => (k ? arr.includes(r[k]) : false) }
   return { eq, and, inArray, desc: (c: any) => c, gt: () => () => false, sql: (..._a: any[]) => ({}) }
+})
+
+// Spy on server analytics (the real helper is a no-op under vitest anyway).
+const trackServerSpy = vi.fn()
+vi.mock('../../utils/posthog', async (orig) => {
+  const real = await orig<typeof import('../../utils/posthog')>()
+  return { ...real, trackServer: (...args: any[]) => trackServerSpy(...args) }
 })
 
 import { appRouter } from '../index'
@@ -51,6 +59,7 @@ class FakeDb {
   electionVotes: Row[] = []
   electionVoteHistory: Row[] = []
   guidelineVersions: Row[] = []
+  bookingRequests: Row[] = []
   // Return row COPIES (snapshots) — like real Drizzle — so a later update()
   // doesn't retroactively mutate a value a caller already read.
   select(_c?: any) { return { from: (t: any) => new Q(this.tableFor(t).map(r => ({ ...r }))) } }
@@ -81,6 +90,7 @@ class FakeDb {
     if (t === electionVotes) return this.electionVotes
     if (t === electionVoteHistory) return this.electionVoteHistory
     if (t === guidelineVersions) return this.guidelineVersions
+    if (t === bookingRequests) return this.bookingRequests
     throw new Error('unexpected table')
   }
 }
@@ -157,5 +167,21 @@ describe('election full flow', () => {
     const admin = caller(db, { dancerId: U.alice, isAdmin: true })
     await admin.election.open({ profileId: U.p1 })
     await expect(admin.election.open({ profileId: U.p1 })).rejects.toThrow(/already running/i)
+  })
+})
+
+describe('election.moderateBooking analytics', () => {
+  it('sends server_booking_decided with the decision and hours to decide', async () => {
+    const db = seed()
+    const bookingId = genId()
+    db.bookingRequests.push({ id: bookingId, profileId: U.p1, status: 'pending', createdAt: new Date(Date.now() - 5 * 3_600_000) })
+    trackServerSpy.mockClear()
+    await caller(db, { dancerId: U.vera, isAdmin: true }).election.moderateBooking({ bookingId, action: 'decline', note: 'Clashes with the open floor.' })
+
+    expect(db.bookingRequests[0]!.status).toBe('declined')
+    const call = trackServerSpy.mock.calls.find(c => c[1] === 'booking_decided')
+    expect(call![2]).toEqual({ booking_id: bookingId, decision: 'declined', hours_to_decide: 5, redecided: false, free: true })
+    // The moderator's note is free text: never sent.
+    expect(JSON.stringify(call![2])).not.toContain('Clashes')
   })
 })

@@ -7,7 +7,7 @@ import { inquirySchema } from '../../../shared/utils/bookingInquiry'
 import { sendBookingInquiryEmail } from '../../utils/email'
 import { requireMember } from './business'
 import { requireEventManager } from './businessEvents'
-import { trackServer } from '../../utils/posthog'
+import { hoursBetween, profileGroup, trackServer } from '../../utils/posthog'
 
 /**
  * Booking inquiries — anyone asks to book an artist or venue from their page
@@ -106,7 +106,7 @@ export const inquiriesRouter = router({
         })
       } catch (e) { console.error('[inquiries] email failed', e) }
     }
-    trackServer(ctx, 'booking_inquiry_sent', { inquiry_id: row!.id, profile: p.username, delivered: forward ? 'wedance' : 'team', signed_in: !!ctx.dancerId })
+    trackServer(ctx, 'booking_inquiry_sent', { inquiry_id: row!.id, profile: p.username, delivered: forward ? 'wedance' : 'team', signed_in: !!ctx.dancerId, ...profileGroup(p.username) })
     return { ok: true, id: row!.id, delivered: forward ? 'wedance' as const : 'team' as const }
   }),
 
@@ -120,8 +120,14 @@ export const inquiriesRouter = router({
     .input(z.object({ username: z.string().min(1), id: z.string().uuid(), status: z.enum(['new', 'answered', 'declined']) }))
     .mutation(async ({ ctx, input }) => {
       const p = await requireMember(ctx, input.username)
+      const [before] = await ctx.db.select({ status: bookingInquiries.status, createdAt: bookingInquiries.createdAt }).from(bookingInquiries)
+        .where(and(eq(bookingInquiries.id, input.id), eq(bookingInquiries.profileId, p.id)))
       await ctx.db.update(bookingInquiries).set({ status: input.status, answeredAt: input.status === 'new' ? null : new Date() })
         .where(and(eq(bookingInquiries.id, input.id), eq(bookingInquiries.profileId, p.id)))
+      // C6: the organiser handled an inquiry — first time out of 'new' only.
+      if (before?.status === 'new' && input.status !== 'new') {
+        trackServer(ctx, 'inquiry_replied', { inquiry_id: input.id, status: input.status, hours_to_reply: hoursBetween(before.createdAt), profile: p.username, profile_type: p.type, ...profileGroup(p.username) })
+      }
       return { ok: true }
     }),
 })

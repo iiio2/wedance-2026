@@ -39,7 +39,7 @@ function onPick() {
     return
   }
   const wasGoing = picked.value
-  toggleEvent(ev.value.id)
+  toggleEvent(ev.value.id, { event_type: ev.value.eventType || null, city: ev.value.citySlug || null, surface: 'event' })
   liveGoingCount.value = Math.max(0, liveGoingCount.value + (wasGoing ? -1 : 1))
 }
 
@@ -110,6 +110,9 @@ async function load() {
   trackView()
 }
 onMounted(load)
+
+// outbound_click on this page (ticket, venue site, map, …) is about this event.
+useTrackContext(() => ev.value?.id && { object_type: festivalData.value ? 'festival' : 'event', object_id: ev.value.id, city: ev.value.citySlug || null })
 
 // One view per mount (trackOnce also drops the remount after the canonical-URL replace).
 function trackView() {

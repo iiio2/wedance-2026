@@ -3,6 +3,7 @@ import { eq, and, sql, inArray, ne } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure, adminProcedure } from '../trpc'
 import { attendances, dancers, events, profileMembers } from '../../database/schema'
+import { eventGroup, trackServer } from '../../utils/posthog'
 
 const visibilityEnum = z.enum(['hidden', 'public_minimal', 'public_full'])
 const statusEnum = z.enum(['interested', 'going', 'none'])
@@ -348,7 +349,7 @@ export const attendanceRouter = router({
     .mutation(async ({ ctx, input }) => {
       // Verify the caller is an owner/editor of the event's host profile.
       const [event] = await ctx.db
-        .select({ hostProfileId: events.hostProfileId })
+        .select({ hostProfileId: events.hostProfileId, organizerUsername: events.organizerUsername, venueUsername: events.venueUsername, isFestival: events.isFestival })
         .from(events)
         .where(eq(events.id, input.eventId))
 
@@ -387,6 +388,8 @@ export const attendanceRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Attendance not found' })
       }
 
+      // Door check-in by the organiser (distinct_id = the organiser; no attendee data).
+      trackServer(ctx, 'checked_in', { event_id: input.eventId, is_festival: !!event.isFestival, ...eventGroup(event) })
       return { checkedInAt: result[0].checkedInAt }
     }),
 })

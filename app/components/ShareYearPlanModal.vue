@@ -51,7 +51,12 @@ function formatDateRange(start: string, end: string): string {
   return `${sMonth} ${s.getDate()} – ${eMonth} ${e.getDate()}`
 }
 
-async function copyLink() {
+// plan_shared (C4): the share intent; `shared_plan_viewed` is the other end.
+const trackShare = (method: 'copy' | 'native') =>
+  useTrack().track('plan_shared', { object: 'year', method, festivals: props.festivals.length, surface: 'year-modal' })
+
+async function copyLink(fromNative = false) {
+  if (!fromNative) trackShare('copy')
   try {
     await navigator.clipboard.writeText(shareUrl.value)
     copied.value = true
@@ -62,6 +67,7 @@ async function copyLink() {
 }
 
 async function nativeShare() {
+  trackShare(navigator.share ? 'native' : 'copy')
   if (navigator.share) {
     try {
       await navigator.share({
@@ -73,7 +79,7 @@ async function nativeShare() {
       // user cancelled
     }
   } else {
-    copyLink()
+    copyLink(true)
   }
 }
 </script>
@@ -109,7 +115,7 @@ async function nativeShare() {
               size="sm"
               variant="outline"
               class="shrink-0"
-              @click="copyLink"
+              @click="copyLink()"
             >
               <component :is="copied ? Check : Copy" class="w-3.5 h-3.5 mr-1" />
               {{ copied ? 'Copied!' : 'Copy' }}

@@ -226,6 +226,7 @@ const soldOutCount = computed(() => props.tickets.filter((t) => t.soldOut).lengt
               as="a"
               :href="ticketUrl"
               target="_blank"
+              data-outbound-kind="ticket"
             >
               Get Tickets
               <ExternalLink class="w-3.5 h-3.5 ml-1.5" />

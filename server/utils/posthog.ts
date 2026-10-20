@@ -180,3 +180,27 @@ export function trackServerEvent(
   }
   catch { /* never break the caller */ }
 }
+
+/**
+ * `$groups` for a server event about a business profile (organiser / venue /
+ * artist / promoter page), keyed by its username — the same key the client
+ * passes to `posthog.group('profile', username)`. Spread into the props:
+ *   trackServer(ctx, 'flyer_generated', { event_id, ...profileGroup(ev.organizerUsername) })
+ * Empty when there is no profile in scope.
+ */
+export function profileGroup(username: string | null | undefined): { $groups?: { profile: string } } {
+  return username ? { $groups: { profile: username } } : {}
+}
+
+/** The organisation an event belongs to (its organiser, else its venue), for `$groups`. */
+export function eventGroup(ev: { organizerUsername?: string | null; venueUsername?: string | null } | null | undefined) {
+  return profileGroup(ev?.organizerUsername || ev?.venueUsername)
+}
+
+/** Whole hours between two instants (≥ 0), for `hours_to_reply` / `hours_to_decide`. */
+export function hoursBetween(from: Date | string | null | undefined, to: Date = new Date()): number | null {
+  if (!from) return null
+  const t = new Date(from).getTime()
+  if (!Number.isFinite(t)) return null
+  return Math.max(0, Math.round((to.getTime() - t) / 3_600_000))
+}

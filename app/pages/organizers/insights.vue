@@ -54,6 +54,8 @@ async function loadMix(slug: string) {
   mix.value = null
   try {
     mix.value = await $trpc.festivalInsights.styleLevelMix.query({ festivalSlug: slug })
+    // organizer_insights_viewed (C7): once per festival per visit.
+    useTrack().trackOnce(slug, 'organizer_insights_viewed', { festival: slug, profile_type: 'festival', festivals: festivals.value.length }, 30 * 60_000)
   } catch (e: unknown) {
     error.value = (e as { message?: string })?.message || 'Could not load insights.'
   } finally {

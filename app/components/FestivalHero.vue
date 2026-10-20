@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ticketProvider } from '~/lib/outbound'
 import type { Festival } from '~/types/festival'
 import { Instagram, Globe, Facebook, Users, Star, Ticket, Check, Plus } from 'lucide-vue-next'
 import { daysUntil as formatDaysUntil } from '#shared/utils/festivalDateFormatter'
@@ -199,7 +200,8 @@ const rays = Array.from({ length: 24 }, (_, i) => {
                 :href="festival.ticketUrl"
                 target="_blank"
                 rel="noopener noreferrer"
-                @click="useTrack().track('ticket_cta_click', { entity: reviewTargetType, slug: festival.slug })"
+                data-outbound-kind="ticket"
+                @click="useTrack().track('ticket_cta_click', { entity: reviewTargetType, slug: festival.slug, festival: festival.slug, provider: ticketProvider(festival.ticketUrl) })"
               >
                 <Ticket aria-hidden="true" /> Get tickets
               </a>

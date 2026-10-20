@@ -1,5 +1,6 @@
 import posthog from 'posthog-js'
 import { isLocalHost } from '~/lib/analytics-host'
+import { organiserProfileFromPath } from '~/lib/analytics-groups'
 
 /**
  * PostHog product analytics — client only. Initializes once with the public
@@ -34,6 +35,9 @@ export default defineNuxtPlugin({
 
     const router = useRouter()
     router.afterEach((to) => {
+      // Business mode for an organisation → its events count for that group.
+      const org = organiserProfileFromPath(to.path)
+      if (org) posthog.group('profile', org)
       // Wait a tick so document.title reflects the new page.
       nextTick(() => {
         posthog.capture('$pageview', { path: to.fullPath })

@@ -194,14 +194,25 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `signup_completed` | `useAuth.register`, `useAuth.verifyMagicLink` (server says `isNew`, rule below) | `method` (password / magic_link) |
 | `login_completed` | `useAuth.login`, `useAuth.verifyMagicLink` | `method` |
 | `onboarding_completed` | `useAuth.completeOnboarding` | `intent` |
-| `profile_updated` | `useAuth.updateProfile` | — |
+| `profile_updated` | `useAuth.updateProfile` | `fields_changed` (field NAMES only, `app/lib/changed-fields.ts`) |
+| `onboarding_step_completed` | `onboarding.vue` (intent picked · details saved · skipped) | `step` (intent / details / skip), `intent`, `repeat` (already onboarded), `has_details` · `has_city`, `styles_count`, `has_role` |
+| `landing_cta_click` | `index.vue` | `cta` (find_festival / seeker … / see_attendees / private_events / festival_organizers), `section` (hero / journey / proof / business / footer) |
+| `find_your_dance_started` / `find_your_dance_completed` | `find-your-dance.vue` (first video watched or choice · a style or the taster chosen; not a quiz) | `style`, `via` · `style_chosen`, `taster`, `answers_count` (videos watched), `styles_suggested` |
+| `profile_viewed` | `/@handle` (business profiles, `trackOnce`), `/u/<handle>` (dancers — no handle sent) | `profile` (business only), `profile_type`, `city`, `claimed`, `own`, `surface` |
+| `outbound_click` | delegated listener `plugins/06.outbound-click.client.ts` (every external link) | `kind` (ticket / website / instagram / map / whatsapp / telegram / community_group / email / phone / …; `data-outbound-kind` overrides), `platform`, `host` (never path/query), `object_type`, `object_id` (`data-object-*` or the page's `useTrackContext`), `city`, `surface` (route name) |
+| `plan_shared` | `SharePlanModal` (festival workshop plan), `ShareYearPlanModal` (year) | `object` (festival / year), `method` (copy / native), `festival` / `workshops` / `festivals`, `surface` |
+| `shared_plan_viewed` | `FestivalView` (`?invite=` / `?plan=shared`), `my-year?user=` | `object`, `festival`, `signed_in`, `workshops` / `festivals`, `has_referral` |
+| `referral_link_shared` | `SharePlanModal` referral link copy | `method`, `festival`, `surface` |
+| `tracked_link_visit` | `plugins/05.tracked-link.client.ts` (`?via=` promoter link) | `code_type`, `referral_code` (promoter link code), `counted`, `landing` |
+| `organizer_insights_viewed` | `organizers/insights.vue` (once per festival per 30 min) | `festival`, `profile_type`, `festivals` |
+| `venue_cta_click` | `for-venues.vue` | `surface`, `cta` (list_venue / for_organizers / booking_terms) |
 | `city_viewed` | `pages/cities/[city]/index.vue` (once per mount) | `city`, `style` |
 | `event_viewed` | `pages/events/[id].vue` (non-festival, once per mount) | `event_id`, `city`, `style`, `event_type`, `synced`, `is_festival` |
 | `festival_viewed` | `pages/events/[id].vue` (festival) | same as `event_viewed` |
 | `filter_used` | city page style chip | `surface`, `city`, `filter_keys`, `style` |
 | `search_used` | `/festivals`, `/artists`, `/gigs` (`useTrackSearch`, debounced) | `surface`, `query_length`, `filter_keys`, `results` |
-| `week_plan_add` / `week_plan_remove` | `useWeekPlan` (Going! toggle), `my-plan` enroll / course X | `event_id`, `week_count` or `source` |
-| `year_plan_add` / `year_plan_remove` | `useYearPlan` | `festival_slug`, `year_count` |
+| `week_plan_add` / `week_plan_remove` | `useWeekPlan` (Going! toggle), `my-plan` enroll / course X | `event_id`, `week_count` or `source`; add: `event_type`, `city`, `surface` |
+| `year_plan_add` / `year_plan_remove` | `useYearPlan` | `festival_slug`, `year_count`; add: `festival`, `surface` |
 | `workshop_plan_add` / `workshop_plan_remove` | `festival/FestivalView.vue` | `festival`, `workshop_id`, `workshop_type`, `partner_status` |
 | `discover_swipe` | `my-plan` discover deck | `direction`, `card_kind`, `added_festival`, `added_event` |
 | `goal_added` | `useGoals.addGoal` | `style` |
@@ -213,7 +224,7 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `hangout_created` | `FestivalView`, `my-plan` | `kind`, `surface`, `event_id` / `event_linked` |
 | `hangout_rsvp` | `FestivalView`, `my-plan` | `going`, `surface`, `hangout_id` |
 | `dinner_joined` · `ride_share_posted` · `roommate_search_toggled` | `useDinners` · `useRideShares` · `useRoommates` | `dinner_id` · `festival`, `type` · `festival`, `looking` |
-| `shared_plan_signup` | `SharePlanModal`, `FestivalView`, `my-year` | `surface`, `slug` |
+| `shared_plan_signup` | `FestivalView`, `my-year` ("add friend" from a shared plan) | `surface`, `slug` |
 | `ask_locals_post` · `video_submit` · `video_vote` · `city_battle_vote` | city components | `city`, … |
 | `review_submitted` · `giveaway_entered` · `election_nominated` | `ReviewsSection` · `GiveawayCard` · `elections/[handle]` | target ids |
 | `event_created` / `event_published` | `business/events/new.vue`; publish = draft→live in `business/events/[id]` | `event_id`, `is_festival`, `city`, `style`, `published` |
@@ -225,10 +236,10 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `booking_inquiry_sent` · `booking_join_offered` · `booking_request_submitted` · `booking_added_to_event` | `BookingInquiryForm`, `PromoterProfile`, `/@handle`, `book/[handle]` | `profile`, … |
 | `event_inquiry_submitted` | `for-events.vue` | `event_type`, `city` |
 | `gig_posted` · `gig_cta_click` | `gigs/index.vue` | `kind`, `category` · `action`, `gig_id` |
-| `ticket_cta_click` | `FestivalHero`, `FestivalView` | `slug`, … |
+| `ticket_cta_click` | `FestivalHero` (external shop), `FestivalView` (Stripe checkout) | `slug` / `festival`, `provider` (stripe / tickettailor / external), `tickets`, … |
 | `organizer_cta_click` · `sponsor_cta_click` · `press_cta_click` · `whats_new_*_click` | marketing pages | `surface`, `kind` |
 | `app_connected` | `oauth/authorize.vue` | `scopes`, `business` |
-| `problem_report_opened` / `problem_report_submitted` | `ReportProblem` | `type` |
+| `problem_report_opened` / `problem_report_submitted` / `problem_report_screenshot` | `ReportProblem` | `type` · `captured` (screenshot) |
 
 ### Server events (`trackServer`, all prefixed `server_`)
 
@@ -249,10 +260,31 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `server_festival_joined` | `festivalSignup.join` | `festival` |
 | `server_ticket_checkout_started` | `festivalSignup.ticketCheckout`, `festivalSignup.createCheckoutSession` | `festival`, `tickets`, `referral` |
 | `server_subscription_checkout_started` | `organizerSubscription.createCheckout` | `plan`, `profile_type` |
+| `server_gig_applied` | `gigs.applyTo` | `gig_id`, `category`, `as_profile`, `reapplied`, `$groups` |
+| `server_gig_application_decided` | `gigs.decideApplication` | `gig_id`, `category`, `decision`, `hours_to_decide` |
+| `server_booking_decided` | `election.moderateBooking` (free spaces; commercial venues decide off-platform) | `booking_id`, `decision`, `hours_to_decide`, `redecided`, `free` |
+| `server_inquiry_replied` | `inquiries.setStatus` (first move out of `new`) | `inquiry_id`, `status` (answered / declined), `hours_to_reply`, `profile`, `profile_type`, `$groups` |
+| `server_flyer_generated` | `businessFlyers.make` / `directions` / `again` / `feed` / `fix` / `refresh` (each is an AI paint) | `event_id`, `mode`, `variant_count`, `saved_look`, `references`, `feelings`, `from_kept`, `$groups` |
+| `server_flyer_kept` | `businessFlyers.keep` | `event_id`, `mode`, `post_kind`, `new_look`, `$groups` |
+| `server_caption_written` | `businessFlyers.writeCaption`, `businessPosts.writeCaption` / `writeCaptions` | `event_id`, `language`, `scope` (event / post / plan), `count`, `failed`, `post_kind`, `$groups` |
+| `server_post_proposed` | `businessPosts.propose` (content plan) | `event_id`, `added`, `total`, `is_festival`, `$groups` |
+| `server_promo_kit_opened` | `referral.promoKit` | `event_id`, `profile_type`, `manager`, `has_link`, `has_flyer`, `painting`, `language`, `$groups` |
+| `server_venue_ask_sent` / `server_venue_ask_booked` / `server_venue_ask_unbooked` | `venueAsks.ask` / `book` / `unbook` | `event_id`, `venue`, `updated`, `guests`, `needs_count`, `venue_managed`, `$groups` |
+| `server_checked_in` | `attendance.checkIn` (door, organiser's id) | `event_id`, `is_festival`, `$groups` |
+| `server_site_saved` | `businessSite.save` | `profile`, `profile_type`, `first_save`, `sections`, `locales`, `$groups` |
+| `server_member_role_set` | `businessTeam.setRole` (role actually changed) | `profile`, `profile_type`, `from_role`, `role`, `self`, `$groups` |
+| `server_account_deleted` | `auth.deleteAccount` — **anonymous**, no person profile | `days_since_signup` |
 | `server_ticket_purchased` | Stripe webhook `checkout.session.completed` (festival checkout; not on redelivery) · TicketTailor webhook, first of `order.created`/`order.completed` per order | `festival`, `provider` (stripe / tickettailor), `product` (ticket / social_unlock), `tickets`, `amount` (cents), `currency`, `$revenue` (major units), `$currency`, `referral`, `referral_code` (promoter tracked-link code), `discount` (cents) |
 | `server_ticket_checkout_expired` | Stripe webhook `checkout.session.expired` (festival checkout) | `festival`, `provider`, `product`, `tickets`, `referral`, `referral_code` |
 | `server_subscription_activated` | Stripe webhook `checkout.session.completed` (`mode=subscription`, first delivery) | `plan`, `profile_id`, `provider`, `amount` (cents), `currency`, `interval`, `$revenue`, `$currency` |
 | `server_subscription_cancelled` | Stripe webhook `customer.subscription.deleted` (or `updated` → canceled), once per subscription | `plan`, `profile_id`, `provider`, `amount`, `currency`, `interval`, `reason` (Stripe enum), `days_active` |
+
+**Groups.** PostHog group type `profile` = a business profile's username. Client:
+`useTrack().group('profile', username)` on Business mode pages (`/business/network/<username>/…`,
+via the posthog plugin) and on `/@handle` for its managers. Server: `...profileGroup(username)` /
+`...eventGroup(ev)` (organiser, else venue) add `$groups` to events where a business profile is in
+scope (event created/published, claims, flyers, captions, inquiries, team, site, venue asks,
+promo kit, gig applications as a page). Use group-based insights to count organisations, not people.
 
 Webhook events (`channel: 'webhook'`) use the buyer's dancer id as `distinct_id` (Stripe metadata;
 TicketTailor by buyer-email match, else anonymous). **Revenue = sum of `$revenue` on

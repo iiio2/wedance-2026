@@ -23,7 +23,13 @@ useHead({
   title: 'WeDance — Welcome',
 })
 
-const { isSignedIn, isLoading, completeOnboarding, city: meCity, danceStyles: meStyles, role: meRole } = useAuth()
+const { isSignedIn, isLoading, completeOnboarding, city: meCity, danceStyles: meStyles, role: meRole, onboardedAt } = useAuth()
+
+// onboarding_step_completed — the step funnel before `onboarding_completed`.
+// `repeat` = this account had onboarded before (re-onboarding, not a new sign-up).
+function stepDone(stepName: 'intent' | 'details' | 'skip', props: Record<string, unknown> = {}) {
+  useTrack().track('onboarding_step_completed', { step: stepName, repeat: !!onboardedAt.value, ...props })
+}
 
 // Persona definitions: the one choice that routes everything.
 type IntentKey = 'social' | 'festivals' | 'learn' | 'perform' | 'organize'
@@ -89,6 +95,7 @@ function pickIntent(p: Persona) {
   chosen.value = p
   error.value = ''
   details.reset()
+  stepDone('intent', { intent: p.key, has_details: detailsNeeded.value })
   if (detailsNeeded.value) {
     step.value = 'details'
     nextTick(() => {
@@ -114,6 +121,14 @@ async function finish() {
 
   const result = details.validate()
   if (!result.success) return
+  if (detailsNeeded.value) {
+    stepDone('details', {
+      intent: chosen.value.key,
+      has_city: !!form.city,
+      styles_count: form.danceStyles.length,
+      has_role: !!form.role,
+    })
+  }
 
   loading.value = true
   error.value = ''
@@ -128,6 +143,7 @@ async function finish() {
 }
 
 async function skip() {
+  stepDone('skip', { intent: 'skipped' })
   loading.value = true
   error.value = ''
   try {

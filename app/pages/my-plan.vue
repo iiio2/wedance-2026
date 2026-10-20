@@ -1502,7 +1502,7 @@ function commitSwipe(direction: 'yes' | 'skip' | 'later') {
     }
     if (card.kind === 'event-festival' && !effectivePickIds.value.has(card.slug)) {
       // Add straight to the year picks
-      if (!previewMode.value) addFestival(card.slug)
+      if (!previewMode.value) addFestival(card.slug, { surface: 'discover' })
       addedFestival = true
     }
     if (card.kind === 'event-social') {
@@ -1582,7 +1582,7 @@ function undoSwipe() {
 }
 
 function acceptFestivalNudge(n: FestivalNudge) {
-  if (!previewMode.value) addFestival(n.festivalSlug)
+  if (!previewMode.value) addFestival(n.festivalSlug, { surface: 'nudge' })
   n.dismissed = true
   festivalNudges.value = [...festivalNudges.value]
 }

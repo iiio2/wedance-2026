@@ -14,6 +14,7 @@ import {
   guidelineVersions,
 } from '../../database/schema'
 import { requireProfileRole } from '../../utils/profileAccess'
+import { hoursBetween, trackServer } from '../../utils/posthog'
 
 /**
  * Moderator elections — community governance for free/OpenAir commons (epic G800,
@@ -402,7 +403,7 @@ export const electionRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const [booking] = await ctx.db
-        .select({ id: bookingRequests.id, profileId: bookingRequests.profileId, status: bookingRequests.status })
+        .select({ id: bookingRequests.id, profileId: bookingRequests.profileId, status: bookingRequests.status, createdAt: bookingRequests.createdAt })
         .from(bookingRequests)
         .where(eq(bookingRequests.id, input.bookingId))
       if (!booking) throw new TRPCError({ code: 'NOT_FOUND', message: 'Booking request not found.' })
@@ -416,6 +417,8 @@ export const electionRouter = router({
           moderationNote: input.note ?? null,
         })
         .where(eq(bookingRequests.id, input.bookingId))
+      // C5: booking request → decided (free spaces decide here; commercial venues off-platform).
+      trackServer(ctx, 'booking_decided', { booking_id: booking.id, decision: input.action === 'accept' ? 'accepted' : 'declined', hours_to_decide: hoursBetween(booking.createdAt), redecided: booking.status !== 'pending', free: true })
       return { ok: true }
     }),
 

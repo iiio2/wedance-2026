@@ -10,11 +10,17 @@ export default defineNuxtPlugin(() => {
   const { $trpc } = useNuxtApp()
   const seen = new Set<string>()
 
+  const landingType = (path: string) => path.startsWith('/events/') ? 'event' : path.startsWith('/festivals') ? 'festivals' : path.startsWith('/@') ? 'profile' : path === '/' ? 'home' : 'other'
+
   const take = (code: unknown) => {
     if (typeof code !== 'string' || !/^[a-z2-9]{8}$/.test(code) || seen.has(code)) return
     seen.add(code)
     document.cookie = `wd_via=${code}; Max-Age=${30 * 24 * 60 * 60}; Path=/; SameSite=Lax`
-    $trpc.referral.trackVisit.mutate({ code }).catch(() => { /* counting never blocks the page */ })
+    $trpc.referral.trackVisit.mutate({ code })
+      // tracked_link_visit: the promoter link in PostHog too (the DB counts it
+      // once per browser; `counted` says whether this one was new).
+      .then(r => useTrack().track('tracked_link_visit', { code_type: 'promoter', referral_code: code, counted: !!r?.counted, landing: landingType(router.currentRoute.value.path) }))
+      .catch(() => { /* counting never blocks the page */ })
   }
 
   const handle = (to: ReturnType<typeof useRoute>) => {

@@ -59,6 +59,7 @@ async function resolve() {
       const access = await $trpc.business.canManage.query({ username: pro.profile.username }).catch(() => ({ canManage: false, managed: true }))
       canManage.value = access.canManage
       managed.value = access.managed
+      trackProfileView(pro.profile, access)
       return
     }
     // An old handle: merged into another profile, or renamed.
@@ -77,6 +78,24 @@ async function resolve() {
   pending.value = false
 }
 onMounted(resolve)
+
+// profile_viewed (C2: teacher discovery → follow / booking). Business profiles
+// only here — a dancer handle redirects to /u/<handle>, which tracks its own.
+function trackProfileView(p: { username: string; type: string; city?: string | null }, access: { canManage: boolean; managed: boolean }) {
+  const t = useTrack()
+  t.trackOnce(p.username, 'profile_viewed', {
+    profile: p.username,
+    profile_type: p.type,
+    city: p.city || null,
+    claimed: access.managed,
+    own: access.canManage,
+    surface: route.query.from ? String(route.query.from).slice(0, 40) : 'handle',
+  })
+  // Their own page: an organiser surface → group analytics by profile.
+  if (access.canManage) t.group('profile', p.username, { profile_type: p.type })
+}
+// outbound_click (website, Instagram, map, booking links) is about this profile.
+useTrackContext(() => data.value?.profile && { object_type: data.value.profile.type, object_id: data.value.profile.username, city: data.value.profile.city || null })
 
 // --- Follow artist ---
 const following = ref(false)

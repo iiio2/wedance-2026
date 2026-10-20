@@ -13,6 +13,7 @@ import { eventPath } from '../../../shared/utils/eventSlug'
 import { eventLocalDate, eventLocalTime, eventLocalWeekday } from '../../../shared/utils/eventTime'
 import { eventLanguage, hostLanguages, kitCaption, kitFlyers, kitHashtags, startKitFlyer } from '../../utils/promoKit'
 import { LANGUAGES } from '../../../shared/utils/caption'
+import { profileGroup, trackServer } from '../../utils/posthog'
 
 /**
  * Referrals (dancer → dancer festival tickets with a discount) and, since MCP
@@ -275,6 +276,8 @@ export const referralRouter = router({
       const cap = await kitCaption(ctx.db, ev, { language, linkId: link?.id ?? null, linkCaption: link?.caption ?? null, manager })
       const host = await eventHostProfile(ctx.db, ev)
       const url = link ? linkUrl(origin, ev, link.code) : `${origin}${eventPath(ev)}`
+      // promo_kit_opened: a promoter / the event team pulled the kit (MCP or web).
+      trackServer(ctx, 'promo_kit_opened', { event_id: ev.id, profile_type: page.type, manager, has_link: !!link, has_flyer: !!(flyers.story || flyers.feed), painting: !!painting, language, ...profileGroup(page.username) })
       return {
         event: { ...eventCard(origin, ev), host: host?.name ?? null, styles: ev.styles ?? [] },
         flyer: {

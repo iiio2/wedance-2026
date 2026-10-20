@@ -42,7 +42,8 @@ function onToggleEvent(id: string) {
     showSignUp.value = true
     return
   }
-  toggleEvent(id)
+  const e = filteredEvents.value.find((x: any) => x.id === id) as any
+  toggleEvent(id, { event_type: e?.type ?? null, city: slug, surface: 'city' })
 }
 
 // People + venues from real migrated profiles (entity.cityDirectory), kept as
@@ -466,6 +467,10 @@ onMounted(() => {
   loadGiveaways()
   useTrack().trackOnce(slug, 'city_viewed', { city: slug, style: selectedStyle.value || null })
 })
+
+// outbound_click from this page (venue sites, maps, groups) is about the city
+// unless the link's card names its own object (data-object-type/-id).
+useTrackContext(() => ({ object_type: 'city', object_id: slug, city: slug }))
 
 // Style filter use (a click on a style chip — one event per change).
 watch(selectedStyle, (style) => {

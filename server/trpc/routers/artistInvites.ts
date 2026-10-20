@@ -11,7 +11,7 @@ import { grant, logAccess, assertProfileGranted } from '../../utils/profileAcces
 import { instagramUrl, parseInstagramHandle } from '../../../shared/utils/instagram'
 import { videoEmbedUrl } from '../../../shared/utils/video'
 import { contactsFor } from '../../../shared/utils/contacts'
-import { trackServer } from '../../utils/posthog'
+import { profileGroup, trackServer } from '../../utils/posthog'
 
 /**
  * Artist confirmation. An organizer's photo, video or name for an artist in
@@ -478,7 +478,7 @@ export const artistInvitesRouter = router({
       }
       await grant(ctx.db, p.id, ctx.dancerId, 'owner', { by: invite?.createdBy ?? null })
       await logAccess(ctx.db, { profileId: p.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'approved', role: 'owner', note: 'Took over the page through an organizer’s invite link.' })
-      trackServer(ctx, 'profile_claimed', { profile: p.username, via: 'invite' })
+      trackServer(ctx, 'profile_claimed', { profile: p.username, via: 'invite', ...profileGroup(p.username) })
       return { username: p.username, owner: true }
     }),
 })

@@ -1,3 +1,4 @@
+import { changedFields } from '~/lib/changed-fields'
 // Auth composable — email + password + session-based authentication.
 // Magic-link methods (requestMagicLink/verifyMagicLink) are retained but
 // dormant: the primary sign-in UX is email+password, but the pages
@@ -336,10 +337,15 @@ export function useAuth() {
     website?: string
     profilePublic?: boolean
   }) {
+    const before = {
+      name: _dancerName.value, city: _city.value, danceStyles: _danceStyles.value, danceLevels: _danceLevels.value,
+      role: _role.value, photo: _photo.value, bio: _bio.value, instagram: _instagram.value, youtube: _youtube.value,
+      website: _website.value, profilePublic: _profilePublic.value,
+    }
     await $trpc.profile.update.mutate(data)
     await refreshMe()
-    // CUJ: "Manage profile" — profile edited/saved.
-    useTrack().track('profile_updated')
+    // CUJ: "Manage profile" — profile edited/saved. Field names only, never values.
+    useTrack().track('profile_updated', { fields_changed: changedFields(before, data) })
   }
 
   async function changePassword(data: { currentPassword: string; newPassword: string }) {

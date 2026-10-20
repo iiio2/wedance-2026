@@ -10,6 +10,7 @@ import { announcementPost, flyerSource, texts } from '../../utils/flyer/paint'
 import { flyerChanges } from '../../../shared/utils/flyer'
 import { POST_KINDS, proposePlan, type PostKind } from '../../../shared/utils/posts'
 import { eventLocalDate } from '../../../shared/utils/eventTime'
+import { eventGroup, trackServer } from '../../utils/posthog'
 
 /**
  * Business mode — an event's content plan (event_posts): the posts it's
@@ -96,6 +97,7 @@ export const businessPostsRouter = router({
       try {
         const caption = await writeCaption(ctx.db, ev, p, input.language)
         await saveCaptionFor(ctx.db, p, ev, caption)
+        trackServer(ctx, 'caption_written', { event_id: ev.id, language: input.language, scope: 'post', post_kind: p.kind, count: 1, ...eventGroup(ev) })
         return caption
       } catch (e: any) {
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e?.message || 'Couldn’t write the caption. Try again.' })
@@ -127,6 +129,7 @@ export const businessPostsRouter = router({
           written++
         } catch { failed++ }
       }
+      if (written || failed) trackServer(ctx, 'caption_written', { event_id: ev.id, language: input.language, scope: 'plan', count: written, failed, ...eventGroup(ev) })
       return { written, failed }
     }),
 
@@ -158,6 +161,7 @@ export const businessPostsRouter = router({
         await ctx.db.insert(eventPosts).values({ eventId: ev.id, kind: p.kind, subject: p.subject ?? null, dueOn: p.dueOn, format: p.format, sort: i, createdBy: ctx.dancerId })
         added++
       }
+      trackServer(ctx, 'post_proposed', { event_id: ev.id, added, total: plan.length, is_festival: FESTIVAL_TYPES.includes(ev.type ?? ''), ...eventGroup(ev) })
       return { added, total: plan.length }
     }),
 

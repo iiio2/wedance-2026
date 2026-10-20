@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { buildServerEvent, dedupeUuid, posthogServerConfig, sendServerEvent, trackServer, trackServerEvent } from './posthog'
+import { buildServerEvent, dedupeUuid, hoursBetween, posthogServerConfig, profileGroup, sendServerEvent, trackServer, trackServerEvent } from './posthog'
 
 const config = { key: 'phc_test', host: 'https://eu.i.posthog.com/' }
 
@@ -102,5 +102,21 @@ describe('server posthog capture', () => {
     expect(dedupeUuid('stripe:cs_1')).toBe(dedupeUuid('stripe:cs_1'))
     expect(dedupeUuid('stripe:cs_1')).not.toBe(dedupeUuid('stripe:cs_2'))
     expect(dedupeUuid('k')).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+  })
+
+  it('profileGroup adds $groups only when a profile is in scope', async () => {
+    expect(profileGroup('salsa-crew')).toEqual({ $groups: { profile: 'salsa-crew' } })
+    expect(profileGroup(null)).toEqual({})
+    expect(profileGroup('')).toEqual({})
+    const body = buildServerEvent(config, 'flyer_generated', 'd', { event_id: 'e', ...profileGroup('salsa-crew') })
+    expect(body.properties.$groups).toEqual({ profile: 'salsa-crew' })
+  })
+
+  it('hoursBetween rounds to whole non-negative hours', () => {
+    const now = new Date('2026-10-20T12:00:00Z')
+    expect(hoursBetween(new Date('2026-10-20T09:20:00Z'), now)).toBe(3)
+    expect(hoursBetween('2026-10-21T00:00:00Z', now)).toBe(0)
+    expect(hoursBetween(null, now)).toBeNull()
+    expect(hoursBetween('not a date', now)).toBeNull()
   })
 })
