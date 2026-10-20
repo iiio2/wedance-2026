@@ -127,19 +127,19 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
     <section v-if="!searchQuery.trim() && !taster && !style" class="max-w-4xl mx-auto px-4 py-6">
       <NuxtLink
         to="/battle"
-        class="group flex items-center justify-between gap-4 rounded-2xl p-5 sm:p-6 bg-wd-brown-900 text-white transition-all hover:scale-[1.01]"
-        style="box-shadow: 0 8px 22px rgba(59,31,18,0.15);"
+        class="group relative flex items-center justify-between gap-4 rounded-2xl p-5 sm:p-6 text-white transition-all hover:scale-[1.01] overflow-hidden"
+        style="background: linear-gradient(135deg, var(--wd-brown-900) 0%, color-mix(in srgb, var(--wd-brown-900) 85%, var(--wd-red-600)) 100%); box-shadow: 0 8px 22px rgba(59,31,18,0.18);"
       >
-        <div class="flex items-center gap-3">
-          <div class="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+        <div class="flex items-center gap-3.5">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style="background: rgba(255,255,255,0.1); box-shadow: 0 0 0 1px rgba(255,255,255,0.06);">
             <Swords class="w-5 h-5 text-primary" />
           </div>
           <div>
             <div class="font-bold text-lg font-display">City Battle</div>
-            <div class="text-sm text-white/60 font-sans">Which city dances best? Watch &amp; vote.</div>
+            <div class="text-sm font-hand" style="font-size: 15px; color: rgba(255,255,255,0.6);">— which city dances best? watch &amp; vote</div>
           </div>
         </div>
-        <ArrowRight class="w-5 h-5 text-white/40 group-hover:text-white transition-colors shrink-0" />
+        <ArrowRight class="w-5 h-5 text-white/40 group-hover:text-white group-hover:translate-x-1 transition-all shrink-0" />
       </NuxtLink>
     </section>
 
