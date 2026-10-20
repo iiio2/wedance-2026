@@ -133,13 +133,18 @@ export default defineNuxtConfig({
       commitSha: (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7),
     },
   },
+  // Client source maps are off by default in Nuxt, so Sentry had nothing to
+  // upload for browser errors. 'hidden' emits them without a sourceMappingURL
+  // comment; they are deleted after upload so they are never served publicly.
+  sourcemap: { client: 'hidden' },
   // Source-map upload for readable Sentry stack traces. Skipped automatically
   // (build still succeeds) when SENTRY_AUTH_TOKEN is absent.
   sentry: {
-    sourceMapsUploadOptions: {
-      org: process.env.SENTRY_ORG,
-      project: process.env.SENTRY_PROJECT,
-      authToken: process.env.SENTRY_AUTH_TOKEN,
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+    authToken: process.env.SENTRY_AUTH_TOKEN,
+    sourcemaps: {
+      filesToDeleteAfterUpload: ['.*/**/public/**/*.map', '.vercel/output/static/**/*.map'],
     },
   },
 })
