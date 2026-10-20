@@ -157,9 +157,18 @@ bun run dev:db-proxy          # Neon-HTTP-compatible proxy on :4444
 **Setup.** Client: `app/plugins/03.posthog.client.ts` (posthog-js, EU host, manual `$pageview`
 on route change, `person_profiles: 'identified_only'`). Call sites use `useTrack()`
 (`app/composables/useTrack.ts`: `track`, `trackOnce`, `identify`, `reset`, `sessionReplayUrl`) —
-never import posthog directly; everything is a no-op without `NUXT_PUBLIC_POSTHOG_KEY` (dev, tests).
+never import posthog directly; everything is a no-op without `NUXT_PUBLIC_POSTHOG_KEY` (tests).
 Server: `server/utils/posthog.ts` → `trackServer(ctx, name, props)` from tRPC procedures
-(dependency-free `fetch` to `/i/v0/e/`, handed to `ctx.waitUntil`, never throws, off under vitest).
+(dependency-free `fetch` to `/i/v0/e/`, handed to `ctx.waitUntil`, never throws, off under vitest);
+`trackServerEvent(h3Event, name, distinctId, props, { dedupeKey })` from webhooks / plain API routes
+(no tRPC ctx: `distinctId` = the buyer's dancer id when known, else anonymous; `channel: 'webhook'`;
+`dedupeKey` → deterministic event `uuid` so redeliveries collapse).
+`server/utils/posthog.catalogue.test.ts` fails when a `server_*` event in code is missing from the table below.
+
+**Local dev never sends.** The Vercel-pulled `.env` holds the PRODUCTION key. The client plugin is a
+no-op on a dev build (`import.meta.dev`) and on local hosts (`app/lib/analytics-host.ts`: localhost,
+127.x, ::1, `*.localhost`, `*.test`); the server helper is off under `nuxt dev`. To debug PostHog
+locally, use a separate test project key, and still expect nothing from localhost — test on a preview.
 
 **The `app` filter rule.** 2026 shares the WeDance v4 PostHog project (EU free plan = one project).
 Every event — client super-property and server payload — carries `app: 'wedance-2026'`.
@@ -230,8 +239,8 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `server_onboarding_completed` | `auth.completeOnboarding` | `intent` |
 | `server_event_created` | `businessEvents.create`, `businessEvents.createSeries` | `event_id`, `is_festival`, `host_type`, `city`, `published`, `series_id`, `dates` |
 | `server_event_published` | `create`/`createSeries` with `published`, `update` draft→live, `publishSeries` | `event_id`, `is_festival`, `series_id`, `dates` |
-| `server_booking_requested` | `booking.request` | `booking_id`, `signed_in` |
-| `server_inquiry_sent` | `inquiries.send` | `inquiry_id`, `profile`, `delivered`, `signed_in` |
+| `server_booking_request_submitted` | `booking.request` (was server_booking_requested until 2026-10-20) | `booking_id`, `signed_in` |
+| `server_booking_inquiry_sent` | `inquiries.send` (was server_inquiry_sent until 2026-10-20) | `inquiry_id`, `profile`, `delivered`, `signed_in` |
 | `server_event_inquiry_submitted` | `feedback.inquiry` | `event_type`, `city` |
 | `server_festival_draft_submitted` | `festival.submitDraft` (server only) | `submission_id`, `festival`, `signed_in` |
 | `server_profile_claim_requested` / `server_team_join_requested` | `businessTeam.requestAccess`, `business.requestClaim` | `profile`, `profile_type`, `kind`, `evidence_type` |
@@ -240,6 +249,15 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `server_festival_joined` | `festivalSignup.join` | `festival` |
 | `server_ticket_checkout_started` | `festivalSignup.ticketCheckout`, `festivalSignup.createCheckoutSession` | `festival`, `tickets`, `referral` |
 | `server_subscription_checkout_started` | `organizerSubscription.createCheckout` | `plan`, `profile_type` |
+| `server_ticket_purchased` | Stripe webhook `checkout.session.completed` (festival checkout; not on redelivery) · TicketTailor webhook, first of `order.created`/`order.completed` per order | `festival`, `provider` (stripe / tickettailor), `product` (ticket / social_unlock), `tickets`, `amount` (cents), `currency`, `$revenue` (major units), `$currency`, `referral`, `referral_code` (promoter tracked-link code), `discount` (cents) |
+| `server_ticket_checkout_expired` | Stripe webhook `checkout.session.expired` (festival checkout) | `festival`, `provider`, `product`, `tickets`, `referral`, `referral_code` |
+| `server_subscription_activated` | Stripe webhook `checkout.session.completed` (`mode=subscription`, first delivery) | `plan`, `profile_id`, `provider`, `amount` (cents), `currency`, `interval`, `$revenue`, `$currency` |
+| `server_subscription_cancelled` | Stripe webhook `customer.subscription.deleted` (or `updated` → canceled), once per subscription | `plan`, `profile_id`, `provider`, `amount`, `currency`, `interval`, `reason` (Stripe enum), `days_active` |
+
+Webhook events (`channel: 'webhook'`) use the buyer's dancer id as `distinct_id` (Stripe metadata;
+TicketTailor by buyer-email match, else anonymous). **Revenue = sum of `$revenue` on
+`server_ticket_purchased` + `server_subscription_activated`** (first period only — renewals are not
+yet tracked).
 
 **Magic-link sign-up rule** (`server/utils/magicLinkSignup.ts`): a magic-link sign-in counts as a
 sign-up only when the account was created by the magic-link flow — created < 24 h ago, no `source_ref`

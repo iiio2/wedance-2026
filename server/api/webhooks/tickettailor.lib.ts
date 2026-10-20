@@ -33,6 +33,49 @@ export interface TicketTailorOrder {
   status?: string
   buyer_details?: TicketTailorBuyerDetails
   event_summary?: { event_id?: string; id?: string }
+  /** Order total in minor units (cents). */
+  total?: number | null
+  currency?: { code?: string | null; base_multiplier?: number | null } | string | null
+  line_items?: Array<{ type?: string | null; quantity?: number | null; total?: number | null }> | null
+  issued_tickets?: unknown[] | null
+}
+
+/** One newly recorded TicketTailor purchase — the `server_ticket_purchased` payload. */
+export interface TicketTailorPurchase {
+  /** The buyer's dancer id when their email matches an account; null → anonymous. */
+  distinctId: string | null
+  orderId: string
+  properties: Record<string, unknown>
+}
+
+/**
+ * The `server_ticket_purchased` props for a TicketTailor order. Money in cents
+ * + currency, `$revenue` in major units; never the buyer's name or email.
+ */
+export function ticketTailorPurchaseProps(order: TicketTailorOrder, festivalSlug: string): Record<string, unknown> {
+  const lines = Array.isArray(order.line_items) ? order.line_items : []
+  const ticketLines = lines.filter(l => !l.type || l.type === 'ticket')
+  const amount = typeof order.total === 'number'
+    ? order.total
+    : lines.reduce((sum, l) => sum + (Number(l.total) || 0), 0)
+  const rawCurrency = typeof order.currency === 'string' ? order.currency : order.currency?.code
+  const currency = (rawCurrency || 'eur').toLowerCase()
+  const multiplier = (typeof order.currency === 'object' && order.currency?.base_multiplier) || 100
+  const tickets = Array.isArray(order.issued_tickets) && order.issued_tickets.length
+    ? order.issued_tickets.length
+    : ticketLines.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0) || 1
+  return {
+    festival: festivalSlug,
+    provider: 'tickettailor',
+    product: 'ticket',
+    tickets,
+    amount,
+    currency,
+    $revenue: amount / multiplier,
+    $currency: currency.toUpperCase(),
+    referral: false,
+    referral_code: null,
+  }
 }
 
 interface TicketTailorEnvelope {
@@ -91,7 +134,12 @@ type Db = ReturnType<typeof useDb>
  * Parse a verified webhook body and write matching festival_signup rows.
  * Caller is responsible for HMAC verification before invoking this.
  */
-export async function processWebhookBody(db: Db, rawBody: string): Promise<ProcessResult> {
+export async function processWebhookBody(
+  db: Db,
+  rawBody: string,
+  /** Called once per order the first time it is recorded (not on replays). */
+  onPurchase?: (purchase: TicketTailorPurchase) => void,
+): Promise<ProcessResult> {
   let parsed: unknown
   try {
     parsed = JSON.parse(rawBody)
@@ -159,6 +207,7 @@ export async function processWebhookBody(db: Db, rawBody: string): Promise<Proce
       if (inserted.length > 0) {
         processed += 1
         outcomes.push({ kind: 'inserted', orderId })
+        onPurchase?.({ distinctId: dancerId, orderId, properties: ticketTailorPurchaseProps(order, festivalSlug) })
       } else {
         outcomes.push({ kind: 'duplicate', orderId })
       }
@@ -184,6 +233,7 @@ export async function processWebhookBody(db: Db, rawBody: string): Promise<Proce
           ))
         processed += 1
         outcomes.push({ kind: 'verified-existing', orderId })
+        onPurchase?.({ distinctId: dancerId, orderId, properties: ticketTailorPurchaseProps(order, festivalSlug) })
       } else {
         throw e
       }

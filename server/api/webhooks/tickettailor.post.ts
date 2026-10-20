@@ -23,6 +23,7 @@
  * so it can be unit-tested without booting Nitro.
  */
 import { useDb } from '../../utils/db'
+import { trackServerEvent } from '../../utils/posthog'
 import { processWebhookBody, verifySignature } from './tickettailor.lib'
 
 export default defineEventHandler(async (event) => {
@@ -50,7 +51,11 @@ export default defineEventHandler(async (event) => {
   }
 
   // Body is verified — safe to parse and process.
-  const result = await processWebhookBody(useDb(), rawBody)
+  // `server_ticket_purchased` once per order: order.created and order.completed
+  // both arrive, but only the first one records the row (idempotent on order id).
+  const result = await processWebhookBody(useDb(), rawBody, (purchase) => {
+    trackServerEvent(event, 'ticket_purchased', purchase.distinctId, purchase.properties, { dedupeKey: `tickettailor:${purchase.orderId}` })
+  })
   if (result.parseError) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid JSON' })
   }

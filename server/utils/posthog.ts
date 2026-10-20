@@ -27,6 +27,8 @@
  * keeps the function alive until it settles), else fired and forgotten.
  */
 
+import { createHash } from 'node:crypto'
+
 export const SERVER_EVENT_PREFIX = 'server_'
 
 export interface PosthogServerConfig {
@@ -41,12 +43,27 @@ export interface ServerCaptureOptions {
   config?: PosthogServerConfig | null
   /** Override fetch (tests). */
   fetch?: Fetch
+  /**
+   * Stable key for one real-world occurrence (e.g. `stripe:<session id>`).
+   * Becomes a deterministic event `uuid`, so a webhook redelivery that slips
+   * past the handler's own idempotency check is collapsed by PostHog.
+   */
+  dedupeKey?: string
+}
+
+/** Deterministic RFC-4122-shaped uuid for a dedupe key. Exported for tests. */
+export function dedupeUuid(key: string): string {
+  const h = createHash('sha256').update(`wedance-2026:${key}`).digest('hex')
+  const variant = ((parseInt(h[16]!, 16) & 0x3) | 0x8).toString(16)
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${variant}${h.slice(17, 20)}-${h.slice(20, 32)}`
 }
 
 /** The key + host from runtime config (falls back to env outside Nitro). Null when unkeyed. */
 export function posthogServerConfig(): PosthogServerConfig | null {
   // Unit/integration tests load .env; never send real events from a test run.
   if (process.env.VITEST) return null
+  // `nuxt dev` with the Vercel-pulled .env (prod key) must not pollute prod data.
+  if (import.meta.dev) return null
   let key = ''
   let host = ''
   try {
@@ -68,6 +85,7 @@ export function buildServerEvent(
   event: string,
   distinctId: string | null | undefined,
   properties: Record<string, unknown> = {},
+  dedupeKey?: string,
 ) {
   const name = event.startsWith(SERVER_EVENT_PREFIX) ? event : `${SERVER_EVENT_PREFIX}${event}`
   const anonymous = !distinctId
@@ -75,6 +93,7 @@ export function buildServerEvent(
     api_key: config.key,
     event: name,
     distinct_id: distinctId || `anon-server-${crypto.randomUUID()}`,
+    ...(dedupeKey ? { uuid: dedupeUuid(dedupeKey) } : {}),
     timestamp: new Date().toISOString(),
     properties: {
       ...properties,
@@ -98,7 +117,7 @@ export async function sendServerEvent(
   try {
     const config = opts.config === undefined ? posthogServerConfig() : opts.config
     if (!config?.key) return
-    const body = buildServerEvent(config, event, distinctId, properties)
+    const body = buildServerEvent(config, event, distinctId, properties, opts.dedupeKey)
     const doFetch: Fetch = opts.fetch ?? ((url, init) => fetch(url, init))
     const res = await doFetch(`${config.host.replace(/\/$/, '')}/i/v0/e/`, {
       method: 'POST',
@@ -130,6 +149,34 @@ export function trackServer(
     const p = sendServerEvent(event, opts.distinctId !== undefined ? opts.distinctId : ctx?.dancerId, props, opts)
     if (ctx?.waitUntil) ctx.waitUntil(p)
     else void p
+  }
+  catch { /* never break the caller */ }
+}
+
+/** The slice of an H3 event `trackServerEvent` needs (kept structural for tests). */
+export interface WaitUntilEvent {
+  waitUntil?: (p: Promise<unknown>) => void
+}
+
+/**
+ * Fire-and-forget capture from a plain API route / webhook (no tRPC ctx).
+ *
+ * `distinctId` is the dancer the event belongs to when known (e.g. the buyer's
+ * dancerId from Stripe metadata); `null` sends it anonymously with
+ * `$process_person_profile: false`. The request is handed to the H3 event's
+ * `waitUntil` so Vercel keeps the function alive until PostHog answered.
+ * `channel` defaults to `'webhook'`. Never throws; a no-op without a key.
+ */
+export function trackServerEvent(
+  h3Event: WaitUntilEvent | null | undefined,
+  event: string,
+  distinctId: string | null | undefined,
+  properties?: Record<string, unknown>,
+  opts: ServerCaptureOptions = {},
+): void {
+  try {
+    const waitUntil = h3Event?.waitUntil ? (p: Promise<unknown>) => h3Event.waitUntil!(p) : undefined
+    trackServer({ dancerId: distinctId ?? null, waitUntil }, event, { channel: 'webhook', ...properties }, opts)
   }
   catch { /* never break the caller */ }
 }

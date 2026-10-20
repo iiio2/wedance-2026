@@ -232,7 +232,7 @@ export const bookingRouter = router({
         })
         .returning({ id: bookingRequests.id })
 
-      trackServer(ctx, 'booking_requested', { booking_id: row!.id, signed_in: !!ctx.dancerId })
+      trackServer(ctx, 'booking_request_submitted', { booking_id: row!.id, signed_in: !!ctx.dancerId })
       return { ok: true, id: row!.id }
     }),
 

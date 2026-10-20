@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { buildServerEvent, posthogServerConfig, sendServerEvent, trackServer } from './posthog'
+import { buildServerEvent, dedupeUuid, posthogServerConfig, sendServerEvent, trackServer, trackServerEvent } from './posthog'
 
 const config = { key: 'phc_test', host: 'https://eu.i.posthog.com/' }
 
@@ -41,7 +41,7 @@ describe('server posthog capture', () => {
   })
 
   it('anonymous callers get a random id and no person profile', () => {
-    const body = buildServerEvent(config, 'booking_requested', null)
+    const body = buildServerEvent(config, 'booking_request_submitted', null)
     expect(body.distinct_id).toMatch(/^anon-server-/)
     expect(body.properties.$process_person_profile).toBe(false)
   })
@@ -68,5 +68,39 @@ describe('server posthog capture', () => {
   it('trackServer never throws without a ctx or key', () => {
     expect(() => trackServer(undefined, 'x')).not.toThrow()
     expect(() => trackServer({ dancerId: 'd' }, 'x', {}, { distinctId: 'other' })).not.toThrow()
+  })
+
+  it('trackServerEvent (webhooks) hands the request to the H3 event waitUntil and tags channel=webhook', async () => {
+    const fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 })
+    const waitUntil = vi.fn()
+    trackServerEvent({ waitUntil }, 'ticket_purchased', 'buyer-1', { amount: 100 }, { config, fetch, dedupeKey: 'stripe:cs_1' })
+    expect(waitUntil).toHaveBeenCalledOnce()
+    await waitUntil.mock.calls[0]![0]
+    const body = JSON.parse(fetch.mock.calls[0]![1].body)
+    expect(body).toMatchObject({ event: 'server_ticket_purchased', distinct_id: 'buyer-1', uuid: dedupeUuid('stripe:cs_1') })
+    expect(body.properties).toMatchObject({ channel: 'webhook', amount: 100 })
+    expect(body.properties.$process_person_profile).toBeUndefined()
+  })
+
+  it('trackServerEvent without a known buyer is anonymous and profile-less', async () => {
+    const fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 })
+    const waitUntil = vi.fn()
+    trackServerEvent({ waitUntil }, 'ticket_purchased', null, {}, { config, fetch })
+    await waitUntil.mock.calls[0]![0]
+    const body = JSON.parse(fetch.mock.calls[0]![1].body)
+    expect(body.distinct_id).toMatch(/^anon-server-/)
+    expect(body.properties.$process_person_profile).toBe(false)
+    expect(body.uuid).toBeUndefined()
+  })
+
+  it('trackServerEvent never throws (no event, no key, throwing waitUntil)', () => {
+    expect(() => trackServerEvent(undefined, 'x', 'd')).not.toThrow()
+    expect(() => trackServerEvent({ waitUntil: () => { throw new Error('boom') } }, 'x', 'd', {}, { config, fetch: vi.fn().mockResolvedValue({ ok: true, status: 200 }) })).not.toThrow()
+  })
+
+  it('dedupeUuid is stable, uuid-shaped and key-specific', () => {
+    expect(dedupeUuid('stripe:cs_1')).toBe(dedupeUuid('stripe:cs_1'))
+    expect(dedupeUuid('stripe:cs_1')).not.toBe(dedupeUuid('stripe:cs_2'))
+    expect(dedupeUuid('k')).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
   })
 })

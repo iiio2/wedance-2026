@@ -363,6 +363,7 @@ export const festivalSignupRouter = router({
         metadata: {
           festivalSlug: input.festivalSlug,
           ticketName: input.ticketNames.join(', '),
+          ticketCount: String(input.ticketNames.length),
           dancerId: ctx.dancerId,
           amountCents: String(chargedCents),
           ...(referrerId ? { referrerId, referralDiscount: String(refereeDiscountCents) } : {}),

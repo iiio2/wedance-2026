@@ -1,10 +1,38 @@
 import Stripe from 'stripe'
+import type { H3Event } from 'h3'
 import { eq, and } from 'drizzle-orm'
 import { useDb } from '../../utils/db'
 import { festivals, festivalSignups, dancers, organizerSubscriptions } from '../../database/schema'
 import { sendTicketConfirmationEmail } from '../../utils/email'
-import { completeReferral, expireReferral } from './webhook.lib'
+import {
+  completeReferral, expireReferral, isFestivalCheckout,
+  subscriptionActivatedEvent, subscriptionCancelledEvent, ticketCheckoutExpiredEvent, ticketPurchasedEvent,
+} from './webhook.lib'
 import { eventIdForFestival, recordLinkAction } from '../../utils/trackedLinks'
+import { trackServerEvent } from '../../utils/posthog'
+
+/**
+ * `server_subscription_cancelled`, once per organiser subscription: only while
+ * our row is not yet 'canceled' (call BEFORE the status update), so a Stripe
+ * redelivery or an `updated` + `deleted` pair counts one cancellation. A
+ * subscription we have no row for (another product on the account) is skipped.
+ */
+async function trackSubscriptionCancelled(event: H3Event, db: ReturnType<typeof useDb>, sub: Stripe.Subscription) {
+  const [row] = await db
+    .select({
+      dancerId: organizerSubscriptions.dancerId,
+      plan: organizerSubscriptions.plan,
+      profileId: organizerSubscriptions.profileId,
+      status: organizerSubscriptions.status,
+      createdAt: organizerSubscriptions.createdAt,
+    })
+    .from(organizerSubscriptions)
+    .where(eq(organizerSubscriptions.stripeSubscriptionId, sub.id))
+    .catch(() => [])
+  if (!row || row.status === 'canceled') return
+  const cancelled = subscriptionCancelledEvent(sub, row)
+  trackServerEvent(event, 'subscription_cancelled', cancelled.distinctId, cancelled.properties, { dedupeKey: `stripe-sub-cancel:${sub.id}` })
+}
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
@@ -28,7 +56,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid signature' })
   }
 
-  if (stripeEvent.type === 'checkout.session.completed') {
+  // Festival checkouts (tickets / €1 social unlock). Organiser subscriptions
+  // carry no festivalSlug and are handled in the RAZ-106 block below — they
+  // must not reach the "missing metadata" 400 here.
+  if (stripeEvent.type === 'checkout.session.completed'
+    && (stripeEvent.data.object as Stripe.Checkout.Session).mode !== 'subscription') {
     const session = stripeEvent.data.object as Stripe.Checkout.Session
 
     const festivalSlug = session.metadata?.festivalSlug
@@ -88,6 +120,23 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // Revenue: one `server_ticket_purchased` per paid session. A duplicate row
+    // written by THIS session is a Stripe redelivery (already counted); a
+    // duplicate from an earlier free join is still a new payment.
+    let isRedelivery = false
+    if (isDuplicate) {
+      const [existing] = await db
+        .select({ stripeSessionId: festivalSignups.stripeSessionId })
+        .from(festivalSignups)
+        .where(and(eq(festivalSignups.festivalId, festival.id), eq(festivalSignups.dancerId, dancerId)))
+        .catch(() => [] as { stripeSessionId: string | null }[])
+      isRedelivery = existing?.stripeSessionId === session.id
+    }
+    if (!isRedelivery) {
+      const purchase = ticketPurchasedEvent(session, paidAmount)
+      trackServerEvent(event, 'ticket_purchased', purchase.distinctId, purchase.properties, { dedupeKey: `stripe:${session.id}` })
+    }
+
     // Mark referral as completed if this checkout carried a referral.
     // Runs on every delivery (including retries where the signup is a duplicate)
     // because the referral row may still be 'pending' even if the signup already
@@ -136,6 +185,10 @@ export default defineEventHandler(async (event) => {
   // referral as 'expired' so the referee can use a new referral link later.
   if (stripeEvent.type === 'checkout.session.expired') {
     const session = stripeEvent.data.object as Stripe.Checkout.Session
+    if (isFestivalCheckout(session)) {
+      const expired = ticketCheckoutExpiredEvent(session)
+      trackServerEvent(event, 'ticket_checkout_expired', expired.distinctId, expired.properties, { dedupeKey: `stripe-expired:${session.id}` })
+    }
     if (session.metadata?.referrerId) {
       try {
         await expireReferral(useDb(), session.id)
@@ -171,6 +224,9 @@ export default defineEventHandler(async (event) => {
             currentPeriodStart: new Date(sub.current_period_start * 1000),
             currentPeriodEnd: new Date(sub.current_period_end * 1000),
           })
+          // First delivery only (a redelivery hits the unique constraint below).
+          const activated = subscriptionActivatedEvent(sub, { dancerId, plan: 'network', profileId })
+          trackServerEvent(event, 'subscription_activated', activated.distinctId, activated.properties, { dedupeKey: `stripe-sub:${sub.id}` })
         } catch (e: any) {
           // Idempotent: ignore duplicate on stripe_subscription_id unique constraint
           if (!(e.message?.includes('unique') || e.message?.includes('duplicate') || e.cause?.code === '23505')) {
@@ -192,6 +248,11 @@ export default defineEventHandler(async (event) => {
             : null
 
     if (status) {
+      // A subscription Stripe ends via an `updated` (rather than `deleted`)
+      // delivery still counts as cancelled — once (status guard).
+      if (status === 'canceled') {
+        await trackSubscriptionCancelled(event, db, sub)
+      }
       await db.update(organizerSubscriptions)
         .set({
           status,
@@ -206,6 +267,8 @@ export default defineEventHandler(async (event) => {
   if (stripeEvent.type === 'customer.subscription.deleted') {
     const sub = stripeEvent.data.object as Stripe.Subscription
     const db = useDb()
+
+    await trackSubscriptionCancelled(event, db, sub)
 
     await db.update(organizerSubscriptions)
       .set({

@@ -106,7 +106,7 @@ export const inquiriesRouter = router({
         })
       } catch (e) { console.error('[inquiries] email failed', e) }
     }
-    trackServer(ctx, 'inquiry_sent', { inquiry_id: row!.id, profile: p.username, delivered: forward ? 'wedance' : 'team', signed_in: !!ctx.dancerId })
+    trackServer(ctx, 'booking_inquiry_sent', { inquiry_id: row!.id, profile: p.username, delivered: forward ? 'wedance' : 'team', signed_in: !!ctx.dancerId })
     return { ok: true, id: row!.id, delivered: forward ? 'wedance' as const : 'team' as const }
   }),
 

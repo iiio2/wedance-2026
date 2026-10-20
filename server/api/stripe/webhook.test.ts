@@ -89,7 +89,10 @@ class FakeDb {
 }
 
 // ---------- import under test ----------
-import { completeReferral, expireReferral } from './webhook.lib'
+import {
+  completeReferral, expireReferral, isFestivalCheckout,
+  subscriptionActivatedEvent, subscriptionCancelledEvent, ticketCheckoutExpiredEvent, ticketPurchasedEvent,
+} from './webhook.lib'
 
 // =====================================================================
 // completeReferral
@@ -177,5 +180,110 @@ describe('expireReferral', () => {
     await expireReferral(db, 'cs_456')
 
     expect(db.referrals[0].status).toBe('pending')
+  })
+})
+
+// =====================================================================
+// PostHog conversion payloads (server_ticket_purchased & co.)
+// =====================================================================
+
+const ticketSession = {
+  id: 'cs_paid',
+  mode: 'payment',
+  amount_total: 9000,
+  currency: 'eur',
+  metadata: {
+    festivalSlug: 'charanga-2026',
+    ticketName: 'Full Pass, Party Pass',
+    ticketCount: '2',
+    dancerId: 'dancer-1',
+    amountCents: '9000',
+    referrerId: 'dancer-ref',
+    referralDiscount: '1000',
+    via: 'salsa-crew',
+  },
+}
+
+describe('ticketPurchasedEvent', () => {
+  it('builds the revenue payload for a ticket checkout', () => {
+    const { distinctId, properties } = ticketPurchasedEvent(ticketSession, 9000)
+    expect(distinctId).toBe('dancer-1')
+    expect(properties).toEqual({
+      festival: 'charanga-2026',
+      provider: 'stripe',
+      product: 'ticket',
+      tickets: 2,
+      referral: true,
+      referral_code: 'salsa-crew',
+      discount: 1000,
+      amount: 9000,
+      currency: 'eur',
+      $revenue: 90,
+      $currency: 'EUR',
+    })
+  })
+
+  it('counts tickets from the joined names on older sessions', () => {
+    const { ticketCount: _, ...meta } = ticketSession.metadata
+    expect(ticketPurchasedEvent({ ...ticketSession, metadata: meta }, 9000).properties.tickets).toBe(2)
+  })
+
+  it('marks the €1 social unlock as its own product', () => {
+    const { properties } = ticketPurchasedEvent({ id: 'cs_unlock', mode: 'payment', currency: 'eur', metadata: { festivalSlug: 'f', dancerId: 'd' } }, 100)
+    expect(properties).toMatchObject({ product: 'social_unlock', tickets: 1, referral: false, referral_code: null, amount: 100, $revenue: 1 })
+    expect(properties.discount).toBeUndefined()
+  })
+
+  it('never carries the buyer email or ticket names', () => {
+    const json = JSON.stringify(ticketPurchasedEvent(ticketSession, 9000))
+    expect(json).not.toContain('Full Pass')
+    expect(json).not.toContain('@')
+  })
+})
+
+describe('ticketCheckoutExpiredEvent / isFestivalCheckout', () => {
+  it('reports the abandoned festival checkout without money props', () => {
+    const { distinctId, properties } = ticketCheckoutExpiredEvent(ticketSession)
+    expect(distinctId).toBe('dancer-1')
+    expect(properties).toMatchObject({ festival: 'charanga-2026', provider: 'stripe', tickets: 2, product: 'ticket' })
+    expect(properties.$revenue).toBeUndefined()
+  })
+
+  it('tells festival checkouts from organiser subscriptions', () => {
+    expect(isFestivalCheckout(ticketSession)).toBe(true)
+    expect(isFestivalCheckout({ id: 'cs_sub', mode: 'subscription', metadata: { plan: 'network', dancerId: 'd', profileId: 'p' } })).toBe(false)
+    expect(isFestivalCheckout({ id: 'cs_x', mode: 'payment', metadata: {} })).toBe(false)
+  })
+})
+
+const sub = {
+  id: 'sub_1',
+  created: Math.floor(new Date('2026-09-01T00:00:00Z').getTime() / 1000),
+  items: { data: [{ quantity: 1, price: { unit_amount: 2900, currency: 'eur', recurring: { interval: 'month' } } }] },
+  cancellation_details: { reason: 'cancellation_requested' },
+}
+
+describe('subscription events', () => {
+  it('activated carries plan, price and $revenue for the payer', () => {
+    const { distinctId, properties } = subscriptionActivatedEvent(sub, { dancerId: 'org-1', plan: 'network', profileId: 'prof-1' })
+    expect(distinctId).toBe('org-1')
+    expect(properties).toEqual({
+      plan: 'network', profile_id: 'prof-1', provider: 'stripe',
+      amount: 2900, currency: 'eur', interval: 'month', $revenue: 29, $currency: 'EUR',
+    })
+  })
+
+  it('cancelled carries the Stripe reason and days active, no revenue', () => {
+    const row = { dancerId: 'org-1', plan: 'network', profileId: 'prof-1', createdAt: new Date('2026-09-01T00:00:00Z') }
+    const { distinctId, properties } = subscriptionCancelledEvent(sub, row, new Date('2026-10-01T12:00:00Z'))
+    expect(distinctId).toBe('org-1')
+    expect(properties).toMatchObject({ plan: 'network', profile_id: 'prof-1', reason: 'cancellation_requested', days_active: 30, amount: 2900 })
+    expect(properties.$revenue).toBeUndefined()
+  })
+
+  it('cancelled without our row falls back to the Stripe creation date and stays anonymous', () => {
+    const { distinctId, properties } = subscriptionCancelledEvent({ ...sub, cancellation_details: null }, null, new Date('2026-09-11T00:00:00Z'))
+    expect(distinctId).toBeNull()
+    expect(properties).toMatchObject({ plan: null, reason: null, days_active: 10 })
   })
 })

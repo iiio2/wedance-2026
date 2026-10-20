@@ -1,9 +1,10 @@
 import posthog from 'posthog-js'
+import { isLocalHost } from '~/lib/analytics-host'
 
 /**
  * PostHog product analytics — client only. Initializes once with the public
- * ingest key. When the key is empty (dev, or before the key is wired) this is
- * a complete no-op: `useTrack()` guards on `posthog.__loaded`, so no events and
+ * ingest key. When the key is empty, on a dev build, or on a local host
+ * (localhost / 127.0.0.1 / ::1 / *.localhost / *.test) this is a complete no-op: `useTrack()` guards on `posthog.__loaded`, so no events and
  * no network calls happen. Pageviews are captured manually on route change
  * because Nuxt is an SPA after first load.
  */
@@ -12,6 +13,10 @@ export default defineNuxtPlugin({
   setup() {
     const { public: { posthogKey, posthogHost } } = useRuntimeConfig()
     if (!posthogKey) return
+    // The Vercel-pulled .env carries the PRODUCTION key, so a local `bun run dev`
+    // (or a local build served on localhost) would send events to the prod
+    // project. Never initialise on a dev build or a local host.
+    if (import.meta.dev || isLocalHost(window.location.hostname)) return
 
     posthog.init(posthogKey as string, {
       api_host: posthogHost as string,

@@ -7,13 +7,14 @@
  * builder we actually use. That keeps the suite hermetic — no Neon round-trip
  * required to run `bun run test`.
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { createHmac } from 'node:crypto'
 import {
   verifySignature,
   extractEvents,
   processWebhookBody,
   TICKETTAILOR_FESTIVAL_MAP,
+  ticketTailorPurchaseProps,
 } from './tickettailor.lib'
 import { dancers, festivals, festivalSignups } from '../../database/schema'
 
@@ -364,5 +365,82 @@ describe('processWebhookBody', () => {
     const result = await processWebhookBody(db as any, malformed)
     expect(result.processed).toBe(0)
     expect(result.outcomes[0]).toMatchObject({ kind: 'ignored', reason: 'missing_fields' })
+  })
+})
+
+// =====================================================================
+// server_ticket_purchased (PostHog) — emitted via the onPurchase callback
+// =====================================================================
+
+describe('ticket purchase tracking', () => {
+  it('reports one purchase for a new order, tied to the matching dancer', async () => {
+    const db = new FakeDb()
+    db.seedFestival(CHARANGA_SLUG)
+    const dancerId = db.seedDancer('fan@example.com')
+    const onPurchase = vi.fn()
+
+    const order = { ...buildOrder({ id: 'or_rev', email: 'fan@example.com' }), total: 11000, currency: { code: 'eur', base_multiplier: 100 }, line_items: [{ type: 'ticket', quantity: 2, total: 11000 }] }
+    await processWebhookBody(db as any, buildEnvelope('order.completed', order as any), onPurchase)
+
+    expect(onPurchase).toHaveBeenCalledOnce()
+    const purchase = onPurchase.mock.calls[0]![0]
+    expect(purchase).toMatchObject({ distinctId: dancerId, orderId: 'or_rev' })
+    expect(purchase.properties).toMatchObject({
+      festival: CHARANGA_SLUG,
+      provider: 'tickettailor',
+      tickets: 2,
+      amount: 11000,
+      currency: 'eur',
+      $revenue: 110,
+    })
+  })
+
+  it('is anonymous for an unknown buyer and never carries the name or email', async () => {
+    const db = new FakeDb()
+    db.seedFestival(CHARANGA_SLUG)
+    const onPurchase = vi.fn()
+    await processWebhookBody(db as any, buildEnvelope('order.created', buildOrder({ id: 'or_anon', email: 'stranger@example.com' })), onPurchase)
+
+    const purchase = onPurchase.mock.calls[0]![0]
+    expect(purchase.distinctId).toBeNull()
+    const json = JSON.stringify(purchase.properties)
+    expect(json).not.toContain('stranger@example.com')
+    expect(json).not.toContain('Iciar')
+  })
+
+  it('counts an order once across order.created + order.completed and replays', async () => {
+    const db = new FakeDb()
+    db.seedFestival(CHARANGA_SLUG)
+    const onPurchase = vi.fn()
+    const order = buildOrder({ id: 'or_once', email: 'once@example.com' })
+    await processWebhookBody(db as any, buildEnvelope('order.created', order), onPurchase)
+    await processWebhookBody(db as any, buildEnvelope('order.completed', order), onPurchase)
+    await processWebhookBody(db as any, buildEnvelope('order.completed', order), onPurchase)
+    expect(onPurchase).toHaveBeenCalledOnce()
+  })
+
+  it('reports the purchase when it promotes an existing free signup', async () => {
+    const db = new FakeDb()
+    const festivalId = db.seedFestival(CHARANGA_SLUG)
+    const dancerId = db.seedDancer('joined@example.com')
+    db.seedSignup({ festivalId, dancerId, paidAmount: 0, verifiedTicketHolder: false })
+    const onPurchase = vi.fn()
+    await processWebhookBody(db as any, buildEnvelope('order.completed', buildOrder({ id: 'or_up', email: 'joined@example.com' })), onPurchase)
+    expect(onPurchase).toHaveBeenCalledOnce()
+    expect(onPurchase.mock.calls[0]![0].distinctId).toBe(dancerId)
+  })
+
+  it('does not report ignored orders', async () => {
+    const db = new FakeDb()
+    db.seedFestival(CHARANGA_SLUG)
+    const onPurchase = vi.fn()
+    await processWebhookBody(db as any, buildEnvelope('order.completed', buildOrder({ ttEventId: 'ev_unknown' })), onPurchase)
+    await processWebhookBody(db as any, JSON.stringify({ event: 'ticket.refunded', payload: buildOrder() }), onPurchase)
+    expect(onPurchase).not.toHaveBeenCalled()
+  })
+
+  it('falls back to line items when the order has no total', () => {
+    const props = ticketTailorPurchaseProps(buildOrder() as any, 'fest')
+    expect(props).toMatchObject({ amount: 5500, currency: 'eur', $revenue: 55, tickets: 1 })
   })
 })
