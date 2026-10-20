@@ -129,6 +129,7 @@ const eventHref = (e: { id: string; name?: string | null; booking?: boolean }) =
 const syncedTypeMap: Record<string, string> = { Course: 'class', Workshop: 'workshop', Party: 'social', Concert: 'social', Show: 'social' }
 const toCityEvent = (e: any) => ({
   id: e.id, name: e.name || 'Event', type: syncedTypeMap[e.type] || 'social',
+  typeLabel: e.type === 'Concert' || e.type === 'Show' ? e.type : undefined,
   style: e.styles?.[0] || '', styles: e.styles || [],
   day: eventLocalWeekday(e.startDate, e.timezone), time: eventLocalTime(e.startDate, e.timezone),
   duration: e.endDate ? Math.round((new Date(e.endDate).getTime() - new Date(e.startDate).getTime()) / 60000) : 0,

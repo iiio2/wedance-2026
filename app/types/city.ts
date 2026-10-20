@@ -6,6 +6,8 @@ export interface CityEvent {
   id: string
   name: string
   type: EventType
+  /** Chip label when it differs from the type bucket (a synced Concert/Show groups as social). */
+  typeLabel?: string
   style: string
   day: DayOfWeek
   time: string
