@@ -182,7 +182,7 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | Event | Fired in | Props |
 |---|---|---|
 | `$pageview` | `plugins/03.posthog.client.ts` (route change) | `path` |
-| `signup_completed` | `useAuth.register`, `useAuth.verifyMagicLink` (new account) | `method` (password / magic_link) |
+| `signup_completed` | `useAuth.register`, `useAuth.verifyMagicLink` (server says `isNew`, rule below) | `method` (password / magic_link) |
 | `login_completed` | `useAuth.login`, `useAuth.verifyMagicLink` | `method` |
 | `onboarding_completed` | `useAuth.completeOnboarding` | `intent` |
 | `profile_updated` | `useAuth.updateProfile` | — |
@@ -225,7 +225,7 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 
 | Event | Procedure | Props |
 |---|---|---|
-| `server_signup_completed` | `auth.register`, `auth.verifyMagicLink` (first verified passwordless sign-in) | `method`, `has_city`, `via_link` |
+| `server_signup_completed` | `auth.register`, `auth.verifyMagicLink` (account created by this flow, see note) | `method`, `has_city`, `via_link` |
 | `server_login_completed` | `auth.login`, `auth.verifyMagicLink` | `method` |
 | `server_onboarding_completed` | `auth.completeOnboarding` | `intent` |
 | `server_event_created` | `businessEvents.create`, `businessEvents.createSeries` | `event_id`, `is_festival`, `host_type`, `city`, `published`, `series_id`, `dates` |
@@ -240,5 +240,10 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `server_festival_joined` | `festivalSignup.join` | `festival` |
 | `server_ticket_checkout_started` | `festivalSignup.ticketCheckout`, `festivalSignup.createCheckoutSession` | `festival`, `tickets`, `referral` |
 | `server_subscription_checkout_started` | `organizerSubscription.createCheckout` | `plan`, `profile_type` |
+
+**Magic-link sign-up rule** (`server/utils/magicLinkSignup.ts`): a magic-link sign-in counts as a
+sign-up only when the account was created by the magic-link flow — created < 24 h ago, no `source_ref`
+(migrated v4 dancers never count), no password, never email-verified, and no earlier session.
+Anything else is `login_completed`.
 
 Adding an event: snake_case, one per user intent, non-PII props, and add a row above.

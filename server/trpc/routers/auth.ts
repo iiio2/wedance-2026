@@ -17,6 +17,7 @@ import { generateUsername } from '../../utils/slug'
 import { freeHandle } from '../../utils/handles'
 import { recordLinkAction } from '../../utils/trackedLinks'
 import { trackServer } from '../../utils/posthog'
+import { isMagicLinkSignup } from '../../utils/magicLinkSignup'
 
 // FirebaseScrypt parameters, ported verbatim from wedance-v4
 // (server/api/auth/[...].ts). These MUST match v4 exactly so legacy user
@@ -176,6 +177,8 @@ export const authRouter = router({
           isAdmin: dancers.isAdmin,
           emailVerifiedAt: dancers.emailVerifiedAt,
           hash: dancers.hash,
+          createdAt: dancers.createdAt,
+          sourceRef: dancers.sourceRef,
         })
         .from(dancers)
         .where(
@@ -201,9 +204,11 @@ export const authRouter = router({
         .set({ magicToken: null, magicTokenExpiresAt: null, emailVerifiedAt: new Date() })
         .where(eq(dancers.id, dancer.id))
 
-      // First verified sign-in of a passwordless account = the magic-link
-      // sign-up (requestMagicLink created the row); anything else is a login.
-      const isNew = !dancer.emailVerifiedAt && !dancer.hash
+      // A sign-up only when this flow just created the account (recent, not
+      // migrated, no password, never verified, no earlier session) — see
+      // server/utils/magicLinkSignup.ts. Migrated v4 dancers never count.
+      const [prior] = await ctx.db.select({ id: sessions.id }).from(sessions).where(eq(sessions.dancerId, dancer.id)).limit(1)
+      const isNew = isMagicLinkSignup({ ...dancer, hadSession: !!prior })
       trackServer(ctx, isNew ? 'signup_completed' : 'login_completed', { method: 'magic_link' }, { distinctId: dancer.id })
       return { ...(await createSession(ctx.db, dancer)), isNew }
     }),
