@@ -158,6 +158,154 @@ describe('booking.request', () => {
     })
     expect(out.ok).toBe(true)
   })
+
+  // ── Area (spaceId) validation ───────────────────────────────────────────────
+  it('rejects a non-UUID spaceId at the schema level', async () => {
+    const db = new FakeDb()
+    await expect(caller(db).booking.request({
+      spaceId: 'not-a-uuid',
+      email: 'org@example.com', termsAccepted: true,
+    })).rejects.toThrow()
+  })
+
+  // ── Headcount validation ────────────────────────────────────────────────────
+  it('rejects headcount of zero', async () => {
+    const db = new FakeDb()
+    db.bookableSpaces.push({ id: '11111111-1111-4111-8111-111111111111', profileId: 'p1', name: 'A' })
+    await expect(caller(db).booking.request({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      email: 'org@example.com', termsAccepted: true, headcount: 0,
+    })).rejects.toThrow()
+  })
+
+  it('rejects a negative headcount', async () => {
+    const db = new FakeDb()
+    db.bookableSpaces.push({ id: '11111111-1111-4111-8111-111111111111', profileId: 'p1', name: 'A' })
+    await expect(caller(db).booking.request({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      email: 'org@example.com', termsAccepted: true, headcount: -5,
+    })).rejects.toThrow()
+  })
+
+  it('rejects a fractional headcount', async () => {
+    const db = new FakeDb()
+    db.bookableSpaces.push({ id: '11111111-1111-4111-8111-111111111111', profileId: 'p1', name: 'A' })
+    await expect(caller(db).booking.request({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      email: 'org@example.com', termsAccepted: true, headcount: 1.5,
+    })).rejects.toThrow()
+  })
+
+  it('rejects headcount above 100 000', async () => {
+    const db = new FakeDb()
+    db.bookableSpaces.push({ id: '11111111-1111-4111-8111-111111111111', profileId: 'p1', name: 'A' })
+    await expect(caller(db).booking.request({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      email: 'org@example.com', termsAccepted: true, headcount: 100001,
+    })).rejects.toThrow()
+  })
+
+  it('accepts headcount at lower boundary (1)', async () => {
+    const db = new FakeDb()
+    db.bookableSpaces.push({ id: '11111111-1111-4111-8111-111111111111', profileId: 'p1', name: 'A' })
+    const out = await caller(db).booking.request({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      email: 'org@example.com', termsAccepted: true, headcount: 1,
+    })
+    expect(out.ok).toBe(true)
+  })
+
+  it('accepts headcount at upper boundary (100 000)', async () => {
+    const db = new FakeDb()
+    db.bookableSpaces.push({ id: '11111111-1111-4111-8111-111111111111', profileId: 'p1', name: 'A' })
+    const out = await caller(db).booking.request({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      email: 'org@example.com', termsAccepted: true, headcount: 100000,
+    })
+    expect(out.ok).toBe(true)
+  })
+
+  // ── Message validation ──────────────────────────────────────────────────────
+  it('rejects a message longer than 2 000 characters', async () => {
+    const db = new FakeDb()
+    db.bookableSpaces.push({ id: '11111111-1111-4111-8111-111111111111', profileId: 'p1', name: 'A' })
+    await expect(caller(db).booking.request({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      email: 'org@example.com', termsAccepted: true, message: 'x'.repeat(2001),
+    })).rejects.toThrow()
+  })
+
+  it('accepts a message at exactly 2 000 characters', async () => {
+    const db = new FakeDb()
+    db.bookableSpaces.push({ id: '11111111-1111-4111-8111-111111111111', profileId: 'p1', name: 'A' })
+    const out = await caller(db).booking.request({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      email: 'org@example.com', termsAccepted: true, message: 'x'.repeat(2000),
+    })
+    expect(out.ok).toBe(true)
+  })
+
+  // ── Date validation (business logic) ────────────────────────────────────────
+  it('accepts a request with no eventDate (optional)', async () => {
+    const db = new FakeDb()
+    db.bookableSpaces.push({ id: '11111111-1111-4111-8111-111111111111', profileId: 'p1', name: 'A' })
+    const out = await caller(db).booking.request({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      email: 'org@example.com', termsAccepted: true,
+    })
+    expect(out.ok).toBe(true)
+    expect(db.bookingRequests[0].eventDate).toBeNull()
+  })
+
+  it('rejects startTime outside published slot hours', async () => {
+    const db = new FakeDb()
+    const spaceId = '11111111-1111-4111-8111-111111111111'
+    db.bookableSpaces.push({ id: spaceId, profileId: 'p1', name: 'A' })
+    // Slot on Monday (1) from 18:00–23:00
+    db.availabilitySlots.push({ id: 'av1', spaceId, dayOfWeek: 1, startTime: '18:00', endTime: '23:00', isActive: true })
+    // 2026-10-05 is a Monday — correct day, but 10:00 is before the 18:00 window
+    await expect(caller(db).booking.request({
+      spaceId, email: 'org@example.com', termsAccepted: true,
+      eventDate: '2026-10-05', startTime: '10:00',
+    })).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+
+  it('accepts startTime within published slot hours', async () => {
+    const db = new FakeDb()
+    const spaceId = '11111111-1111-4111-8111-111111111111'
+    db.bookableSpaces.push({ id: spaceId, profileId: 'p1', name: 'A' })
+    db.availabilitySlots.push({ id: 'av1', spaceId, dayOfWeek: 1, startTime: '18:00', endTime: '23:00', isActive: true })
+    // 2026-10-05 is a Monday, 19:00 falls inside 18:00–23:00
+    const out = await caller(db).booking.request({
+      spaceId, email: 'org@example.com', termsAccepted: true,
+      eventDate: '2026-10-05', startTime: '19:00',
+    })
+    expect(out.ok).toBe(true)
+  })
+
+  it('rejects endTime that exceeds the slot window', async () => {
+    const db = new FakeDb()
+    const spaceId = '11111111-1111-4111-8111-111111111111'
+    db.bookableSpaces.push({ id: spaceId, profileId: 'p1', name: 'A' })
+    db.availabilitySlots.push({ id: 'av1', spaceId, dayOfWeek: 1, startTime: '18:00', endTime: '23:00', isActive: true })
+    // 2026-10-05 Monday, start 19:00 ok but end 23:30 exceeds slot
+    await expect(caller(db).booking.request({
+      spaceId, email: 'org@example.com', termsAccepted: true,
+      eventDate: '2026-10-05', startTime: '19:00', endTime: '23:30',
+    })).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+
+  it('stores headcount and message on the persisted booking request', async () => {
+    const db = new FakeDb()
+    db.bookableSpaces.push({ id: '11111111-1111-4111-8111-111111111111', profileId: 'p1', name: 'A' })
+    await caller(db).booking.request({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      email: 'org@example.com', termsAccepted: true,
+      headcount: 120, message: 'Birthday party',
+    })
+    expect(db.bookingRequests[0].headcount).toBe(120)
+    expect(db.bookingRequests[0].message).toBe('Birthday party')
+  })
 })
 
 describe('booking.setAvailability', () => {
