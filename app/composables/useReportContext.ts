@@ -6,7 +6,6 @@
  * context can never break the report flow. Nothing sensitive is collected —
  * URLs, device metadata, and error strings only.
  */
-import type posthogT from 'posthog-js'
 
 export interface ReportContext {
   url?: string
@@ -72,15 +71,11 @@ export function useReportContext() {
       }
     } catch { /* ignore */ }
 
-    // PostHog — session replay deep link, if the SDK is initialised.
+    // PostHog — session replay deep link. The npm build never sets
+    // window.posthog, so read it through useTrack (the imported singleton).
     try {
-      const ph = (window as unknown as { posthog?: typeof posthogT }).posthog as
-        | (typeof posthogT & { get_session_replay_url?: (o?: unknown) => string })
-        | undefined
-      if (ph && typeof ph.get_session_replay_url === 'function') {
-        const url = ph.get_session_replay_url({ withTimestamp: true })
-        if (url) ctx.posthogSessionUrl = url
-      }
+      const url = useTrack().sessionReplayUrl()
+      if (url) ctx.posthogSessionUrl = url
     } catch { /* ignore */ }
 
     return ctx

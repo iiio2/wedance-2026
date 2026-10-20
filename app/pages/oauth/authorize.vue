@@ -70,6 +70,7 @@ async function allow() {
       scopes: selectedScopes.value,
       profileIds: businessPicked.value ? selectedProfiles.value : [],
     })
+    useTrack().track('app_connected', { scopes: selectedScopes.value.length, business: businessPicked.value })
     window.location.replace(redirect)
   } catch (e: any) {
     actionError.value = e?.message || 'Couldn’t connect the app. Try again.'

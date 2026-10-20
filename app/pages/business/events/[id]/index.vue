@@ -90,10 +90,13 @@ async function save(v: BusinessEventValues) {
     const input = toBusinessEventInput(v)
     const oldHost = ev.value?.host?.username
     const hostChanged = input.hostUsername !== oldHost
+    const wasPublished = !!ev.value?.published
     await $trpc.businessEvents.update.mutate({
       id: id.value,
       ...(hostChanged ? input : (() => { const { hostUsername: _h, ...rest } = input; return rest })()),
     })
+    // Draft → live is the publish moment (re-saving a live event is not).
+    if (input.published && !wasPublished) useTrack().track('event_published', { event_id: id.value, is_festival: !!input.festival, city: input.city || null, style: input.styles?.[0] ?? null })
     await load()
     panelRef.value?.reload()
     captionRef.value?.reload()

@@ -107,8 +107,25 @@ async function load() {
       else failed.value = true
     }
   } finally { pending.value = false }
+  trackView()
 }
 onMounted(load)
+
+// One view per mount (trackOnce also drops the remount after the canonical-URL replace).
+function trackView() {
+  const e = ev.value
+  if (!e?.id) return
+  const props = {
+    event_id: e.id,
+    city: e.citySlug || null,
+    style: e.styles?.[0] || null,
+    event_type: e.eventType || null,
+    synced: !!e.synced,
+    is_festival: !!festivalData.value,
+  }
+  if (festivalData.value) useTrack().trackOnce(e.id, 'festival_viewed', props)
+  else useTrack().trackOnce(e.id, 'event_viewed', props)
+}
 
 // Managers of the hosting profile (and admins) get an Edit button. Bookings and
 // synced events have no host on WeDance, so nobody edits them here.

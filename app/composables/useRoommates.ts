@@ -29,6 +29,7 @@ export function useRoommates(festivalSlug: string) {
     try {
       const result = await $trpc.roommate.toggle.mutate({ festivalSlug })
       lookingForRoommate.value = result.looking
+      useTrack().track('roommate_search_toggled', { festival: festivalSlug, looking: result.looking })
       if (result.looking) {
         await loadRoommateStatus()
       }

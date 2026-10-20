@@ -102,6 +102,7 @@ async function submitNomination() {
   nom.busy = true
   try {
     await $trpc.election.nominate.mutate({ electionId: election.value.id, ...result.data })
+    useTrack().track('election_nominated', { election_id: election.value.id })
     nom.open = false; nom.guidelines = ''; nom.statement = ''
     await loadElection()
   } catch (e: any) { nom.err = e?.message || 'Could not submit your candidacy.' }

@@ -64,6 +64,7 @@ async function refreshStatus() {
         const result = await $trpc.claim.claimMyTicketHolderRows.mutate()
         if (result.claimed > 0) {
           status.value = { kind: 'claimed', festivals: result.festivals }
+          useTrack().track('tickets_claimed', { count: result.claimed, festivals: result.festivals?.length ?? 0 })
         } else {
           status.value = { kind: 'already-claimed' }
         }

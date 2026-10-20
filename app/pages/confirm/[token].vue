@@ -203,6 +203,7 @@ async function claim() {
   if (!('token' in key.value)) return
   claiming.value = true
   accountError.value = null
+  const isSignedInBefore = isSignedIn.value
   try {
     if (!isSignedIn.value) {
       if (!/^\S+@\S+\.\S+$/.test(account.email)) throw new Error('Add your email.')
@@ -210,6 +211,7 @@ async function claim() {
       await register({ name: form.name.trim(), email: account.email, password: account.password })
     }
     await $trpc.artistInvites.claim.mutate({ token: param.value })
+    useTrack().track('profile_claimed', { via: 'invite', new_account: !isSignedInBefore })
     step.value = 'done'
   } catch (e: any) {
     accountError.value = e?.message || 'Couldn’t create the account.'

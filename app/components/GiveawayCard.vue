@@ -48,6 +48,7 @@ async function enter() {
     })
     entered.value = true
     already.value = res.alreadyEntered
+    if (!res.alreadyEntered) useTrack().track('giveaway_entered', { giveaway_id: props.giveaway.id })
   } catch (e: any) {
     error.value = e?.message ?? 'Could not enter. Try again.'
   } finally {

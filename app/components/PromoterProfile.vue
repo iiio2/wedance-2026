@@ -98,6 +98,7 @@ async function toggleFollow() {
   try {
     const result = await $trpc.follow.toggle.mutate({ profileId: props.profile.id })
     following.value = result.following
+    useTrack().track(result.following ? 'follow' : 'unfollow', { target: 'profile', profile: props.profile.username, profile_type: props.profile.type, surface: 'promoter_profile' })
     followerCount.value += result.following ? 1 : -1
   } catch {} finally { followBusy.value = false }
 }
@@ -132,6 +133,7 @@ async function toggleArtistFollow() {
     if (p) {
       const result = await $trpc.follow.toggle.mutate({ profileId: p.profile.id })
       artistFollowing.value = result.following
+      useTrack().track(result.following ? 'follow' : 'unfollow', { target: 'profile', profile: openArtist.value.username, profile_type: 'artist', surface: 'promoter_artist_overlay' })
     }
   } catch {} finally { artistFollowBusy.value = false }
 }

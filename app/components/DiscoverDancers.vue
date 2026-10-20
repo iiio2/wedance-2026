@@ -111,6 +111,7 @@ async function joinDeck() {
   if (joining.value) return
   joining.value = true
   joinError.value = ''
+  const wasGoing = isGoing.value
   try {
     if (!isGoing.value) {
       await $trpc.plan.add.mutate({ itemType: props.itemType, itemId: props.festivalSlug })
@@ -118,6 +119,7 @@ async function joinDeck() {
     }
     await $trpc.plan.setShareGoing.mutate({ itemType: props.itemType, itemId: props.festivalSlug, share: true })
     visible.value = true
+    useTrack().track('discover_deck_joined', { item_type: props.itemType, item_id: props.festivalSlug, was_going: wasGoing })
   } catch {
     joinError.value = 'Could not save that. Please try again.'
   } finally {
@@ -387,6 +389,7 @@ function swipe(direction: 'left' | 'right') {
       else if (card.cardType === 'activity') emit('join-activity', id)
       else if (!card.cardType || card.cardType === 'dancer') {
         // Send wave (fire-and-forget, already idempotent)
+        useTrack().track('wave_sent', { festival: props.festivalSlug, surface: 'discover_deck' })
         $trpc.wave.send.mutate({
           festivalSlug: props.festivalSlug,
           targetDancerId: id,

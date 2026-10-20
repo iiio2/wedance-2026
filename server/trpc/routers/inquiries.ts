@@ -7,6 +7,7 @@ import { inquirySchema } from '../../../shared/utils/bookingInquiry'
 import { sendBookingInquiryEmail } from '../../utils/email'
 import { requireMember } from './business'
 import { requireEventManager } from './businessEvents'
+import { trackServer } from '../../utils/posthog'
 
 /**
  * Booking inquiries — anyone asks to book an artist or venue from their page
@@ -105,6 +106,7 @@ export const inquiriesRouter = router({
         })
       } catch (e) { console.error('[inquiries] email failed', e) }
     }
+    trackServer(ctx, 'inquiry_sent', { inquiry_id: row!.id, profile: p.username, delivered: forward ? 'wedance' : 'team', signed_in: !!ctx.dancerId })
     return { ok: true, id: row!.id, delivered: forward ? 'wedance' as const : 'team' as const }
   }),
 

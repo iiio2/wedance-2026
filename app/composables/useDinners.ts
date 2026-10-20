@@ -42,6 +42,7 @@ export function useDinners(festivalSlug: string) {
 
     try {
       await $trpc.dinner.join.mutate({ dinnerId: id })
+      useTrack().track('dinner_joined', { dinner_id: id })
     } catch (e: any) {
       // Rollback on failure
       d.userJoined = false

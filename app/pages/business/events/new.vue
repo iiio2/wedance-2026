@@ -41,7 +41,11 @@ async function create(v: BusinessEventValues) {
   saving.value = true
   error.value = null
   try {
-    const { id } = await $trpc.businessEvents.create.mutate(toBusinessEventInput(v))
+    const input = toBusinessEventInput(v)
+    const { id } = await $trpc.businessEvents.create.mutate(input)
+    const props = { event_id: id, is_festival: !!input.festival, city: input.city || null, style: input.styles?.[0] ?? null }
+    useTrack().track('event_created', { ...props, published: !!input.published })
+    if (input.published) useTrack().track('event_published', props)
     await navigateTo(`/business/events/${id}?created=1`)
   } catch (e: any) {
     error.value = e?.message || 'Could not create the event.'

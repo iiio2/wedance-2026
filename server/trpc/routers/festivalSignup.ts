@@ -7,6 +7,7 @@ import { festivals, festivalSignups, dancers, referrals } from '../../database/s
 import { getTicketPriceCents, getReferralDiscountPercent } from '../../utils/ticket-prices'
 import { festivalPath } from '../../../shared/utils/eventSlug'
 import { eventIdForFestival, recordLinkAction } from '../../utils/trackedLinks'
+import { trackServer } from '../../utils/posthog'
 
 function getStripe() {
   const config = useRuntimeConfig()
@@ -116,6 +117,7 @@ export const festivalSignupRouter = router({
       if (ctx.viaCode) {
         await recordLinkAction(ctx.db, ctx.viaCode, 'plan_add', { dancerId: ctx.dancerId, eventId: await eventIdForFestival(ctx.db, input.festivalSlug) })
       }
+      trackServer(ctx, 'festival_joined', { festival: input.festivalSlug })
       return { joined: true }
     }),
 
@@ -177,6 +179,7 @@ export const festivalSignupRouter = router({
         cancel_url: `${config.siteUrl}${festivalPath(input.festivalSlug)}?payment=cancel`,
       })
 
+      trackServer(ctx, 'ticket_checkout_started', { festival: input.festivalSlug, tickets: 1, referral: false })
       return { checkoutUrl: session.url }
     }),
 
@@ -403,6 +406,7 @@ export const festivalSignupRouter = router({
         }
       }
 
+      trackServer(ctx, 'ticket_checkout_started', { festival: input.festivalSlug, tickets: input.ticketNames.length, referral: !!input.referralCode })
       return {
         checkoutUrl: session.url,
         discountCents: totalDiscountCents,

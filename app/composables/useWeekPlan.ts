@@ -42,6 +42,7 @@ export function useWeekPlan() {
     const next = new Set(weekPlanIds.value)
     next.delete(id)
     weekPlanIds.value = next
+    useTrack().track('week_plan_remove', { event_id: id, week_count: next.size })
     const { $trpc } = useNuxtApp()
     $trpc.plan.remove
       .mutate({ itemType: 'event', itemId: id })

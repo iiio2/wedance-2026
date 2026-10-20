@@ -5,6 +5,7 @@ import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
 import { bookableSpaces, bookingRequests, profiles, availabilitySlots, dancers } from '../../database/schema'
 import { requireProfileRole } from '../../utils/profileAccess'
+import { trackServer } from '../../utils/posthog'
 
 // Validates a HH:MM string has realistic hour (00–23) and minute (00–59).
 const timeString = z.string().regex(/^\d{2}:\d{2}$/).refine((v) => {
@@ -231,6 +232,7 @@ export const bookingRouter = router({
         })
         .returning({ id: bookingRequests.id })
 
+      trackServer(ctx, 'booking_requested', { booking_id: row!.id, signed_in: !!ctx.dancerId })
       return { ok: true, id: row!.id }
     }),
 

@@ -101,6 +101,7 @@ async function toggleFollow() {
   try {
     const result = await $trpc.follow.toggle.mutate({ profileId: p.id })
     following.value = result.following
+    useTrack().track(result.following ? 'follow' : 'unfollow', { target: 'profile', profile: p.username, profile_type: p.type, surface: 'profile_page' })
     followerCount.value += result.following ? 1 : -1
   } catch (e) {
     console.error('follow.toggle failed', e)

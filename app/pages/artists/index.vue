@@ -80,6 +80,8 @@ const filtered = computed(() => {
   })
 })
 
+useTrackSearch('artists', () => ({ query: searchQuery.value, filters: { city: selectedCity.value, style: selectedStyle.value } }), () => filtered.value.length)
+
 const accents = [WD.red600, WD.cyan600, WD.green600, WD.purple500, WD.amber500, WD.pink500, WD.violet600]
 const NuxtLinkC = resolveComponent('NuxtLink')
 </script>

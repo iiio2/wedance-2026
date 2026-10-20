@@ -151,3 +151,94 @@ bun run dev:db-proxy          # Neon-HTTP-compatible proxy on :4444
 # .env: DATABASE_URL=postgresql://dev:dev@localhost:5441/wedance
 #       NEON_FETCH_ENDPOINT=http://localhost:4444/sql
 ```
+
+## Analytics (PostHog)
+
+**Setup.** Client: `app/plugins/03.posthog.client.ts` (posthog-js, EU host, manual `$pageview`
+on route change, `person_profiles: 'identified_only'`). Call sites use `useTrack()`
+(`app/composables/useTrack.ts`: `track`, `trackOnce`, `identify`, `reset`, `sessionReplayUrl`) —
+never import posthog directly; everything is a no-op without `NUXT_PUBLIC_POSTHOG_KEY` (dev, tests).
+Server: `server/utils/posthog.ts` → `trackServer(ctx, name, props)` from tRPC procedures
+(dependency-free `fetch` to `/i/v0/e/`, handed to `ctx.waitUntil`, never throws, off under vitest).
+
+**The `app` filter rule.** 2026 shares the WeDance v4 PostHog project (EU free plan = one project).
+Every event — client super-property and server payload — carries `app: 'wedance-2026'`.
+**Always filter insights/funnels on `app = wedance-2026`.**
+
+**Identity.** `identify(dancerId)` runs on sign-in (`setSession`) and on every session restore
+(`auth.me` → `_applyMe`), idempotently (skipped when `get_distinct_id()` already is the dancer; only
+person props are refreshed). Person props are non-PII only: `city`, `is_admin`, `role`, `intent`,
+`onboarded`, `dance_styles_count`, `has_username`. Never send names, emails or raw search text.
+`reset()` on sign-out. Server events use `distinct_id = dancerId`; anonymous server calls get a random
+id + `$process_person_profile: false`.
+
+**Client vs server convention.** Conversions fire twice: the client event (in-session context:
+pageviews, replay, UTM) and a `server_<same name>` copy from the router (survives ad blockers).
+**Count conversions on `server_*`**; use the un-prefixed client event for in-session funnels. Never
+mix the two in one count. Server events also carry `$lib: 'wedance-server'` and `channel: web|mcp`.
+
+### Client events (`useTrack().track`)
+
+| Event | Fired in | Props |
+|---|---|---|
+| `$pageview` | `plugins/03.posthog.client.ts` (route change) | `path` |
+| `signup_completed` | `useAuth.register`, `useAuth.verifyMagicLink` (new account) | `method` (password / magic_link) |
+| `login_completed` | `useAuth.login`, `useAuth.verifyMagicLink` | `method` |
+| `onboarding_completed` | `useAuth.completeOnboarding` | `intent` |
+| `profile_updated` | `useAuth.updateProfile` | — |
+| `city_viewed` | `pages/cities/[city]/index.vue` (once per mount) | `city`, `style` |
+| `event_viewed` | `pages/events/[id].vue` (non-festival, once per mount) | `event_id`, `city`, `style`, `event_type`, `synced`, `is_festival` |
+| `festival_viewed` | `pages/events/[id].vue` (festival) | same as `event_viewed` |
+| `filter_used` | city page style chip | `surface`, `city`, `filter_keys`, `style` |
+| `search_used` | `/festivals`, `/artists`, `/gigs` (`useTrackSearch`, debounced) | `surface`, `query_length`, `filter_keys`, `results` |
+| `week_plan_add` / `week_plan_remove` | `useWeekPlan` (Going! toggle), `my-plan` enroll / course X | `event_id`, `week_count` or `source` |
+| `year_plan_add` / `year_plan_remove` | `useYearPlan` | `festival_slug`, `year_count` |
+| `workshop_plan_add` / `workshop_plan_remove` | `festival/FestivalView.vue` | `festival`, `workshop_id`, `workshop_type`, `partner_status` |
+| `discover_swipe` | `my-plan` discover deck | `direction`, `card_kind`, `added_festival`, `added_event` |
+| `goal_added` | `useGoals.addGoal` | `style` |
+| `follow` / `unfollow` | `/@handle`, `PromoterProfile` (profiles); `FestivalView` shared plan (dancer) | `target`, `profile`, `profile_type`, `surface` |
+| `whos_going_profile_opened` | `GoingSection` face tap | `item_type`, `item_id` |
+| `going_visibility_changed` | `GoingSection` share toggle | `share`, `item_type`, `item_id` |
+| `wave_sent` / `wave_retracted` | `GoingSection`, `DiscoverDancers` | `festival`, `surface` |
+| `discover_deck_joined` | `DiscoverDancers` "show me" | `item_type`, `item_id`, `was_going` |
+| `hangout_created` | `FestivalView`, `my-plan` | `kind`, `surface`, `event_id` / `event_linked` |
+| `hangout_rsvp` | `FestivalView`, `my-plan` | `going`, `surface`, `hangout_id` |
+| `dinner_joined` · `ride_share_posted` · `roommate_search_toggled` | `useDinners` · `useRideShares` · `useRoommates` | `dinner_id` · `festival`, `type` · `festival`, `looking` |
+| `shared_plan_signup` | `SharePlanModal`, `FestivalView`, `my-year` | `surface`, `slug` |
+| `ask_locals_post` · `video_submit` · `video_vote` · `city_battle_vote` | city components | `city`, … |
+| `review_submitted` · `giveaway_entered` · `election_nominated` | `ReviewsSection` · `GiveawayCard` · `elections/[handle]` | target ids |
+| `event_created` / `event_published` | `business/events/new.vue`; publish = draft→live in `business/events/[id]` | `event_id`, `is_festival`, `city`, `style`, `published` |
+| `business_profile_created` | `business/new.vue` | `profile`, `profile_type`, `from_instagram` |
+| `profile_claim_started` / `team_join_started` | `business/claim.vue` (form opened) | `profile`, `kind` |
+| `profile_claim_requested` / `team_join_requested` | `business/claim.vue` (sent) | `profile`, `kind`, `evidence_type` |
+| `profile_claimed` | `confirm/[token].vue` (invite link) | `via`, `new_account` |
+| `tickets_claimed` | `charanga/claim.vue` | `count`, `festivals` |
+| `booking_inquiry_sent` · `booking_join_offered` · `booking_request_submitted` · `booking_added_to_event` | `BookingInquiryForm`, `PromoterProfile`, `/@handle`, `book/[handle]` | `profile`, … |
+| `event_inquiry_submitted` | `for-events.vue` | `event_type`, `city` |
+| `gig_posted` · `gig_cta_click` | `gigs/index.vue` | `kind`, `category` · `action`, `gig_id` |
+| `ticket_cta_click` | `FestivalHero`, `FestivalView` | `slug`, … |
+| `organizer_cta_click` · `sponsor_cta_click` · `press_cta_click` · `whats_new_*_click` | marketing pages | `surface`, `kind` |
+| `app_connected` | `oauth/authorize.vue` | `scopes`, `business` |
+| `problem_report_opened` / `problem_report_submitted` | `ReportProblem` | `type` |
+
+### Server events (`trackServer`, all prefixed `server_`)
+
+| Event | Procedure | Props |
+|---|---|---|
+| `server_signup_completed` | `auth.register`, `auth.verifyMagicLink` (first verified passwordless sign-in) | `method`, `has_city`, `via_link` |
+| `server_login_completed` | `auth.login`, `auth.verifyMagicLink` | `method` |
+| `server_onboarding_completed` | `auth.completeOnboarding` | `intent` |
+| `server_event_created` | `businessEvents.create`, `businessEvents.createSeries` | `event_id`, `is_festival`, `host_type`, `city`, `published`, `series_id`, `dates` |
+| `server_event_published` | `create`/`createSeries` with `published`, `update` draft→live, `publishSeries` | `event_id`, `is_festival`, `series_id`, `dates` |
+| `server_booking_requested` | `booking.request` | `booking_id`, `signed_in` |
+| `server_inquiry_sent` | `inquiries.send` | `inquiry_id`, `profile`, `delivered`, `signed_in` |
+| `server_event_inquiry_submitted` | `feedback.inquiry` | `event_type`, `city` |
+| `server_festival_draft_submitted` | `festival.submitDraft` (server only) | `submission_id`, `festival`, `signed_in` |
+| `server_profile_claim_requested` / `server_team_join_requested` | `businessTeam.requestAccess`, `business.requestClaim` | `profile`, `profile_type`, `kind`, `evidence_type` |
+| `server_profile_claimed` | `business.decideClaim` approve (claimant's id), `artistInvites.claim` | `profile`, `via` (review / invite) |
+| `server_business_profile_created` | `business.create` | `profile`, `profile_type` |
+| `server_festival_joined` | `festivalSignup.join` | `festival` |
+| `server_ticket_checkout_started` | `festivalSignup.ticketCheckout`, `festivalSignup.createCheckoutSession` | `festival`, `tickets`, `referral` |
+| `server_subscription_checkout_started` | `organizerSubscription.createCheckout` | `plan`, `profile_type` |
+
+Adding an event: snake_case, one per user intent, non-PII props, and add a row above.

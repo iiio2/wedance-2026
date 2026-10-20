@@ -57,6 +57,7 @@ const loadingGigs = computed(() => gigsStatus.value === 'idle' || gigsStatus.val
 const gigsFailed = computed(() => gigsStatus.value === 'error')
 
 const allGigs = computed(() => gigs.value || [])
+useTrackSearch('gigs', () => ({ filters: { kind: kindFilter.value, category: categoryFilter.value } }), () => allGigs.value.length)
 const categories = computed(() => Array.from(new Set(allGigs.value.map((g: any) => g.category))))
 
 function safeHref(url: string | null | undefined): string | undefined {
@@ -129,6 +130,7 @@ async function submitForm() {
   try {
     // Mutation through the tRPC client so the session Bearer token is sent.
     await $trpc.gigs.create.mutate(result.data)
+    useTrack().track('gig_posted', { kind: result.data.kind, category: result.data.category || null })
 
     formSuccess.value = true
     formData.kind = 'offer'

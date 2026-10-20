@@ -52,6 +52,7 @@ export function useGoals() {
         itemId: id,
         metadata: { title, why, progress: '0', style },
       })
+      useTrack().track('goal_added', { style: style || null })
     } catch (err) {
       console.error('[useGoals] addGoal failed — rolling back:', err)
       goals.value = goals.value.filter(g => g.id !== id)

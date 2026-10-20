@@ -151,6 +151,18 @@ export function useAuth() {
     _profilePublic.value = me.profilePublic ?? true
     _saveAuthCache()
     _syncAuthHint()
+    // Identify on every auth.me (sign-in AND session restore from cookie/cache),
+    // so dancers who never re-log in still get attributed. Idempotent in
+    // useTrack. Non-PII person properties only — never name/email.
+    useTrack().identify(me.id, {
+      city: me.city ?? null,
+      is_admin: me.isAdmin,
+      role: me.role ?? null,
+      intent: me.intent ?? null,
+      onboarded: !!me.onboardedAt,
+      dance_styles_count: me.danceStyles?.length ?? 0,
+      has_username: !!me.username,
+    })
   }
 
   // Server round-trip to validate the session and refresh auth state.
@@ -233,6 +245,8 @@ export function useAuth() {
   async function verifyMagicLink(token: string) {
     const result = await $trpc.auth.verifyMagicLink.mutate({ token })
     setSession(result)
+    // The server says whether this first verified link created the account.
+    useTrack().track(result.isNew ? 'signup_completed' : 'login_completed', { method: 'magic_link' })
     return result
   }
 
@@ -248,6 +262,7 @@ export function useAuth() {
       password: data.password,
     })
     setSession(result)
+    useTrack().track('login_completed', { method: 'password' })
     return result
   }
 
@@ -351,7 +366,9 @@ export function useAuth() {
     _saveAuthCache()
     _syncAuthHint()
     // Tie analytics events to this dancer (login / register / magic-link).
-    useTrack().identify(data.dancerId, { name: data.name })
+    // No person properties here (the name is PII); _applyMe adds the non-PII
+    // ones once auth.me resolves.
+    useTrack().identify(data.dancerId)
   }
 
   function signOut() {

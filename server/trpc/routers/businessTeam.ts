@@ -6,6 +6,7 @@ import { router, protectedProcedure, adminProcedure } from '../trpc'
 import { profiles, profileMembers, profileClaims, profileAccessLog, dancers } from '../../database/schema'
 import { profileByHandle, membershipOf, requireOwner, keepAnOwner, grant, logAccess, assertProfileGranted } from '../../utils/profileAccess'
 import { sendAccessDecisionEmail, sendInfoRequiredEmail } from '../../utils/email'
+import { trackServer } from '../../utils/posthog'
 
 /**
  * Business mode — teams. Who may join a profile, with which role, and who decides:
@@ -100,6 +101,7 @@ export const businessTeamRouter = router({
         .values({ profileId: p.id, dancerId: ctx.dancerId, ...values })
         .onConflictDoUpdate({ target: [profileClaims.profileId, profileClaims.dancerId], set: values })
       await logAccess(ctx.db, { profileId: p.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'requested', role: requestedRole, note: kind })
+      trackServer(ctx, kind === 'join' ? 'team_join_requested' : 'profile_claim_requested', { profile: p.username, profile_type: p.type, kind, evidence_type: input.evidenceType })
       return { requested: true, kind, reviewer: kind === 'join' ? 'owners' as const : 'wedance' as const }
     }),
 

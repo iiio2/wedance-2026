@@ -8,6 +8,7 @@ import { slugify, randomSuffix } from '../../utils/slug'
 import { parseInstagramHandle, instagramUrl } from '../../../shared/utils/instagram'
 import { grant, logAccess, assertProfileGranted, onlyGranted, type GrantCtx } from '../../utils/profileAccess'
 import { notifyDecision, notifyInfoRequired } from './businessTeam'
+import { trackServer } from '../../utils/posthog'
 
 /**
  * Business mode — artists, venues and organizers managing their own profile.
@@ -204,6 +205,7 @@ export const businessRouter = router({
           },
         })
       await logAccess(ctx.db, { profileId: p.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'requested', role: 'owner', note: 'claim' })
+      trackServer(ctx, 'profile_claim_requested', { profile: p.username, profile_type: p.type, evidence_type: input.evidenceType })
       return { requested: true }
     }),
 
@@ -261,6 +263,7 @@ export const businessRouter = router({
         .returning({ id: profiles.id, username: profiles.username })
       await ctx.db.insert(profileMembers).values({ profileId: p!.id, dancerId: ctx.dancerId, role: 'owner' })
       await logAccess(ctx.db, { profileId: p!.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'created', role: 'owner' })
+      trackServer(ctx, 'business_profile_created', { profile: p!.username, profile_type: input.type })
       return { username: p!.username }
     }),
 
@@ -464,6 +467,8 @@ export const businessRouter = router({
       }
       await logAccess(ctx.db, { profileId: c.profileId, actorId: ctx.dancerId ?? null, subjectId: c.dancerId, action: input.approve ? 'approved' : 'rejected', role, note: c.kind })
       await notifyDecision(ctx.db, c.dancerId, p, input.approve, role)
+      // Attributed to the claimant (not the reviewing admin).
+      if (input.approve && c.kind !== 'join') trackServer(ctx, 'profile_claimed', { profile: p?.username ?? null, via: 'review', kind: c.kind }, { distinctId: c.dancerId })
       return { status: input.approve ? 'approved' : 'rejected' }
     }),
 })

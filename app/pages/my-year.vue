@@ -335,7 +335,7 @@ function onAddFestival(slug: string) {
 }
 
 function onAddFriend() {
-  useTrack().track('shared_plan_signup', { surface: 'my-year', sharer: sharer.value.name })
+  useTrack().track('shared_plan_signup', { surface: 'my-year', sharer: sharerUsername.value || null })
   if (!isSignedIn.value) {
     promptSignIn('social')
     return

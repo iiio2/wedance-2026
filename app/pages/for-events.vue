@@ -81,6 +81,7 @@ async function submit() {
   submitting.value = true
   try {
     await $trpc.feedback.inquiry.mutate(result.data)
+    useTrack().track('event_inquiry_submitted', { event_type: result.data.eventType || null, city: result.data.city || null })
     submitted.value = true
   } catch (e: any) {
     submitError.value = e?.message || 'Could not send your request. Please try again, or email hello@wedance.vip.'

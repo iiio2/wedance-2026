@@ -4,6 +4,7 @@ import Stripe from 'stripe'
 import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure, publicProcedure } from '../trpc'
 import { organizerSubscriptions, profiles, profileMembers, dancers } from '../../database/schema'
+import { trackServer } from '../../utils/posthog'
 
 function getStripe() {
   const config = useRuntimeConfig()
@@ -113,6 +114,7 @@ export const organizerSubscriptionRouter = router({
         cancel_url: `${config.siteUrl}/organizers`,
       })
 
+      trackServer(ctx, 'subscription_checkout_started', { plan: 'network', profile_type: profile.type })
       return { checkoutUrl: session.url }
     }),
 })

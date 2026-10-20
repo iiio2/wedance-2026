@@ -16,6 +16,7 @@ import { sendMagicLinkEmail, sendPasswordResetEmail } from '../../utils/email'
 import { generateUsername } from '../../utils/slug'
 import { freeHandle } from '../../utils/handles'
 import { recordLinkAction } from '../../utils/trackedLinks'
+import { trackServer } from '../../utils/posthog'
 
 // FirebaseScrypt parameters, ported verbatim from wedance-v4
 // (server/api/auth/[...].ts). These MUST match v4 exactly so legacy user
@@ -173,6 +174,8 @@ export const authRouter = router({
           id: dancers.id,
           name: dancers.name,
           isAdmin: dancers.isAdmin,
+          emailVerifiedAt: dancers.emailVerifiedAt,
+          hash: dancers.hash,
         })
         .from(dancers)
         .where(
@@ -198,7 +201,11 @@ export const authRouter = router({
         .set({ magicToken: null, magicTokenExpiresAt: null, emailVerifiedAt: new Date() })
         .where(eq(dancers.id, dancer.id))
 
-      return createSession(ctx.db, dancer)
+      // First verified sign-in of a passwordless account = the magic-link
+      // sign-up (requestMagicLink created the row); anything else is a login.
+      const isNew = !dancer.emailVerifiedAt && !dancer.hash
+      trackServer(ctx, isNew ? 'signup_completed' : 'login_completed', { method: 'magic_link' }, { distinctId: dancer.id })
+      return { ...(await createSession(ctx.db, dancer)), isNew }
     }),
 
   // Reset password via magic-link token. The "forgot password" flow sends a
@@ -287,6 +294,7 @@ export const authRouter = router({
         throw invalidCredentials
       }
 
+      trackServer(ctx, 'login_completed', { method: 'password' }, { distinctId: dancer.id })
       return createSession(ctx.db, dancer)
     }),
 
@@ -380,6 +388,7 @@ export const authRouter = router({
           .where(and(eq(bookingInquiries.email, input.email), sql`${bookingInquiries.requesterId} is null`))
       } catch (e) { console.error('[auth] linking booking requests failed', e) }
 
+      trackServer(ctx, 'signup_completed', { method: 'password', has_city: !!input.city, via_link: !!ctx.viaCode }, { distinctId: dancer.id })
       return createSession(ctx.db, dancer)
     }),
 
@@ -449,6 +458,7 @@ export const authRouter = router({
         .set(updateSet)
         .where(eq(dancers.id, ctx.dancerId))
 
+      trackServer(ctx, 'onboarding_completed', { intent: input.intent })
       return { ok: true }
     }),
 

@@ -47,6 +47,7 @@ export function useYearPlan() {
     const next = new Set(yearPlanIds.value)
     next.delete(slug)
     yearPlanIds.value = next
+    useTrack().track('year_plan_remove', { festival_slug: slug, year_count: next.size })
     const { $trpc } = useNuxtApp()
     $trpc.plan.remove
       .mutate({ itemType: 'festival', itemId: slug })

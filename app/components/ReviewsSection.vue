@@ -54,6 +54,7 @@ async function submit() {
       citySlug: props.citySlug,
       ...result.data,
     })
+    useTrack().track('review_submitted', { target_type: props.targetType, target: props.targetSlug, city: props.citySlug || null })
     showForm.value = false
     form.text = ''
     form.rating = 5

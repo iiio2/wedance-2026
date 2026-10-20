@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import { dancers } from '../../database/schema'
+import { trackServer } from '../../utils/posthog'
 
 /**
  * User problem reports → Linear.
@@ -172,7 +173,7 @@ export const feedbackRouter = router({
         email: z.string().email(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const title = `🎉 Event inquiry${input.name ? ` from ${input.name}` : ''}`
       const lines: string[] = []
       if (input.eventType) lines.push(`**Event type:** ${input.eventType}`)
@@ -200,6 +201,7 @@ export const feedbackRouter = router({
         { i: issueInput },
       )
 
+      trackServer(ctx, 'event_inquiry_submitted', { event_type: input.eventType || null, city: input.city || null })
       return { ok: d.issueCreate.success }
     }),
 

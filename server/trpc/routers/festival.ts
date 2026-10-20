@@ -13,6 +13,7 @@ import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import { festivals, festivalSubmissions } from '../../database/schema'
+import { trackServer } from '../../utils/posthog'
 
 export const festivalRouter = router({
   /**
@@ -72,6 +73,7 @@ export const festivalRouter = router({
         })
         .returning({ id: festivalSubmissions.id })
 
+      trackServer(ctx, 'festival_draft_submitted', { submission_id: row?.id ?? null, festival: input.slug || null, signed_in: !!ctx.dancerId })
       return { id: row.id }
     }),
 })

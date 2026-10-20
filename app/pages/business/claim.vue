@@ -62,6 +62,7 @@ const evidenceTypeOptions = [
 function start(username: string, m: 'claim' | 'join' | 'reclaim') {
   openFor.value = username
   mode.value = m
+  useTrack().track(m === 'join' ? 'team_join_started' : 'profile_claim_started', { profile: username, kind: m })
   message.value = ''
   evidence.value = ''
   evidenceType.value = 'other'
@@ -79,6 +80,7 @@ async function send(username: string) {
       evidence: evidence.value, evidenceType: evidenceType.value,
     })
     sent.value = new Map(sent.value).set(username, res.reviewer)
+    useTrack().track(res.kind === 'join' ? 'team_join_requested' : 'profile_claim_requested', { profile: username, kind: res.kind, evidence_type: evidenceType.value })
     openFor.value = null
   } catch (e: any) {
     error.value = e?.message || 'Could not send your request.'

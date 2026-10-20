@@ -85,6 +85,8 @@ const filteredFestivals = computed(() => {
   )
 })
 
+useTrackSearch('festivals', () => ({ query: searchQuery.value }), () => filteredFestivals.value.length)
+
 // Styles the listed festivals actually have, most popular first.
 const styleChips = computed(() => {
   const present = sortDanceStyles((allFestivals.value ?? []).flatMap(f => f.styles || []))

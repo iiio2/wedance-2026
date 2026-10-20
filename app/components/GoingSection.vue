@@ -100,6 +100,7 @@ async function toggleShare() {
       itemId: resolvedId.value,
       share: next,
     })
+    useTrack().track('going_visibility_changed', { share: next, item_type: resolvedType.value, item_id: resolvedId.value, surface: 'whos_going' })
     // Reload the public list to reflect the change
     await load()
   } catch {
@@ -128,9 +129,11 @@ async function toggleWave(dancerId: string) {
     if (wasWaved) {
       wavedIds.value.delete(dancerId)
       await $trpc.wave.retract.mutate({ festivalSlug: resolvedId.value, targetDancerId: dancerId })
+      useTrack().track('wave_retracted', { festival: resolvedId.value, surface: 'whos_going' })
     } else {
       wavedIds.value.add(dancerId)
       await $trpc.wave.send.mutate({ festivalSlug: resolvedId.value, targetDancerId: dancerId })
+      useTrack().track('wave_sent', { festival: resolvedId.value, surface: 'whos_going' })
     }
   } catch {
     // Roll back
@@ -235,6 +238,7 @@ function initials(name: string): string {
             :to="d.username ? `/u/${d.username}` : ''"
             :class="d.username ? 'hover:brightness-[0.97] cursor-pointer' : 'pointer-events-none'"
             class="flex items-center gap-3 no-underline min-w-0 flex-1"
+            @click="useTrack().track('whos_going_profile_opened', { item_type: resolvedType, item_id: resolvedId })"
           >
             <img
               v-if="d.photo"

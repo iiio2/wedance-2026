@@ -917,6 +917,7 @@ async function unenrollCourse(id: string) {
   if (previewMode.value) return
   try {
     await $trpc.plan.remove.mutate({ itemType: 'event', itemId: id })
+    useTrack().track('week_plan_remove', { event_id: id, source: 'my_plan_course' })
   } catch (err) {
     console.warn('[my-plan] unenrollCourse failed:', err)
     courses.value = before
@@ -1131,7 +1132,8 @@ async function toggleHangout(id: string) {
   }
 
   try {
-    await $trpc.hangouts.toggleRsvp.mutate({ hangoutId: id })
+    const res = await $trpc.hangouts.toggleRsvp.mutate({ hangoutId: id })
+    useTrack().track('hangout_rsvp', { going: !!res?.rsvpd, surface: 'my_plan', hangout_id: id })
 
     // Update local state
     const wasGoing = userRsvpedHangouts.value.has(id)
@@ -1219,6 +1221,7 @@ async function createHangout() {
       citySlug: dancerCity.value || 'munich',
       eventId: newHangout.value.eventId || undefined,
     })
+    useTrack().track('hangout_created', { kind: newHangout.value.kind, surface: 'my_plan', city: dancerCity.value || null, event_linked: !!newHangout.value.eventId })
     showHangoutForm.value = false
     newHangout.value = emptyHangout()
     newHangoutPlace.value = null
@@ -1520,6 +1523,7 @@ function commitSwipe(direction: 'yes' | 'skip' | 'later') {
     }
   }
   if (direction === 'yes' || direction === 'skip') persistSwipe(card, direction)
+  if (!previewMode.value) useTrack().track('discover_swipe', { direction, card_kind: card.kind, added_festival: addedFestival, added_event: addedEvent })
 
   // Animate out then advance
   setTimeout(() => {

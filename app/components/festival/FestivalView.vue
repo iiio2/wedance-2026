@@ -113,7 +113,10 @@ async function followSharer() {
   friendPending.value = true
   try {
     const already = await $trpc.follow.isFollowingDancer.query({ targetDancerId: target })
-    if (!already) await $trpc.follow.toggleDancer.mutate({ targetDancerId: target })
+    if (!already) {
+      await $trpc.follow.toggleDancer.mutate({ targetDancerId: target })
+      useTrack().track('follow', { target: 'dancer', surface: 'shared_plan', festival: festival.slug })
+    }
     friendAdded.value = true
   } catch (e) {
     console.error('[shared-plan] add friend failed', e)
@@ -123,7 +126,7 @@ async function followSharer() {
 }
 
 function onAddFriend() {
-  useTrack().track('shared_plan_signup', { surface: 'festival', slug: festival.slug, sharer: sharer.value.name })
+  useTrack().track('shared_plan_signup', { surface: 'festival', slug: festival.slug })
   if (!isSignedIn.value) {
     pendingFriendAfterSignIn.value = true
     onSignIn('friend')
@@ -200,11 +203,20 @@ function removeConflicting(next: Map<string, PlanEntry>, workshop: Workshop) {
   }
 }
 
+// One event per explicit add/remove (not for conflict clean-up or reconciling).
+function trackWorkshop(action: 'add' | 'remove', id: string, partnerStatus?: string) {
+  const w = workshops.find((x) => x.id === id)
+  useTrack().track(action === 'add' ? 'workshop_plan_add' : 'workshop_plan_remove', {
+    festival: slug, workshop_id: id, workshop_type: w?.type ?? null, partner_status: partnerStatus ?? null,
+  })
+}
+
 function toggleWorkshop(id: string) {
   const next = new Map(plan.value)
   if (next.has(id)) {
     next.delete(id)
     persistWorkshopRemove(id)
+    trackWorkshop('remove', id)
     plan.value = next
   } else {
     const workshop = workshops.find((w) => w.id === id)
@@ -212,6 +224,7 @@ function toggleWorkshop(id: string) {
       // Parties don't need role/partner — add directly
       next.set(id, { workshopId: id, role: null, partnerStatus: 'solo' })
       persistWorkshopAdd(id)
+      trackWorkshop('add', id, 'solo')
       plan.value = next
     } else if (workshop && rememberedRole.value && rememberedHasPartner.value !== null) {
       // Both role and partner answer remembered — skip modal entirely
@@ -223,6 +236,7 @@ function toggleWorkshop(id: string) {
         partnerId: rememberedHasPartner.value ? rememberedPartnerId.value : undefined,
       })
       persistWorkshopAdd(id)
+      trackWorkshop('add', id, rememberedHasPartner.value ? 'with-partner' : 'looking')
       plan.value = next
     } else {
       rolePickerWorkshopId.value = id
@@ -249,6 +263,7 @@ function onRoleConfirm(role: DanceRole, hasPartner: boolean, remember: boolean, 
     partnerId: hasPartner ? partnerId : undefined,
   })
   persistWorkshopAdd(id)
+  trackWorkshop('add', id, hasPartner ? 'with-partner' : 'looking')
   plan.value = next
 }
 
@@ -262,6 +277,7 @@ function removeFromPlan(id: string) {
   const next = new Map(plan.value)
   next.delete(id)
   persistWorkshopRemove(id)
+  trackWorkshop('remove', id)
   plan.value = next
 }
 
@@ -557,11 +573,13 @@ async function createEventHangout(hangout: { kind: HangoutKind; title: string; t
     citySlug,
     eventId: data.eventId,
   })
+  useTrack().track('hangout_created', { kind: hangout.kind, surface: 'festival', event_id: data.eventId })
   await loadEventHangouts()
 }
 
 async function toggleEventHangout(id: string) {
-  await $trpc.hangouts.toggleRsvp.mutate({ hangoutId: id })
+  const res = await $trpc.hangouts.toggleRsvp.mutate({ hangoutId: id })
+  useTrack().track('hangout_rsvp', { going: !!res?.rsvpd, surface: 'festival', hangout_id: id, event_id: data.eventId })
   await loadEventHangouts()
 }
 

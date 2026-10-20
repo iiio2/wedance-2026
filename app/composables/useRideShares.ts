@@ -36,6 +36,7 @@ export function useRideShares(festivalSlug: string) {
         seatsAvailable: ride.seats,
         contactLink: ride.contactLink,
       })
+      useTrack().track('ride_share_posted', { festival: festivalSlug, type: ride.type })
       await loadRideShares()
     } catch (e: any) {
       console.warn('Failed to post ride:', e)

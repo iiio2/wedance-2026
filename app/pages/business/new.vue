@@ -76,6 +76,7 @@ async function submit() {
       instagram: igHandle.value || undefined,
       handle: form.handle.trim() || undefined,
     })
+    useTrack().track('business_profile_created', { profile: username, profile_type: form.type, from_instagram: !!igHandle.value })
     await navigateTo(next || `/business/network/${username}`)
   } catch (e: any) {
     error.value = e?.message || 'Could not create the profile.'

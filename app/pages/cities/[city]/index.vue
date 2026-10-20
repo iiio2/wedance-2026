@@ -463,6 +463,12 @@ async function loadGiveaways() {
 onMounted(() => {
   loadLeaderboard()
   loadGiveaways()
+  useTrack().trackOnce(slug, 'city_viewed', { city: slug, style: selectedStyle.value || null })
+})
+
+// Style filter use (a click on a style chip — one event per change).
+watch(selectedStyle, (style) => {
+  useTrack().track('filter_used', { surface: 'city', city: slug, filter_keys: style ? ['style'] : [], style: style || null })
 })
 </script>
 
