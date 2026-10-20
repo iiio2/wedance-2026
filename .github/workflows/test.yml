@@ -93,7 +93,18 @@ jobs:
         run: bun run db:seed
 
       - name: Run integration tests (all vitest, 0 skips expected)
-        run: bun run test -- --reporter=verbose
+        run: bun run test -- --reporter=verbose --reporter=json --outputFile.json=test-results/vitest.json
+
+      # One log line per test → Grafana Cloud Loki (RAZ-631). Never fails the
+      # build: no secrets (fork PRs) or a Loki outage only print a warning.
+      - name: Push test results to Grafana Loki
+        if: always()
+        run: bun scripts/ci/loki-test-results.ts --suite vitest --file test-results/vitest.json
+        env:
+          LOKI_URL: ${{ secrets.LOKI_URL }}
+          LOKI_USER: ${{ secrets.LOKI_USER }}
+          LOKI_TOKEN: ${{ secrets.LOKI_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
 
   # After merge only: ~5 min (DB + build + browser), so PRs don't wait on it.
   # Each merged commit still gets an end-to-end result to trace breaks to.
@@ -205,6 +216,16 @@ jobs:
         # invalid YAML when written inline (CI silently didn't run 2026-10-10..12).
         run: |
           bunx playwright test -c playwright.design.config.ts contract a11y --grep "component contract|: /docs/design"
+
+      - name: Push E2E results to Grafana Loki
+        if: always()
+        run: |
+          bun scripts/ci/loki-test-results.ts --suite playwright-smoke --file test-results/playwright-smoke.json
+          bun scripts/ci/loki-test-results.ts --suite playwright-design --file test-results/playwright-design.json
+        env:
+          LOKI_URL: ${{ secrets.LOKI_URL }}
+          LOKI_USER: ${{ secrets.LOKI_USER }}
+          LOKI_TOKEN: ${{ secrets.LOKI_TOKEN }}
 
       - name: Upload E2E report
         if: always()

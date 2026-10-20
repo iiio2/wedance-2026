@@ -1,0 +1,391 @@
+{
+  "title": "wedance-2026 \u00b7 CI tests",
+  "uid": "wedance-ci-tests",
+  "tags": [
+    "ci",
+    "tests",
+    "wedance-2026"
+  ],
+  "timezone": "Europe/Berlin",
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-14d",
+    "to": "now"
+  },
+  "refresh": "",
+  "editable": true,
+  "templating": {
+    "list": [
+      {
+        "name": "ds",
+        "label": "Logs",
+        "type": "datasource",
+        "query": "loki",
+        "current": {
+          "text": "grafanacloud-sturdydeer385-logs",
+          "value": "grafanacloud-logs"
+        }
+      },
+      {
+        "name": "suite",
+        "label": "Suite",
+        "type": "custom",
+        "query": "vitest,playwright-smoke,playwright-design",
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Pass rate",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.95
+              },
+              {
+                "color": "green",
+                "value": 0.99
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${ds}"
+          },
+          "expr": "sum(count_over_time({service_name=\"ci-tests\", repo=\"wedance-2026\", suite=~\"$suite\"} | json | status=\"passed\" [$__range])) / sum(count_over_time({service_name=\"ci-tests\", repo=\"wedance-2026\", suite=~\"$suite\"} | json | status=~\"passed|failed|flaky\" [$__range]))",
+          "queryType": "instant"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "${ds}"
+      },
+      "id": 1
+    },
+    {
+      "type": "stat",
+      "title": "Failed test runs",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${ds}"
+          },
+          "expr": "sum(count_over_time({service_name=\"ci-tests\", repo=\"wedance-2026\", suite=~\"$suite\"} | json | status=\"failed\" [$__range]))",
+          "queryType": "instant"
+        }
+      ],
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "${ds}"
+      },
+      "id": 2
+    },
+    {
+      "type": "stat",
+      "title": "Flaky (passed on retry)",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${ds}"
+          },
+          "expr": "sum(count_over_time({service_name=\"ci-tests\", repo=\"wedance-2026\", suite=~\"$suite\"} | json | status=\"flaky\" [$__range]))",
+          "queryType": "instant"
+        }
+      ],
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "${ds}"
+      },
+      "id": 3
+    },
+    {
+      "type": "timeseries",
+      "title": "Results over time",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 80
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "passed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "flaky"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "gray"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${ds}"
+          },
+          "expr": "sum by (status) (count_over_time({service_name=\"ci-tests\", repo=\"wedance-2026\", suite=~\"$suite\"} | json [$__auto]))",
+          "queryType": "range",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "${ds}"
+      },
+      "id": 4
+    },
+    {
+      "type": "table",
+      "title": "Most failing tests",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Last *",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${ds}"
+          },
+          "expr": "topk(20, sum by (name, file) (count_over_time({service_name=\"ci-tests\", repo=\"wedance-2026\", suite=~\"$suite\"} | json | status=~\"failed|flaky\" [$__range])))",
+          "queryType": "instant"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "${ds}"
+      },
+      "id": 5
+    },
+    {
+      "type": "table",
+      "title": "Slowest tests (avg ms)",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${ds}"
+          },
+          "expr": "topk(20, avg by (name, suite) (avg_over_time({service_name=\"ci-tests\", repo=\"wedance-2026\", suite=~\"$suite\"} | json | status!=\"skipped\" | unwrap duration_ms [$__range])))",
+          "queryType": "instant"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "${ds}"
+      },
+      "id": 6
+    },
+    {
+      "type": "logs",
+      "title": "Recent failures (PR \u00b7 branch \u00b7 error)",
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${ds}"
+          },
+          "expr": "{service_name=\"ci-tests\", repo=\"wedance-2026\", suite=~\"$suite\"} | json | status=~\"failed|flaky\" | line_format \"{{.status}} \u00b7 {{.name}} \u00b7 PR {{.pr}} \u00b7 {{.branch}} \u00b7 {{.error}} \u00b7 {{.run_url}}\"",
+          "queryType": "range"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 10
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "${ds}"
+      },
+      "id": 7
+    }
+  ]
+}

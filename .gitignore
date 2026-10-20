@@ -50,3 +50,6 @@ screenshots/
 
 # Backups written by one-off data scripts (may hold contact details)
 .backups/
+
+# CI JSON test results for the Grafana Loki push
+test-results/

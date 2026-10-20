@@ -17,7 +17,12 @@ export default defineConfig({
   testDir: './e2e/design',
   outputDir: './e2e/test-results/design',
   snapshotPathTemplate: '{testDir}/__screenshots__/{platform}/{arg}{ext}',
-  reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report/design' }]],
+  reporter: [
+    ['list'],
+    ['html', { open: 'never', outputFolder: 'playwright-report/design' }],
+    // CI also writes JSON for the Grafana Loki push (scripts/ci/loki-test-results.ts).
+    ...(process.env.CI ? [['json', { outputFile: 'test-results/playwright-design.json' }] as const] : []),
+  ],
   timeout: 90_000,
   expect: {
     timeout: 15_000,

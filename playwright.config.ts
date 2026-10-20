@@ -11,7 +11,10 @@ const testDir = defineBddConfig({
 export default defineConfig({
   testDir,
   outputDir: './e2e/test-results',
-  reporter: 'html',
+  // CI also writes JSON for the Grafana Loki push (scripts/ci/loki-test-results.ts).
+  reporter: process.env.CI
+    ? [['html'], ['json', { outputFile: 'test-results/playwright-smoke.json' }]]
+    : 'html',
   /* Give CI builds extra time — nuxt preview cold-starts can be slow. */
   timeout: 60_000,
   expect: { timeout: 10_000 },
