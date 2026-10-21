@@ -1,4 +1,5 @@
 export interface RoommateEntry {
+  dancerId: string
   name: string
   photo: string | null
   city: string | null

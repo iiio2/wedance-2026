@@ -27,6 +27,7 @@ export const roommateRouter = router({
       }
 
       const selectFields = {
+        dancerId: dancers.id,
         name: dancers.name,
         photo: dancers.photo,
         city: dancers.city,

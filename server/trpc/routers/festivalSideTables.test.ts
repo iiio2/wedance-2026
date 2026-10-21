@@ -67,6 +67,10 @@ describe.skipIf(!DATABASE_URL)('festival side tables on an event-only festival',
   it('toggles looking for a roommate (RAZ-438)', async () => {
     expect(await caller(dancerId).roommate.toggle({ festivalSlug: KEY })).toEqual({ looking: true })
     expect((await caller(dancerId).roommate.list({ festivalSlug: KEY })).looking).toBe(true)
+    // Each listed dancer carries a stable id, the v-for key in ActivitiesTab.
+    expect((await caller(null).roommate.list({ festivalSlug: KEY })).others).toEqual([
+      expect.objectContaining({ dancerId }),
+    ])
     expect(await caller(dancerId).roommate.toggle({ festivalSlug: KEY })).toEqual({ looking: false })
   })
 

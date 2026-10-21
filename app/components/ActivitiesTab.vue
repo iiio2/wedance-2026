@@ -286,7 +286,7 @@ function badgeFor(key: string): string | null {
         <!-- Others looking for roommates -->
         <div v-if="roommateOthers.length" class="grid gap-1.5">
           <p class="text-eyebrow font-bold uppercase tracking-widest font-sans text-secondary">Others looking for roommates</p>
-          <div v-for="person in roommateOthers" :key="person.username || person.name" class="flex items-center gap-2.5 py-1.5 px-2 rounded-lg" style="background:color-mix(in srgb, var(--wd-brown-900) 2%, transparent);">
+          <div v-for="person in roommateOthers" :key="person.dancerId" class="flex items-center gap-2.5 py-1.5 px-2 rounded-lg" style="background:color-mix(in srgb, var(--wd-brown-900) 2%, transparent);">
             <img v-if="person.photo" :src="person.photo" :alt="person.name" class="w-8 h-8 rounded-full shrink-0 object-cover">
             <span v-else class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold" :style="{ background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: GREEN_CHIP }">{{ initialOf(person.name) }}</span>
             <div class="min-w-0 flex-1 text-xs font-sans text-muted-foreground">
