@@ -431,16 +431,53 @@ describe('booking.setAvailability', () => {
     })).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
   })
 
-  it('rejects non-moderator callers', async () => {
+  it('rejects a signed-in dancer who is not a member of the venue', async () => {
     const db = new FakeDb()
     const spaceId = '11111111-1111-4111-8111-111111111111'
     db.bookableSpaces.push({ id: spaceId, profileId: 'p1', name: 'A' })
-    db.profiles.push({ id: 'p1', username: 'pina', type: 'venue', name: 'Pina', status: 'visible', moderatorHandle: '@mod1' })
+    db.profiles.push({ id: 'p1', username: 'pina', type: 'venue', name: 'Pina', status: 'visible' })
     db.dancers.push({ id: 'd2', username: 'someone-else' })
+    // d2 has no profileMembers entry for p1 — should be rejected
     await expect(caller(db, { dancerId: 'd2' }).booking.setAvailability({
       spaceId,
       slots: [],
     })).rejects.toMatchObject({ code: 'FORBIDDEN' })
+  })
+
+  it('allows a venue owner to set availability', async () => {
+    const db = new FakeDb()
+    const spaceId = '11111111-1111-4111-8111-111111111111'
+    db.bookableSpaces.push({ id: spaceId, profileId: 'p1', name: 'A' })
+    db.profileMembers.push({ profileId: 'p1', dancerId: 'd1', role: 'owner' })
+    const out = await caller(db, { dancerId: 'd1' }).booking.setAvailability({
+      spaceId,
+      slots: [{ dayOfWeek: 6, startTime: '20:00', endTime: '03:00' }],
+    })
+    expect(out.ok).toBe(true)
+  })
+
+  it('allows an editor to set availability', async () => {
+    const db = new FakeDb()
+    const spaceId = '11111111-1111-4111-8111-111111111111'
+    db.bookableSpaces.push({ id: spaceId, profileId: 'p1', name: 'A' })
+    db.profileMembers.push({ profileId: 'p1', dancerId: 'd1', role: 'editor' })
+    const out = await caller(db, { dancerId: 'd1' }).booking.setAvailability({
+      spaceId,
+      slots: [{ dayOfWeek: 3, startTime: '14:00', endTime: '22:00' }],
+    })
+    expect(out.ok).toBe(true)
+  })
+
+  it('allows a moderator (steward) to set availability', async () => {
+    const db = new FakeDb()
+    const spaceId = '11111111-1111-4111-8111-111111111111'
+    db.bookableSpaces.push({ id: spaceId, profileId: 'p1', name: 'A' })
+    db.profileMembers.push({ profileId: 'p1', dancerId: 'd1', role: 'moderator' })
+    const out = await caller(db, { dancerId: 'd1' }).booking.setAvailability({
+      spaceId,
+      slots: [{ dayOfWeek: 1, startTime: '18:00', endTime: '23:00' }],
+    })
+    expect(out.ok).toBe(true)
   })
 
   it('404s for unknown space (admin)', async () => {
