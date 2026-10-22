@@ -488,12 +488,55 @@ describe('booking.setAvailability', () => {
     })).rejects.toMatchObject({ code: 'NOT_FOUND' })
   })
 
-  it('rejects invalid clock times like 29:99', async () => {
+  // --- RAZ-651: comprehensive HH:MM availability validation ---
+
+  it.each([
+    ['29:99', '23:00', 'hour and minute both out of range (startTime)'],
+    ['24:00', '23:00', 'hour 24 is out of range (startTime)'],
+    ['10:60', '23:00', 'minute 60 is out of range (startTime)'],
+    ['99:00', '23:00', 'hour 99 is out of range (startTime)'],
+    ['18:00', '24:00', 'hour 24 is out of range (endTime)'],
+    ['18:00', '10:60', 'minute 60 is out of range (endTime)'],
+    ['18:00', '29:99', 'hour and minute both out of range (endTime)'],
+  ])('rejects out-of-range time %s / %s (%s)', async (startTime, endTime, _label) => {
     const db = new FakeDb()
     db.bookableSpaces.push({ id: '11111111-1111-4111-8111-111111111111', profileId: 'p1', name: 'A' })
     await expect(caller(db, { dancerId: 'd1', isAdmin: true }).booking.setAvailability({
       spaceId: '11111111-1111-4111-8111-111111111111',
-      slots: [{ dayOfWeek: 1, startTime: '29:99', endTime: '23:00' }],
+      slots: [{ dayOfWeek: 1, startTime, endTime }],
     })).rejects.toThrow()
+  })
+
+  it.each([
+    ['9:00', '23:00', 'single-digit hour (startTime)'],
+    ['18:00', '9:00', 'single-digit hour (endTime)'],
+    ['12:5', '23:00', 'single-digit minute (startTime)'],
+    ['abc', '23:00', 'non-numeric string (startTime)'],
+    ['', '23:00', 'empty string (startTime)'],
+    ['1200', '23:00', 'missing colon (startTime)'],
+    ['12:00:00', '23:00', 'seconds included (startTime)'],
+    ['18:00', '12:00:00', 'seconds included (endTime)'],
+  ])('rejects malformed format %s / %s (%s)', async (startTime, endTime, _label) => {
+    const db = new FakeDb()
+    db.bookableSpaces.push({ id: '11111111-1111-4111-8111-111111111111', profileId: 'p1', name: 'A' })
+    await expect(caller(db, { dancerId: 'd1', isAdmin: true }).booking.setAvailability({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      slots: [{ dayOfWeek: 1, startTime, endTime }],
+    })).rejects.toThrow()
+  })
+
+  it.each([
+    ['00:00', '23:59', 'full day boundary'],
+    ['23:59', '00:00', 'latest start wrapping to midnight end'],
+    ['00:00', '00:00', 'midnight to midnight'],
+  ])('accepts valid boundary times %s / %s (%s)', async (startTime, endTime, _label) => {
+    const db = new FakeDb()
+    const spaceId = '11111111-1111-4111-8111-111111111111'
+    db.bookableSpaces.push({ id: spaceId, profileId: 'p1', name: 'A' })
+    const out = await caller(db, { dancerId: 'd1', isAdmin: true }).booking.setAvailability({
+      spaceId,
+      slots: [{ dayOfWeek: 1, startTime, endTime }],
+    })
+    expect(out.ok).toBe(true)
   })
 })
