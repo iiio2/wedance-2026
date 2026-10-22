@@ -348,6 +348,61 @@ describe('booking.request', () => {
   })
 })
 
+// ── Date-only weekday consistency (RAZ-649) ────────────────────────────────
+// The booking router converts YYYY-MM-DD strings into ISO day-of-week via
+// utcDayOfWeek (Date.UTC → getUTCDay → 1=Mon…7=Sun). If it used a naive
+// new Date(str).getDay(), a server in a negative-UTC-offset zone could shift
+// a Sunday onto Saturday. These tests pin all seven weekdays against
+// their matching availability slots.
+describe('booking.request — date-only weekday consistency', () => {
+  // 2026-10-05=Mon … 2026-10-11=Sun (verified from existing tests)
+  const WEEK: [string, number][] = [
+    ['2026-10-05', 1], // Monday
+    ['2026-10-06', 2], // Tuesday
+    ['2026-10-07', 3], // Wednesday
+    ['2026-10-08', 4], // Thursday
+    ['2026-10-09', 5], // Friday
+    ['2026-10-10', 6], // Saturday
+    ['2026-10-11', 7], // Sunday
+  ]
+
+  for (const [date, isoDay] of WEEK) {
+    it(`accepts ${date} (ISO day ${isoDay}) when slot matches that weekday`, async () => {
+      const db = new FakeDb()
+      const spaceId = '11111111-1111-4111-8111-111111111111'
+      db.bookableSpaces.push({ id: spaceId, profileId: 'p1', name: 'A' })
+      db.availabilitySlots.push({ id: `av-${isoDay}`, spaceId, dayOfWeek: isoDay, startTime: '10:00', endTime: '22:00', isActive: true })
+      const out = await caller(db).booking.request({
+        spaceId, email: 'org@example.com', termsAccepted: true, eventDate: date,
+      })
+      expect(out.ok).toBe(true)
+    })
+
+    it(`rejects ${date} (ISO day ${isoDay}) when only an adjacent weekday is available`, async () => {
+      const db = new FakeDb()
+      const spaceId = '11111111-1111-4111-8111-111111111111'
+      db.bookableSpaces.push({ id: spaceId, profileId: 'p1', name: 'A' })
+      const wrongDay = isoDay === 7 ? 1 : isoDay + 1
+      db.availabilitySlots.push({ id: 'av-wrong', spaceId, dayOfWeek: wrongDay, startTime: '10:00', endTime: '22:00', isActive: true })
+      await expect(caller(db).booking.request({
+        spaceId, email: 'org@example.com', termsAccepted: true, eventDate: date,
+      })).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+    })
+  }
+
+  it('Sunday (ISO 7) is never matched by JS-native day 0', async () => {
+    // Regression: new Date('2026-10-11').getDay() === 0 in JS, but ISO Sunday = 7.
+    // A slot with dayOfWeek=0 must not match any valid date.
+    const db = new FakeDb()
+    const spaceId = '11111111-1111-4111-8111-111111111111'
+    db.bookableSpaces.push({ id: spaceId, profileId: 'p1', name: 'A' })
+    db.availabilitySlots.push({ id: 'av0', spaceId, dayOfWeek: 0 as any, startTime: '10:00', endTime: '22:00', isActive: true })
+    await expect(caller(db).booking.request({
+      spaceId, email: 'org@example.com', termsAccepted: true, eventDate: '2026-10-11',
+    })).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  })
+})
+
 describe('booking.setAvailability', () => {
   it('replaces all slots for a space (admin)', async () => {
     const db = new FakeDb()

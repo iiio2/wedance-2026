@@ -39,3 +39,33 @@ describe('seriesDates', () => {
     expect(r.skipped).toHaveLength(2)
   })
 })
+
+// ── Date-only weekday consistency (RAZ-649) ──────────────────────────────────
+// weekdayOf parses via T12:00:00Z to avoid timezone-dependent day shifts.
+// A naive new Date('2026-10-11') in UTC−8 would resolve to Saturday instead of
+// Sunday. These tests pin all seven weekdays for a known week.
+describe('weekdayOf — date-only weekday consistency', () => {
+  const WEEK: [string, string][] = [
+    ['2026-10-05', 'Monday'],
+    ['2026-10-06', 'Tuesday'],
+    ['2026-10-07', 'Wednesday'],
+    ['2026-10-08', 'Thursday'],
+    ['2026-10-09', 'Friday'],
+    ['2026-10-10', 'Saturday'],
+    ['2026-10-11', 'Sunday'],
+  ]
+
+  for (const [date, name] of WEEK) {
+    it(`resolves ${date} as ${name}`, () => {
+      expect(weekdayOf(date)).toBe(name)
+    })
+  }
+
+  it('noon-UTC pinning prevents Sunday from shifting to Saturday', () => {
+    // If weekdayOf used new Date('2026-10-11') without T12:00:00Z,
+    // a UTC−8 runtime would parse it as 2026-10-10T08:00:00Z (still Sat UTC).
+    // With noon pinning, getUTCDay() always returns 0 (Sunday).
+    expect(weekdayOf('2026-10-11')).toBe('Sunday')
+    expect(weekdayOf('2026-10-12')).toBe('Monday')
+  })
+})
