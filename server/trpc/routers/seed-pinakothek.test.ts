@@ -138,41 +138,65 @@ const SHOWCASE_DATA: Omit<Profile, 'id'> = {
 // ── RAZ-654 — Repeat showcase seeding without duplicate areas ─────────────
 
 describe('seed idempotency — no duplicates on re-run (RAZ-654)', () => {
-  it('creates 6 areas on first run', () => {
+  it('creates 6 areas with unique names and sequential sortOrders on first run', () => {
     const db = new SeedDb()
     const result = runSeed(db, 'test-showcase', SHOWCASE_DATA)
 
     expect(result.action).toBe('created')
-    expect(db.findSpaces(result.profileId)).toHaveLength(EXPECTED_AREA_COUNT)
+    const areas = db.findSpaces(result.profileId)
+    expect(areas).toHaveLength(EXPECTED_AREA_COUNT)
     expect(db.profiles).toHaveLength(1)
+
+    // Every area name must be unique
+    const names = areas.map(a => a.name)
+    expect(new Set(names).size).toBe(EXPECTED_AREA_COUNT)
+
+    // SortOrders must be 1–6 without gaps
+    const orders = areas.map(a => a.sortOrder).sort((a, b) => a - b)
+    expect(orders).toEqual([1, 2, 3, 4, 5, 6])
   })
 
-  it('skips and keeps exactly 6 areas on second run', () => {
+  it('skips on second run with identical area names and IDs', () => {
     const db = new SeedDb()
 
     // First run
     const r1 = runSeed(db, 'test-showcase', SHOWCASE_DATA)
     expect(r1.action).toBe('created')
-    expect(db.findSpaces(r1.profileId)).toHaveLength(6)
+    const areasAfterFirst = db.findSpaces(r1.profileId).map(a => ({ id: a.id, name: a.name, sortOrder: a.sortOrder }))
+    expect(areasAfterFirst).toHaveLength(6)
 
     // Second run — should skip
     const r2 = runSeed(db, 'test-showcase', SHOWCASE_DATA)
     expect(r2.action).toBe('skip')
 
-    // Still exactly 6 areas — no duplicates
-    expect(db.findSpaces(r2.profileId)).toHaveLength(6)
+    // Areas are byte-identical — same IDs, names, sortOrders
+    const areasAfterSecond = db.findSpaces(r2.profileId).map(a => ({ id: a.id, name: a.name, sortOrder: a.sortOrder }))
+    expect(areasAfterSecond).toEqual(areasAfterFirst)
+
+    // No duplicate names
+    const names = areasAfterSecond.map(a => a.name)
+    expect(new Set(names).size).toBe(6)
+
     expect(db.profiles).toHaveLength(1)
   })
 
-  it('skips on third run without accumulating areas', () => {
+  it('skips on third run without accumulating areas or mutating data', () => {
     const db = new SeedDb()
 
-    runSeed(db, 'test-showcase', SHOWCASE_DATA)
+    const r1 = runSeed(db, 'test-showcase', SHOWCASE_DATA)
+    const snapshotAfterFirst = db.findSpaces(r1.profileId).map(a => ({ id: a.id, name: a.name, sortOrder: a.sortOrder }))
+
     runSeed(db, 'test-showcase', SHOWCASE_DATA)
     const r3 = runSeed(db, 'test-showcase', SHOWCASE_DATA)
 
     expect(r3.action).toBe('skip')
-    expect(db.findSpaces(r3.profileId)).toHaveLength(6)
+
+    // Exactly the same areas as after the first run
+    const snapshotAfterThird = db.findSpaces(r3.profileId).map(a => ({ id: a.id, name: a.name, sortOrder: a.sortOrder }))
+    expect(snapshotAfterThird).toEqual(snapshotAfterFirst)
+
+    // Global spaces array hasn't grown (no phantom inserts)
+    expect(db.spaces).toHaveLength(6)
   })
 })
 
