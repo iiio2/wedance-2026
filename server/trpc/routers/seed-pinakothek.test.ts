@@ -221,6 +221,14 @@ describe('seed recovery — partial seed completed without duplicates (RAZ-655)'
 
     // Original 3 are untouched
     expect(allSpaces.filter(s => s.id.startsWith('existing-'))).toHaveLength(3)
+
+    // No duplicate names across old + new areas
+    const names = allSpaces.map(s => s.name)
+    expect(new Set(names).size).toBe(6)
+
+    // sortOrders are sequential 1–6 with no gaps
+    const orders = allSpaces.map(s => s.sortOrder).sort((a, b) => a - b)
+    expect(orders).toEqual([1, 2, 3, 4, 5, 6])
   })
 
   it('fills missing areas when profile has zero areas (crashed after profile creation)', () => {
@@ -232,7 +240,16 @@ describe('seed recovery — partial seed completed without duplicates (RAZ-655)'
 
     expect(result.action).toBe('filled-areas')
     expect(result.added).toBe(6)
-    expect(db.findSpaces('crashed-1')).toHaveLength(6)
+
+    const allSpaces = db.findSpaces('crashed-1')
+    expect(allSpaces).toHaveLength(6)
+
+    // All 6 areas have unique names and sequential sortOrders
+    const names = allSpaces.map(s => s.name)
+    expect(new Set(names).size).toBe(6)
+
+    const orders = allSpaces.map(s => s.sortOrder).sort((a, b) => a - b)
+    expect(orders).toEqual([1, 2, 3, 4, 5, 6])
   })
 
   it('re-running after recovery does not add more areas', () => {
@@ -244,12 +261,14 @@ describe('seed recovery — partial seed completed without duplicates (RAZ-655)'
 
     // Recovery run
     runSeed(db, 'test-showcase', SHOWCASE_DATA)
-    expect(db.findSpaces('partial-2')).toHaveLength(6)
+    const areasAfterRecovery = db.findSpaces('partial-2').map(s => ({ id: s.id, name: s.name, sortOrder: s.sortOrder }))
+    expect(areasAfterRecovery).toHaveLength(6)
 
-    // Idempotent re-run
+    // Idempotent re-run — areas are byte-identical
     const r2 = runSeed(db, 'test-showcase', SHOWCASE_DATA)
     expect(r2.action).toBe('skip')
-    expect(db.findSpaces('partial-2')).toHaveLength(6)
+    const areasAfterRerun = db.findSpaces('partial-2').map(s => ({ id: s.id, name: s.name, sortOrder: s.sortOrder }))
+    expect(areasAfterRerun).toEqual(areasAfterRecovery)
   })
 
   it('enriches a bare profile (no guidelines) and adds all areas', () => {
@@ -267,12 +286,82 @@ describe('seed recovery — partial seed completed without duplicates (RAZ-655)'
     const result = runSeed(db, 'test-showcase', SHOWCASE_DATA)
 
     expect(result.action).toBe('enriched')
-    expect(db.findSpaces('bare-1')).toHaveLength(6)
+
+    const allSpaces = db.findSpaces('bare-1')
+    expect(allSpaces).toHaveLength(6)
+
+    // All 6 areas have unique names and sequential sortOrders
+    const names = allSpaces.map(s => s.name)
+    expect(new Set(names).size).toBe(6)
+
+    const orders = allSpaces.map(s => s.sortOrder).sort((a, b) => a - b)
+    expect(orders).toEqual([1, 2, 3, 4, 5, 6])
 
     // Profile was enriched with the seed data
     const p = db.findProfile('test-showcase')!
     expect(p.guidelines).toBe('No music before 7pm.')
     expect(p.name).toBe('Test Showcase Venue')
+  })
+
+  it('fills exactly 1 missing area when profile has 5 of 6', () => {
+    const db = new SeedDb()
+    db.insertProfile({ id: 'almost-done', ...SHOWCASE_DATA })
+    for (let i = 0; i < 5; i++) {
+      db.insertSpace({ id: `existing-${i}`, profileId: 'almost-done', ...AREAS[i] })
+    }
+
+    const result = runSeed(db, 'test-showcase', SHOWCASE_DATA)
+
+    expect(result.action).toBe('filled-areas')
+    expect(result.added).toBe(1)
+
+    const allSpaces = db.findSpaces('almost-done')
+    expect(allSpaces).toHaveLength(6)
+
+    // Original 5 are untouched
+    expect(allSpaces.filter(s => s.id.startsWith('existing-'))).toHaveLength(5)
+
+    // The new area is "Area 6" with sortOrder 6
+    const newArea = allSpaces.find(s => !s.id.startsWith('existing-'))!
+    expect(newArea.name).toBe('Area 6')
+    expect(newArea.sortOrder).toBe(6)
+
+    // No duplicate names
+    const names = allSpaces.map(s => s.name)
+    expect(new Set(names).size).toBe(6)
+  })
+
+  it('enriches bare profile with existing areas and adds only missing ones', () => {
+    const db = new SeedDb()
+    // v3-synced profile with some areas but no guidelines
+    db.insertProfile({
+      id: 'bare-partial',
+      username: 'test-showcase',
+      type: 'venue',
+      guidelines: null,
+      bookingModel: 'commercial',
+      name: 'Bare Venue',
+    })
+    for (let i = 0; i < 4; i++) {
+      db.insertSpace({ id: `v3-area-${i}`, profileId: 'bare-partial', ...AREAS[i] })
+    }
+
+    const result = runSeed(db, 'test-showcase', SHOWCASE_DATA)
+
+    expect(result.action).toBe('enriched')
+
+    const allSpaces = db.findSpaces('bare-partial')
+    expect(allSpaces).toHaveLength(6)
+
+    // Original 4 v3 areas untouched
+    expect(allSpaces.filter(s => s.id.startsWith('v3-area-'))).toHaveLength(4)
+
+    // No duplicate names, sequential sortOrders
+    const names = allSpaces.map(s => s.name)
+    expect(new Set(names).size).toBe(6)
+
+    const orders = allSpaces.map(s => s.sortOrder).sort((a, b) => a - b)
+    expect(orders).toEqual([1, 2, 3, 4, 5, 6])
   })
 })
 
