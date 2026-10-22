@@ -80,6 +80,46 @@ describe('entity.getByHandle', () => {
     expect(await caller(db).entity.getByHandle({ handle: 'nope' })).toBeNull()
   })
 
+  it('returns only seeded areas after partial seeding, exposing the gap', async () => {
+    const db = new FakeDb()
+    db.profiles.push({ id: 'v1', username: 'test-venue', type: 'venue', name: 'Test Venue', status: 'visible', city: 'TestCity', citySlug: 'testcity' })
+    // Simulate partial seed: 3 of 6 expected areas created
+    const EXPECTED_AREA_COUNT = 6
+    db.bookableSpaces.push({ id: 'a1', profileId: 'v1', name: 'Zone Alpha', sortOrder: 1 })
+    db.bookableSpaces.push({ id: 'a2', profileId: 'v1', name: 'Zone Beta', sortOrder: 2 })
+    db.bookableSpaces.push({ id: 'a3', profileId: 'v1', name: 'Zone Gamma', sortOrder: 3 })
+
+    const res = await caller(db).entity.getByHandle({ handle: 'test-venue' })
+    // Only 3 spaces returned — the missing 3 are detectable
+    expect(res?.spaces).toHaveLength(3)
+    expect(res!.spaces.length).toBeLessThan(EXPECTED_AREA_COUNT)
+    expect(res?.spaces.map((s: any) => s.name)).toEqual(['Zone Alpha', 'Zone Beta', 'Zone Gamma'])
+  })
+
+  it('returns all areas when seeding is complete', async () => {
+    const db = new FakeDb()
+    db.profiles.push({ id: 'v2', username: 'full-venue', type: 'venue', name: 'Full Venue', status: 'visible', city: 'TestCity', citySlug: 'testcity' })
+    const EXPECTED_AREA_COUNT = 6
+    for (let i = 1; i <= EXPECTED_AREA_COUNT; i++) {
+      db.bookableSpaces.push({ id: `f${i}`, profileId: 'v2', name: `Zone ${i}`, sortOrder: i })
+    }
+
+    const res = await caller(db).entity.getByHandle({ handle: 'full-venue' })
+    expect(res?.spaces).toHaveLength(EXPECTED_AREA_COUNT)
+    expect(res?.spaces.map((s: any) => s.name)).toEqual(
+      Array.from({ length: 6 }, (_, i) => `Zone ${i + 1}`),
+    )
+  })
+
+  it('returns zero spaces when no areas are seeded', async () => {
+    const db = new FakeDb()
+    db.profiles.push({ id: 'v3', username: 'empty-venue', type: 'venue', name: 'Empty Venue', status: 'visible', city: 'TestCity', citySlug: 'testcity' })
+    // No bookableSpaces added — simulates seeding that created the profile but crashed before areas
+
+    const res = await caller(db).entity.getByHandle({ handle: 'empty-venue' })
+    expect(res?.spaces).toHaveLength(0)
+  })
+
   it('lists venues by city', async () => {
     const db = new FakeDb()
     db.profiles.push({ id: 'p1', username: 'pina', type: 'venue', name: 'Pina', status: 'visible', citySlug: 'munich' })
