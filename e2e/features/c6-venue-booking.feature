@@ -17,6 +17,13 @@ Feature: C6 — Host and venue journey
     When I click on the venue "QA Venue 657"
     Then I see the venue profile page for "qa-venue-657"
     And I see at least 1 bookable space
+    When I click "Propose an event"
+    Then I see the booking form
+    When I fill in the booking title with "QA Sunday Social 657"
+    And I fill in the booking email with "qa-657@test.wedance.vip"
+    And I accept the booking terms
+    And I submit the booking request
+    Then I see "Slot proposed"
 
   # ── RAZ-658 — Start a private-event request from For Events ───────────
 

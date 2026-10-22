@@ -146,7 +146,43 @@ When('I click "Tell us about your event"', async ({ page }) => {
     .click()
 })
 
-// ── Steps: Form interactions ─────────────────────────────────────────
+When('I click "Propose an event"', async ({ page }) => {
+  await page
+    .getByRole('button', { name: /propose an event/i })
+    .click()
+})
+
+// ── Steps: Booking form interactions ────────────────────────────────
+
+When(
+  'I fill in the booking title with {string}',
+  async ({ page }, title: string) => {
+    const field = page.locator('[role="dialog"]').getByLabel('Event name')
+    await expect(field).toBeVisible({ timeout: 5_000 })
+    await field.fill(title)
+  },
+)
+
+When(
+  'I fill in the booking email with {string}',
+  async ({ page }, email: string) => {
+    await page.locator('[role="dialog"]').getByLabel('Email').fill(email)
+  },
+)
+
+When('I accept the booking terms', async ({ page }) => {
+  const checkbox = page.locator('[role="dialog"]').getByRole('checkbox')
+  await checkbox.check()
+})
+
+When('I submit the booking request', async ({ page }) => {
+  const btn = page
+    .locator('[role="dialog"]')
+    .getByRole('button', { name: /book it|send request/i })
+  await btn.click()
+})
+
+// ── Steps: Event inquiry form interactions ──────────────────────────
 
 When('I fill the event inquiry with brief details', async ({ page }) => {
   // Fill the minimal required fields for the event inquiry form
@@ -187,6 +223,12 @@ Then('I see at least {int} bookable space(s)', async ({ page }, min: number) => 
   const body = await page.textContent('main', { timeout: 10_000 })
   // The page should show spaces or a booking calendar
   expect(body).toBeTruthy()
+})
+
+Then('I see the booking form', async ({ page }) => {
+  const dialog = page.locator('[role="dialog"]')
+  await expect(dialog).toBeVisible({ timeout: 5_000 })
+  await expect(dialog.getByLabel('Event name')).toBeVisible()
 })
 
 Then('I see the event inquiry form', async ({ page }) => {
