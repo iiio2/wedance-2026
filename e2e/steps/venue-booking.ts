@@ -195,6 +195,15 @@ When('I fill the event inquiry with brief details', async ({ page }) => {
 })
 
 When('I submit the event inquiry', async ({ page }) => {
+  // Intercept the tRPC mutation so the test never hits the real Linear API.
+  await page.route('**/api/trpc/feedback.inquiry**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{ result: { data: { ok: true } } }]),
+    })
+  })
+
   await page.getByRole('button', { name: /send request/i }).click()
 })
 
