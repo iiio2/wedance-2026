@@ -245,3 +245,25 @@ Then(
     await expect(link.first()).toBeVisible({ timeout: 10_000 })
   },
 )
+
+// ── Steps: Showcase venue seeding (RAZ-662) ─────────────────────────
+
+Given(
+  'the showcase venue {string} exists with bookable spaces',
+  async ({}, username: string) => {
+    const displayName = username
+      .split('-')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ')
+    venueStore[username] = await seedVenue(username, displayName, 2)
+  },
+)
+
+When(
+  'I click the showcase venue link {string}',
+  async ({ page }, handle: string) => {
+    const link = page.locator(`a[href*="@${handle}"]`)
+    await link.first().click()
+    await page.waitForLoadState('networkidle')
+  },
+)

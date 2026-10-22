@@ -66,7 +66,13 @@ Feature: C6 — Host and venue journey
 
   # ── RAZ-662 — Follow showcase entry point to a bookable venue ─────────
 
+  @write
   Scenario: Follow the showcase link from For Events to a venue
+    Given the test environment is safe to write
+    And the showcase venue "pinakothek-der-moderne" exists with bookable spaces
     When I go to the for-events page
     Then I see "See it in action"
     And I see a link to the showcase venue "pinakothek-der-moderne"
+    When I click the showcase venue link "pinakothek-der-moderne"
+    Then I see the venue profile page for "pinakothek-der-moderne"
+    And I see at least 1 bookable space
