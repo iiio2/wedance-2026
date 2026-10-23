@@ -65,6 +65,31 @@ Feature: C6 — Host and venue journey
     And the venue "qa-venue-661" has Monday availability from "18:00" to "23:00"
     When I navigate to the venue profile "qa-venue-661"
     Then I see the venue profile page for "qa-venue-661"
+    When I click "Propose an event"
+    Then I see the booking dialog
+    When I fill in the booking title with "QA Unavailable Date"
+    And I fill in the booking email with "qa-661@test.wedance.vip"
+    And I set the booking date to next Tuesday
+    And I accept the booking terms
+    And I submit the booking request
+    Then I see the booking error "not available on that day"
+
+  @write
+  Scenario: Validation feedback when requesting an out-of-hours time
+    Given the test environment is safe to write
+    And a test venue "qa-venue-661b" exists with 2 bookable spaces
+    And the venue "qa-venue-661b" has Monday availability from "18:00" to "23:00"
+    When I navigate to the venue profile "qa-venue-661b"
+    Then I see the venue profile page for "qa-venue-661b"
+    When I click "Propose an event"
+    Then I see the booking dialog
+    When I fill in the booking title with "QA Out-of-Hours"
+    And I fill in the booking email with "qa-661b@test.wedance.vip"
+    And I set the booking date to next Monday
+    And I set the booking start time to "10:00"
+    And I accept the booking terms
+    And I submit the booking request
+    Then I see the booking error "outside this space's available hours"
 
   # ── RAZ-662 — Follow showcase entry point to a bookable venue ─────────
 

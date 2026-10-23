@@ -88,6 +88,16 @@ async function seedAvailability(
   }
 }
 
+/** Return the next occurrence of a given ISO weekday (1=Mon…7=Sun) as YYYY-MM-DD. */
+function nextWeekday(isoDay: number): string {
+  const now = new Date()
+  const current = now.getUTCDay() || 7 // 0→7 so Sun=7
+  const diff = ((isoDay - current) % 7 + 7) % 7 || 7 // always at least 1 day ahead
+  const target = new Date(now)
+  target.setDate(target.getDate() + diff)
+  return target.toISOString().slice(0, 10)
+}
+
 // ── Module-level store for cross-step state ──────────────────────────
 
 const venueStore: Record<string, string> = {} // username → profileId
@@ -187,6 +197,43 @@ When('I submit the booking request', async ({ page }) => {
     .getByRole('button', { name: /book it|send request/i })
   await btn.click()
 })
+
+// ── Steps: Booking validation (RAZ-661) ─────────────────────────────
+
+Then('I see the booking dialog', async ({ page }) => {
+  const dialog = page.locator('[role="dialog"]')
+  await expect(dialog).toBeVisible({ timeout: 5_000 })
+  await expect(dialog.getByLabel('Event name')).toBeVisible()
+})
+
+When('I set the booking date to next Tuesday', async ({ page }) => {
+  const dialog = page.locator('[role="dialog"]')
+  const tuesday = nextWeekday(2)
+  await dialog.getByLabel('Date').fill(tuesday)
+})
+
+When('I set the booking date to next Monday', async ({ page }) => {
+  const dialog = page.locator('[role="dialog"]')
+  const monday = nextWeekday(1)
+  await dialog.getByLabel('Date').fill(monday)
+})
+
+When(
+  'I set the booking start time to {string}',
+  async ({ page }, time: string) => {
+    const dialog = page.locator('[role="dialog"]')
+    await dialog.getByLabel('Start').fill(time)
+  },
+)
+
+Then(
+  'I see the booking error {string}',
+  async ({ page }, errorFragment: string) => {
+    const alert = page.locator('[role="dialog"] [role="alert"]')
+    await expect(alert).toBeVisible({ timeout: 10_000 })
+    await expect(alert).toContainText(errorFragment, { ignoreCase: true })
+  },
+)
 
 // ── Steps: Event inquiry form interactions ──────────────────────────
 
