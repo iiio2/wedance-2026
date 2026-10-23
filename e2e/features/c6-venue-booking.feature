@@ -47,12 +47,14 @@ Feature: C6 — Host and venue journey
   # ── RAZ-660 — Open a venue and start a booking request ────────────────
 
   @write
-  Scenario: Open a venue profile and see the booking calendar
+  Scenario: Open a venue profile and start a booking request
     Given the test environment is safe to write
     And a test venue "qa-venue-660" exists with 2 bookable spaces
     When I navigate to the venue profile "qa-venue-660"
     Then I see the venue profile page for "qa-venue-660"
-    And I see at least 1 bookable space
+    And I see the "Book a free slot" section
+    When I click "Propose an event"
+    Then I see the booking request dialog
 
   # ── RAZ-661 — Show validation feedback for unavailable bookings ───────
 

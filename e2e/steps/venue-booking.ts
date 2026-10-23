@@ -140,6 +140,12 @@ When(
   },
 )
 
+When('I click "Propose an event"', async ({ page }) => {
+  await page
+    .getByRole('button', { name: /propose an event/i })
+    .click()
+})
+
 When('I click "Tell us about your event"', async ({ page }) => {
   await page
     .getByRole('button', { name: /tell us about your event/i })
@@ -245,6 +251,27 @@ Then('I see the event inquiry form', async ({ page }) => {
     timeout: 5_000,
   })
   await expect(page.getByLabel(/your email/i)).toBeVisible()
+})
+
+Then(
+  'I see the {string} section',
+  async ({ page }, heading: string) => {
+    await expect(
+      page.getByRole('heading', { name: heading }),
+    ).toBeVisible({ timeout: 10_000 })
+  },
+)
+
+Then('I see the booking request dialog', async ({ page }) => {
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible({ timeout: 5_000 })
+  // The dialog title for a free venue is "Propose an event"
+  await expect(
+    dialog.getByText(/propose an event|request a space/i),
+  ).toBeVisible()
+  // Key form fields are present
+  await expect(dialog.locator('#booking-title')).toBeVisible()
+  await expect(dialog.locator('#booking-email')).toBeVisible()
 })
 
 Then(
