@@ -106,12 +106,14 @@ jobs:
           LOKI_TOKEN: ${{ secrets.LOKI_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
 
-  # After merge only: ~5 min (DB + build + browser), so PRs don't wait on it.
+  # After merge only: ~7 min typical (DB + build + cached browser + tests).
   # Each merged commit still gets an end-to-end result to trace breaks to.
+  # 20-min timeout absorbs occasional slow apt mirrors (observed 10min+ on
+  # westus3 in run #442).
   e2e-smoke:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     services:
       postgres:
@@ -199,8 +201,19 @@ jobs:
           cat /tmp/preview.log
           exit 1
 
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package.json') }}
+
       - name: Install Playwright browsers
-        run: bunx playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install chromium
+
+      - name: Install Playwright system dependencies
+        run: bunx playwright install-deps chromium
 
       - name: Generate BDD test files
         run: bunx bddgen
