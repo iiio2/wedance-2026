@@ -24,7 +24,7 @@ export type FlyerSource = {
   styles?: string[]
   /** One price per line ("Free until 21:00\nFrom 21:00 · 10€"). */
   price?: string | null
-  /** Festival passes as display strings, e.g. ["Full Pass · 210 €"]. Shown on the announcement flyer when price is empty. */
+  /** Festival passes as display strings, e.g. ["Full Pass · 210 €"]. The flyer's entry line shows up to 3, before the promotions. */
   passes?: string[]
 }
 
@@ -65,9 +65,8 @@ export function flyerLines(e: FlyerSource): FlyerLine[] {
   }
   if (names.length) out.push({ label: 'line-up', text: up(names.join(' · ')) })
   if (e.styles?.length) out.push({ label: 'music', text: up(e.styles.join(' × ')) })
-  const prices = priceLines(e.price)
+  const prices = [...(e.passes ?? []).slice(0, 3), ...priceLines(e.price)]
   if (prices.length) out.push({ label: 'entry', text: prices.join(' · ') })
-  else if (e.passes?.length) out.push({ label: 'entry', text: e.passes.slice(0, 3).join(' · ') })
   if (venue) out.push({ label: 'venue', text: venue })
   return out
 }

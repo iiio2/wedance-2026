@@ -327,22 +327,22 @@ const hostText = computed(() => props.hosts.find(h => h.username === form.hostUs
       </div>
       <div v-if="isOpen('entry')" class="mt-3 grid gap-2">
         <BusinessFestivalEditor v-if="form.festival" v-model="form.festival" part="passes" :days="festivalDays" />
-        <div class=”mt-4”>
-          <p class=”text-sm font-bold”>Door price <span class=”font-normal text-muted-foreground”>(shown on the flyer)</span></p>
-          <p class=”text-xs text-muted-foreground”>Entry prices, one per line, e.g. “Free until 21:00”, “From 21:00 · 10€”, “Early bird −20% until 1 Nov”.</p>
+        <div class="mt-4">
+          <p class="text-sm font-bold">Promotions <span class="font-normal text-muted-foreground">(optional)</span></p>
+          <p class="text-xs text-muted-foreground">Deals and door prices, one per line, e.g. “Free until 21:00”, “From 21:00 · 10€”, “Early bird −20% until 1 Nov”.</p>
         </div>
         <div v-for="(_, i) in prices" :key="i" class="flex gap-2">
-          <Input v-model="prices[i]" class="flex-1" :aria-label="`Price line ${i + 1}`" />
-          <Button type="button" variant="ghost" size="icon-sm" :aria-label="`Remove price line ${i + 1}`" @click="prices.splice(i, 1)"><X /></Button>
+          <Input v-model="prices[i]" class="flex-1" :aria-label="`Promotion, line ${i + 1}`" />
+          <Button type="button" variant="ghost" size="icon-sm" :aria-label="`Remove promotion ${i + 1}`" @click="prices.splice(i, 1)"><X /></Button>
         </div>
-        <Button type="button" variant="ghost" size="sm" class="justify-self-start" @click="prices.push('')"><Plus /> Add a price line</Button>
+        <Button type="button" variant="ghost" size="sm" class="justify-self-start" @click="prices.push('')"><Plus /> Add a promotion</Button>
         <Field id="ev-ticket" label="Ticket link" optional :error="errors.ticketUrl" class="mt-2" hint="For Tickettailor, use the checkout link so people land on the ticket list.">
           <Input v-model="form.ticketUrl" type="url" placeholder="https://…" />
         </Field>
       </div>
       <div v-else class="mt-1 text-sm">
         <p v-if="form.festival?.passes?.length">Passes: {{ form.festival.passes.map(p => p.name).filter(Boolean).join(' · ') }}</p>
-        <p>{{ prices.filter(Boolean).length ? `Door price: ${prices.filter(Boolean).join(' · ')}` : 'No door price' }}</p>
+        <p>{{ prices.filter(Boolean).length ? `Promotions: ${prices.filter(Boolean).join(' · ')}` : 'No promotions' }}</p>
         <p class="truncate text-xs text-muted-foreground">{{ form.ticketUrl ? `Tickets: ${form.ticketUrl}` : 'No ticket link' }}</p>
       </div>
     </section>

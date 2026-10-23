@@ -35,13 +35,13 @@ describe('flyerLines', () => {
   it('keeps price lines as typed, dropping blanks', () => {
     expect(priceLines(' Free \n\n10€ ')).toEqual(['Free', '10€'])
   })
-  it('falls back to passes when price is empty', () => {
+  it('shows passes when there are no promotions', () => {
     const lines = flyerLines({ ...ev, price: '', passes: ['Full Pass · 210 €', 'Party Pass · 80 €'] })
     expect(lines.find(l => l.label === 'entry')?.text).toBe('Full Pass · 210 € · Party Pass · 80 €')
   })
-  it('prefers price over passes', () => {
-    const lines = flyerLines({ ...ev, price: '10€', passes: ['Full Pass · 210 €'] })
-    expect(lines.find(l => l.label === 'entry')?.text).toBe('10€')
+  it('shows passes, then promotions', () => {
+    const lines = flyerLines({ ...ev, price: 'Early bird −20%', passes: ['Full Pass · 210 €'] })
+    expect(lines.find(l => l.label === 'entry')?.text).toBe('Full Pass · 210 € · Early bird −20%')
   })
   it('limits passes to 3 on the flyer', () => {
     const lines = flyerLines({ ...ev, price: '', passes: ['A · 10 €', 'B · 20 €', 'C · 30 €', 'D · 40 €'] })
