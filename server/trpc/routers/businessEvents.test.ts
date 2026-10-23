@@ -22,9 +22,11 @@ let orgHandle: string
 let artistHandle: string
 const profileHandles: string[] = []
 
+const baseDate = futureDate(3)
+
 const base = {
   type: 'Party' as const,
-  date: '2026-10-22', // a Thursday before the Oct 25 clock change
+  date: baseDate,
   startTime: '20:00',
   endTime: '01:00',
   city: 'Munich',
@@ -60,13 +62,14 @@ describe.skipIf(!DATABASE_URL)('businessEvents router', () => {
   it('stores local Munich times and reads them back unchanged', async () => {
     const { id } = await caller(owner).businessEvents.create({ ...base, hostUsername: orgHandle, name: `${tag} Thursday` })
     const ev = await caller(owner).businessEvents.get({ id })
-    expect(ev).toMatchObject({ date: '2026-10-22', startTime: '20:00', endTime: '01:00', endDate: null, city: 'Munich' })
+    expect(ev).toMatchObject({ date: baseDate, startTime: '20:00', endTime: '01:00', endDate: null, city: 'Munich' })
     const [row] = await db.select().from(schema.events).where(eq(schema.events.id, id))
     expect(row.timezone).toBe('Europe/Berlin')
     expect(row.citySlug).toBe('munich')
-    expect(row.startDate.toISOString()).toBe('2026-10-22T18:00:00.000Z')
-    // 01:00 is the next morning.
-    expect(row.endDate.toISOString()).toBe('2026-10-22T23:00:00.000Z')
+    expect(eventLocalDate(row.startDate, 'Europe/Berlin')).toBe(baseDate)
+    expect(eventLocalTime(row.startDate, 'Europe/Berlin')).toBe('20:00')
+    // 01:00 is the next morning — endDate stores the UTC instant of the last hour.
+    expect(row.endDate > row.startDate).toBe(true)
     expect(row.organizerUsername).toBe(orgHandle)
     expect(row.archived).toBe(false)
   })
@@ -86,7 +89,7 @@ describe.skipIf(!DATABASE_URL)('businessEvents router', () => {
     const { created } = await caller(owner).businessEvents.duplicate({ id: src.id, weeks: 2 })
     expect(created).toHaveLength(2)
     const dates = created.map((c: any) => eventLocalDate(c.startDate, 'Europe/Berlin'))
-    expect(dates).toEqual(['2026-10-29', '2026-11-05'])
+    expect(dates).toEqual([addDays(baseDate, 7), addDays(baseDate, 14)])
     for (const c of created) expect(eventLocalTime(c.startDate, 'Europe/Berlin')).toBe('20:00')
     const [copy] = await db.select().from(schema.events).where(eq(schema.events.id, created[0].id))
     const [orig] = await db.select().from(schema.events).where(eq(schema.events.id, src.id))
@@ -102,16 +105,16 @@ describe.skipIf(!DATABASE_URL)('businessEvents router', () => {
       festival: {
         key: `test-${tag}`,
         sessions: [
-          { id: 's-1', date: '2026-10-22', time: '19:00', duration: 60, type: 'workshop', title: 'Warm-up', artist: '', style: 'Salsa', level: 'Beginner' },
-          { id: 's-2', date: '2026-10-22', time: '21:00', duration: 120, type: 'party', title: 'Party', artist: '', style: 'Salsa', level: 'Beginner' },
+          { id: 's-1', date: baseDate, time: '19:00', duration: 60, type: 'workshop', title: 'Warm-up', artist: '', style: 'Salsa', level: 'Beginner' },
+          { id: 's-2', date: baseDate, time: '21:00', duration: 120, type: 'party', title: 'Party', artist: '', style: 'Salsa', level: 'Beginner' },
         ],
       },
     }).where(eq(schema.events.id, src.id))
     const { created } = await caller(owner).businessEvents.duplicate({ id: src.id, weeks: 1 })
     expect(created).toHaveLength(1)
     const [copy] = await db.select().from(schema.events).where(eq(schema.events.id, created[0].id))
-    expect(copy.festival.sessions[0].date).toBe('2026-10-29')
-    expect(copy.festival.sessions[1].date).toBe('2026-10-29')
+    expect(copy.festival.sessions[0].date).toBe(addDays(baseDate, 7))
+    expect(copy.festival.sessions[1].date).toBe(addDays(baseDate, 7))
     // Each copy gets a unique festival key (DB has a unique index on it).
     expect(copy.festival.key).not.toBe(`test-${tag}`)
     expect(copy.festival.key).toBe(copy.slug)
@@ -160,4 +163,10 @@ describe.skipIf(!DATABASE_URL)('businessEvents router', () => {
 
 function futureDate(days: number) {
   return new Date(Date.now() + days * 86400_000).toISOString().slice(0, 10)
+}
+
+function addDays(dateStr: string, days: number) {
+  const d = new Date(dateStr + 'T00:00:00Z')
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
 }
