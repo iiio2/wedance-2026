@@ -162,12 +162,6 @@ When('I click "Tell us about your event"', async ({ page }) => {
     .click()
 })
 
-When('I click "Propose an event"', async ({ page }) => {
-  await page
-    .getByRole('button', { name: /propose an event/i })
-    .click()
-})
-
 // ── Steps: Booking form interactions ────────────────────────────────
 
 When(
