@@ -26,7 +26,7 @@ exported: 2026-10-25
 When I click Forgot password, it doesn't work.
 I don't receive an email.
 And I see exposed raw sql error:
-Failed query: insert into "dancers" ("id", "email", "name", "photo", "dance_styles", "dance_levels", "role", "city", "neon_auth_id", "is_admin", "username", "old_usernames", "bio", "instagram", "youtube", "website", "profile_public", "salt", "hash", "intent", "onboarded_at", "magic_token", "magic_token_expires_at", "email_verified_at", "created_at") values (default, $1, $2, default, $3, default, $4, $5, default, default, default, default, default, default, default, default, default, default, default, default, default, $6, $7, default, default) on conflict ("email") do update set "magic_token" = $8, "magic_token_expires_at" = $9 params: [[email redacted]](<mailto:[email redacted]>),razbakov.aleksey,\[\],,,f2a5b28b-3895-48dc-936e-b19c5ff25b87,2026-10-15T16:26:37.914Z,f2a5b28b-3895-48dc-936e-b19c5ff25b87,2026-10-15T16:26:37.914Z
+Failed query: insert into "dancers" ("id", "email", "name", "photo", "dance_styles", "dance_levels", "role", "city", "neon_auth_id", "is_admin", "username", "old_usernames", "bio", "instagram", "youtube", "website", "profile_public", "salt", "hash", "intent", "onboarded_at", "magic_token", "magic_token_expires_at", "email_verified_at", "created_at") values (default, $1, $2, default, $3, default, $4, $5, default, default, default, default, default, default, default, default, default, default, default, default, default, $6, $7, default, default) on conflict ("email") do update set "magic_token" = $8, "magic_token_expires_at" = $9 params: [redacted]
 
 ---
 

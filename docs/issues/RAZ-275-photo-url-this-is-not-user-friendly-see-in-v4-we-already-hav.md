@@ -39,39 +39,39 @@ This is not user friendly. See in v4 we already have a good way of uploading pho
 ```
 [11:02:26.020] console.error: Hydration completed but contains mismatches.
 [11:02:26.500] console.error: Failed to fetch hangouts: TRPCClientError: Failed query: select "id", "kind", "title", "time", "venue", "host", "people_count", "status", "dancer_id", "created_at" from "hangouts" where ("hangouts"."city_slug" = $1 and "hangouts"."status" = $2) order by "hangouts"."created_at" desc
-params: munich,active
+params: [redacted]
 TRPCClientError: Failed query: select "id", "kind", "title", "time", "venue", "host", "people_count", "status", "dancer_id", "created_at" from "hangouts" where ("hangouts"."city_slug" = $1 and "hangouts"."status" = $2) order by "hangouts"."created_at" desc
-params: munich,active
+params: [redacted]
     at Nc.from (https://2026.wedance.vip/_nuxt/4HjQCKps.js:7:10261)
     at https://2026.wedance.vip/_nuxt/4HjQCKps.js:7:15462
 [11:02:57.767] console.error: Failed to fetch hangouts: TRPCClientError: Failed query: select "id", "kind", "title", "time", "venue", "host", "people_count", "status", "dancer_id", "created_at" from "hangouts" where ("hangouts"."city_slug" = $1 and "hangouts"."status" = $2) order by "hangouts"."created_at" desc
-params: munich,active
+params: [redacted]
 TRPCClientError: Failed query: select "id", "kind", "title", "time", "venue", "host", "people_count", "status", "dancer_id", "created_at" from "hangouts" where ("hangouts"."city_slug" = $1 and "hangouts"."status" = $2) order by "hangouts"."created_at" desc
-params: munich,active
+params: [redacted]
     at Nc.from (https://2026.wedance.vip/_nuxt/4HjQCKps.js:7:10261)
     at https://2026.wedance.vip/_nuxt/4HjQCKps.js:7:15462
 [11:03:00.247] console.error: Failed to fetch hangouts: TRPCClientError: Failed query: select "id", "kind", "title", "time", "venue", "host", "people_count", "status", "dancer_id", "created_at" from "hangouts" where ("hangouts"."city_slug" = $1 and "hangouts"."status" = $2) order by "hangouts"."created_at" desc
-params: munich,active
+params: [redacted]
 TRPCClientError: Failed query: select "id", "kind", "title", "time", "venue", "host", "people_count", "status", "dancer_id", "created_at" from "hangouts" where ("hangouts"."city_slug" = $1 and "hangouts"."status" = $2) order by "hangouts"."created_at" desc
-params: munich,active
+params: [redacted]
     at Nc.from (https://2026.wedance.vip/_nuxt/4HjQCKps.js:7:10261)
     at https://2026.wedance.vip/_nuxt/4HjQCKps.js:7:15462
 [11:03:03.817] console.error: Failed to fetch hangouts: TRPCClientError: Failed query: select "id", "kind", "title", "time", "venue", "host", "people_count", "status", "dancer_id", "created_at" from "hangouts" where ("hangouts"."city_slug" = $1 and "hangouts"."status" = $2) order by "hangouts"."created_at" desc
-params: munich,active
+params: [redacted]
 TRPCClientError: Failed query: select "id", "kind", "title", "time", "venue", "host", "people_count", "status", "dancer_id", "created_at" from "hangouts" where ("hangouts"."city_slug" = $1 and "hangouts"."status" = $2) order by "hangouts"."created_at" desc
-params: munich,active
+params: [redacted]
     at Nc.from (https://2026.wedance.vip/_nuxt/4HjQCKps.js:7:10261)
     at https://2026.wedance.vip/_nuxt/4HjQCKps.js:7:15462
 [11:03:07.284] console.error: Failed to fetch hangouts: TRPCClientError: Failed query: select "id", "kind", "title", "time", "venue", "host", "people_count", "status", "dancer_id", "created_at" from "hangouts" where ("hangouts"."city_slug" = $1 and "hangouts"."status" = $2) order by "hangouts"."created_at" desc
-params: munich,active
+params: [redacted]
 TRPCClientError: Failed query: select "id", "kind", "title", "time", "venue", "host", "people_count", "status", "dancer_id", "created_at" from "hangouts" where ("hangouts"."city_slug" = $1 and "hangouts"."status" = $2) order by "hangouts"."created_at" desc
-params: munich,active
+params: [redacted]
     at Nc.from (https://2026.wedance.vip/_nuxt/4HjQCKps.js:7:10261)
     at https://2026.wedance.vip/_nuxt/4HjQCKps.js:7:15462
 [11:03:16.836] console.error: Failed to fetch hangouts: TRPCClientError: Failed query: select "id", "kind", "title", "time", "venue", "host", "people_count", "status", "dancer_id", "created_at" from "hangouts" where ("hangouts"."city_slug" = $1 and "hangouts"."status" = $2) order by "hangouts"."created_at" desc
-params: munich,active
+params: [redacted]
 TRPCClientError: Failed query: select "id", "kind", "title", "time", "venue", "host", "people_count", "status", "dancer_id", "created_at" from "hangouts" where ("hangouts"."city_slug" = $1 and "hangouts"."status" = $2) order by "hangouts"."created_at" desc
-params: munich,active
+params: [redacted]
     at Nc.from (https://2026.wedance.vip/_nuxt/4HjQCKps.js:7:10261)
     at https://2026.wedance.vip/_nuxt/4HjQCKps.js:7:15462
 ```

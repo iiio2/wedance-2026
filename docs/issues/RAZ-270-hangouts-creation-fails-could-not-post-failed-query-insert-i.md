@@ -25,7 +25,7 @@ exported: 2026-10-25
 
 Hangouts creation fails
 
-Could not post: Failed query: insert into "hangouts" ("id", "kind", "title", "time", "venue", "host", "city_slug", "people_count", "status", "dancer_id", "created_at", "updated_at") values (default, $1, $2, $3, $4, $5, $6, $7, $8, $9, default, default) returning "id", "kind", "title", "time", "venue", "host", "city_slug", "people_count", "status", "dancer_id", "created_at", "updated_at" params: dinner,Dinner about Ritmo in LUMA,20:00,Hans im Glück, Türkenstraße 79,Alösha,munich,1,active,48e7c709-2e54-47a8-a026-f862972318f1
+Could not post: Failed query: insert into "hangouts" ("id", "kind", "title", "time", "venue", "host", "city_slug", "people_count", "status", "dancer_id", "created_at", "updated_at") values (default, $1, $2, $3, $4, $5, $6, $7, $8, $9, default, default) returning "id", "kind", "title", "time", "venue", "host", "city_slug", "people_count", "status", "dancer_id", "created_at", "updated_at" params: [redacted]
 
 ---
 

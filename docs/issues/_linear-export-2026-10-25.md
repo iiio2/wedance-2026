@@ -7,7 +7,8 @@ exported here on 2026-10-25 so Linear can stay a short focus list under the free
 - New issues → `RAZ-<n>-<slug>.md` (same frontmatter as the 2026-10-09 export).
 - Issues that match a story file by title → appended as a *Linear history* section and
   `linear_*` frontmatter on that file (P / G / WED stories).
-- Personal emails and feedback-reporter names are redacted (public repo).
+- Personal emails, feedback-reporter names and the parameter values in quoted SQL errors
+  (magic tokens, auth ids) are redacted (public repo).
 
 After the export, everything except the Todo and Triage issues (minus PR-mirror issues) was
 archived in Linear. Archived issues can be restored from Linear's archive.
