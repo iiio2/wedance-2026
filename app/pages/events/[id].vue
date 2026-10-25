@@ -7,12 +7,12 @@
  */
 import { Check, ArrowLeft, MapPin, Globe, User, Euro, Pencil, ExternalLink } from 'lucide-vue-next'
 import type { DanceRole, SwipeCard } from '~/types/festival'
-import { findMockEvent } from '~/lib/mockEvents'
+import { findMockEvent, festivalSessionEvent } from '~/lib/mockEvents'
 import { formatEventWhen, eventLocalDate } from '#shared/utils/eventTime'
 import { Button } from '~/components/ui/button'
 import { WD } from '~/lib/brand'
 import { mixHex, readableOn } from '~/lib/contrast'
-import { isUuid, eventSlug } from '#shared/utils/eventSlug'
+import { isUuid, eventSlug, sessionKey } from '#shared/utils/eventSlug'
 import { festivalPath } from '#shared/utils/eventSlug'
 
 definePageMeta({ layout: false })
@@ -91,15 +91,23 @@ async function load() {
     ev.value = await $trpc.booking.getEvent.query({ id: id.value })
   } catch {
     try {
-      // A dated public event (wedance.vip mirror) — adapt to the booking shape.
-      const e = await $trpc.events.get.query({ id: id.value })
-      // A festival renders the festival page (programme, passes, line-up, dinners…).
-      if (e.festival) festivalData.value = await $trpc.events.festival.query({ id: e.id })
-      ev.value = fromSyncedEvent(e)
-      // An old /events/<id> link, or a name that changed since → the current
-      // address, without a new history entry.
-      const canonical = eventSlug(e)
-      if (id.value !== canonical) router.replace({ path: `/events/${canonical}`, query: route.query, hash: route.hash })
+      // One item of a festival's programme (f~<key>~<session id>).
+      const session = sessionKey(id.value)
+      if (session && !findMockEvent(id.value)) {
+        const fest = await $trpc.events.get.query({ id: session.key })
+        ev.value = festivalSessionEvent(await $trpc.events.festival.query({ id: fest.id }), session.sessionId)
+        if (!ev.value) throw new Error('no such session')
+      } else {
+        // A dated public event (wedance.vip mirror) — adapt to the booking shape.
+        const e = await $trpc.events.get.query({ id: id.value })
+        // A festival renders the festival page (programme, passes, line-up, dinners…).
+        if (e.festival) festivalData.value = await $trpc.events.festival.query({ id: e.id })
+        ev.value = fromSyncedEvent(e)
+        // An old /events/<id> link, or a name that changed since → the current
+        // address, without a new history entry.
+        const canonical = eventSlug(e)
+        if (id.value !== canonical) router.replace({ path: `/events/${canonical}`, query: route.query, hash: route.hash })
+      }
     } catch {
       // Neither — fall back to a mock city event so it still has a page.
       const mock = findMockEvent(id.value)

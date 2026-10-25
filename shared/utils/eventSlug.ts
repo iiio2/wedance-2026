@@ -45,3 +45,13 @@ export function eventKey(param: string): { id: string } | { short: string } | nu
 // Festivals are events: /events/<festival key> finds the festival and switches
 // to its current URL.
 export const festivalPath = (key: string) => `/events/${key}`
+
+// A festival programme item has its own page: /events/f~<festival key>~<session id>
+// (session ids repeat across festivals, so the key keeps it unique).
+export const sessionPath = (key: string, sessionId: string) => `/events/f~${key}~${sessionId}`
+
+/** "f~<key>~<session id>" → its parts, else null. */
+export function sessionKey(param: string): { key: string; sessionId: string } | null {
+  const m = param.match(/^f~([^~]+)~(.+)$/)
+  return m ? { key: m[1]!, sessionId: m[2]! } : null
+}

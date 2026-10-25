@@ -5,10 +5,11 @@
  * <param> is a full id, a festival key or stored slug (/events/meneate-viena-2026),
  * or /events/<name>-<short id> (the last 8 characters start the id). Only
  * published events count: an unpublished one is "not found" to the public.
+ * f~<festival key>~<session id> is one item of a festival's programme.
  */
 import { and, eq, or, sql, type SQL } from 'drizzle-orm'
 import { events, bookingRequests } from '../database/schema'
-import { eventKey } from '../../shared/utils/eventSlug'
+import { eventKey, sessionKey } from '../../shared/utils/eventSlug'
 
 /** WHERE clauses to try in order: exact (id / slug / festival key), then short-id prefix. */
 export function publicEventWhere(param: string): SQL[] {
@@ -24,6 +25,15 @@ export function publicEventWhere(param: string): SQL[] {
 
 /** Does /events/<param> resolve to a published event or a booking request? */
 export async function eventPageExists(db: any, param: string): Promise<boolean> {
+  const session = sessionKey(param)
+  if (session) {
+    const [row] = await db.select({ id: events.id }).from(events).where(and(
+      eq(events.published, true),
+      sql`${events.festival}->>'key' = ${session.key}`,
+      sql`${events.festival}->'sessions' @> ${JSON.stringify([{ id: session.sessionId }])}::jsonb`,
+    )).limit(1)
+    return !!row
+  }
   for (const where of publicEventWhere(param)) {
     const [row] = await db.select({ id: events.id }).from(events).where(where).limit(1)
     if (row) return true

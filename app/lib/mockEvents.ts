@@ -96,6 +96,12 @@ function mapEvent(e: CityEvent, cityName: string) {
   }
 }
 
+/** One programme item of a real (DB) festival, in the same shape — festivalView + a workshop id. */
+export function festivalSessionEvent(view: { festival: any; workshops: any[]; teachers: any[] }, wid: string) {
+  const w = view.workshops.find(x => x.id === wid)
+  return w ? mapWorkshop(w, view) : null
+}
+
 export function findMockEvent(id: string) {
   // Festival schedule item: f~<festivalSlug>~<workshopId>.
   if (id.startsWith('f~')) {

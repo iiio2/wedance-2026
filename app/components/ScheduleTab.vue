@@ -12,6 +12,7 @@ import { chilis } from '~/lib/levels'
 import { WD } from '~/lib/brand'
 import { accentText, readableAccent } from '~/lib/accent'
 import { Button } from '~/components/ui/button'
+import { sessionPath } from '#shared/utils/eventSlug'
 
 const props = defineProps<{
   workshops: Workshop[]
@@ -31,7 +32,7 @@ const emit = defineEmits<{
 // Each schedule item opens its own event page. Compound id (festival~workshop)
 // keeps it globally unique since workshop ids repeat across festivals. The
 // title is the link, stretched over the row, so "Going?" isn't nested in an <a>.
-const eventHref = (wid: string) => (props.festivalSlug ? `/events/f~${props.festivalSlug}~${wid}` : undefined)
+const eventHref = (wid: string) => (props.festivalSlug ? sessionPath(props.festivalSlug, wid) : undefined)
 
 const dayLabels = computed(() => {
   const start = new Date(props.startDate)

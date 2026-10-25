@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { eventSlug, eventPath, eventKey } from './eventSlug'
+import { eventSlug, eventPath, eventKey, sessionKey, sessionPath } from './eventSlug'
 
 const id = '1ed1a238-7c7c-474d-94ff-1656b08f9c73'
 
@@ -32,5 +32,16 @@ describe('eventKey', () => {
   it('rejects anything else', () => {
     expect(eventKey('la-clave-thursday')).toBeNull()
     expect(eventKey('party-2026-10-15')).toBeNull()
+  })
+})
+
+describe('sessionKey', () => {
+  it('splits f~<festival key>~<session id>', () => {
+    expect(sessionKey('f~salsa-from-zero-free-tas-c944c~s-6fn8t0')).toEqual({ key: 'salsa-from-zero-free-tas-c944c', sessionId: 's-6fn8t0' })
+    expect(sessionPath('salsa-from-zero-free-tas-c944c', 's-6fn8t0')).toBe('/events/f~salsa-from-zero-free-tas-c944c~s-6fn8t0')
+  })
+  it('is null for anything else', () => {
+    expect(sessionKey('salsa-from-zero-a1b55bdb')).toBeNull()
+    expect(sessionKey('f~only-key')).toBeNull()
   })
 })

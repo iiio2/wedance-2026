@@ -20,7 +20,7 @@ describe.skipIf(!DATABASE_URL)('eventPageExists', () => {
   beforeAll(async () => {
     const base = { citySlug: `testville-${RUN}`, startDate: new Date(Date.now() + 86400_000), archived: false }
     const [pub] = await db.insert(schema.events).values({ ...base, name: `Live night ${RUN}`, published: true, slug: `live-night-${RUN}` }).returning({ id: schema.events.id })
-    const [fest] = await db.insert(schema.events).values({ ...base, name: `Fest ${RUN}`, published: true, festival: { key: `fest-key-${RUN}` } as any }).returning({ id: schema.events.id })
+    const [fest] = await db.insert(schema.events).values({ ...base, name: `Fest ${RUN}`, published: true, festival: { key: `fest-key-${RUN}`, sessions: [{ id: 's-abc', date: '2026-10-25', time: '19:00', duration: 60, type: 'workshop', title: 'Taster', artist: '', style: 'Salsa', level: 'Beginner' }] } as any }).returning({ id: schema.events.id })
     const [hidden] = await db.insert(schema.events).values({ ...base, name: `Hidden ${RUN}`, published: false, slug: `hidden-${RUN}`, festival: { key: `hidden-key-${RUN}` } as any }).returning({ id: schema.events.id })
     ids.pub = pub.id; ids.fest = fest.id; ids.hidden = hidden.id
   })
@@ -34,6 +34,12 @@ describe.skipIf(!DATABASE_URL)('eventPageExists', () => {
     expect(await eventPageExists(db, `live-night-${RUN}`)).toBe(true)
     expect(await eventPageExists(db, `fest-key-${RUN}`)).toBe(true)
     expect(await eventPageExists(db, eventSlug({ id: ids.pub!, name: `Live night ${RUN}` }))).toBe(true)
+  })
+
+  it('finds a festival programme item by f~<key>~<session id>', async () => {
+    expect(await eventPageExists(db, `f~fest-key-${RUN}~s-abc`)).toBe(true)
+    expect(await eventPageExists(db, `f~fest-key-${RUN}~s-nope`)).toBe(false)
+    expect(await eventPageExists(db, `f~hidden-key-${RUN}~s-abc`)).toBe(false)
   })
 
   it('treats an unpublished event as not found — by id, slug or festival key', async () => {
