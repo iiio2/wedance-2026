@@ -197,10 +197,18 @@ export function paintPrompt(lines: FlyerLine[], look: FlyerLook, opts: { people?
   ].filter(Boolean).join('\n')
 }
 
+/**
+ * Edits redraw the whole picture, and Gemini re-poses people as it goes — after
+ * a few edits the artist is someone else. Pinned by what they look like, not
+ * "identity" (which the La Clave recipe found triggers refusals).
+ */
+const SAME_PEOPLE = 'Leave every person exactly as they are in this poster: same face, pose, body, hands, clothes, size and position. Do not redraw them.'
+
 /** The 4:5 feed post from a finished story: the same poster, recomposed (the house way). */
 export function recomposePrompt(lines: FlyerLine[]) {
   return [
     'Recompose this exact poster into a vertical 4:5 Instagram feed format. Keep the same scene, people, style, colours and all the text; move things so everything fits, nothing cropped.',
+    SAME_PEOPLE,
     `The text stays exactly, spelled exactly: ${textBlock(lines)}`,
     CLEAR_TEXT,
   ].join('\n')
@@ -210,6 +218,7 @@ export function recomposePrompt(lines: FlyerLine[]) {
 export function fixPrompt(lines: FlyerLine[], notes: string) {
   return [
     'Edit this poster. Keep the same scene, people, style, colours and layout.',
+    SAME_PEOPLE,
     `Change only this: ${clean(notes)}`,
     `All text must stay exactly as it is now, spelled exactly: ${textBlock(lines)}`,
     CLEAR_TEXT,
@@ -220,6 +229,7 @@ export function fixPrompt(lines: FlyerLine[], notes: string) {
 export function refreshPrompt(lines: FlyerLine[]) {
   return [
     'Update this poster for new event details. Keep the same scene, people, style, colours and layout.',
+    SAME_PEOPLE,
     `Replace the text so the poster shows exactly this and nothing else, spelled exactly: ${textBlock(lines)}`,
     CLEAR_TEXT,
   ].join('\n')

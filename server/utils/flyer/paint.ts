@@ -197,7 +197,11 @@ async function paintRow(db: any, f: any, flyerId: string) {
         else tiles.push({ url, name: src.pictured[i]! })
       })
       const loaded = await Promise.all(tiles.slice(0, many ? MAX_GRID : MAX_FACES).map(t => fetchImage(t.url)))
-      const ok = loaded.map((img, i) => ({ img, name: tiles[i]!.name })).filter(x => x.img) as { img: InlineImage; name: string }[]
+      // A photo that won't load stops the painting: without it Gemini paints a
+      // stranger in the artist's place (the style reference's person, or made up).
+      const lost = tiles.slice(0, loaded.length).filter((_, i) => !loaded[i]).map(t => t.name)
+      if (lost.length) throw new Error(`Couldn’t load the photo of ${lost.join(', ')}. Pick another photo, or show the name only.`)
+      const ok = loaded.map((img, i) => ({ img: img!, name: tiles[i]!.name }))
       const grid = many && ok.length > MAX_FACES ? await faceGrid(ok.map(x => x.img)) : null
       const faces = grid ? [grid] : ok.map(x => x.img)
       const refUrl = await styleReference(db, f)

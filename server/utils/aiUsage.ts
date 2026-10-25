@@ -2,8 +2,8 @@
  * Who and what an AI call is for, carried through async work (a flyer painted
  * after the response) without passing it along: the action that started it
  * (tRPC path), the person, the event and the flyer. Every Gemini call is
- * logged to ai_usage with it (server/utils/flyer/gemini.ts), never failing
- * the call itself.
+ * logged to ai_usage with it (server/utils/flyer/gemini.ts) — the prompt as sent
+ * included, for /admin/ai-usage — never failing the call itself.
  */
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { aiUsage } from '../database/schema'
@@ -24,7 +24,7 @@ export function withAi<T>(more: AiContext, fn: () => T): T {
   return store.run({ ...(store.getStore() ?? {}), ...more }, fn)
 }
 
-export async function logAiCall(e: { purpose: string; model: string; durationMs: number; status: 'ok' | 'refused' | 'error'; response?: any; error?: string }) {
+export async function logAiCall(e: { purpose: string; model: string; durationMs: number; status: 'ok' | 'refused' | 'error'; request?: { prompt: string; images: { mimeType: string; kb: number }[] }; response?: any; error?: string }) {
   try {
     const c = store.getStore() ?? {}
     const t = tokensOf(e.response?.usageMetadata)
@@ -35,6 +35,7 @@ export async function logAiCall(e: { purpose: string; model: string; durationMs:
       inputTokens: t.input, outputTextTokens: t.outputText, outputImageTokens: t.outputImage, thoughtTokens: t.thoughts,
       costUsd: cost == null ? null : cost.toFixed(6), eventId: c.eventId ?? null, flyerId: c.flyerId ?? null, dancerId: c.dancerId ?? null,
       error: e.error?.slice(0, 500) ?? null,
+      prompt: e.request?.prompt ?? null, images: e.request?.images.length ? e.request.images : null,
     })
   } catch (err) {
     // The log never breaks the work it logs.

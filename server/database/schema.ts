@@ -1112,6 +1112,9 @@ export const aiUsage = pgTable('ai_usage', {
   flyerId: uuid('flyer_id').references(() => eventFlyers.id, { onDelete: 'set null' }),
   dancerId: uuid('dancer_id').references(() => dancers.id, { onDelete: 'set null' }),
   error: text('error'),
+  // The request as sent (0052): its text with "[image N: …]" markers, and the images' type and size.
+  prompt: text('prompt'),
+  images: jsonb('images').$type<{ mimeType: string; kb: number }[] | null>(),
 }, (t) => [index('ai_usage_created_idx').on(t.createdAt), index('ai_usage_purpose_idx').on(t.purpose)])
 
 // Content plan (migration 0037): an event's posts, each with its own flyer

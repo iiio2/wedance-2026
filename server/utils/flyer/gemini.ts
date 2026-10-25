@@ -2,6 +2,7 @@
  * Thin Gemini REST client for flyers: paint an image, read text off an image,
  * write a caption. No SDK — same endpoints as the image-from-gemini skill.
  */
+import sharp from 'sharp'
 import { logAiCall, aiLabel } from '../aiUsage'
 
 const API = 'https://generativelanguage.googleapis.com/v1beta/models'
@@ -16,6 +17,24 @@ function key() {
   const k = useRuntimeConfig().geminiApiKey
   if (!k) throw new Error('Flyers aren’t set up: GEMINI_API_KEY is missing.')
   return k
+}
+
+/**
+ * What was sent, for the admin log: the text parts in order, each image as a
+ * "[image N: type, size]" marker where it sat, so "Image 2" in a prompt can be
+ * matched to what Gemini actually got.
+ */
+export function requestOf(body: any): { prompt: string; images: { mimeType: string; kb: number }[] } {
+  const images: { mimeType: string; kb: number }[] = []
+  const prompt = (body?.contents ?? []).flatMap((c: any) => c.parts ?? []).map((p: any) => {
+    if (p.inlineData) {
+      const kb = Math.round((p.inlineData.data?.length ?? 0) * 3 / 4 / 1024)
+      images.push({ mimeType: p.inlineData.mimeType, kb })
+      return `[image ${images.length}: ${p.inlineData.mimeType}, ${kb} KB]`
+    }
+    return p.text ?? ''
+  }).join('\n')
+  return { prompt, images }
 }
 
 // A call that hangs would leave a flyer "painting" or "checking" forever.
@@ -34,7 +53,7 @@ async function call(model: string, body: unknown, purpose: string) {
     })
   } catch (e: any) {
     const timeout = e?.name === 'TimeoutError' || e?.name === 'AbortError'
-    await logAiCall({ purpose, model, durationMs: performance.now() - started, status: 'error', error: timeout ? 'timeout' : (e?.message ?? String(e)) })
+    await logAiCall({ purpose, model, durationMs: performance.now() - started, status: 'error', request: requestOf(body), error: timeout ? 'timeout' : (e?.message ?? String(e)) })
     if (timeout) throw new Error(model === IMAGE_MODEL ? 'Painting took too long. Try again.' : 'Reading the words took too long.')
     throw e
   }
@@ -42,7 +61,7 @@ async function call(model: string, body: unknown, purpose: string) {
   const parts = json?.candidates?.[0]?.content?.parts ?? []
   // A painting with no image back is a soft refusal.
   const refused = res.ok && model === IMAGE_MODEL && !parts.some((p: any) => p.inlineData?.data)
-  await logAiCall({ purpose, model, durationMs: performance.now() - started, status: !res.ok ? 'error' : refused ? 'refused' : 'ok', response: json, error: res.ok ? (refused ? json?.candidates?.[0]?.finishReason : undefined) : (json?.error?.message || `Gemini ${res.status}`) })
+  await logAiCall({ purpose, model, durationMs: performance.now() - started, status: !res.ok ? 'error' : refused ? 'refused' : 'ok', request: requestOf(body), response: json, error: res.ok ? (refused ? json?.candidates?.[0]?.finishReason : undefined) : (json?.error?.message || `Gemini ${res.status}`) })
   if (!res.ok) throw new Error(json?.error?.message || `Gemini ${res.status}`)
   return json
 }
@@ -113,9 +132,25 @@ export async function fetchImage(url: string): Promise<InlineImage | null> {
     const abs = url.startsWith('/') ? `${(useRuntimeConfig().siteUrl || 'https://2026.wedance.vip').replace(/\/$/, '')}${url}` : url
     const res = await fetch(abs)
     if (!res.ok) return null
-    const mimeType = (res.headers.get('content-type') || 'image/jpeg').split(';')[0]!
-    if (!mimeType.startsWith('image/')) return null
-    return { mimeType, data: Buffer.from(await res.arrayBuffer()).toString('base64') }
+    return await asInline(Buffer.from(await res.arrayBuffer()))
+  } catch {
+    return null
+  }
+}
+
+// What Gemini takes as is; anything else sharp can read goes in as PNG.
+const INLINE = { jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' } as Record<string, string>
+
+/**
+ * The bytes' real format, not the server's content-type: v3 photos on Firebase
+ * Storage come as application/octet-stream, and were dropped — Gemini then got
+ * no artist photo and painted a stranger.
+ */
+export async function asInline(buf: Buffer): Promise<InlineImage | null> {
+  try {
+    const { format } = await sharp(buf).metadata()
+    if (format && INLINE[format]) return { mimeType: INLINE[format]!, data: buf.toString('base64') }
+    return { mimeType: 'image/png', data: (await sharp(buf).png().toBuffer()).toString('base64') }
   } catch {
     return null
   }

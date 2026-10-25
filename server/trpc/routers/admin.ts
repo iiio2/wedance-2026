@@ -236,7 +236,7 @@ export const adminRouter = router({
 
   // The AI usage log (ai_usage): what every Gemini call cost and how it went.
   // Totals for today / 7 / 30 days, per purpose and per day over the range,
-  // and the latest calls with their event and who asked.
+  // and the latest calls with their event, who asked and the prompt as sent.
   aiUsage: adminProcedure
     .input(z.object({ days: z.number().int().min(1).max(365).default(30), purpose: z.string().max(80).optional() }))
     .query(async ({ ctx, input }) => {
@@ -261,7 +261,7 @@ export const adminRouter = router({
         from ai_usage where created_at >= ${since} ${only} group by 1 order by 1`)
       const recent = await q(sql`select a.id, a.created_at as "createdAt", a.purpose, a.source, a.model_version as "modelVersion", a.model, a.status, a.duration_ms as "durationMs",
         a.input_tokens as "inputTokens", a.output_text_tokens + a.thought_tokens as "textTokens", a.output_image_tokens as "imageTokens", a.cost_usd::float as cost, a.error,
-        a.event_id as "eventId", e.name as "eventName", d.name as "dancerName", d.username as "dancerUsername", f.url as "flyerUrl"
+        a.prompt, a.images, a.event_id as "eventId", e.name as "eventName", d.name as "dancerName", d.username as "dancerUsername", f.url as "flyerUrl"
         from ai_usage a left join events e on e.id = a.event_id left join dancers d on d.id = a.dancer_id left join event_flyers f on f.id = a.flyer_id
         where a.created_at >= ${since} ${only} order by a.created_at desc limit 200`)
       return { totals, byPurpose, byDay, recent, days: input.days }

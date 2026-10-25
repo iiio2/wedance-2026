@@ -3,7 +3,8 @@
  * /admin/ai-usage — every AI call (ai_usage): what it was for, what it cost
  * (from Google's price list, shared/utils/aiPricing.ts), how long it took and
  * what failed. Totals, per purpose (click one to filter), per day, and the
- * latest calls with their event and who asked.
+ * latest calls with their event and who asked; click a call to read the prompt
+ * exactly as it was sent (images shown as "[image N: …]" where they sat).
  */
 import { Cpu, AlertTriangle, Check, X } from 'lucide-vue-next'
 import { PRICES_CHECKED } from '#shared/utils/aiPricing'
@@ -37,6 +38,7 @@ const num = (n: number) => n.toLocaleString('en-GB')
 const when = (d: string) => new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 const maxDay = computed(() => Math.max(0.0001, ...(data.value?.byDay ?? []).map(d => d.cost)))
 const rangeCost = computed(() => (data.value?.byPurpose ?? []).reduce((n, p) => n + p.cost, 0))
+const open = ref<string | null>(null)
 const rangeCalls = computed(() => (data.value?.byPurpose ?? []).reduce((n, p) => n + p.calls, 0))
 </script>
 
@@ -109,7 +111,8 @@ const rangeCalls = computed(() => (data.value?.byPurpose ?? []).reduce((n, p) =>
             <tr class="border-y"><th class="p-3">When</th><th class="p-3">What</th><th class="p-3">Event · who</th><th class="p-3">Result</th><th class="p-3 text-right">Time</th><th class="p-3 text-right">Tokens</th><th class="p-3 text-right">Cost</th></tr>
           </thead>
           <tbody>
-            <tr v-for="r in data.recent" :key="r.id" class="border-b align-top last:border-0">
+            <template v-for="r in data.recent" :key="r.id">
+            <tr class="border-b align-top last:border-0" :class="r.prompt ? 'cursor-pointer hover:bg-muted/50' : ''" :aria-expanded="r.prompt ? open === r.id : undefined" @click="r.prompt && (open = open === r.id ? null : r.id)">
               <td class="whitespace-nowrap p-3 tabular-nums text-muted-foreground">{{ when(r.createdAt) }}</td>
               <td class="max-w-[14rem] p-3"><span class="font-bold">{{ r.purpose }}</span><span class="block truncate text-xs text-muted-foreground" :title="`${r.source ?? ''} · ${r.modelVersion || r.model}`">{{ r.source || '—' }} · {{ r.modelVersion || r.model }}</span></td>
               <td class="p-3">
@@ -124,8 +127,19 @@ const rangeCalls = computed(() => (data.value?.byPurpose ?? []).reduce((n, p) =>
               </td>
               <td class="p-3 text-right tabular-nums">{{ secs(r.durationMs) }}</td>
               <td class="p-3 text-right tabular-nums text-muted-foreground">{{ num(r.inputTokens) }} → {{ num(r.textTokens) }}<template v-if="r.imageTokens"> + {{ num(r.imageTokens) }} img</template></td>
-              <td class="p-3 text-right font-bold tabular-nums">{{ usd(r.cost) }}</td>
+              <td class="p-3 text-right font-bold tabular-nums">{{ usd(r.cost) }}<span v-if="r.prompt" class="block text-xs font-normal text-secondary">{{ open === r.id ? 'Hide prompt' : 'Prompt' }}</span></td>
             </tr>
+            <tr v-if="open === r.id" class="border-b bg-muted/30">
+              <td colspan="7" class="p-3">
+                <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span class="font-bold uppercase tracking-wider">Prompt as sent</span>
+                  <span v-if="r.images?.length">· {{ r.images.length }} {{ r.images.length === 1 ? 'image' : 'images' }}</span>
+                  <a v-if="r.flyerUrl" :href="r.flyerUrl" target="_blank" rel="noopener" class="font-bold text-secondary hover:underline">· the flyer it painted</a>
+                </div>
+                <pre class="mt-2 max-h-[28rem] overflow-auto whitespace-pre-wrap break-words rounded-xl border bg-card p-3 font-mono text-xs leading-relaxed">{{ r.prompt }}</pre>
+              </td>
+            </tr>
+            </template>
             <tr v-if="!data.recent.length"><td colspan="7" class="p-4 text-center text-muted-foreground"><Cpu class="mx-auto mb-1 size-5" aria-hidden="true" />No AI calls yet in this range.</td></tr>
           </tbody>
         </table>
