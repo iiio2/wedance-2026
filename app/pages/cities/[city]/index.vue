@@ -23,6 +23,7 @@ import { WD } from '~/lib/brand'
 import { readableOn } from '~/lib/contrast'
 import { eventPath } from '#shared/utils/eventSlug'
 import { initialOf } from '#shared/utils/initials'
+import { weekDateKeys, cityFeed, matchesStyle, activeThisWeek, isActiveThisWeek, groupUpcoming, type PeopleTab } from '~/lib/cityWeek'
 
 definePageMeta({ layout: false })
 
@@ -101,19 +102,10 @@ onMounted(async () => {
   } finally { bookedEventsLoaded.value = true }
 })
 const bookedTypeMap: Record<string, string> = { Social: 'social', Party: 'social', Workshop: 'workshop', Class: 'class', Practica: 'practica' }
-// Local YYYY-MM-DD (never toISOString — that shifts to UTC and, in a positive
-// offset like CEST, moves every day back by one, so "this week" ends up a day off).
-const fmtLocalDate = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-const thisWeekDates = computed(() => {
-  const now = new Date(); const off = (now.getDay() + 6) % 7
-  const mon = new Date(now); mon.setDate(now.getDate() - off); mon.setHours(0, 0, 0, 0)
-  const set = new Set<string>()
-  for (let i = 0; i < 7; i++) { const x = new Date(mon); x.setDate(mon.getDate() + i); set.add(fmtLocalDate(x)) }
-  return set
-})
-const bookedThisWeek = computed(() => bookedEvents.value
-  .filter(b => b.eventDate && thisWeekDates.value.has(String(b.eventDate).slice(0, 10)))
+// This week = Monday–Sunday in local dates (app/lib/cityWeek.ts).
+const thisWeekDates = computed(() => weekDateKeys())
+const feed = computed(() => cityFeed(bookedEvents.value, syncedEvents.value, thisWeekDates.value))
+const bookedThisWeek = computed(() => feed.value.bookedThisWeek
   .map(b => ({
     id: b.id, name: b.title || 'Social', type: bookedTypeMap[b.eventType] || 'social',
     style: b.styles?.[0] || '', day: new Date(String(b.eventDate).slice(0, 10)).toLocaleDateString('en-US', { weekday: 'long' }),
@@ -143,24 +135,14 @@ const toCityEvent = (e: any) => ({
   date: eventLocalDate(e.startDate, e.timezone),
 })
 // Festivals get their own section below — the week list is classes & socials.
-const syncedNonFestival = computed(() => syncedEvents.value.filter(e => !e.isFestival))
-const syncedThisWeek = computed(() => syncedNonFestival.value
-  .filter(e => thisWeekDates.value.has(eventLocalDate(e.startDate, e.timezone)))
-  .map(toCityEvent))
+const syncedThisWeek = computed(() => feed.value.syncedThisWeek.map(toCityEvent))
 // After this week: the next weeks, grouped by local date (capped; "show more").
 const upcomingLimit = ref(24)
-const syncedLater = computed(() => {
-  const weekEnd = [...thisWeekDates.value].sort().at(-1) ?? ''
-  return syncedNonFestival.value
-    .filter(e => eventLocalDate(e.startDate, e.timezone) > weekEnd)
-    .filter(e => !selectedStyle.value || (e.styles || []).some((s: string) => sameDanceStyle(s, selectedStyle.value)))
-})
+const syncedLater = computed(() => feed.value.syncedLater.filter(e => matchesStyle(e.styles, selectedStyle.value)))
 // Booked events beyond this week (same shape as toCityEvent output).
 const bookedLater = computed(() => {
-  const weekEnd = [...thisWeekDates.value].sort().at(-1) ?? ''
-  return bookedEvents.value
-    .filter(b => b.eventDate && String(b.eventDate).slice(0, 10) > weekEnd)
-    .filter(b => !selectedStyle.value || (b.styles || []).some((s: string) => sameDanceStyle(s, selectedStyle.value)))
+  return feed.value.bookedLater
+    .filter(b => matchesStyle(b.styles, selectedStyle.value))
     .map(b => {
       const date = String(b.eventDate).slice(0, 10)
       return {
@@ -172,25 +154,11 @@ const bookedLater = computed(() => {
       }
     })
 })
-const upcomingGroups = computed(() => {
-  // Merge synced and booked future events, sorted by date then time.
-  const allLater: { date: string; time: string; [k: string]: any }[] = [
-    ...syncedLater.value.map(e => ({ ...e, date: eventLocalDate(e.startDate, e.timezone), time: eventLocalTime(e.startDate, e.timezone) })),
-    ...bookedLater.value,
-  ].sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-
-  const groups: { date: string; label: string; items: any[] }[] = []
-  for (const e of allLater.slice(0, upcomingLimit.value)) {
-    const date = e.date
-    let g = groups.find(x => x.date === date)
-    if (!g) {
-      g = { date, label: new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' }), items: [] }
-      groups.push(g)
-    }
-    g.items.push(e)
-  }
-  return groups
-})
+// Merge synced and booked future events, sorted by date then time.
+const upcomingGroups = computed(() => groupUpcoming<{ id: string; date: string; time: string; [k: string]: any }>([
+  ...syncedLater.value.map(e => ({ ...e, date: eventLocalDate(e.startDate, e.timezone), time: eventLocalTime(e.startDate, e.timezone) })),
+  ...bookedLater.value,
+], upcomingLimit.value))
 
 const cityAccent: Record<string, string> = {
   munich: WD.red600,
@@ -238,7 +206,6 @@ const selectedStyle = ref(typeof route.query.style === 'string' ? route.query.st
 
 // People tabs (now also includes Venues — same Lineup shape with auto-generated avatars).
 // Order: Venues first, then Organisers, then Artists.
-type PeopleTab = 'teachers' | 'djs' | 'organisers' | 'venues'
 const activeTab = ref<PeopleTab>('venues')
 
 const peopleTabs: { key: PeopleTab; label: string }[] = [
@@ -251,33 +218,9 @@ const peopleTabs: { key: PeopleTab; label: string }[] = [
 // Default view shows only these; "See all" reveals the full directory. The raw
 // booked rows carry the identifiers we match on (venue/organiser @handle and the
 // event's artists[] — names or @handles), so we derive one set per role.
-const rawThisWeek = computed(() => bookedEvents.value.filter(
-  b => b.eventDate && thisWeekDates.value.has(String(b.eventDate).slice(0, 10)),
-))
-const activeVenueIds = computed(() => new Set([
-  ...rawThisWeek.value.map((b: any) => b.venueHandle),
-  ...syncedThisWeek.value.map((e: any) => e.venueId),
-].filter(Boolean)))
-const activeOrganiserIds = computed(() => new Set([
-  ...rawThisWeek.value.map((b: any) => b.organizerHandle),
-  ...syncedThisWeek.value.map((e: any) => e.organizerId),
-].filter(Boolean)))
-const activeArtistTokens = computed(() => {
-  const s = new Set<string>()
-  for (const b of [...rawThisWeek.value, ...syncedThisWeek.value]) {
-    for (const a of ((b as any).artists || [])) s.add(String(a).trim().replace(/^@/, '').toLowerCase())
-  }
-  return s
-})
+const active = computed(() => activeThisWeek(feed.value.bookedThisWeek, syncedThisWeek.value))
 function personActiveThisWeek(tab: PeopleTab, p: any): boolean {
-  // A handle counts in whichever role the event names it: many schools are typed
-  // "venue" in 2026 but run the events as organiser (and vice versa).
-  if (tab === 'venues' || tab === 'organisers') return activeVenueIds.value.has(p.id) || activeOrganiserIds.value.has(p.id)
-  if (tab === 'teachers') {
-    const t = activeArtistTokens.value
-    return t.has(String(p.id).toLowerCase()) || t.has(String(p.name).trim().toLowerCase())
-  }
-  return false
+  return isActiveThisWeek(tab, p, active.value)
 }
 
 // Real venue profiles in this city.

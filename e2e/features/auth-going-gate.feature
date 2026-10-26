@@ -11,3 +11,16 @@ Feature: Signed-out user clicking "Going" is sent to sign-in
     When I click the "Going?" button
     Then the sign-up modal is visible
     And no event is saved to my week plan
+    And no Going is saved in the database for that event
+
+  # RAZ-713 — the same gate from the city page (a modal, not a redirect).
+  Scenario: Signed-out visitor taps Going on a city page event
+    Given the test environment is safe to write
+    And I am not signed in
+    And Munich has a weekly practica and a one-off social this week
+    And the browser clock is the day before them
+    When I open the "munich" city page
+    And I tap "Going?" on the one-off social
+    Then the sign-up modal is visible
+    And the one-off social shows "Going?"
+    And no Going is saved in the database for the one-off social

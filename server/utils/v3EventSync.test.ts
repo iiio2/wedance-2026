@@ -170,3 +170,109 @@ describe('selectRows (RAZ-412: archived events must not come back, no duplicates
     expect(dedupeKey(row('x'))).not.toBe(dedupeKey(row('y', { startDate: new Date('2026-10-17T18:00:00Z') })))
   })
 })
+
+// RAZ-684 — C3: imported dates, styles, event types and cities normalise to
+// 2026's shapes. Extends the cases above with the formats they didn't reach.
+describe('C3 import normalisation (RAZ-684)', () => {
+  const START = Date.parse('2026-10-10T18:00:00Z')
+  const startOf = (startDate: unknown) => {
+    const r = mapV3Event({ ...base, startDate, endDate: null, duration: null }, ctx)
+    if (!r.ok) throw new Error(r.reason)
+    return r.row
+  }
+
+  it.each([
+    ['epoch ms', START],
+    ['epoch seconds', START / 1000],
+    ['numeric string (ms)', String(START)],
+    ['numeric string (seconds)', String(START / 1000)],
+    ['ISO string', '2026-10-10T18:00:00.000Z'],
+    ['ISO string with offset', '2026-10-10T20:00:00+02:00'],
+    ['Firestore Timestamp (_seconds)', { _seconds: START / 1000, _nanoseconds: 0 }],
+    ['Firestore Timestamp (seconds)', { seconds: START / 1000, nanoseconds: 0 }],
+    ['Timestamp object with toMillis()', { toMillis: () => START }],
+    ['Date', new Date(START)],
+  ])('maps a %s start date to the same instant, stored as a Date (never raw epoch)', (_label, startDate) => {
+    const row = startOf(startDate)
+    expect(row.startDate).toBeInstanceOf(Date)
+    expect(row.startDate.toISOString()).toBe('2026-10-10T18:00:00.000Z')
+    // No end, no duration → the 2-hour default, also a Date.
+    expect(row.endDate).toBeInstanceOf(Date)
+    expect(row.endDate.toISOString()).toBe('2026-10-10T20:00:00.000Z')
+    // Nothing on the row is an epoch number a page could print.
+    expect(Object.values(row).some(v => typeof v === 'number' && v > 1e9)).toBe(false)
+  })
+
+  it('treats an end before the start as missing and falls back to the duration', () => {
+    const r = mapV3Event({ ...base, endDate: Date.parse('2026-10-10T17:00:00Z'), duration: 45 }, ctx)
+    expect(r.ok && r.row.endDate.toISOString()).toBe('2026-10-10T18:45:00.000Z')
+  })
+
+  it.each([
+    [{ SalsaOn2: { selected: true }, salsa_la: true, Mambo: {} }, ['Salsa']],
+    [{ SalsaCubana: { selected: true }, 'Rueda de Casino': {} }, ['Casino', 'Rueda']],
+    [{ SensualBachata: {}, DominicanBachata: {}, 'Bachata Moderna': {} }, ['Bachata']],
+    [{ Douceur: {}, UrbanKiz: {}, Tarraxinha: {}, Semba: {} }, ['Kizomba', 'Urban Kiz', 'Tarraxo', 'Semba']],
+    [['Brazilian Zouk', 'Lindy Hop', 'West Coast Swing'], ['Zouk', 'Lindy Hop', 'West Coast Swing']],
+    ['Salsa, Bachata | Kizomba', ['Salsa', 'Bachata', 'Kizomba']],
+    [['0', '1', 'Salsa', 7], ['Salsa']],
+  ])('maps style aliases %j to %j with no numeric tags', (raw, expected) => {
+    const { styles } = mapStyles(raw)
+    expect(styles).toEqual(expected)
+    expect(styles.some(s => /^\d+$/.test(s))).toBe(false)
+  })
+
+  it.each([
+    ['Festival', true], ['Congress', true], ['Weekender', true],
+    ['Party', false], ['Course', false], ['Workshop', false], ['Concert', false],
+  ])('event type %s → isFestival=%s, type kept as given', (eventType, isFestival) => {
+    const r = mapV3Event({ ...base, eventType }, ctx)
+    expect(r.ok && r.row.type).toBe(eventType)
+    expect(r.ok && r.row.isFestival).toBe(isFestival)
+  })
+
+  it('defaults a missing event type to Party', () => {
+    const r = mapV3Event({ ...base, eventType: '' }, ctx)
+    expect(r.ok && r.row).toMatchObject({ type: 'Party', isFestival: false })
+  })
+
+  it.each([
+    ['München', 'munich', 'Munich'], ['Munique', 'munich', 'Munich'], ['Múnich', 'munich', 'Munich'],
+    ['München-Ramersdorf', 'munich', 'Munich'], ['Wien', 'vienna', null], ['Praha', 'prague', 'Prague'], ['Köln', 'cologne', null],
+  ])('city alias %s → /cities/%s', (locality, slug, name) => {
+    const hit = resolveCity(locality, cityIndex)!
+    expect(hit.slug).toBe(slug)
+    if (name) expect(hit.name).toBe(name)
+  })
+
+  it('maps a venue locality alias onto the event row\'s city + slug', () => {
+    const venue = { ...munichVenue, address_components: [{ long_name: 'Munique', types: ['locality'] }, { long_name: 'Germany', short_name: 'DE', types: ['country'] }] }
+    const r = mapV3Event({ ...base, venue }, ctx)
+    expect(r.ok && r.row).toMatchObject({ city: 'Munich', citySlug: 'munich', timezone: 'Europe/Berlin' })
+  })
+
+  // KNOWN DEFECT (follow-up RAZ-719): normName keeps only [a-z0-9], so a
+  // non-Latin locality ("Мюнхен", listed in city-images.json altNames) folds to ''
+  // and the event gets an EMPTY city slug. Expected to fail until that is fixed —
+  // flip to it() then.
+  it.fails('maps non-Latin city aliases (Мюнхен) to their city, never an empty slug', () => {
+    const hit = resolveCity('Мюнхен', cityIndex)!
+    expect(hit.slug).not.toBe('')
+    expect(hit.slug).toBe('munich')
+  })
+})
+
+// RAZ-687 — the import never invents a ticket link: a v3 event's website is the
+// event `link` ("Event website" on /events/<id>), not a ticket URL.
+describe('C3 website is not a ticket link (RAZ-687)', () => {
+  it('keeps the v3 link as the event website and carries no ticket URL', () => {
+    const r = mapV3Event({ ...base, link: 'https://club.example/salsa-night' }, ctx)
+    expect(r.ok && r.row.link).toBe('https://club.example/salsa-night')
+    expect(r.ok && 'ticketUrl' in r.row).toBe(false)
+  })
+
+  it('drops a non-http "link" instead of passing it on', () => {
+    const r = mapV3Event({ ...base, link: 'call us', sourceUrl: null, facebook: null, source: null }, ctx)
+    expect(r.ok && r.row.link).toBeNull()
+  })
+})
