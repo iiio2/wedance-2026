@@ -36,6 +36,7 @@ import { businessSiteRouter } from './routers/businessSite'
 import { businessTeamRouter } from './routers/businessTeam'
 import { businessNetworkRouter } from './routers/businessNetwork'
 import { waveRouter } from './routers/wave'
+import { rsvpRouter } from './routers/rsvp'
 import { organizerSubscriptionRouter } from './routers/organizerSubscription'
 import { attendanceRouter } from './routers/attendance'
 import { oauthRouter } from './routers/oauth'
@@ -78,6 +79,7 @@ export const appRouter = router({
   businessNetwork: businessNetworkRouter,
   roommate: roommateRouter,
   wave: waveRouter,
+  rsvp: rsvpRouter,
   organizerSubscription: organizerSubscriptionRouter,
   attendance: attendanceRouter,
   oauth: oauthRouter,

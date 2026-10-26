@@ -34,6 +34,7 @@ const PUBLIC_MUTATIONS_ALLOW_LIST: Record<string, string> = {
   'artistInvites.respond': 'an artist answers an organizer’s invite link without an account; only while nobody manages the page — a managed page needs its team signed in (checked inside)',
   'festival.submitDraft': 'public festival submission (moderated via admin)',
   'giveaway.enter': 'public giveaway entry — low-risk, promotional',
+  'rsvp.answer': 'the event poll counts a signed-out tap at once (RAZ-718): stored unconfirmed against an anonymous browser token, drops out after 48 h unless the magic link confirms it',
   'referral.trackVisit': 'counts a visit to a promoter’s tracked link before anyone signs in; once per browser session, unknown codes count nothing',
 }
 

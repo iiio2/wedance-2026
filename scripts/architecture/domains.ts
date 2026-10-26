@@ -36,8 +36,8 @@ export const DOMAINS: Domain[] = [
   {
     id: 'events',
     title: 'Events & plans',
-    summary: 'Dated public events (v4 archive + live v3 mirror), their flyers and the hosts\' saved flyer looks, each dancer\'s week/year plan, and the unified attendance model.',
-    tables: ['events', 'planItems', 'discoverSwipes', 'attendances', 'dancerGoals', 'brandLooks', 'eventFlyers', 'eventPosts', 'aiUsage'],
+    summary: 'Dated public events (v4 archive + live v3 mirror), their flyers and the hosts\' saved flyer looks, each dancer\'s week/year plan, the unified attendance model, and the organiser\'s RSVP poll.',
+    tables: ['events', 'planItems', 'discoverSwipes', 'attendances', 'eventRsvps', 'dancerGoals', 'brandLooks', 'eventFlyers', 'eventPosts', 'aiUsage'],
   },
   {
     id: 'directory',

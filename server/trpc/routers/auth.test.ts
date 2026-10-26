@@ -718,6 +718,33 @@ describe('auth.requestMagicLink', () => {
     expect(mockSendMagicLink).toHaveBeenCalledOnce()
   })
 
+  it('carries the event and the poll answer through the link (RAZ-718)', async () => {
+    const db = new FakeDb()
+    db.seedDancer({ email: 'old@example.com', name: 'Old Account' })
+    const guest = '6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b'
+
+    // Same button for an existing account: no "email already in use".
+    const result = await createCaller(db).auth.requestMagicLink({
+      email: 'old@example.com', purpose: 'login',
+      redirect: '/events/salsa-from-zero-a1b55bdb', do: 'needLeader', guest,
+    })
+
+    expect(result).toEqual({ sent: true })
+    const url = new URL(mockSendMagicLink.mock.calls[0][2])
+    expect(url.pathname).toBe('/auth/verify')
+    expect(url.searchParams.get('token')).toBe(db.dancers[0].magicToken)
+    expect(url.searchParams.get('redirect')).toBe('/events/salsa-from-zero-a1b55bdb')
+    expect(url.searchParams.get('do')).toBe('needLeader')
+    expect(url.searchParams.get('guest')).toBe(guest)
+  })
+
+  it('rejects an off-site redirect and an unknown answer', async () => {
+    const caller = createCaller(new FakeDb())
+    await expect(caller.auth.requestMagicLink({ email: 'a@example.com', redirect: '//evil.example/x' })).rejects.toThrow()
+    await expect(caller.auth.requestMagicLink({ email: 'a@example.com', redirect: 'https://evil.example' })).rejects.toThrow()
+    await expect(caller.auth.requestMagicLink({ email: 'a@example.com', do: 'maybe' as any })).rejects.toThrow()
+  })
+
   it('never exposes raw DB errors on the recovery path (RAZ-413)', async () => {
     const db = new FakeDb()
     db.seedDancer({ email: 'crash@example.com', name: 'Crash' })

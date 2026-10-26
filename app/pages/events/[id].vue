@@ -33,7 +33,16 @@ function onSignIn(action?: string) {
   showSignUp.value = true
 }
 
+// The RSVP is the organiser's poll (RAZ-718): on a dated event the hero's
+// "Going?" leads to it instead of a sign-up wall.
+const rsvpPoll = ref<{ coming: number; mine: { answer: string } | null } | null>(null)
+function onPoll(p: { coming: number; mine: { answer: string } | null }) { rsvpPoll.value = p }
+
 function onPick() {
+  if (rsvpPoll.value) {
+    scrollTo('rsvp')
+    return
+  }
   if (!isSignedIn.value) {
     onSignIn('plan')
     return
@@ -182,6 +191,8 @@ function fromSyncedEvent(e: any) {
     organizerHandle: e.organizerUsername || '',
     archived: !!e.archived,
     synced: e.source === 'wedance-v3',
+    // A dated event (not a festival) gets the RSVP poll.
+    pollable: !e.isFestival,
   }
 }
 
@@ -193,7 +204,9 @@ const accent = computed(() => styleColor[String(ev.value?.styles?.[0] || '').toL
 // Accent text darkened just enough for 4.5:1 — on the cream page, or on its own '14' tint (chips).
 const ink = (c: string) => readableOn(c, WD.cream)
 const chipInk = (c: string) => readableOn(c, mixHex(c, WD.cream, 0.078))
-const picked = computed(() => !!ev.value && weekPlanIds?.value?.has(ev.value.id))
+const picked = computed(() => rsvpPoll.value
+  ? !!rsvpPoll.value.mine && rsvpPoll.value.mine.answer !== 'next'
+  : !!ev.value && weekPlanIds?.value?.has(ev.value.id))
 const parentFestival = computed(() => ev.value?.parentFestival ?? null)
 
 // Live going count from plan items (replaces static headcount).
@@ -216,7 +229,7 @@ const asFestival = computed(() => ({
   endDate: ev.value.endDate || ev.value.eventDate,
   timezone: ev.value.timezone || null,
   venue: { name: [ev.value.spaceName, ev.value.venueName].filter(Boolean).join(' · ') },
-  attendeeCount: liveGoingCount.value,
+  attendeeCount: rsvpPoll.value ? rsvpPoll.value.coming : liveGoingCount.value,
   socialLinks: [] as any[],
   ticketUrl: ev.value.ticketUrl || undefined,
   tickets: [] as any[],
@@ -243,7 +256,7 @@ useHead(() => ({
 </script>
 
 <template>
-  <FestivalView v-if="festivalData && !pending" :data="festivalData" :type="ev?.eventType" :edit-to="canEdit ? `/business/events/${festivalData.eventId}` : undefined" />
+  <FestivalView v-if="festivalData && !pending" :data="festivalData" :type="ev?.eventType" :edit-to="canEdit ? `/business/events/${festivalData.eventId}` : undefined" :rsvp="ev?.pollable && !ev.archived ? { eventId: ev.id, path: route.path, startDate: ev.startDate, endDate: ev.endDate, timezone: ev.timezone, organizerName: ev.organizerName || (ev.organizerHandle ? `@${ev.organizerHandle}` : null) } : null" />
   <div v-else class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
@@ -285,6 +298,11 @@ useHead(() => ({
 
       <!-- Same hero as festivals -->
       <FestivalHero :festival="asFestival" review-target-type="event" entity-label="event" cta-anchor="#discover" cta-fallback-label="I'm going" :picked="picked" :date-label="ev.when" :venue-address="ev.venueAddress" :map-url="ev.mapUrl" @pick="onPick" />
+
+      <!-- The RSVP: the organiser's poll -->
+      <div v-if="ev.pollable && !ev.archived" id="rsvp" class="max-w-3xl mx-auto px-4 pt-6 scroll-mt-16">
+        <EventRsvpPoll :event-id="ev.id" :path="route.path" :start-date="ev.startDate" :end-date="ev.endDate" :timezone="ev.timezone" :organizer-name="ev.organizerName || (ev.organizerHandle ? `@${ev.organizerHandle}` : null)" surface="event" @poll="onPoll" />
+      </div>
 
       <div v-if="ev.archived" class="max-w-3xl mx-auto px-4 pt-4 font-sans">
         <p class="rounded-xl px-4 py-3 text-sm bg-warning/[12.2%] text-wd-amber-800">This event is no longer listed by its organiser — it may have been cancelled or moved.</p>

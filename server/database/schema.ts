@@ -807,6 +807,29 @@ export const attendances = pgTable('attendances', {
 ])
 
 // ---------------------------------------------------------------------------
+// Event RSVPs (RAZ-718, migration 0053): the organiser's poll as the RSVP. One
+// answer per dancer — or per anonymous browser (`guest_token`) until its magic
+// link confirms it — per event. `answer` buckets: shared/utils/rsvp.ts.
+// Unconfirmed rows (dancer_id NULL) count for 48 h; confirming moves the answer
+// onto the dancer and deletes the guest row.
+// ---------------------------------------------------------------------------
+export const eventRsvps = pgTable('event_rsvps', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  dancerId: uuid('dancer_id').references(() => dancers.id, { onDelete: 'cascade' }),
+  guestToken: text('guest_token'),
+  answer: text('answer').notNull().$type<'partner' | 'needLeader' | 'needFollower' | 'yes' | 'next'>(),
+  confirmedAt: timestamp('confirmed_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (t) => [
+  unique('event_rsvps_event_dancer').on(t.eventId, t.dancerId),
+  unique('event_rsvps_event_guest').on(t.eventId, t.guestToken),
+  index('event_rsvps_event_idx').on(t.eventId),
+  check('event_rsvps_dancer_or_guest', sql`num_nonnulls(${t.dancerId}, ${t.guestToken}) >= 1`),
+])
+
+// ---------------------------------------------------------------------------
 // Dancer goals (ADR-009, migration 0044). Goals were stored as plan_items with
 // item_type='goal' and the goal itself in metadata. Now they have their own
 // table with typed columns.

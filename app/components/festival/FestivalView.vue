@@ -25,6 +25,8 @@ const props = defineProps<{
   editTo?: string
   /** The event's type ("Weekender"), for the wording: "You manage this weekender". */
   type?: string | null
+  /** A dated event (not a festival) shown in this view: its RSVP is the organiser's poll (RAZ-718). */
+  rsvp?: { eventId: string; path: string; startDate: string; endDate?: string | null; timezone?: string | null; organizerName?: string | null } | null
 }>()
 const kind = computed(() => (props.type || 'festival').toLowerCase())
 const data = props.data
@@ -35,7 +37,14 @@ const slug = festival.slug
 
 // Live "planning" count from the DB — replaces the hardcoded mock value.
 const liveAttendeeCount = ref(festival.attendeeCount)
-const heroFestival = computed(() => ({ ...festival, attendeeCount: liveAttendeeCount.value }))
+const heroFestival = computed(() => ({ ...festival, attendeeCount: rsvpPoll.value ? rsvpPoll.value.coming : liveAttendeeCount.value }))
+
+// The poll answers "Going?" for a dated event: the hero leads to it.
+const rsvpPoll = ref<{ coming: number; mine: { answer: string } | null } | null>(null)
+function onPoll(p: { coming: number; mine: { answer: string } | null }) { rsvpPoll.value = p }
+const heroPicked = computed(() => rsvpPoll.value
+  ? !!rsvpPoll.value.mine && rsvpPoll.value.mine.answer !== 'next'
+  : yearPlanIds.value.has(festival.slug))
 
 // Fetch the real count client-side (public, no auth required).
 const { $trpc } = useNuxtApp()
@@ -719,6 +728,10 @@ function onSignedIn() {
 }
 
 function onPick() {
+  if (rsvpPoll.value) {
+    document.getElementById('rsvp')?.scrollIntoView({ behavior: 'smooth' })
+    return
+  }
   if (!isSignedIn.value) {
     signUpAction.value = 'plan'
     showSignUp.value = true
@@ -1106,7 +1119,12 @@ useHead({
     </div>
 
     <div ref="heroRef">
-      <FestivalHero :festival="heroFestival" :picked="yearPlanIds.has(festival.slug)" :venue-address="festival.venue?.address" :map-url="festival.venue?.coordinates?.lat != null ? `https://www.google.com/maps/search/?api=1&query=${festival.venue.coordinates.lat},${festival.venue.coordinates.lng}` : (festival.venue?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(festival.venue.address)}` : undefined)" @pick="onPick" />
+      <FestivalHero :festival="heroFestival" :picked="heroPicked" :venue-address="festival.venue?.address" :map-url="festival.venue?.coordinates?.lat != null ? `https://www.google.com/maps/search/?api=1&query=${festival.venue.coordinates.lat},${festival.venue.coordinates.lng}` : (festival.venue?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(festival.venue.address)}` : undefined)" @pick="onPick" />
+    </div>
+
+    <!-- The RSVP: the organiser's poll -->
+    <div v-if="rsvp" id="rsvp" class="max-w-3xl mx-auto px-4 pt-6 scroll-mt-16">
+      <EventRsvpPoll :event-id="rsvp.eventId" :path="rsvp.path" :start-date="rsvp.startDate" :end-date="rsvp.endDate" :timezone="rsvp.timezone" :organizer-name="rsvp.organizerName" surface="event" @poll="onPoll" />
     </div>
 
     <!-- Section anchor nav — V3 restyled. Festival identity slides in on

@@ -39,6 +39,11 @@ export const RecoverySchema = v.object({
   email: email(),
 })
 
+/** Event poll (RAZ-718): the answer already counts, the email only confirms it. */
+export const RsvpEmailSchema = v.object({
+  email: email(),
+})
+
 export const ResetPasswordSchema = v.pipe(
   v.object({
     password: newPassword(),
