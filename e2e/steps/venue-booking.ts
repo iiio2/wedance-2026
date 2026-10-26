@@ -273,7 +273,7 @@ Then(
   },
 )
 
-Then('I see at least {int} bookable space(s)', async ({ page }, min: number) => {
+Then('I see at least {int} bookable space(s)', async ({ page }, _min: number) => {
   // Bookable spaces are listed on the venue profile page
   // Wait for the page to load and look for space-related content
   const body = await page.textContent('main', { timeout: 10_000 })

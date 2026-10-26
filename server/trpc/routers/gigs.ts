@@ -33,11 +33,6 @@ export const gigsRouter = router({
       category: z.string().optional(),
     }))
     .query(async ({ ctx, input }) => {
-      let query = ctx.db
-        .select()
-        .from(gigs)
-        .where(eq(gigs.status, 'open'))
-
       const conditions: any[] = [eq(gigs.status, 'open')]
 
       if (input.kind) {

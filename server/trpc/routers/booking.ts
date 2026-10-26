@@ -3,7 +3,7 @@ import { eq, and, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
-import { bookableSpaces, bookingRequests, profiles, availabilitySlots, dancers } from '../../database/schema'
+import { bookableSpaces, bookingRequests, profiles, availabilitySlots } from '../../database/schema'
 import { requireProfileRole } from '../../utils/profileAccess'
 import { trackServer } from '../../utils/posthog'
 

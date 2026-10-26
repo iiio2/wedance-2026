@@ -12,7 +12,7 @@ const model = defineModel<L10n | undefined>()
 const value = computed({
   get: () => model.value?.[props.lang] ?? '',
   set: (v: string) => {
-    const next = { ...(model.value ?? {}) }
+    const next = { ...model.value }
     if (v) next[props.lang] = v
     else delete next[props.lang]
     model.value = Object.keys(next).length ? next : undefined

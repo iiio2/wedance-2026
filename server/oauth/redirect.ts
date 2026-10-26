@@ -23,7 +23,7 @@ export function redirectUriProblem(uri: unknown): string | null {
   if (u.protocol === 'https:') return u.hostname ? null : 'redirect_uri needs a host'
   if (u.protocol === 'http:') return LOOPBACK_HOSTS.has(u.hostname) ? null : 'http redirect_uris are only allowed for localhost'
   // Private-use URI scheme for native apps: reverse-domain style.
-  return /^[a-z][a-z0-9+\-]*\.[a-z0-9+.\-]+:$/i.test(u.protocol) ? null : `redirect_uri scheme ${u.protocol} is not allowed`
+  return /^[a-z][a-z0-9+-]*\.[a-z0-9+.-]+:$/i.test(u.protocol) ? null : `redirect_uri scheme ${u.protocol} is not allowed`
 }
 
 /** Exact, case-sensitive string match against the registered list. */

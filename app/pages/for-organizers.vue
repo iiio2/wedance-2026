@@ -12,7 +12,7 @@
  * door claims until those are live. Numbers come from events.stats, live.
  * Example flyers are real ones kept by organizers on WeDance.
  */
-import { ArrowRight, CalendarSearch, MapPin, UserCheck, Sparkles, Palette, Check, Mail, Wand2, CalendarDays, Users, Share2, Map, Ticket, QrCode, Wallet, Crown, Infinity, BarChart3, Star, Headphones } from 'lucide-vue-next'
+import { ArrowRight, CalendarSearch, MapPin, UserCheck, Sparkles, Palette, Check, Mail, Wand2, CalendarDays, Users, Share2, Map, Ticket, QrCode, Wallet, Crown, Infinity as InfinityIcon, BarChart3, Star, Headphones } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
 
 definePageMeta({ layout: false })
@@ -69,7 +69,7 @@ const startFestival = () => useTrack().track('organizer_cta_click', { surface: '
 
 // Network plan (RAZ-106): €199/year for organizers running multiple events.
 const NETWORK_BENEFITS = [
-  { icon: Infinity, text: 'Unlimited events per year' },
+  { icon: InfinityIcon, text: 'Unlimited events per year' },
   { icon: Sparkles, text: 'AI-painted flyers and content plan for every event' },
   { icon: BarChart3, text: 'Cross-event audience insights' },
   { icon: Star, text: 'Featured in the Year Planner' },

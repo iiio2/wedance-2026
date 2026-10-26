@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { neon } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import * as schema from '../../database/schema'
 import { appRouter } from '../index'
 

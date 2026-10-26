@@ -7,7 +7,6 @@
  * the metadata column was missing) + RAZ-115 (opt-in attendee sharing).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { planItems } from '../../database/schema'
 
 // ---------- drizzle mocks ----------
 

@@ -254,7 +254,7 @@ class FakeDb {
     return Promise.all(statements.map(s => s._execute ? s._execute() : s))
   }
 
-  transaction(fn: (tx: any) => Promise<void>): Promise<void> {
+  transaction(_fn: (tx: any) => Promise<void>): Promise<void> {
     // transaction() is no longer supported; db.batch() should be used instead
     throw new Error('transaction() is not supported by neon-http driver. Use db.batch() instead.')
   }

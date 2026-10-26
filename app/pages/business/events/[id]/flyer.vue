@@ -57,9 +57,9 @@ const postTitle = computed(() => {
   return who ? `${POST_TITLE[p.kind]} · ${who}` : POST_TITLE[p.kind] ?? 'Post'
 })
 let timer: ReturnType<typeof setInterval> | undefined
-// Waiting for one painting (`id`) to have its picture, then `then` runs; the
+// Waiting for one painting (`id`) to have its picture, then `onDone` runs; the
 // read-back check keeps updating in the background. id null: no wait.
-let awaiting: { id: string | null; then: () => void } | null = null
+let awaiting: { id: string | null; onDone: () => void } | null = null
 const active = (r: Row) => r.status === 'painting' || r.status === 'checking'
 async function pollOnce() {
   if (!batchId.value) return
@@ -71,7 +71,7 @@ async function pollOnce() {
   if (awaiting) {
     const r = awaiting.id ? rows.value.find(x => x.id === awaiting!.id) : null
     if (!awaiting.id || (r && (r.url || !active(r)))) {
-      const cb = awaiting.then
+      const cb = awaiting.onDone
       awaiting = null
       cb()
     }
@@ -81,9 +81,9 @@ async function pollOnce() {
     timer = undefined
   }
 }
-function watchBatch(b: string, waitFor: string | null, then: () => void = () => {}) {
+function watchBatch(b: string, waitFor: string | null, onDone: () => void = () => {}) {
   batchId.value = b
-  awaiting = { id: waitFor, then }
+  awaiting = { id: waitFor, onDone }
   clearInterval(timer)
   timer = setInterval(pollOnce, 3000)
   void pollOnce()

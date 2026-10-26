@@ -50,11 +50,11 @@ export function renderMarkdownParts(md: string): DocPart[] {
   let i = 0
   while (i < lines.length) {
     const line = lines[i]!
-    if (/^```/.test(line)) {
+    if (line.startsWith('```')) {
       const lang = line.slice(3).trim()
       const buf: string[] = []
       i++
-      while (i < lines.length && !/^```/.test(lines[i]!)) buf.push(lines[i++]!)
+      while (i < lines.length && !lines[i]!.startsWith('```')) buf.push(lines[i++]!)
       i++
       if (lang === 'mermaid') {
         flush()

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { eq, and, sql, inArray } from 'drizzle-orm'
+import { eq, and, sql } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import { profiles, bookableSpaces, networkLinks } from '../../database/schema'
 

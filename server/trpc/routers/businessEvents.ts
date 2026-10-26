@@ -666,7 +666,7 @@ export const businessEventsRouter = router({
         .where(and(eq(events.source, ev.source), isNull(events.hostProfileId), or(eq(events.id, ev.id), gte(events.startDate, now))))
       const dates = siblings.filter((s: any) => s.id === ev.id || seriesKey(s.sourceId, s.seriesId) === key)
       for (const s of dates) {
-        await ctx.db.update(events).set({ ...stamp, sourceRef: { ...(s.sourceRef ?? {}), dismissed: 'series' } }).where(eq(events.id, s.id))
+        await ctx.db.update(events).set({ ...stamp, sourceRef: { ...s.sourceRef, dismissed: 'series' } }).where(eq(events.id, s.id))
       }
       return { archived: dates.length }
     }),

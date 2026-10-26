@@ -19,7 +19,7 @@ let inserted=0
 const CH=500
 for(let i=0;i<list.length;i+=CH){
   const b=list.slice(i,i+CH)
-  const f=b.map(x=>x[0]), t=b.map(x=>x[1]), s=b.map(x=>JSON.stringify({migrated:true}))
+  const f=b.map(x=>x[0]), t=b.map(x=>x[1]), s=b.map(()=>JSON.stringify({migrated:true}))
   const res=arr(await tgt.query(`INSERT INTO follows (follower_id,target_username,source_ref)
     SELECT * FROM unnest($1::uuid[],$2::text[],$3::jsonb[])
     ON CONFLICT (follower_id,target_username) DO NOTHING RETURNING id`,[f,t,s]))

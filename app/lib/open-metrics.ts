@@ -9,7 +9,7 @@
 export const OPEN_METRICS_DASHBOARD_URL = 'https://eu.posthog.com/shared/ONKnioxDNNkpt_9UmV8kCGm2WumY_A'
 
 export const hasOpenMetricsDashboard = (url: string = OPEN_METRICS_DASHBOARD_URL) =>
-  /^https:\/\//.test(url.trim())
+  url.trim().startsWith('https://')
 
 export interface MetricTile {
   title: string

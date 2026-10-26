@@ -3,7 +3,7 @@
  *
  * Uses the same FakeDb pattern as festival.test.ts — hermetic, no live DB.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { profiles, profileMembers, dancers, organizerSubscriptions } from '../../database/schema'
 
 // ---------- mocks ----------

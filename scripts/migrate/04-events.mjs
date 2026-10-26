@@ -34,11 +34,6 @@ for(let i=0;i<list.length;i+=CH){
     C.sref.push(JSON.stringify({v4EventId:e.eid, firebaseId:e.fbid||null}))
   }
   if(DRY){inserted+=b.length;continue}
-  const q=`INSERT INTO events (slug,name,type,description,cover,start_date,end_date,is_festival,ticket_url,price,city,venue_username,organizer_username,archived,published,source_ref)
-    SELECT *, true, false, s::jsonb FROM unnest($1::text[],$2::text[],$3::text[],$4::text[],$5::text[],$6::timestamp[],$7::timestamp[],$8::boolean[],$9::text[],$10::text[],$11::text[],$12::text[],$13::text[]) AS u(a,b,c,d,e,f,g,h,i,j,k,l,m), unnest($14::text[]) AS s
-    ON CONFLICT (slug) WHERE slug IS NOT NULL DO UPDATE SET name=EXCLUDED.name, start_date=EXCLUDED.start_date, end_date=EXCLUDED.end_date, is_festival=EXCLUDED.is_festival, ticket_url=EXCLUDED.ticket_url, venue_username=EXCLUDED.venue_username, organizer_username=EXCLUDED.organizer_username, source_ref=EXCLUDED.source_ref
-    RETURNING (xmax=0) AS is_insert`
-  // simpler: separate source_ref array align — rebuild without the awkward join
   const q2=`INSERT INTO events (slug,name,type,description,cover,start_date,end_date,is_festival,ticket_url,price,city,venue_username,organizer_username,archived,published,source_ref)
     SELECT slug,name,type,description,cover,sd,ed,fest,turl,price,city,vu,ou,true,false,sref FROM unnest(
       $1::text[],$2::text[],$3::text[],$4::text[],$5::text[],$6::timestamp[],$7::timestamp[],$8::boolean[],$9::text[],$10::text[],$11::text[],$12::text[],$13::text[],$14::jsonb[]

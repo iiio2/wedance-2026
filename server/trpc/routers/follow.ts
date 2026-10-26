@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { eq, and, sql, isNotNull } from 'drizzle-orm'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
-import { follows, profiles, dancers } from '../../database/schema'
+import { follows, profiles } from '../../database/schema'
 
 export const followRouter = router({
   /**

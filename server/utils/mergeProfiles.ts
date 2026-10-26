@@ -146,7 +146,7 @@ export function findDuplicates(rows: DupRow[], cityKeys: Set<string>): DupGroup[
 export function renameInEvent(ev: { artists: string[] | null; flyerOptions: any; festival: any }, from: string, to: string) {
   const swap = (h: string) => (h === from ? to : h)
   const artists = [...new Set((ev.artists ?? []).map(swap))]
-  const fo = { ...(ev.flyerOptions ?? {}) }
+  const fo = { ...ev.flyerOptions }
   for (const k of ['photos', 'names'] as const) {
     if (fo[k] && from in fo[k]) {
       const m = { ...fo[k] }
@@ -224,7 +224,7 @@ export async function mergeProfile(db: any, from: { id: string; username: string
   for (const p of (b.photos ?? []) as any[]) if (!photos.some((x: any) => x.url === p.url)) photos.push(p)
   const styles = (a.styles ?? []).length ? a.styles : (b.styles ?? [])
   const amenities = (a.amenities ?? []).length ? a.amenities : (b.amenities ?? [])
-  const contact = { ...(b.contact ?? {}), ...(a.contact ?? {}) }
+  const contact = { ...b.contact, ...a.contact }
   await q(sql`update profiles set socials = ${JSON.stringify(socials)}::json, photos = ${JSON.stringify(photos)}::jsonb, styles = ${JSON.stringify(styles)}::json,
     amenities = ${JSON.stringify(amenities)}::jsonb, contact = ${JSON.stringify(contact)}::jsonb where id = ${to.id}`)
   // Hide the copy, pointing at the one that stays.

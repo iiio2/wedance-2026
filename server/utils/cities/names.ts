@@ -83,7 +83,7 @@ export function isUsefulQuery(query: string | null | undefined, known: string[])
  */
 export function mergeAltNames(existing: string[], additions: Array<string | null | undefined>, protectedNames: Array<string | null | undefined> = []): string[] {
   const keep = new Set(protectedNames.filter(Boolean).map(n => normalizeCity(n!)))
-  const out = [...existing.filter(Boolean)]
+  const out = existing.filter(Boolean)
   for (const raw of additions) {
     const a = raw?.trim()
     if (!a) continue

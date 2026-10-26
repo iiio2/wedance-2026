@@ -21,7 +21,7 @@ const store = new AsyncLocalStorage<AiContext>()
 
 /** Run `fn` with more context (merged into what's already there). */
 export function withAi<T>(more: AiContext, fn: () => T): T {
-  return store.run({ ...(store.getStore() ?? {}), ...more }, fn)
+  return store.run({ ...store.getStore(), ...more }, fn)
 }
 
 export async function logAiCall(e: { purpose: string; model: string; durationMs: number; status: 'ok' | 'refused' | 'error'; request?: { prompt: string; images: { mimeType: string; kb: number }[] }; response?: any; error?: string }) {

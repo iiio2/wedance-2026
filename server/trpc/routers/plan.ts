@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { eq, and, ne, sql, inArray, gte, lt, asc, ilike, isNotNull } from 'drizzle-orm'
+import { eq, and, ne, sql, inArray, gte, asc, isNotNull } from 'drizzle-orm'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
 import { planItems, dancers, festivals, festivalSignups, events, attendances, dancerGoals } from '../../database/schema'
 import { getReferralDiscountPercent, getEarlyBirdInfo } from '../../utils/ticket-prices'

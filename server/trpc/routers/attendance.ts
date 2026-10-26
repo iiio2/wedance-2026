@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { eq, and, sql, inArray, ne } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
-import { router, publicProcedure, protectedProcedure, adminProcedure } from '../trpc'
+import { router, publicProcedure, protectedProcedure } from '../trpc'
 import { attendances, dancers, events, profileMembers } from '../../database/schema'
 import { eventGroup, trackServer } from '../../utils/posthog'
 

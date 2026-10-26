@@ -16,7 +16,7 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
     if (name === 'node_modules' || name.startsWith('.') || name === 'generated' || name === 'sketches') continue
     const p = join(dir, name)
     if (statSync(p).isDirectory()) sourceFiles(p, out)
-    else if (/\.(ts|vue)$/.test(name) && !/\.test\.ts$/.test(name)) out.push(p)
+    else if (/\.(ts|vue)$/.test(name) && !name.endsWith('.test.ts')) out.push(p)
   }
   return out
 }

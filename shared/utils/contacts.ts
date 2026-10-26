@@ -41,7 +41,7 @@ export function contactsFor(p: {
       if (h) out.push({ kind: 'instagram', label: `Message @${h} on Instagram`, url: `https://ig.me/m/${h}` })
     } else if (s.platform === 'facebook') {
       // A page's plain address opens in Messenger; anything else, the page itself.
-      const m = url.match(/facebook\.com\/([A-Za-z0-9.\-]+)\/?$/)
+      const m = url.match(/facebook\.com\/([A-Za-z0-9.-]+)\/?$/)
       out.push(m && !['profile.php', 'groups', 'events'].includes(m[1]!)
         ? { kind: 'facebook', label: 'Message them on Messenger', url: `https://m.me/${m[1]}` }
         : { kind: 'facebook', label: 'Their Facebook page', url })

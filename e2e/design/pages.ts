@@ -46,4 +46,4 @@ export const PRODUCT_ROUTES: Route[] = [
 ].map(p => ({ path: p, name: slug(p), fullPage: false }))
 
 /** Pages that render the shared ui components in every variant. */
-export const COMPONENT_SHOWCASE_ROUTES = [...DESIGN_ROUTES.map(r => r.path)]
+export const COMPONENT_SHOWCASE_ROUTES = DESIGN_ROUTES.map(r => r.path)

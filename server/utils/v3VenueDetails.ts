@@ -90,7 +90,7 @@ export function planVenueDetails(v3Venues: any[], local: LocalVenue[]): { plans:
       put('socials', [...(r.socials ?? []), { platform: 'website', url: website }], 'website', r.socials)
     }
     const phone = String(g.international_phone_number || '').trim()
-    if (phone && !r.contact?.phone) put('contact', { ...(r.contact ?? {}), phone }, 'business phone', r.contact)
+    if (phone && !r.contact?.phone) put('contact', { ...r.contact, phone }, 'business phone', r.contact)
     if (empty(r.venueType) && TYPES.has(String(v.venueType))) put('venueType', String(v.venueType), 'kind of place', r.venueType)
     const am = mapAmenities(v.amenities)
     if (empty(r.amenities) && am.length) put('amenities', am, 'amenities', r.amenities)

@@ -29,7 +29,7 @@
  */
 import { neon, neonConfig } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import * as schema from '../server/database/schema'
 
 const args = new Set(process.argv.slice(2))

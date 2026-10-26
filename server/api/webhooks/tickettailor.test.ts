@@ -179,7 +179,6 @@ type FilterFn = (row: FakeRow) => boolean
 //
 // vitest.mock replaces drizzle-orm's `eq` and `and` with predicate-builders so
 // the FakeDb's `.where(filter)` receives plain functions instead of SQL.
-import { vi } from 'vitest'
 vi.mock('drizzle-orm', async () => {
   // Drizzle's column markers expose `.name` as the *DB* column name
   // (snake_case). Our FakeDb stores rows with camelCase JS keys (matching the

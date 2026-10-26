@@ -116,7 +116,7 @@ class FakeDb {
           where: (filter: (r: FakeRow) => boolean) => {
             return Promise.resolve(baseRows().filter(filter))
           },
-          leftJoin: (otherTable: any, predicate: any) => {
+          leftJoin: (otherTable: any, _predicate: any) => {
             // Take the column metadata from the predicate to figure out
             // which JS keys to compare. The predicate is `eq(a.x, b.y)`
             // (one column reference + one value) OR `eq(a.x, b.y)` where

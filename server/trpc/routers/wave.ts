@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import { eq, and, inArray, isNotNull, notInArray, ne } from 'drizzle-orm'
-import { router, publicProcedure, protectedProcedure } from '../trpc'
+import { eq, and, inArray, isNotNull, ne } from 'drizzle-orm'
+import { router, protectedProcedure } from '../trpc'
 import { festivalWaves, dancers, planItems } from '../../database/schema'
 
 /** A swipe card is a photo: dancers without one never enter the deck. */

@@ -33,7 +33,6 @@ import {
 } from './v3EventSync'
 
 type PType = 'venue' | 'organizer' | 'artist'
-const V3_TYPE: Record<string, PType> = { Venue: 'venue', Organiser: 'organizer', FanPage: 'organizer', Artist: 'artist' }
 const BOT = 'wedance-bot'
 
 // ---------------------------------------------------------------------------
@@ -81,7 +80,7 @@ export function toSocials(p: Record<string, any>): { platform: string; url: stri
   for (const [platform, base] of Object.entries(SOCIAL_BASE)) {
     const raw = str(p[platform])
     if (!raw) continue
-    let url = /^https?:\/\//i.test(raw) ? raw : (base && /^@?[\w.\-]{2,60}$/.test(raw) ? base + raw.replace(/^@/, '') : null)
+    let url = /^https?:\/\//i.test(raw) ? raw : (base && /^@?[\w.-]{2,60}$/.test(raw) ? base + raw.replace(/^@/, '') : null)
     if (!url) continue
     url = url.replace(/\s+/g, '')
     if (/^https?:\/\/(www\.)?(instagram|facebook|youtube|tiktok|twitter)\.com\/@?$/i.test(url)) continue // empty handle

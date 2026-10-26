@@ -35,6 +35,7 @@ public/               # Static assets
 - `bun run build` — production build
 - `bun run test` — unit tests (vitest)
 - `bun run test:e2e` — e2e tests (playwright)
+- `bun run lint` — oxlint (`.oxlintrc.json`; `bun run lint:fix` applies safe fixes — review the diff)
 
 ## Deployment
 
