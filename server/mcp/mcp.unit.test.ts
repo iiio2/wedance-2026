@@ -118,3 +118,20 @@ describe('confirm_token', () => {
     expect(a.ok && b.ok && a.nonce !== b.nonce).toBe(true)
   })
 })
+
+describe('get_event programme', () => {
+  const tool = TOOLS.find(t => t.name === 'get_event')!
+  const run = (ev: any) => tool.run({ caller: { events: { get: async () => ev } }, ctx: {}, origin: 'https://x' } as any, { event: ev.id })
+  const base = { id: 'e1', name: 'Fest', startDate: new Date('2026-11-06T18:00:00Z'), timezone: 'Europe/Vienna', agenda: [] }
+  it('a festival’s schedule comes from festival.sessions, in order', async () => {
+    const session = (id: string, date: string, time: string) => ({ id, date, time, duration: 60, type: 'workshop', title: id, artist: 'ana', style: 'Salsa', level: 'Intermediate' })
+    const r: any = await run({ ...base, isFestival: true, festival: { key: 'fest-2026', sessions: [session('b', '2026-11-07', '12:00'), session('a', '2026-11-07', '10:00'), session('c', '2026-11-06', '20:00')] } })
+    expect(r.festival.program.map((s: any) => s.title)).toEqual(['c', 'a', 'b'])
+    expect(r.festival.program[0]).toMatchObject({ date: '2026-11-06', time: '20:00', type: 'workshop', artist: 'ana', with: [], room: null })
+  })
+  it('an ordinary event keeps its agenda and no festival block', async () => {
+    const r: any = await run({ ...base, agenda: [{ time: '19:00', what: 'Class' }], festival: null })
+    expect(r.agenda).toEqual([{ time: '19:00', what: 'Class' }])
+    expect(r.festival).toBeNull()
+  })
+})

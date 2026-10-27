@@ -6,6 +6,7 @@ import { hasScope, type Scope } from '../oauth/config'
 import { eventPath } from '../../shared/utils/eventSlug'
 import { eventLocalDate, eventLocalTime, eventLocalWeekday } from '../../shared/utils/eventTime'
 import { LANGUAGES } from '../../shared/utils/caption'
+import type { FestivalSession } from '../../shared/types/festivalDetails'
 
 /**
  * The WeDance MCP tools. A thin adapter: every tool calls the tRPC router
@@ -76,6 +77,12 @@ function card(t: ToolCtx, e: any) {
   }
 }
 const localDay = (e: any) => eventLocalDate(e.startDate, e.timezone || 'Europe/Berlin')
+/** A festival's schedule (events.festival.sessions), in order: its programme lives there, not in `agenda`. */
+export function festivalProgram(sessions: FestivalSession[] | undefined) {
+  return [...(sessions ?? [])]
+    .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))
+    .map(s => ({ date: s.date, time: s.time, duration: s.duration, type: s.type, title: s.title, artist: s.artist || null, with: s.with ?? [], style: s.style, level: s.level, room: s.room ?? null, venue: s.venue ?? null }))
+}
 
 async function profileId(t: ToolCtx, h: string): Promise<string> {
   const p: any = await t.caller.entity.getByHandle({ handle: h })
@@ -158,11 +165,11 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'get_event', title: 'Event details', scopes: [], annotations: READ,
-    description: 'Everything about one event: description, line-up, venue, prices, ticket link, programme. Accepts the id or the slug from its URL.',
+    description: 'Everything about one event: description, line-up, venue, prices, ticket link, programme (agenda; for a festival, festival.program: every workshop and party by date and time). Accepts the id or the slug from its URL.',
     input: { event: z.string().min(1).max(200).describe('Event id, or the last part of its /events/… URL.') },
     run: async (t, a) => {
       const e: any = await t.caller.events.get({ id: a.event })
-      return { ...card(t, e), description: e.description, artists: e.artists ?? [], ticketUrl: e.ticketUrl, link: e.link, country: e.country, address: e.venueAddress, agenda: e.agenda ?? [], checkedBy: e.checkedBy, festival: e.festival ? { key: e.festival.key, passes: e.festival.passes, practicalInfo: e.festival.practicalInfo } : null }
+      return { ...card(t, e), description: e.description, artists: e.artists ?? [], ticketUrl: e.ticketUrl, link: e.link, country: e.country, address: e.venueAddress, agenda: e.agenda ?? [], checkedBy: e.checkedBy, festival: e.festival ? { key: e.festival.key, passes: e.festival.passes, practicalInfo: e.festival.practicalInfo, program: festivalProgram(e.festival.sessions) } : null }
     },
   },
   {
