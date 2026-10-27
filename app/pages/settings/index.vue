@@ -280,8 +280,8 @@ async function submitDelete() {
       <h2 class="mt-12 text-lg font-bold text-primary font-display">Danger Zone</h2>
       <div class="mt-4 p-4 rounded-xl bg-wd-red-50 border border-destructive/40">
         <div class="flex gap-3">
-          <AlertTriangle class="w-5 h-5 flex-shrink-0 mt-0.5 text-primary" aria-hidden="true" />
-          <div class="flex-1">
+          <AlertTriangle class="w-5 h-5 shrink-0 mt-0.5 text-primary" aria-hidden="true" />
+          <div class="flex-1 min-w-0">
             <h3 class="font-bold text-sm mb-2 text-primary">Permanently delete your account</h3>
             <p class="text-xs mb-4 text-wd-red-900">
               This action cannot be undone. Your profile will be removed, your account deleted, and you will be signed out immediately.
@@ -301,7 +301,7 @@ async function submitDelete() {
               v-if="!showDeleteConfirm"
               variant="destructive"
               size="lg"
-              class="w-full rounded-full font-bold uppercase tracking-wider"
+              class="w-full px-4 sm:px-8 rounded-full font-bold uppercase tracking-wider"
               @click="showDeleteConfirm = true"
             >Delete my account</Button>
 
@@ -309,12 +309,12 @@ async function submitDelete() {
               <Field id="settings-delete-confirm" label="Confirm by typing your name" :error="deleteError || undefined">
                 <Input v-model="deleteConfirmInput" :placeholder="`Type: ${dancerName}`" autocomplete="off" />
               </Field>
-              <div class="flex gap-2">
+              <div class="flex flex-col gap-2 sm:flex-row">
                 <Button
                   type="button"
                   variant="outline-pill"
                   size="lg"
-                  class="flex-1"
+                  class="px-4 sm:px-8 sm:flex-1"
                   :disabled="deleteLoading"
                   @click="showDeleteConfirm = false; deleteConfirmInput = ''; deleteError = ''"
                 >Cancel</Button>
@@ -322,7 +322,7 @@ async function submitDelete() {
                   type="submit"
                   variant="destructive"
                   size="lg"
-                  class="flex-1 rounded-full font-bold uppercase tracking-wider"
+                  class="px-4 sm:px-8 sm:flex-1 rounded-full font-bold uppercase tracking-wider"
                   :loading="deleteLoading"
                   :disabled="deleteConfirmInput !== dancerName"
                 >{{ deleteLoading ? 'Deleting…' : 'Permanently delete' }}</Button>
