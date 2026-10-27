@@ -15,10 +15,10 @@ describe('isPartnerEvent', () => {
 
 describe('rsvpOptions', () => {
   it('asks the organiser’s four questions for a partner dance', () => {
-    expect(rsvpOptions(true).map(o => o.label)).toEqual(['Yes, with my partner', 'Yes, I need a leader', 'Yes, I need a follower', 'Next time'])
+    expect(rsvpOptions(true).map(o => o.label)).toEqual(['With my partner', 'I follow, need a leader', 'I lead, need a follower', 'Next time'])
   })
   it('asks Yes / with a friend / Next time otherwise', () => {
-    expect(rsvpOptions(false).map(o => [o.id, o.label])).toEqual([['yes', 'Yes'], ['partner', 'Yes, with a friend'], ['next', 'Next time']])
+    expect(rsvpOptions(false).map(o => [o.id, o.label])).toEqual([['yes', 'I’m going'], ['partner', 'With a friend'], ['next', 'Next time']])
   })
 })
 

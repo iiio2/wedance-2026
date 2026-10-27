@@ -25,6 +25,8 @@ const props = withDefaults(defineProps<{
   // Venue address + Google Maps link (events pass these from the synced data).
   venueAddress?: string
   mapUrl?: string
+  // Every pass is €0 — say so in the hero instead of a €0 checkout (RAZ-731).
+  freeEntry?: boolean
 }>(), { reviewTargetType: 'festival', entityLabel: 'festival', ctaAnchor: '#discover' })
 
 defineEmits<{ pick: [] }>()
@@ -56,8 +58,10 @@ const dateRange = computed(() => {
   const timeZone = String(props.festival.startDate).includes('T') ? (props.festival.timezone || 'Europe/Berlin') : 'UTC'
   const fmt = (d: Date, o: Intl.DateTimeFormatOptions) => d.toLocaleDateString('en-US', { ...o, timeZone })
   const day = { year: 'numeric', month: 'numeric', day: 'numeric' } as const
-  // Single-day (events) → one date; multi-day (festivals) → a range.
-  if (fmt(start, day) === fmt(end, day)) {
+  // Single-day (events) → one date; multi-day (festivals) → a range. A night
+  // that runs past midnight (21:00–03:00) is still one date, not "Oct 29 – Oct 30".
+  const overnight = end.getTime() - start.getTime() <= 18 * 3600_000
+  if (fmt(start, day) === fmt(end, day) || overnight) {
     return fmt(start, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
   }
   return `${fmt(start, { month: 'short', day: 'numeric' })} – ${fmt(end, { month: 'short', day: 'numeric', year: 'numeric' })}`
@@ -160,7 +164,14 @@ const rays = Array.from({ length: 24 }, (_, i) => {
               :style="{ background: festival.accentColor + '18', color: chipText }"
             >
               <Users class="w-3 h-3" aria-hidden="true" />
-              {{ festival.attendeeCount }} planning
+              {{ festival.attendeeCount }} going
+            </span>
+            <span
+              v-if="freeEntry"
+              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold font-sans bg-success/10 text-wd-green-700"
+              data-free-entry
+            >
+              Free entry
             </span>
             <!-- Review rating (appears once loaded), links to the reviews section -->
             <a
@@ -193,8 +204,15 @@ const rays = Array.from({ length: 24 }, (_, i) => {
             </div>
           </div>
 
-          <!-- CTAs: Get tickets (external, if any) + Pick (add to plan). Both. -->
-          <div class="mt-4 flex flex-wrap gap-2">
+          <!-- The one "am I coming?" control (RAZ-731). The parent can replace it
+               (a dated event's poll, a festival's Get pass); the default is
+               external tickets when linked, else I'm going (add to plan). -->
+          <!-- A replaced control (the poll) takes the full width on phones,
+               under the logo too: logo w-20 + gap-5 = 6.25rem. -->
+          <div v-if="$slots.cta" class="-ml-[6.25rem] sm:ml-0">
+            <slot name="cta" />
+          </div>
+          <div v-else class="mt-4 flex flex-wrap gap-2">
             <Button v-if="hasTickets" as-child variant="cta" :accent="buttonAccent" class="px-5">
               <a
                 :href="festival.ticketUrl"
@@ -214,7 +232,7 @@ const rays = Array.from({ length: 24 }, (_, i) => {
               :aria-pressed="picked"
               @click="$emit('pick')"
             >
-              <component :is="picked ? Check : Plus" aria-hidden="true" /> {{ picked ? 'Going!' : 'Going?' }}
+              <component :is="picked ? Check : Plus" aria-hidden="true" /> {{ picked ? 'You’re going' : 'I’m going' }}
             </Button>
           </div>
         </div>

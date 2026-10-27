@@ -33,16 +33,12 @@ function onSignIn(action?: string) {
   showSignUp.value = true
 }
 
-// The RSVP is the organiser's poll (RAZ-718): on a dated event the hero's
-// "Going?" leads to it instead of a sign-up wall.
+// The RSVP is the organiser's poll (RAZ-718), shown in the hero in place of
+// the Going button (RAZ-731).
 const rsvpPoll = ref<{ coming: number; mine: { answer: string } | null } | null>(null)
 function onPoll(p: { coming: number; mine: { answer: string } | null }) { rsvpPoll.value = p }
 
 function onPick() {
-  if (rsvpPoll.value) {
-    scrollTo('rsvp')
-    return
-  }
   if (!isSignedIn.value) {
     onSignIn('plan')
     return
@@ -297,12 +293,14 @@ useHead(() => ({
       </div>
 
       <!-- Same hero as festivals -->
-      <FestivalHero :festival="asFestival" review-target-type="event" entity-label="event" cta-anchor="#discover" cta-fallback-label="I'm going" :picked="picked" :date-label="ev.when" :venue-address="ev.venueAddress" :map-url="ev.mapUrl" @pick="onPick" />
-
-      <!-- The RSVP: the organiser's poll -->
-      <div v-if="ev.pollable && !ev.archived" id="rsvp" class="max-w-3xl mx-auto px-4 pt-6 scroll-mt-16">
-        <EventRsvpPoll :event-id="ev.id" :path="route.path" :start-date="ev.startDate" :end-date="ev.endDate" :timezone="ev.timezone" :organizer-name="ev.organizerName || (ev.organizerHandle ? `@${ev.organizerHandle}` : null)" surface="event" @poll="onPoll" />
-      </div>
+      <FestivalHero :festival="asFestival" review-target-type="event" entity-label="event" cta-anchor="#discover" cta-fallback-label="I'm going" :picked="picked" :date-label="ev.when" :venue-address="ev.venueAddress" :map-url="ev.mapUrl" @pick="onPick">
+        <!-- The RSVP: the organiser's poll IS the hero's Going question (RAZ-731). -->
+        <template v-if="ev.pollable && !ev.archived" #cta>
+          <div id="rsvp" class="mt-4 max-w-xl scroll-mt-16">
+            <EventRsvpPoll :event-id="ev.id" :path="route.path" :start-date="ev.startDate" :end-date="ev.endDate" :timezone="ev.timezone" :organizer-name="ev.organizerName || (ev.organizerHandle ? `@${ev.organizerHandle}` : null)" surface="event" @poll="onPoll" />
+          </div>
+        </template>
+      </FestivalHero>
 
       <div v-if="ev.archived" class="max-w-3xl mx-auto px-4 pt-4 font-sans">
         <p class="rounded-xl px-4 py-3 text-sm bg-warning/[12.2%] text-wd-amber-800">This event is no longer listed by its organiser — it may have been cancelled or moved.</p>

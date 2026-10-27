@@ -7,7 +7,7 @@
  * whole column of mostly-empty cells.
  */
 import type { Workshop, Teacher } from '~/types/festival'
-import { MapPin, Music, Users } from 'lucide-vue-next'
+import { MapPin, Music, Users, Star } from 'lucide-vue-next'
 import { chilis } from '~/lib/levels'
 import { WD } from '~/lib/brand'
 import { accentText, readableAccent } from '~/lib/accent'
@@ -31,7 +31,9 @@ const emit = defineEmits<{
 
 // Each schedule item opens its own event page. Compound id (festival~workshop)
 // keeps it globally unique since workshop ids repeat across festivals. The
-// title is the link, stretched over the row, so "Going?" isn't nested in an <a>.
+// title is the link, stretched over the row, so Save isn't nested in an <a>.
+// A row SAVES the session to My plan; "Going?" is asked once, in the hero
+// (RAZ-731), so the rows don't ask it again.
 const eventHref = (wid: string) => (props.festivalSlug ? sessionPath(props.festivalSlug, wid) : undefined)
 
 const dayLabels = computed(() => {
@@ -227,7 +229,7 @@ const levelColor: Record<string, string> = {
             :aria-pressed="planIds.has(w.id)"
             @click="emit('toggleWorkshop', w.id)"
           >
-            {{ planIds.has(w.id) ? '✓ Going!' : 'Going?' }}
+            <Star :class="planIds.has(w.id) ? 'fill-current' : ''" aria-hidden="true" /> {{ planIds.has(w.id) ? 'Saved' : 'Save' }}
           </Button>
         </div>
       </div>
@@ -285,7 +287,7 @@ const levelColor: Record<string, string> = {
           :aria-pressed="planIds.has(party.id)"
           @click="emit('toggleWorkshop', party.id)"
         >
-          {{ planIds.has(party.id) ? '✓ Going!' : 'Going?' }}
+          <Star :class="planIds.has(party.id) ? 'fill-current' : ''" aria-hidden="true" /> {{ planIds.has(party.id) ? 'Saved' : 'Save' }}
         </Button>
       </div>
     </div>

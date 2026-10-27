@@ -285,10 +285,18 @@ When(
 
 // ── "Going?" gate ───────────────────────────────────────────────────
 
-When('I click the "Going?" button', async ({ page }) => {
-  const goingBtn = page.getByRole('button', { name: 'Going?' })
-  await expect(goingBtn).toBeVisible({ timeout: 10_000 })
-  await goingBtn.click()
+// The hero's Going question on a dated event is the organiser's poll (RAZ-731).
+When('I answer the Going question in the event hero', async ({ page }) => {
+  const answer = page.locator('#rsvp [data-rsvp]').first()
+  await expect(answer).toBeVisible({ timeout: 10_000 })
+  await answer.click()
+})
+
+Then('the email confirmation sheet is visible', async ({ page }) => {
+  const dialog = page.locator('[role="dialog"]')
+  await expect(dialog).toBeVisible({ timeout: 5_000 })
+  await expect(dialog.getByRole('heading', { name: 'You’re on the list' })).toBeVisible()
+  await expect(dialog.getByRole('textbox', { name: 'Email' })).toBeVisible()
 })
 
 // ── Assertions ──────────────────────────────────────────────────────
@@ -320,11 +328,4 @@ Then('the sign-up modal is visible', async ({ page }) => {
   await expect(
     dialog.getByRole('heading', { name: 'Join WeDance' }),
   ).toBeVisible()
-})
-
-Then('no event is saved to my week plan', async ({ page }) => {
-  // The sign-up modal is still open, so "Going?" may be behind it.
-  // The real assertion: "Going!" (saved state) must NOT exist anywhere.
-  const goingDone = page.getByRole('button', { name: 'Going!' })
-  await expect(goingDone).not.toBeVisible()
 })

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Festival, Teacher, Workshop, PlanEntry, DanceRole, DancePartner, FestivalFriend, PartnerMatch, ExtraActivity, SwipeCard, FreemiumState } from '~/types/festival'
-import { ArrowRight, Sparkles, Check, Pencil } from 'lucide-vue-next'
+import { ArrowRight, Sparkles, Check, Pencil, Ticket } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { artistPlaces, artistLanguages } from '~/data/artists'
 import { WD } from '~/lib/brand'
@@ -37,9 +37,21 @@ const slug = festival.slug
 
 // Live "planning" count from the DB — replaces the hardcoded mock value.
 const liveAttendeeCount = ref(festival.attendeeCount)
-const heroFestival = computed(() => ({ ...festival, attendeeCount: rsvpPoll.value ? rsvpPoll.value.coming : liveAttendeeCount.value }))
+const heroFestival = computed(() => ({
+  ...festival,
+  attendeeCount: rsvpPoll.value ? rsvpPoll.value.coming : liveAttendeeCount.value,
+  // A dated event knows its real start/end times (festival data carries dates
+  // only), so a night running past midnight reads as one date, not two.
+  ...(props.rsvp?.startDate ? { startDate: props.rsvp.startDate, endDate: props.rsvp.endDate || props.rsvp.startDate, timezone: props.rsvp.timezone || festival.timezone } : {}),
+}))
 
-// The poll answers "Going?" for a dated event: the hero leads to it.
+// One "am I coming?" control in the hero (RAZ-731): a dated event's poll, a
+// festival's Get pass when it sells passes, else I'm going. Passes that are all
+// €0 aren't a checkout, just free entry.
+const freeEntry = computed(() => (festival.tickets?.length ?? 0) > 0 && festival.tickets!.every(t => !t.price))
+const sellsPasses = computed(() => (festival.tickets?.length ?? 0) > 0 && !freeEntry.value)
+
+// The poll answers "Going?" for a dated event, in the hero.
 const rsvpPoll = ref<{ coming: number; mine: { answer: string } | null } | null>(null)
 function onPoll(p: { coming: number; mine: { answer: string } | null }) { rsvpPoll.value = p }
 const heroPicked = computed(() => rsvpPoll.value
@@ -728,10 +740,6 @@ function onSignedIn() {
 }
 
 function onPick() {
-  if (rsvpPoll.value) {
-    document.getElementById('rsvp')?.scrollIntoView({ behavior: 'smooth' })
-    return
-  }
   if (!isSignedIn.value) {
     signUpAction.value = 'plan'
     showSignUp.value = true
@@ -774,7 +782,7 @@ const sections = computed(() =>
   allSections.filter((s) => {
     if (s === 'schedule') return workshops.length > 0
     if (s === 'lineup') return teachers.length > 0
-    if (s === 'tickets') return (festival.tickets?.length ?? 0) > 0
+    if (s === 'tickets') return sellsPasses.value
     return true
   }),
 )
@@ -1119,12 +1127,25 @@ useHead({
     </div>
 
     <div ref="heroRef">
-      <FestivalHero :festival="heroFestival" :picked="heroPicked" :venue-address="festival.venue?.address" :map-url="festival.venue?.coordinates?.lat != null ? `https://www.google.com/maps/search/?api=1&query=${festival.venue.coordinates.lat},${festival.venue.coordinates.lng}` : (festival.venue?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(festival.venue.address)}` : undefined)" @pick="onPick" />
-    </div>
-
-    <!-- The RSVP: the organiser's poll -->
-    <div v-if="rsvp" id="rsvp" class="max-w-3xl mx-auto px-4 pt-6 scroll-mt-16">
-      <EventRsvpPoll :event-id="rsvp.eventId" :path="rsvp.path" :start-date="rsvp.startDate" :end-date="rsvp.endDate" :timezone="rsvp.timezone" :organizer-name="rsvp.organizerName" surface="event" @poll="onPoll" />
+      <FestivalHero :festival="heroFestival" :picked="heroPicked" :free-entry="freeEntry" :venue-address="festival.venue?.address" :map-url="festival.venue?.coordinates?.lat != null ? `https://www.google.com/maps/search/?api=1&query=${festival.venue.coordinates.lat},${festival.venue.coordinates.lng}` : (festival.venue?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(festival.venue.address)}` : undefined)" @pick="onPick">
+        <!-- A dated event: the organiser's poll is the Going question. -->
+        <template v-if="rsvp" #cta>
+          <div id="rsvp" class="mt-4 max-w-xl scroll-mt-16">
+            <EventRsvpPoll :event-id="rsvp.eventId" :path="rsvp.path" :start-date="rsvp.startDate" :end-date="rsvp.endDate" :timezone="rsvp.timezone" :organizer-name="rsvp.organizerName" surface="event" @poll="onPoll" />
+          </div>
+        </template>
+        <!-- A festival that sells passes: the pass is the Going. -->
+        <template v-else-if="sellsPasses" #cta>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <Button v-if="hasTicket" type="button" variant="pill" class="px-5" @click="scrollTo('tickets')">
+              <Check aria-hidden="true" /> You have a pass
+            </Button>
+            <Button v-else type="button" variant="cta" class="px-5" data-hero-get-pass @click="scrollTo('tickets')">
+              <Ticket aria-hidden="true" /> Get pass
+            </Button>
+          </div>
+        </template>
+      </FestivalHero>
     </div>
 
     <!-- Section anchor nav — V3 restyled. Festival identity slides in on
@@ -1315,7 +1336,7 @@ useHead({
           />
         </section>
 
-        <section v-if="festival.tickets?.length" id="tickets" class="scroll-mt-16">
+        <section v-if="sellsPasses || (festival.tickets?.length && hasTicket)" id="tickets" class="scroll-mt-16">
           <div class="mb-4">
             <div class="text-xs uppercase tracking-[0.3em] text-secondary">Passes</div>
             <h2 v-if="hasTicket" class="mt-2 text-2xl font-black leading-tight text-foreground">

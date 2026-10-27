@@ -2,9 +2,9 @@
  * The event RSVP as the organiser's own poll (RAZ-718). Instead of a yes/no
  * "Going?", one tap answers coming or not, alone or not, and which side:
  *
- *   Yes, with my partner · Yes, I need a leader · Yes, I need a follower · Next time
+ *   With my partner · I follow, need a leader · I lead, need a follower · Next time
  *
- * Non-partner styles get "Yes · Yes, with a friend · Next time" (stored as
+ * Non-partner styles get "I’m going · With a friend · Next time" (stored as
  * `yes` / `partner` / `next`). The event page and the organiser view count the
  * same buckets, so the numbers match everywhere.
  *
@@ -48,14 +48,16 @@ export interface RsvpOption { id: RsvpAnswer; label: string; short: string }
 export function rsvpOptions(partner: boolean): RsvpOption[] {
   return partner
     ? [
-        { id: 'partner', label: 'Yes, with my partner', short: 'With my partner' },
-        { id: 'needLeader', label: 'Yes, I need a leader', short: 'Need a leader' },
-        { id: 'needFollower', label: 'Yes, I need a follower', short: 'Need a follower' },
+        // Say which side you dance: "I need a follower" above "Followers who
+        // need a leader" read like a bug (RAZ-731).
+        { id: 'partner', label: 'With my partner', short: 'With your partner' },
+        { id: 'needLeader', label: 'I follow, need a leader', short: 'Follower looking for a leader' },
+        { id: 'needFollower', label: 'I lead, need a follower', short: 'Leader looking for a follower' },
         { id: 'next', label: 'Next time', short: 'Next time' },
       ]
     : [
-        { id: 'yes', label: 'Yes', short: 'Coming' },
-        { id: 'partner', label: 'Yes, with a friend', short: 'With a friend' },
+        { id: 'yes', label: 'I’m going', short: 'Going' },
+        { id: 'partner', label: 'With a friend', short: 'With a friend' },
         { id: 'next', label: 'Next time', short: 'Next time' },
       ]
 }
