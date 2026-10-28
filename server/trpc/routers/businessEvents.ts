@@ -810,117 +810,121 @@ export const businessEventsRouter = router({
     }),
 
   // /business home: what needs me + the next 14 days, across every profile I manage.
-  inbox: protectedProcedure.query(async ({ ctx }) => {
-    const mine = await profilesIManage(ctx)
-    const now = new Date()
-    const in14 = new Date(now.getTime() + 14 * 86400_000)
-    const in60 = new Date(now.getTime() + 60 * 86400_000)
-    type Item = { kind: string; tone: 'warning' | 'info' | 'danger' | 'neutral'; title: string; detail?: string; to: string }
-    const needs: Item[] = []
+  // `profile`: the sidebar switcher's page (same as list); every page I manage when absent.
+  inbox: protectedProcedure
+    .input(z.object({ profile: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const all = await profilesIManage(ctx)
+      const mine = input?.profile ? all.filter((p: any) => p.username === input.profile) : all
+      const now = new Date()
+      const in14 = new Date(now.getTime() + 14 * 86400_000)
+      const in60 = new Date(now.getTime() + 60 * 86400_000)
+      type Item = { kind: string; tone: 'warning' | 'info' | 'danger' | 'neutral'; title: string; detail?: string; to: string }
+      const needs: Item[] = []
 
-    const claims = ctx.grantedProfileIds && !ctx.isAdmin ? [] : await ctx.db
-      .select({ status: profileClaims.status, name: profiles.name, username: profiles.username })
-      .from(profileClaims).innerJoin(profiles, eq(profiles.id, profileClaims.profileId))
-      .where(and(eq(profileClaims.dancerId, ctx.dancerId), inArray(profileClaims.status, ['pending', 'rejected'])))
-    for (const c of claims) {
-      needs.push(c.status === 'pending'
-        ? { kind: 'claim', tone: 'neutral', title: `Claim for ${c.name} is waiting for review`, detail: 'We check every claim by hand.', to: '/business/network' }
-        : { kind: 'claim', tone: 'danger', title: `Claim for ${c.name} wasn’t approved`, detail: 'Send a new request with proof we can check.', to: `/business/claim?profile=${c.username}` })
-    }
-
-    // Organizers' suggestions waiting on an artist page I manage.
-    if (mine.length) {
-      const sugg = await ctx.db.select({ username: profiles.username, name: profiles.name, n: sql<number>`count(*)::int` })
-        .from(profileSuggestions).innerJoin(profiles, eq(profiles.id, profileSuggestions.profileId))
-        .leftJoin(events, eq(events.id, profileSuggestions.eventId))
-        .where(and(inArray(profileSuggestions.profileId, mine.map((p: any) => p.id)), eq(profileSuggestions.status, 'pending'), sql`${events.archived} is not true`))
-        .groupBy(profiles.username, profiles.name)
-      for (const g of sugg) {
-        needs.push({ kind: 'suggestions', tone: 'info', title: `${g.n} ${g.n === 1 ? 'change' : 'changes'} suggested for ${g.name}`, detail: 'An organizer added photos, a video or your name for their event. Approve or turn them down.', to: `/confirm/@${g.username}` })
+      const claims = ctx.grantedProfileIds && !ctx.isAdmin ? [] : await ctx.db
+        .select({ status: profileClaims.status, name: profiles.name, username: profiles.username })
+        .from(profileClaims).innerJoin(profiles, eq(profiles.id, profileClaims.profileId))
+        .where(and(eq(profileClaims.dancerId, ctx.dancerId), inArray(profileClaims.status, ['pending', 'rejected'])))
+      for (const c of claims.filter((c: any) => !input?.profile || c.username === input.profile)) {
+        needs.push(c.status === 'pending'
+          ? { kind: 'claim', tone: 'neutral', title: `Claim for ${c.name} is waiting for review`, detail: 'We check every claim by hand.', to: '/business/network' }
+          : { kind: 'claim', tone: 'danger', title: `Claim for ${c.name} wasn’t approved`, detail: 'Send a new request with proof we can check.', to: `/business/claim?profile=${c.username}` })
       }
-    }
 
-    // People asking to book a page I manage (from its page or its /book link).
-    if (mine.length) {
-      const asks = await ctx.db.select({ username: profiles.username, name: profiles.name, n: sql<number>`count(*)::int`, first: sql<string>`min(${bookingInquiries.name})` })
-        .from(bookingInquiries).innerJoin(profiles, eq(profiles.id, bookingInquiries.profileId))
-        .where(and(inArray(bookingInquiries.profileId, mine.map((p: any) => p.id)), eq(bookingInquiries.status, 'new')))
-        .groupBy(profiles.username, profiles.name)
-      for (const g of asks) {
-        needs.push({ kind: 'booking', tone: 'info', title: g.n === 1 ? `${g.first} wants to book ${g.name}` : `${g.n} people want to book ${g.name}`, detail: 'Answer them by email, then mark it answered.', to: `/business/network/${g.username}/bookings` })
+      // Organizers' suggestions waiting on an artist page I manage.
+      if (mine.length) {
+        const sugg = await ctx.db.select({ username: profiles.username, name: profiles.name, n: sql<number>`count(*)::int` })
+          .from(profileSuggestions).innerJoin(profiles, eq(profiles.id, profileSuggestions.profileId))
+          .leftJoin(events, eq(events.id, profileSuggestions.eventId))
+          .where(and(inArray(profileSuggestions.profileId, mine.map((p: any) => p.id)), eq(profileSuggestions.status, 'pending'), sql`${events.archived} is not true`))
+          .groupBy(profiles.username, profiles.name)
+        for (const g of sugg) {
+          needs.push({ kind: 'suggestions', tone: 'info', title: `${g.n} ${g.n === 1 ? 'change' : 'changes'} suggested for ${g.name}`, detail: 'An organizer added photos, a video or your name for their event. Approve or turn them down.', to: `/confirm/@${g.username}` })
+        }
       }
-    }
 
-    // Organizers waiting on a page I manage: a venue asked to host their event,
-    // an artist asked to confirm they're in the line-up.
-    for (const a of await asksWaitingFor(ctx.db, mine.map((p: any) => p.id))) {
-      const tz = a.timezone || 'Europe/Berlin'
-      const when = a.startDate ? `${eventLocalWeekday(a.startDate, tz).slice(0, 3)} ${eventLocalDate(a.startDate, tz)} · ` : ''
-      needs.push(a.kind === 'venue'
-        ? { kind: 'venue-ask', tone: 'info', title: `${a.eventName}: can ${a.profileName} host it?`, detail: `${when}say yes, suggest another date, or no, with your terms.`, to: `/confirm/${a.token}` }
-        : { kind: 'lineup-ask', tone: 'info', title: `${a.eventName}: is ${a.profileName} in?`, detail: `${when}you’re in their line-up. Confirm, check your programme and the posts about you.`, to: `/confirm/${a.token}` })
-    }
+      // People asking to book a page I manage (from its page or its /book link).
+      if (mine.length) {
+        const asks = await ctx.db.select({ username: profiles.username, name: profiles.name, n: sql<number>`count(*)::int`, first: sql<string>`min(${bookingInquiries.name})` })
+          .from(bookingInquiries).innerJoin(profiles, eq(profiles.id, bookingInquiries.profileId))
+          .where(and(inArray(bookingInquiries.profileId, mine.map((p: any) => p.id)), eq(bookingInquiries.status, 'new')))
+          .groupBy(profiles.username, profiles.name)
+        for (const g of asks) {
+          needs.push({ kind: 'booking', tone: 'info', title: g.n === 1 ? `${g.first} wants to book ${g.name}` : `${g.n} people want to book ${g.name}`, detail: 'Answer them by email, then mark it answered.', to: `/business/network/${g.username}/bookings` })
+        }
+      }
 
-    const mineIds = new Set(mine.map((p: any) => p.id))
-    for (const j of (await joinRequestsForOwner(ctx.db, ctx.dancerId)).filter((j: any) => mineIds.has(j.profileId))) {
-      needs.push({ kind: 'join', tone: 'info', title: `${j.dancerName} wants to join ${j.profileName}`, detail: `As ${j.requestedRole}${j.title ? ` · ${j.title}` : ''}. Approve or decline.`, to: `/business/network/${j.profileUsername}/team` })
-    }
+      // Organizers waiting on a page I manage: a venue asked to host their event,
+      // an artist asked to confirm they're in the line-up.
+      for (const a of await asksWaitingFor(ctx.db, mine.map((p: any) => p.id))) {
+        const tz = a.timezone || 'Europe/Berlin'
+        const when = a.startDate ? `${eventLocalWeekday(a.startDate, tz).slice(0, 3)} ${eventLocalDate(a.startDate, tz)} · ` : ''
+        needs.push(a.kind === 'venue'
+          ? { kind: 'venue-ask', tone: 'info', title: `${a.eventName}: can ${a.profileName} host it?`, detail: `${when}say yes, suggest another date, or no, with your terms.`, to: `/confirm/${a.token}` }
+          : { kind: 'lineup-ask', tone: 'info', title: `${a.eventName}: is ${a.profileName} in?`, detail: `${when}you’re in their line-up. Confirm, check your programme and the posts about you.`, to: `/confirm/${a.token}` })
+      }
 
-    const hosted = mine.length
-      ? await ctx.db.select(listColumns).from(events)
-        .where(and(inArray(events.hostProfileId, mine.map((p: any) => p.id)), eq(events.archived, false), gte(events.endDate, now), lt(events.startDate, in60)))
-        .orderBy(asc(events.startDate))
-      : []
-    const checks = await checklistFor(ctx.db, hosted)
-    const fmtDay = (e: any) => {
-      const tz = e.timezone || 'Europe/Berlin'
-      const d = eventLocalDate(e.startDate, tz)
-      return `${eventLocalWeekday(e.startDate, tz).slice(0, 3)} ${Number(d.slice(8))}.${Number(d.slice(5, 7))}.`
-    }
-    // One item per weekly series (not one per date), pointing at the next date.
-    const groups = new Map<string, { kind: 'draft' | 'missing'; first: any; count: number; missing: Set<string> }>()
-    for (const e of hosted) {
-      const gaps = checks.get(e.id) ?? []
-      const kind = !e.published ? 'draft' : (gaps.length && new Date(e.startDate) < new Date(now.getTime() + 30 * 86400_000) ? 'missing' : null)
-      if (!kind) continue
-      const key = `${kind}:${e.seriesId ?? e.id}`
-      const g = groups.get(key) ?? { kind, first: e, count: 0, missing: new Set<string>() }
-      g.count++
-      gaps.forEach(m => g.missing.add(m))
-      groups.set(key, g)
-    }
-    for (const g of groups.values()) {
-      const more = g.count > 1 ? ` (and ${g.count - 1} more ${g.count === 2 ? 'date' : 'dates'})` : ''
-      needs.push(g.kind === 'draft'
-        ? { kind: 'draft', tone: 'warning', title: `${g.first.name} is a draft`, detail: `${fmtDay(g.first)}${more} · dancers can’t see it until you publish it.`, to: `/business/events/${g.first.id}` }
-        : { kind: 'missing', tone: 'warning', title: `${g.first.name} is missing details`, detail: `${fmtDay(g.first)}${more} · add ${[...g.missing].join(', ')}.`, to: `/business/events/${g.first.id}` })
-    }
+      const mineIds = new Set(mine.map((p: any) => p.id))
+      for (const j of (await joinRequestsForOwner(ctx.db, ctx.dancerId)).filter((j: any) => mineIds.has(j.profileId))) {
+        needs.push({ kind: 'join', tone: 'info', title: `${j.dancerName} wants to join ${j.profileName}`, detail: `As ${j.requestedRole}${j.title ? ` · ${j.title}` : ''}. Approve or decline.`, to: `/business/network/${j.profileUsername}/team` })
+      }
 
-    // Flyers: published events in the next 14 days without one, or whose flyer
-    // no longer matches the details. One per series, like the items above.
-    const soon = hosted.filter((e: any) => e.published && new Date(e.startDate) < in14)
-    const flyers = await flyerStatusFor(ctx.db, soon)
-    const seenSeries = new Set<string>()
-    for (const e of soon) {
-      const st = flyers.get(e.id)!
-      const key = e.seriesId ?? e.id
-      if (seenSeries.has(key)) continue
-      if (!st.kept) { seenSeries.add(key); needs.push({ kind: 'flyer', tone: 'info', title: `${e.name} has no flyer yet`, detail: `${fmtDay(e)} · check the details, then make it in about a minute.`, to: `/business/events/${e.id}?flyer=1` }) }
-      else if (st.changes.length) { seenSeries.add(key); needs.push({ kind: 'flyer', tone: 'warning', title: `${e.name}: the flyer is out of date`, detail: `${fmtDay(e)} · you changed the details after it was made.`, to: `/business/events/${e.id}` }) }
-    }
+      const hosted = mine.length
+        ? await ctx.db.select(listColumns).from(events)
+          .where(and(inArray(events.hostProfileId, mine.map((p: any) => p.id)), eq(events.archived, false), gte(events.endDate, now), lt(events.startDate, in60)))
+          .orderBy(asc(events.startDate))
+        : []
+      const checks = await checklistFor(ctx.db, hosted)
+      const fmtDay = (e: any) => {
+        const tz = e.timezone || 'Europe/Berlin'
+        const d = eventLocalDate(e.startDate, tz)
+        return `${eventLocalWeekday(e.startDate, tz).slice(0, 3)} ${Number(d.slice(8))}.${Number(d.slice(5, 7))}.`
+      }
+      // One item per weekly series (not one per date), pointing at the next date.
+      const groups = new Map<string, { kind: 'draft' | 'missing'; first: any; count: number; missing: Set<string> }>()
+      for (const e of hosted) {
+        const gaps = checks.get(e.id) ?? []
+        const kind = !e.published ? 'draft' : (gaps.length && new Date(e.startDate) < new Date(now.getTime() + 30 * 86400_000) ? 'missing' : null)
+        if (!kind) continue
+        const key = `${kind}:${e.seriesId ?? e.id}`
+        const g = groups.get(key) ?? { kind, first: e, count: 0, missing: new Set<string>() }
+        g.count++
+        gaps.forEach(m => g.missing.add(m))
+        groups.set(key, g)
+      }
+      for (const g of groups.values()) {
+        const more = g.count > 1 ? ` (and ${g.count - 1} more ${g.count === 2 ? 'date' : 'dates'})` : ''
+        needs.push(g.kind === 'draft'
+          ? { kind: 'draft', tone: 'warning', title: `${g.first.name} is a draft`, detail: `${fmtDay(g.first)}${more} · dancers can’t see it until you publish it.`, to: `/business/events/${g.first.id}` }
+          : { kind: 'missing', tone: 'warning', title: `${g.first.name} is missing details`, detail: `${fmtDay(g.first)}${more} · add ${[...g.missing].join(', ')}.`, to: `/business/events/${g.first.id}` })
+      }
 
-    // Events run by someone else that my pages take part in (venue, organizer, line-up).
-    const othersGigs = await eventsImIn(ctx.db, mine, and(gte(events.endDate, now), lt(events.startDate, in60)))
+      // Flyers: published events in the next 14 days without one, or whose flyer
+      // no longer matches the details. One per series, like the items above.
+      const soon = hosted.filter((e: any) => e.published && new Date(e.startDate) < in14)
+      const flyers = await flyerStatusFor(ctx.db, soon)
+      const seenSeries = new Set<string>()
+      for (const e of soon) {
+        const st = flyers.get(e.id)!
+        const key = e.seriesId ?? e.id
+        if (seenSeries.has(key)) continue
+        if (!st.kept) { seenSeries.add(key); needs.push({ kind: 'flyer', tone: 'info', title: `${e.name} has no flyer yet`, detail: `${fmtDay(e)} · check the details, then make it in about a minute.`, to: `/business/events/${e.id}?flyer=1` }) }
+        else if (st.changes.length) { seenSeries.add(key); needs.push({ kind: 'flyer', tone: 'warning', title: `${e.name}: the flyer is out of date`, detail: `${fmtDay(e)} · you changed the details after it was made.`, to: `/business/events/${e.id}` }) }
+      }
 
-    const comingUp = [
-      ...hosted.map((e: any) => ({ id: e.id, name: e.name, startDate: e.startDate, timezone: e.timezone, published: e.published, role: 'host' as const, to: `/business/events/${e.id}`, missing: checks.get(e.id) ?? [] })),
-      ...othersGigs.map((g: any) => ({ id: g.id, name: g.name, startDate: g.startDate, timezone: g.timezone, published: true, role: g.role, to: g.to, missing: [] as string[] })),
-    ]
-      .filter(e => new Date(e.startDate) < in14)
-      .sort((a, b) => +new Date(a.startDate) - +new Date(b.startDate))
+      // Events run by someone else that my pages take part in (venue, organizer, line-up).
+      const othersGigs = await eventsImIn(ctx.db, mine, and(gte(events.endDate, now), lt(events.startDate, in60)))
 
-    return { profiles: mine, needs, comingUp, lineupCount: othersGigs.length }
-  }),
+      const comingUp = [
+        ...hosted.map((e: any) => ({ id: e.id, name: e.name, startDate: e.startDate, timezone: e.timezone, published: e.published, role: 'host' as const, to: `/business/events/${e.id}`, missing: checks.get(e.id) ?? [] })),
+        ...othersGigs.map((g: any) => ({ id: g.id, name: g.name, startDate: g.startDate, timezone: g.timezone, published: true, role: g.role, to: g.to, missing: [] as string[] })),
+      ]
+        .filter(e => new Date(e.startDate) < in14)
+        .sort((a, b) => +new Date(a.startDate) - +new Date(b.startDate))
+
+      return { profiles: all, needs, comingUp, lineupCount: othersGigs.length }
+    }),
 })
 
 // Published events run by someone else that my pages take part in: at my

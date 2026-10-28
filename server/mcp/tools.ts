@@ -531,9 +531,9 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'inbox', title: 'Business inbox', scopes: ['business:read'], business: true, annotations: READ,
-    description: 'What needs me across my pages (drafts, missing details, flyers, booking requests, invites, join requests) and the next 14 days.',
-    input: {},
-    run: t => t.caller.businessEvents.inbox(),
+    description: 'What needs me across my pages (drafts, missing details, flyers, booking requests, invites, join requests) and the next 14 days. Pass profile for one page only.',
+    input: { profile: z.string().min(1).max(200).transform(h => h.replace(/^@/, '')).optional().describe('Handle of one of my pages; omit for all of them.') },
+    run: (t, a) => t.caller.businessEvents.inbox(a.profile ? { profile: a.profile } : undefined),
   },
   {
     name: 'create_event', title: 'Create a draft event', scopes: ['business:write'], business: true, annotations: WRITE,

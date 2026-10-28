@@ -145,6 +145,14 @@ describe.skipIf(!DATABASE_URL)('businessEvents router', () => {
     expect(missing?.detail).toContain('cover photo')
     expect(missing?.detail).toContain(`Instagram for @${artistHandle}`)
     expect(inbox.comingUp.map((c: any) => c.id)).toEqual(expect.arrayContaining([draft.id, live.id]))
+    // Filtered to another page of mine (the sidebar switcher), the organizer's events drop out.
+    const other = await caller(owner).businessEvents.inbox({ profile: artistHandle })
+    expect(other.comingUp.some((c: any) => c.id === draft.id)).toBe(false)
+    expect(other.needs.some((n: any) => n.to === `/business/events/${draft.id}`)).toBe(false)
+    expect(other.profiles.length).toBe(inbox.profiles.length)
+    const same = await caller(owner).businessEvents.inbox({ profile: orgHandle })
+    expect(same.comingUp.map((c: any) => c.id)).toEqual(expect.arrayContaining([draft.id, live.id]))
+    expect(same.needs.find((n: any) => n.to === `/business/events/${draft.id}`)?.kind).toBe('draft')
     // The stranger sees nothing of this.
     const theirs = await caller(stranger).businessEvents.inbox()
     expect(theirs.comingUp).toHaveLength(0)
