@@ -68,7 +68,7 @@ export async function callTool(tool: ToolDef, rawArgs: Record<string, unknown>, 
   // One PostHog event per call, whatever the outcome (anonymous calls too).
   const track = (result: 'ok' | 'error' | 'preview' | 'denied', errorCode?: string | null) =>
     trackServer(ctx, 'mcp_tool_called', {
-      channel: 'mcp', tool: tool.name, result, error_code: errorCode ?? null, app: who.clientApp, country: who.country,
+      channel: 'mcp', tool: tool.name, result, error_code: errorCode ?? null, client_app: who.clientApp, country: who.country,
       anonymous: !ctx.oauthGrantId, latency_ms: Date.now() - started,
     })
   const audit = (result: 'ok' | 'error' | 'preview' | 'denied', errorCode?: string | null) => {

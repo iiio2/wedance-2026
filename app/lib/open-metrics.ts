@@ -26,5 +26,6 @@ export const OPEN_METRICS_TILES: MetricTile[] = [
   { title: 'Ticket intent', body: 'Clicks on a ticket button, and how many of those start a checkout.' },
   { title: 'Core engagement', body: 'Event views, plan adds, follows, hangout RSVPs and searches.' },
   { title: 'Page speed', body: 'Largest Contentful Paint at the 75th percentile. Good is under 2.5 s.' },
+  { title: 'AI assistants (MCP)', body: 'How often AI assistants like ChatGPT and Claude use WeDance for people, per week and by app.' },
   { title: 'Visitors by section', body: 'Which parts of the site people use: cities, festivals, artists, profiles and more.' },
 ]
