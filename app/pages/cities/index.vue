@@ -6,8 +6,8 @@
  * Intent from /find-your-dance (?style=Salsa, ?taster=1) is carried through to
  * the city page so its style filter / taster-class section pick it up.
  */
-import { Search, MapPin, ArrowRight, Users, Swords } from 'lucide-vue-next'
-import { Button } from '~/components/ui/button'
+import { Search, MapPin, ArrowRight, Users, Swords, Trophy } from 'lucide-vue-next'
+import { Button, buttonVariants } from '~/components/ui/button'
 import { Field } from '~/components/ui/field'
 import { CityCombobox, type CityOption } from '~/components/ui/city-combobox'
 import { usefulAlts } from '#shared/utils/citySearch'
@@ -69,6 +69,26 @@ const displayedCities = computed(() =>
   searchQuery.value.trim() ? filteredCities.value : filteredCities.value.slice(0, 9),
 )
 
+// City Battle card: this month's leaders, else how many cities are in the pool.
+// Client-only (the tRPC client is), and silent on failure — the card is complete without it.
+type BattleLeader = { citySlug: string; city: string; wins: number }
+const battleLeaders = ref<BattleLeader[]>([])
+const battlePool = ref(0)
+const battleMonth = ref(new Date().toLocaleString('en', { month: 'long' }))
+onMounted(async () => {
+  const { $trpc } = useNuxtApp()
+  const [board, matchup] = await Promise.allSettled([
+    $trpc.cityVideo.cityLeaderboard.query({ limit: 3 }),
+    $trpc.cityVideo.battleMatchup.query(),
+  ])
+  if (board.status === 'fulfilled') {
+    battleLeaders.value = board.value.cities.filter(c => c.wins > 0 && c.city)
+    const [y, m] = board.value.month.split('-').map(Number)
+    if (y && m) battleMonth.value = new Date(y, m - 1, 1).toLocaleString('en', { month: 'long' })
+  }
+  if (matchup.status === 'fulfilled') battlePool.value = matchup.value.poolCities
+})
+
 const accents = [WD.red600, WD.cyan600, WD.green600, WD.purple500, WD.amber500, WD.pink500, WD.violet600]
 // Accent text on its own '18' tint, darkened just enough for 4.5:1.
 const chipInk = (c: string) => readableOn(c, mixHex(c, '#fff', 0.094))
@@ -123,23 +143,47 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
       <WaveDivider />
     </section>
 
-    <!-- City Battle CTA — links to the full-screen /battle feed -->
+    <!-- City Battle card — WeDance card pattern (#465), whole card links to /battle -->
     <section v-if="!searchQuery.trim() && !taster && !style" class="max-w-4xl mx-auto px-4 py-6">
       <NuxtLink
         to="/battle"
-        class="group relative flex items-center justify-between gap-4 rounded-2xl p-5 sm:p-6 text-white transition-all hover:scale-[1.01] overflow-hidden"
-        style="background: linear-gradient(135deg, var(--wd-brown-900) 0%, color-mix(in srgb, var(--wd-brown-900) 85%, var(--wd-red-600)) 100%); box-shadow: 0 8px 22px rgba(59,31,18,0.18);"
+        data-testid="city-battle-card"
+        class="group relative block rounded-2xl overflow-hidden bg-card border border-wd-red-600/[33.3%] shadow-wd-card transition-all hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
-        <div class="flex items-center gap-3.5">
-          <div class="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style="background: rgba(255,255,255,0.1); box-shadow: 0 0 0 1px rgba(255,255,255,0.06);">
-            <Swords class="w-5 h-5 text-primary" />
+        <div class="h-1.5 bg-primary" />
+        <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+          <div class="flex items-start gap-4 flex-1 min-w-0">
+            <div class="size-12 rounded-full bg-wd-red-600/[9.4%] text-primary flex items-center justify-center shrink-0">
+              <Swords class="size-5" aria-hidden="true" />
+            </div>
+            <div class="min-w-0">
+              <div class="font-display italic text-sm text-primary">{{ battleMonth }} battle</div>
+              <h2 class="font-display font-bold text-lg leading-tight text-foreground">City Battle</h2>
+              <p class="mt-1 text-sm font-sans text-muted-foreground">Two cities, two clips. You pick who dances best.</p>
+              <ol v-if="battleLeaders.length" class="mt-3 flex flex-wrap gap-1.5" aria-label="Leading this month">
+                <li
+                  v-for="(c, i) in battleLeaders"
+                  :key="c.citySlug"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-eyebrow font-bold uppercase tracking-wider font-sans bg-wd-red-600/[9.4%] text-wd-red-800"
+                >
+                  <Trophy v-if="i === 0" class="size-3" aria-hidden="true" />
+                  <span v-else aria-hidden="true">{{ i + 1 }}.</span>
+                  {{ c.city }} · {{ c.wins }} win{{ c.wins === 1 ? '' : 's' }}
+                </li>
+              </ol>
+              <p v-else-if="battlePool >= 2" class="mt-3 flex items-center gap-1.5 text-xs font-sans text-muted-foreground">
+                <Users class="size-3 text-secondary" aria-hidden="true" />
+                {{ battlePool }} cities in the ring · be the first to vote this month
+              </p>
+            </div>
           </div>
-          <div>
-            <div class="font-bold text-lg font-display">City Battle</div>
-            <div class="text-sm font-hand" style="font-size: 15px; color: rgba(255,255,255,0.6);">— which city dances best? watch &amp; vote</div>
-          </div>
+          <span
+            :class="buttonVariants({ variant: 'pill', size: 'pill-sm' })"
+            class="self-start ml-16 sm:ml-0 sm:self-center shrink-0 group-hover:-translate-y-px"
+          >
+            Watch &amp; vote <ArrowRight aria-hidden="true" class="transition-transform group-hover:translate-x-0.5" />
+          </span>
         </div>
-        <ArrowRight class="w-5 h-5 text-white/40 group-hover:text-white group-hover:translate-x-1 transition-all shrink-0" />
       </NuxtLink>
     </section>
 
