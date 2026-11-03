@@ -7,7 +7,7 @@
  * converts with the city's timezone). Emits `submit` with the form values.
  */
 import type { PropType } from 'vue'
-import { MapPin, CalendarDays, Send, Pencil, Check, Plus, X, FileText, ListOrdered, Ticket, Users, Palette } from 'lucide-vue-next'
+import { MapPin, CalendarDays, Send, Pencil, Check, Plus, X, FileText, ListOrdered, Ticket, Users, Palette, Handshake } from 'lucide-vue-next'
 import { priceLines } from '#shared/utils/flyer'
 import { agendaToSessions, emptyEventDetails, legacyAgendaOf } from '#shared/utils/programme'
 
@@ -24,6 +24,8 @@ export type BusinessEventValues = {
   venueName: string
   venueAddress: string
   artists: string[]
+  /** Other pages that run it (#456): credited on the event page, no edit rights. */
+  coOrganizers: { username: string; role?: string }[]
   styles: string[]
   description: string
   cover: string
@@ -60,7 +62,7 @@ const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v))
 const TYPES = ['Party', 'Workshop', 'Course', 'Festival', 'Weekender', 'Congress', 'Concert', 'Show']
 const blank = (): BusinessEventValues => ({
   hostUsername: '', name: '', type: 'Party', date: '', startTime: '20:00', endTime: '', endDate: '',
-  city: '', venueUsername: null, venueName: '', venueAddress: '', artists: [], styles: [],
+  city: '', venueUsername: null, venueName: '', venueAddress: '', artists: [], coOrganizers: [], styles: [],
   description: '', cover: '', ticketUrl: '', price: '', published: true,
   agenda: [], showAgenda: true, photos: {}, names: {}, festival: null,
 })
@@ -106,6 +108,12 @@ function toggle(k: string) {
   next.has(k) ? next.delete(k) : next.add(k)
   open.value = next
 }
+
+// Co-organisers: the picker edits the handles, each keeps its role label.
+const coHandles = computed<string[]>({
+  get: () => form.coOrganizers.map(c => c.username),
+  set: (hs) => { form.coOrganizers = hs.map(h => form.coOrganizers.find(c => c.username === h) ?? { username: h }) },
+})
 
 const errors = reactive<Record<string, string | undefined>>({})
 function validate() {
@@ -338,6 +346,18 @@ const hostText = computed(() => props.hosts.find(h => h.username === form.hostUs
         <p v-if="form.festival?.passes?.length">Passes: {{ form.festival.passes.map(p => p.name).filter(Boolean).join(' · ') }}</p>
         <p>{{ prices.filter(Boolean).length ? `Promotions: ${prices.filter(Boolean).join(' · ')}` : 'No promotions' }}</p>
         <p class="truncate text-xs text-muted-foreground">{{ form.ticketUrl ? `Tickets: ${form.ticketUrl}` : 'No ticket link' }}</p>
+      </div>
+    </section>
+
+    <!-- Co-organisers -->
+    <section id="co-organizers" class="scroll-mt-20 rounded-2xl border bg-card p-4">
+      <h2 class="flex items-center gap-1.5 text-sm font-bold"><Handshake class="size-4 text-muted-foreground" aria-hidden="true" /> Co-organisers</h2>
+      <p class="text-xs text-muted-foreground">Pages that run this event with you. They're named next to you on the event page and the event shows on their page. They can't edit it (add them to your team for that).</p>
+      <BusinessProfilePicker v-model="coHandles" multiple placeholder="Search pages by name or @handle" class="mt-3" />
+      <div v-if="form.coOrganizers.length" class="mt-3 grid gap-2">
+        <Field v-for="c in form.coOrganizers" :id="`ev-co-${c.username}`" :key="c.username" :label="`Role of @${c.username}`" optional>
+          <Input v-model="c.role" size="sm" maxlength="40" placeholder="Co-organiser" />
+        </Field>
       </div>
     </section>
 

@@ -192,9 +192,12 @@ export function findDuplicates(rows: DupRow[], cityKeys: Set<string>): DupGroup[
 const SHARED_ACCOUNTS = new Set(['wedance', 'wedance.vip', 'wedanceteam', 'wedance_vip', 'instagram', 'p', 'explore', 'reel', 'stories'])
 
 /** Handles in an event's line-up, flyer options and festival programme, renamed. */
-export function renameInEvent(ev: { artists: string[] | null; flyerOptions: any; festival: any }, from: string, to: string) {
+export function renameInEvent(ev: { artists: string[] | null; coOrganizers?: { username: string; role?: string }[] | null; flyerOptions: any; festival: any }, from: string, to: string) {
   const swap = (h: string) => (h === from ? to : h)
   const artists = [...new Set((ev.artists ?? []).map(swap))]
+  // Co-organisers (#456): each page once, the first entry (and its role) wins.
+  const coOrganizers = (ev.coOrganizers ?? []).map(c => ({ ...c, username: swap(c.username) }))
+    .filter((c, i, all) => all.findIndex(x => x.username === c.username) === i)
   const fo = { ...(ev.flyerOptions ?? {}) }
   for (const k of ['photos', 'names'] as const) {
     if (fo[k] && from in fo[k]) {
@@ -215,7 +218,7 @@ export function renameInEvent(ev: { artists: string[] | null; flyerOptions: any;
       festival.videos = v
     }
   }
-  return { artists, flyerOptions: fo, festival }
+  return { artists, coOrganizers, flyerOptions: fo, festival }
 }
 
 const FILL = ['photo', 'bio', 'city', 'city_slug', 'address', 'lat', 'lng', 'map_url', 'venue_type', 'floor_type', 'capacity', 'floor_plan'] as const
@@ -289,7 +292,7 @@ export function instagramHandles(p: { socials?: { platform: string; url: string 
 
 /**
  * Point everything that names a profile by its handle at another handle:
- * events (venue, organizer, line-up, flyer options, festival programme) and
+ * events (venue, organizer, co-organisers, line-up, flyer options, festival programme) and
  * moderator handles. Used when merging and when renaming a handle.
  * `record` gets the ids it changed (and the line-ups before) for an undo.
  */
@@ -300,13 +303,14 @@ export async function moveHandleRefs(db: any, from: string, to: string, count: (
   count('events.venue', venue.length); record?.('events.venue_username', venue)
   const org = ids(await q(sql`update events set organizer_username = ${to} where organizer_username = ${from} returning id`))
   count('events.organizer', org.length); record?.('events.organizer_username', org)
-  const evs = await q(sql`select id, artists, flyer_options as "flyerOptions", festival from events
+  const evs = await q(sql`select id, artists, co_organizers as "coOrganizers", flyer_options as "flyerOptions", festival from events
     where artists::jsonb ? ${from} or flyer_options->'photos' ? ${from} or flyer_options->'names' ? ${from}
+      or co_organizers @> ${JSON.stringify([{ username: from }])}::jsonb
       or festival::text like ${`%"${from}"%`}`)
   for (const e of evs) {
     lineupsBefore?.push(e)
     const n = renameInEvent(e, from, to)
-    await q(sql`update events set artists = ${JSON.stringify(n.artists)}::jsonb, flyer_options = ${JSON.stringify(n.flyerOptions)}::jsonb, festival = ${n.festival ? JSON.stringify(n.festival) : null}::jsonb where id = ${e.id}`)
+    await q(sql`update events set artists = ${JSON.stringify(n.artists)}::jsonb, co_organizers = ${JSON.stringify(n.coOrganizers)}::jsonb, flyer_options = ${JSON.stringify(n.flyerOptions)}::jsonb, festival = ${n.festival ? JSON.stringify(n.festival) : null}::jsonb where id = ${e.id}`)
   }
   count('events.lineup', evs.length)
   const mod = ids(await q(sql`update profiles set moderator_handle = ${to} where moderator_handle = ${from} returning id`))
@@ -410,7 +414,7 @@ export async function undoMerge(db: any, mergeId: string, by: string | null = nu
   await back('profiles.moderator_handle', 'profiles', 'moderator_handle')
   await back('reviews.target_slug', 'reviews', 'target_slug')
   for (const e of before.lineups ?? []) {
-    await q(sql`update events set artists = ${JSON.stringify(e.artists ?? [])}::jsonb, flyer_options = ${JSON.stringify(e.flyerOptions ?? {})}::jsonb, festival = ${e.festival ? JSON.stringify(e.festival) : null}::jsonb where id = ${e.id}`)
+    await q(sql`update events set artists = ${JSON.stringify(e.artists ?? [])}::jsonb, co_organizers = ${JSON.stringify(e.coOrganizers ?? [])}::jsonb, flyer_options = ${JSON.stringify(e.flyerOptions ?? {})}::jsonb, festival = ${e.festival ? JSON.stringify(e.festival) : null}::jsonb where id = ${e.id}`)
   }
   if (before.profile) {
     const sets = Object.entries(before.profile).map(([c, v]) => JSON_COLS[c]

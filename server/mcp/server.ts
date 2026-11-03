@@ -27,9 +27,10 @@ const INSTRUCTIONS = `WeDance is a dance community platform (salsa, bachata, kiz
   1. Organiser: the user's page from my_profiles; none yet → create_my_page (their own page only).
   2. Venue: find_lineup type=venue or suggest_venues; not on WeDance → add_venue (name, address, city, Instagram). The user's own venue → create_my_page.
   3. Artists: take every teacher, DJ, band and performer from the text, the organiser's Instagram and posts; find_lineup, else add_profile_from_instagram (pages of other people). No names found → ask the user; never leave the line-up empty silently.
-  4. create_event with venue_handle, ticket_url, price, description and programme items, each naming its artist.
-  5. Work through the "missing" list create_event returns; the flyer: flyer_options → make_flyer → flyer_status.
-  6. Show the user the event (get_my_event) and the flyer; publish_event only when they agree.
+  4. Co-organisers: when the event is run by several people or pages ("Organized by A, B and C"), the user's page is the organiser and every other one goes in co_organizers (find_lineup, else add_profile_from_instagram type=organizer). Organising credits never go in artists (the line-up is who performs) or the description.
+  5. create_event with venue_handle, co_organizers, ticket_url, price, description and programme items, each naming its artist.
+  6. Work through the "missing" list create_event returns; the flyer: flyer_options → make_flyer → flyer_status.
+  7. Show the user the event (get_my_event) and the flyer; publish_event only when they agree.
 - Completing pages: an unclaimed page the user added (add_venue, add_profile_from_instagram) or has on their events is fixed with update_listed_profile (address, city, bio, photo, socials, styles), e.g. a venue missing its address. update_business_profile is only for pages the user runs (my_profiles). "You don't manage this page" means exactly that: don't ask the user to reconnect.`
 
 const normalizeHandles = (args: Record<string, unknown>) => {

@@ -194,7 +194,15 @@ const PATCH_FIELDS = {
   venue_handle: z.string().max(200).nullable().optional().describe('Handle of a venue on WeDance (find one with find_lineup type=venue or suggest_venues).'),
   venue_name: z.string().max(200).nullable().optional().describe('Venue name when it isn’t on WeDance.'),
   venue_address: z.string().max(300).nullable().optional(),
-  artists: z.array(z.string().min(1).max(200)).max(40).optional().describe('Line-up as WeDance handles (find_lineup, add_profile_from_instagram).'),
+  artists: z.array(z.string().min(1).max(200)).max(40).optional().describe('Line-up as WeDance handles (find_lineup, add_profile_from_instagram): who performs, teaches or plays. Not the people who organise it (co_organizers).'),
+  co_organizers: z.array(z.union([
+    z.string().min(1).max(200),
+    z.object({ handle: z.string().min(1).max(200), role: z.string().trim().max(40).optional().describe('e.g. "co-organiser", "host", "partner". Default: co-organiser.') }),
+  ])).max(20).optional()
+    .transform(list => list?.map(c => typeof c === 'string'
+      ? { username: c.trim().replace(/^@/, '') }
+      : { username: c.handle.trim().replace(/^@/, ''), ...(c.role ? { role: c.role } : {}) }))
+    .describe('Other pages that organise the event with the main organiser ("Organized by A, B and C"): WeDance handles, or {handle, role}. Shown next to the organiser on the event page and on their own pages. Find them with find_lineup (any type), else add_profile_from_instagram type=organizer. Put every organising credit here, not in artists or the description. Replaces the whole list ([] clears it). Credit only: they can\'t edit the event.'),
   styles: z.array(z.string().min(1).max(40)).max(20).optional().describe('Dance styles, e.g. ["Salsa", "Bachata"].'),
   description: z.string().max(8000).optional(),
   cover: z.string().url().nullable().optional().describe('Cover image URL.'),
@@ -206,7 +214,7 @@ const PATCH_FIELDS = {
 type Patch = { [K in keyof typeof PATCH_FIELDS]?: any }
 /** Plain event fields; the programme (programme, agenda) goes through programmeFields. */
 function patchToInput(p: Patch) {
-  const map: Record<string, string> = { start_time: 'startTime', end_time: 'endTime', end_date: 'endDate', venue_handle: 'venueUsername', venue_name: 'venueName', venue_address: 'venueAddress', ticket_url: 'ticketUrl' }
+  const map: Record<string, string> = { start_time: 'startTime', end_time: 'endTime', end_date: 'endDate', venue_handle: 'venueUsername', venue_name: 'venueName', venue_address: 'venueAddress', ticket_url: 'ticketUrl', co_organizers: 'coOrganizers' }
   const out: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(p)) if (v !== undefined && k in PATCH_FIELDS && k !== 'programme' && k !== 'agenda') out[map[k] ?? k] = v
   return out
@@ -261,11 +269,11 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'get_event', title: 'Event details', scopes: [], annotations: READ,
-    description: 'Everything about one event: description, line-up, venue, prices, ticket link, programme (every workshop, class, show and party by date and time; for a festival also passes). Accepts the id or the slug from its URL.',
+    description: 'Everything about one event: description, organiser and co-organisers, line-up, venue, prices, ticket link, programme (every workshop, class, show and party by date and time; for a festival also passes). Accepts the id or the slug from its URL.',
     input: { event: z.string().min(1).max(200).describe('Event id, or the last part of its /events/… URL.') },
     run: async (t, a) => {
       const e: any = await t.caller.events.get({ id: a.event })
-      return { ...card(t, e), description: e.description, artists: e.artists ?? [], ticketUrl: e.ticketUrl, link: e.link, country: e.country, address: e.venueAddress, programme: readProgramme(e), checkedBy: e.checkedBy, festival: e.festival ? { key: e.festival.key, passes: e.festival.passes ?? [], practicalInfo: e.festival.practicalInfo ?? [] } : null }
+      return { ...card(t, e), description: e.description, coOrganizers: (e.coOrganizers ?? []).map((c: any) => ({ handle: c.username, name: c.name, role: c.role })), artists: e.artists ?? [], ticketUrl: e.ticketUrl, link: e.link, country: e.country, address: e.venueAddress, programme: readProgramme(e), checkedBy: e.checkedBy, festival: e.festival ? { key: e.festival.key, passes: e.festival.passes ?? [], practicalInfo: e.festival.practicalInfo ?? [] } : null }
     },
   },
   {
@@ -621,7 +629,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'get_my_event', title: 'Event as its editor sees it', scopes: ['business:read'], business: true, annotations: READ,
-    description: 'An event of my pages in editable form (local date and times, line-up handles, prices, programme with item ids, flyer, published state) and "missing": what it still needs, each with the tool that fixes it.',
+    description: 'An event of my pages in editable form (local date and times, line-up handles, co-organisers, prices, programme with item ids, flyer, published state) and "missing": what it still needs, each with the tool that fixes it.',
     input: { event_id: eventId },
     run: async (t, a) => {
       const { event, missing } = await editorView(t, a.event_id)
@@ -636,7 +644,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'create_event', title: 'Create a draft event', scopes: ['business:write'], business: true, annotations: WRITE,
-    description: 'Create an event for one of my pages as a DRAFT (not public). If the organiser announced it on Instagram, import_from_instagram with the post link does all of this in one call. Times are local to the city. Before calling: find or create the venue page (venue_handle) and the artists (handles), so the programme can name who is on when (programme items with artist). Returns "missing": what is still to do, each with the tool that does it; work through it, then publish_event only when the user agrees.',
+    description: 'Create an event for one of my pages as a DRAFT (not public). If the organiser announced it on Instagram, import_from_instagram with the post link does all of this in one call. Times are local to the city. Before calling: find or create the venue page (venue_handle), the artists (handles) and any co-organisers (co_organizers), so the programme can name who is on when (programme items with artist). Returns "missing": what is still to do, each with the tool that does it; work through it, then publish_event only when the user agrees.',
     input: { profile: profile.describe('Handle of the page that runs the event (see my_profiles).'), ...PATCH_FIELDS, name: z.string().trim().min(1).max(160), type: PATCH_FIELDS.type.unwrap(), date: ymd, start_time: hhmm },
     run: async (t, a) => {
       const { profile: host, ...fields } = a
@@ -698,7 +706,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'add_profile_from_instagram', title: 'Add an artist or venue from Instagram', scopes: ['business:write'], business: true, annotations: WRITE,
-    description: 'Someone ELSE for a line-up (an artist, DJ, performer) who isn’t on WeDance yet: creates an unclaimed page from their Instagram handle (or returns the page that already links it). Try find_lineup first. Not the user’s own page (create_my_page); for a venue prefer add_venue, which keeps its address. Fill in its bio, photo and styles afterwards with update_listed_profile.',
+    description: 'Someone ELSE for a line-up (an artist, DJ, performer), or a co-organiser (type organizer, then co_organizers on the event), who isn’t on WeDance yet: creates an unclaimed page from their Instagram handle (or returns the page that already links it). Try find_lineup first. Not the user’s own page (create_my_page); for a venue prefer add_venue, which keeps its address. Fill in its bio, photo and styles afterwards with update_listed_profile.',
     input: { instagram: z.string().min(2).max(300).describe('Instagram handle or URL.'), type: z.enum(['artist', 'venue', 'organizer']), name: z.string().max(120).optional() },
     run: (t, a) => t.caller.businessEvents.addFromInstagram({ instagram: a.instagram, type: a.type, name: a.name }),
   },
@@ -803,7 +811,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'find_lineup', title: 'Find artists or venues', scopes: ['business:read'], business: true, annotations: READ,
-    description: 'Search WeDance pages by name or handle for a line-up (type artist) or venue (type venue). Nothing found: add_profile_from_instagram for an artist, add_venue for a venue.',
+    description: 'Search WeDance pages by name or handle for a line-up (type artist), a venue (type venue) or a co-organiser (no type: any page). Nothing found: add_profile_from_instagram for an artist, add_venue for a venue.',
     input: { query: z.string().min(2).max(80), type: z.enum(['artist', 'venue', 'organizer']).optional() },
     run: (t, a) => t.caller.businessEvents.searchProfiles({ q: a.query, type: a.type }),
   },
@@ -1026,7 +1034,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'profile_schedule', title: 'A page’s upcoming events', scopes: ['business:read'], business: true, annotations: READ,
-    description: 'Upcoming events a venue hosts, an organizer runs or an artist plays (artists: "my gigs").',
+    description: 'Upcoming events a venue hosts, an organizer runs or co-organises, or an artist plays (artists: "my gigs").',
     input: { handle, days: z.number().int().min(1).max(366).default(120) },
     run: async (t, a) => ((await t.caller.events.byProfile({ username: a.handle, days: a.days })) as any[]).map(e => card(t, e)),
   },

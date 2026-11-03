@@ -165,6 +165,36 @@ describe.skipIf(!DATABASE_URL)('MCP phase 2 (DB)', () => {
       }
     })
 
+    it('co-organisers (#456): stored with roles, named on the event, listed on their pages, no edit rights', async () => {
+      const writer = await app(ids.org, ['business:read', 'business:write'], [pages.club.id])
+      const draft = json(await callTool(TOOL_BY_NAME.get('create_event')!, {
+        profile: pages.club.username, name: `${tag} Co-organised`, type: 'Party', date: futureThursday, start_time: '20:00', city: 'Munich',
+        // The organiser itself and repeats are dropped.
+        co_organizers: [`@${pages.promoOrg.username}`, { handle: pages.artist.username, role: 'Host' }, pages.club.username, pages.promoOrg.username],
+      }, writer))
+      const mine = json(await callTool(TOOL_BY_NAME.get('get_my_event')!, { event_id: draft.id }, writer))
+      expect(mine.coOrganizers).toEqual([{ username: pages.promoOrg.username }, { username: pages.artist.username, role: 'Host' }])
+      // Not on WeDance: refused with a clear message.
+      const bad = await callTool(TOOL_BY_NAME.get('update_event')!, { event_id: draft.id, co_organizers: [`${tag}-nobody`] }, writer)
+      expect(bad.isError).toBe(true)
+      expect((bad.content[0] as any).text).toMatch(/Not on WeDance yet/)
+
+      await web(ids.org).businessEvents.update({ ...(await web(ids.org).businessEvents.get({ id: draft.id }) as any), id: draft.id, published: true, host: undefined, synced: undefined, recurring: undefined, archived: undefined, editedAt: undefined, timezone: undefined, missing: undefined, gaps: undefined, flyer: undefined } as any)
+      const pub: any = await web(null).events.get({ id: draft.id })
+      expect(pub.coOrganizers).toEqual([
+        { username: pages.promoOrg.username, name: `${tag} PromoOrg`, photo: null, type: 'organizer', role: 'Co-organiser' },
+        { username: pages.artist.username, name: `${tag} Artist`, photo: null, type: 'artist', role: 'Host' },
+      ])
+      expect(json(await callTool(TOOL_BY_NAME.get('get_event')!, { event: draft.id }, writer)).coOrganizers.map((c: any) => c.handle)).toEqual([pages.promoOrg.username, pages.artist.username])
+      // On each co-organiser's /@handle schedule…
+      expect((await web(null).events.byProfile({ username: pages.promoOrg.username })).map((e: any) => e.id)).toContain(draft.id)
+      // …in their business lists as "co-organise", but not editable by their team.
+      const theirs = (await web(ids.promo).businessEvents.list({ profile: pages.promoOrg.username })).upcoming.find((e: any) => e.id === draft.id)
+      expect(theirs).toMatchObject({ role: 'coorganizer', canEdit: false })
+      expect((await web(ids.promo).businessEvents.canEdit({ id: draft.id })).canEdit).toBe(false)
+      await expect(web(ids.promo).businessEvents.get({ id: draft.id })).rejects.toThrow()
+    })
+
     it('monthly: the same nth weekday', async () => {
       const r = await web(ids.org).businessEvents.seriesPreview({ hostUsername: pages.club.username, name: `${tag} Monthly`, ...template, date: '2031-01-19', every: 'month', count: 3, published: false } as any)
       expect(r.dates.map(d => d.date)).toEqual(['2031-01-19', '2031-02-16', '2031-03-16'])

@@ -99,6 +99,7 @@ function when(e: any) {
           </p>
           <div class="mt-1 flex flex-wrap gap-1.5">
             <AdminStatus v-if="e.role === 'lineup'" tone="info">You’re in the line-up</AdminStatus>
+            <AdminStatus v-else-if="e.role === 'coorganizer'" tone="info">You co-organise it</AdminStatus>
             <AdminStatus v-else-if="e.role === 'venue'" tone="info">At your venue</AdminStatus>
             <AdminStatus v-else-if="e.role === 'organizer'" tone="info">You organize it</AdminStatus>
             <AdminStatus v-if="e.role !== 'host'" tone="neutral">{{ e.canEdit ? 'From wedance.vip · you can edit it' : 'Run by someone else' }}</AdminStatus>

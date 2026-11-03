@@ -7,6 +7,7 @@
  *
  *   <BusinessProfilePicker v-model="form.artists" type="artist" multiple />
  *   <BusinessProfilePicker v-model="form.venueUsername" type="venue" />
+ *   <BusinessProfilePicker v-model="handles" multiple />   (any kind of page; Instagram adds an organizer page)
  *
  * v-model is a handle (single) or string[] of handles (multiple).
  */
@@ -14,7 +15,8 @@ import type { PropType } from 'vue'
 import { X, Instagram, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps({
-  type: { type: String as PropType<'artist' | 'venue' | 'organizer' | 'promoter'>, required: true },
+  /** Only this kind of page; unset searches every kind. */
+  type: { type: String as PropType<'artist' | 'venue' | 'organizer' | 'promoter'>, default: undefined },
   multiple: { type: Boolean, default: false },
   placeholder: { type: String, default: 'Search by name or @handle' },
   /** Hide the chips of who's picked (BusinessLineupPicker lists them itself). */
@@ -84,7 +86,7 @@ async function addFromInstagram() {
   busy.value = true
   error.value = null
   try {
-    pick(await $trpc.businessEvents.addFromInstagram.mutate({ instagram: q.value.trim(), type: props.type }))
+    pick(await $trpc.businessEvents.addFromInstagram.mutate({ instagram: q.value.trim(), type: (props.type ?? 'organizer') as any }))
   } catch (e: any) {
     error.value = e?.message || 'Could not add them.'
   } finally {

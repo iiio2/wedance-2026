@@ -71,6 +71,20 @@ async function lineupPages(caller: Caller, ev: ImportedEvent, warnings: string[]
   return out
 }
 
+/** The organisers the post names, as WeDance pages: the event's co-organisers (#456). The host page itself is left out. */
+async function organizerPages(caller: Caller, ev: ImportedEvent, host: string, warnings: string[]) {
+  const out: { username: string }[] = []
+  for (const p of ev.organizers) {
+    try {
+      const page = await caller.businessEvents.addFromInstagram({ instagram: p.handle, type: 'organizer', ...(p.name ? { name: p.name } : {}) })
+      if (page.username !== host) out.push({ username: page.username })
+    } catch (e: any) {
+      warnings.push(`@${p.handle} couldn’t be added as a co-organiser: ${e?.message ?? e}`)
+    }
+  }
+  return out
+}
+
 /** The venue as a WeDance page when the post names its account or full address; else just its name and address. */
 async function venuePage(caller: Caller, ev: ImportedEvent, warnings: string[]) {
   const v = ev.venue
@@ -147,6 +161,7 @@ export const eventImportRouter = router({
       const warnings: string[] = []
       const lineup = await lineupPages(caller, ev, warnings)
       const venue = await venuePage(caller, ev, warnings)
+      const coOrganizers = await organizerPages(caller, ev, host, warnings)
       // The handles the programme names are Instagram handles; the pages may differ ("salsa-js").
       const pageOf = new Map(lineup.map(p => [p.instagram, p.handle]))
       const sessions = ev.sessions.map(s => ({
@@ -167,13 +182,13 @@ export const eventImportRouter = router({
         name: ev.name, type: ev.type, date: ev.date, startTime: ev.startTime, endTime: ev.endTime, endDate: ev.endDate,
         city: ev.city, ...venue,
         artists: lineup.map(p => p.handle).slice(0, 40),
+        coOrganizers,
         styles: ev.styles, description: ev.description, cover, ticketUrl: ev.ticketUrl, price: ev.price,
         published: false, agenda: [],
         flyerOptions: Object.keys(names).length ? { names } : {},
         festival: { ...emptyEventDetails(), sessions },
       })
       // Where it came from: a retry finds it, and the editor can say so.
-      // TODO(#456): link ev.organizers as the event's co-organisers once that lands; until then they are credited in the caption (the description).
       await ctx.db.update(events).set({ sourceRef: { instagram: { code: post.code, url: post.url, owner: post.ownerHandle, organizers: ev.organizers.map(o => o.handle), importedAt: new Date().toISOString() } } }).where(eq(events.id, id))
 
       trackServer(ctx, 'event_imported', { event_id: id, source: 'instagram', kind: link.kind, lineup: lineup.length, organizers: ev.organizers.length, has_venue_page: !!venue.venueUsername, has_cover: !!cover, has_ticket: !!ev.ticketUrl, sessions: sessions.length, ...profileGroup(host) })

@@ -185,6 +185,8 @@ function fromSyncedEvent(e: any) {
     })(),
     organizerName: e.organizerName || '',
     organizerHandle: e.organizerUsername || '',
+    // Named next to the organiser (#456): [{ username, name, role }].
+    coOrganizers: (e.coOrganizers || []) as { username: string; name: string; role: string }[],
     archived: !!e.archived,
     synced: e.source === 'wedance-v3',
     // A dated event (not a festival) gets the RSVP poll.
@@ -315,7 +317,7 @@ useHead(() => ({
 
       <div class="max-w-3xl mx-auto px-4 space-y-14 pt-8 pb-20 font-sans">
         <!-- About -->
-        <section v-if="ev.message || ev.cover || ev.link || ev.price || ev.agenda?.length" id="about" class="scroll-mt-16">
+        <section v-if="ev.message || ev.cover || ev.link || ev.price || ev.agenda?.length || ev.coOrganizers?.length" id="about" class="scroll-mt-16">
           <h2 class="text-2xl font-black leading-tight mb-3 font-display text-foreground">About</h2>
           <img v-if="ev.cover" :src="ev.cover" :alt="ev.title" class="w-full max-h-[28rem] object-contain rounded-2xl mb-4 bg-wd-brown-900/[3.9%]" loading="lazy">
           <div class="flex flex-wrap items-center gap-2 mb-4">
@@ -328,6 +330,10 @@ useHead(() => ({
               <User class="w-4 h-4 mt-0.5 shrink-0 text-secondary" />
               <NuxtLink v-if="ev.organizerHandle" :to="`/@${ev.organizerHandle}`" class="font-bold hover:underline">{{ ev.organizerName }}</NuxtLink>
               <span v-else class="font-bold">{{ ev.organizerName }}</span>
+            </li>
+            <li v-for="c in ev.coOrganizers || []" :key="c.username" class="flex items-start gap-2" data-testid="event-co-organizer">
+              <User class="w-4 h-4 mt-0.5 shrink-0 text-secondary" />
+              <span><NuxtLink :to="`/@${c.username}`" class="font-bold hover:underline">{{ c.name }}</NuxtLink> <span class="text-muted-foreground">· {{ c.role }}</span></span>
             </li>
             <li v-if="ev.link" class="flex items-start gap-2">
               <Globe class="w-4 h-4 mt-0.5 shrink-0 text-secondary" />

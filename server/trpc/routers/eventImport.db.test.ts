@@ -78,6 +78,10 @@ describe.skipIf(!DATABASE_URL)('import an event from an Instagram post (#453)', 
     expect(ev).toMatchObject({ published: false, name: 'HALLOWEEN at B-FEST Boutique', date: '2026-10-31', startTime: '18:00', endTime: '22:00', city: 'Berlin', price: '€15+', cover: COVER, venueUsername: 'galerieheinzgalinski' })
     expect(ev.festival.sessions.map((s: any) => [s.time, s.type, s.duration])).toEqual([['18:00', 'doors', 0], ['19:00', 'show', 90], ['20:30', 'party', 90]])
     expect(ev.artists).toHaveLength(10)
+    // The post's organisers are the event's co-organisers (#456), not its line-up.
+    expect(ev.coOrganizers.length).toBeGreaterThanOrEqual(3)
+    expect(ev.coOrganizers.map((c: any) => c.username)).not.toContain(host)
+    for (const c of ev.coOrganizers) expect(ev.artists).not.toContain(c.username)
     expect(ev.flyerOptions.names['dance_witch_jenna']).toBe('Charley Horse')
     const [venue] = await db.select().from(schema.profiles).where(eq(schema.profiles.username, 'galerieheinzgalinski'))
     expect(venue).toMatchObject({ type: 'venue', name: 'Galerie Heinz Galinski', address: 'Heinz-Galinski-Straße 13' })

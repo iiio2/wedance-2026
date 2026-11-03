@@ -63,7 +63,7 @@ const initial = computed<Partial<BusinessEventValues>>(() => ev.value
       endTime: ev.value.endTime ?? '', endDate: ev.value.endDate ?? '', city: ev.value.city,
       venueUsername: ev.value.venueUsername, venueName: ev.value.venueUsername ? '' : ev.value.venueName,
       venueAddress: ev.value.venueUsername ? '' : ev.value.venueAddress,
-      artists: ev.value.artists, styles: ev.value.styles, description: ev.value.description,
+      artists: ev.value.artists, coOrganizers: ev.value.coOrganizers ?? [], styles: ev.value.styles, description: ev.value.description,
       cover: ev.value.cover ?? '', ticketUrl: ev.value.ticketUrl ?? '', price: ev.value.price, published: ev.value.published,
       agenda: ev.value.agenda, showAgenda: ev.value.flyerOptions.showAgenda !== false, photos: ev.value.flyerOptions.photos ?? {}, names: ev.value.flyerOptions.names ?? {},
       // The key isn't editable: dancers' plans and picks hang on it.

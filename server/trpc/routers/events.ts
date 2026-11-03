@@ -6,6 +6,7 @@ import { events, cities } from '../../database/schema'
 import { festivalView } from '../../utils/festivalView'
 import { listFestivals } from '../../utils/festivalListing'
 import { publicEventWhere } from '../../utils/eventLookup'
+import { resolveCoOrganizers } from '../../utils/coOrganizers'
 
 /**
  * Public dated events from the `events` table — today the live mirror of
@@ -38,7 +39,7 @@ const cardColumns = {
 
 /** Card rows for a filter, soonest first. */
 async function selectCards(db: any, where: SQL | undefined, limit = 1000, extra: Record<string, any> = {}) {
-  return db.select({ ...cardColumns, ...extra, artists: events.artists }).from(events).where(where).orderBy(asc(events.startDate)).limit(limit)
+  return db.select({ ...cardColumns, ...extra, artists: events.artists, coOrganizers: events.coOrganizers }).from(events).where(where).orderBy(asc(events.startDate)).limit(limit)
 }
 
 const live = () => and(eq(events.published, true), eq(events.archived, false))
@@ -91,7 +92,7 @@ export const eventsRouter = router({
     return { upcomingEvents: Number(r.events) || 0, cities: Number(r.cities) || 0 }
   }),
 
-  // Upcoming events a venue hosts, an organiser runs or an artist plays — for /@handle.
+  // Upcoming events a venue hosts, an organiser (or co-organiser) runs or an artist plays — for /@handle.
   // Optional `name` lets artist profiles also match events that list the artist
   // by display name instead of @handle (name fallback).
   byProfile: publicProcedure
@@ -106,6 +107,7 @@ export const eventsRouter = router({
       const who = or(
         eq(events.venueUsername, input.username),
         eq(events.organizerUsername, input.username),
+        sql`${events.coOrganizers} @> ${JSON.stringify([{ username: input.username }])}::jsonb`,
         sql`${events.artists} @> ${JSON.stringify([input.username])}::jsonb`,
         ...(input.name ? [sql`${events.artists} @> ${JSON.stringify([input.name])}::jsonb`] : []),
       )
@@ -145,7 +147,8 @@ export const eventsRouter = router({
         if (ev) break
       }
       if (!ev) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found.' })
-      return ev
+      // Named next to the organiser on the event page.
+      return { ...ev, coOrganizers: await resolveCoOrganizers(ctx.db, ev.coOrganizers) }
     }),
 
   // Upcoming festivals, congresses and weekenders, soonest first (the

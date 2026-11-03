@@ -126,6 +126,7 @@ function dayLabel(iso: string | Date, tz: string | null) {
                 <p class="truncate text-sm font-bold">{{ e.name }}</p>
                 <div class="mt-1 flex flex-wrap gap-1.5">
                   <AdminStatus v-if="e.role === 'lineup'" tone="info">You’re in the line-up</AdminStatus>
+                  <AdminStatus v-else-if="e.role === 'coorganizer'" tone="info">You co-organise it</AdminStatus>
                   <AdminStatus v-else-if="e.role === 'venue'" tone="info">At your venue</AdminStatus>
                   <AdminStatus v-else-if="e.role === 'organizer'" tone="info">You organize it</AdminStatus>
                   <AdminStatus v-else-if="!e.published" tone="warning">Draft</AdminStatus>

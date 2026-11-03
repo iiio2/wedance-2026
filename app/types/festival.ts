@@ -25,6 +25,8 @@ export interface Festival {
   attendeeCount: number
   ticketUrl?: string
   tickets?: TicketOption[]
+  /** Who runs it: the organiser first, then its co-organisers (#456), each with a role label. */
+  organizers?: { username: string; name: string; role: string }[]
 }
 
 export interface Venue {

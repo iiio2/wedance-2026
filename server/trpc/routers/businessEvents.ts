@@ -20,6 +20,7 @@ import { SESSION_TYPES, type FestivalDetails } from '../../../shared/types/festi
 import { cleanSession, inferDurations } from '../../../shared/utils/programme'
 import { seriesDates, weekdayOf, MAX_SERIES } from '../../../shared/utils/recurrence'
 import { eventGaps } from '../../../shared/utils/eventChecklist'
+import { cleanCoOrganizers, CO_ORGANIZERS_MAX, CO_ORGANIZER_ROLE_MAX, type CoOrganizer } from '../../../shared/utils/coOrganizers'
 import { randomUUID } from 'node:crypto'
 import { profileGroup, trackServer } from '../../utils/posthog'
 import { scheduleInstagramImport } from '../../utils/instagram/profileImport'
@@ -98,6 +99,11 @@ const eventInput = z.object({
   venueName: z.string().trim().max(200).nullable().optional(),
   venueAddress: z.string().trim().max(300).nullable().optional(),
   artists: z.array(z.string().min(1).max(200)).max(40).default([]),
+  // Other pages that run it with the organiser (#456): credit, no edit rights.
+  coOrganizers: z.array(z.object({
+    username: z.string().trim().min(1).max(200),
+    role: z.string().trim().max(CO_ORGANIZER_ROLE_MAX).optional(),
+  })).max(CO_ORGANIZERS_MAX).default([]),
   styles: z.array(z.string().min(1).max(40)).max(20).default([]),
   description: z.string().max(8000).default(''),
   cover: z.string().url().nullable().optional(),
@@ -206,6 +212,18 @@ async function toRow(db: any, host: { username: string; type: string } | null, i
     if (!v) throw new TRPCError({ code: 'BAD_REQUEST', message: 'That venue isn’t on WeDance.' })
     venue = v
   }
+  // A synced event keeps its organizer when the editor isn't it (an admin, the venue).
+  const organizerUsername = host?.type === 'organizer' ? host.username : (existing?.organizerUsername ?? null)
+  let coOrganizers = cleanCoOrganizers(input.coOrganizers, [organizerUsername, host?.username])
+  if (coOrganizers.length) {
+    // Each must be a page on WeDance; stored under its handle as written there.
+    const rows: { username: string }[] = await db.select({ username: profiles.username }).from(profiles)
+      .where(inArray(sql`lower(${profiles.username})`, coOrganizers.map(c => c.username)))
+    const found = new Map(rows.map(r => [r.username.toLowerCase(), r.username]))
+    const unknown = coOrganizers.filter(c => !found.has(c.username)).map(c => `@${c.username}`)
+    if (unknown.length) throw new TRPCError({ code: 'BAD_REQUEST', message: `Not on WeDance yet: ${unknown.join(', ')}. Add their page first (from their Instagram).` })
+    coOrganizers = coOrganizers.map(c => ({ ...c, username: found.get(c.username)! }))
+  }
   const loc = await cityInfo(db, input.city || venue?.city)
   const start = zonedToUtc(input.date, input.startTime, loc.timezone)
   let end: Date | null = null
@@ -228,8 +246,8 @@ async function toRow(db: any, host: { username: string; type: string } | null, i
     venueUsername: venue?.username ?? (host?.type === 'venue' && !input.venueName ? host.username : null),
     venueName: venue?.name ?? input.venueName ?? null,
     venueAddress: venue?.address ?? input.venueAddress ?? null,
-    // A synced event keeps its organizer when the editor isn't it (an admin, the venue).
-    organizerUsername: host?.type === 'organizer' ? host.username : (existing?.organizerUsername ?? null),
+    organizerUsername,
+    coOrganizers,
     artists: input.artists,
     styles: input.styles,
     description: input.description,
@@ -284,6 +302,7 @@ const listColumns = {
   id: events.id, name: events.name, type: events.type, startDate: events.startDate, endDate: events.endDate,
   timezone: events.timezone, published: events.published, cover: events.cover, ticketUrl: events.ticketUrl,
   price: events.price, venueUsername: events.venueUsername, venueName: events.venueName, artists: events.artists,
+  coOrganizers: events.coOrganizers,
   city: events.city, hostProfileId: events.hostProfileId, seriesId: events.seriesId,
   organizerName: events.organizerName, organizerUsername: events.organizerUsername, slug: events.slug,
   // What a flyer is made from (flyerStatusFor).
@@ -479,6 +498,7 @@ export const businessEventsRouter = router({
         venueName: venue?.name || ev.venueName || '',
         venueAddress: venue?.address || ev.venueAddress || '',
         artists: ev.artists ?? [],
+        coOrganizers: (ev.coOrganizers ?? []) as CoOrganizer[],
         styles: ev.styles ?? [],
         description: ev.description ?? '',
         cover: ev.cover || null,
@@ -1043,6 +1063,7 @@ export async function eventsImIn(db: any, mine: { id: string; username: string; 
       or(
         inArray(events.venueUsername, handles),
         inArray(events.organizerUsername, handles),
+        ...handles.map(h => sql`${events.coOrganizers} @> ${JSON.stringify([{ username: h }])}::jsonb`),
         ...artists.map(h => sql`${events.artists} @> ${JSON.stringify([h])}::jsonb`),
       ),
       sql`(${events.hostProfileId} is null or ${events.hostProfileId} not in (${sql.join(mine.map(p => sql`${p.id}::uuid`), sql`, `)}))`,
@@ -1051,8 +1072,10 @@ export async function eventsImIn(db: any, mine: { id: string; username: string; 
   const set = new Set(handles)
   return rows.map((e: any) => {
     const role = e.venueUsername && set.has(e.venueUsername) ? 'venue' as const
-      : e.organizerUsername && set.has(e.organizerUsername) ? 'organizer' as const : 'lineup' as const
-    const canEdit = !e.hostProfileId && role !== 'lineup'
+      : e.organizerUsername && set.has(e.organizerUsername) ? 'organizer' as const
+      // Co-organisers are credited, not editors (#456).
+      : (e.coOrganizers ?? []).some((c: CoOrganizer) => set.has(c.username)) ? 'coorganizer' as const : 'lineup' as const
+    const canEdit = !e.hostProfileId && (role === 'venue' || role === 'organizer')
     return { ...e, role, canEdit, host: null, missing: [] as string[], by: e.organizerName || e.venueName || null, to: canEdit ? `/business/events/${e.id}` : eventPath(e) }
   })
 }

@@ -96,7 +96,15 @@ describe('renameInEvent', () => {
       flyerOptions: { photos: { old: 'p.jpg' }, names: { old: 'Old' } },
       festival: { sessions: [{ artist: 'old', with: ['b', 'old'] }], videos: { old: 'v' } },
     }, 'old', 'new')
-    expect(r).toEqual({ artists: ['a', 'new', 'b'], flyerOptions: { photos: { new: 'p.jpg' }, names: { new: 'Old' } }, festival: { sessions: [{ artist: 'new', with: ['b', 'new'] }], videos: { new: 'v' } } })
+    expect(r).toEqual({ artists: ['a', 'new', 'b'], coOrganizers: [], flyerOptions: { photos: { new: 'p.jpg' }, names: { new: 'Old' } }, festival: { sessions: [{ artist: 'new', with: ['b', 'new'] }], videos: { new: 'v' } } })
+  })
+
+  it('renames a co-organiser and keeps each page once (#456)', () => {
+    const r = renameInEvent({
+      artists: [], flyerOptions: {}, festival: null,
+      coOrganizers: [{ username: 'new', role: 'host' }, { username: 'old', role: 'co-organiser' }, { username: 'x' }],
+    }, 'old', 'new')
+    expect(r.coOrganizers).toEqual([{ username: 'new', role: 'host' }, { username: 'x' }])
   })
 })
 

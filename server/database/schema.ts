@@ -959,6 +959,9 @@ export const events = pgTable('events', {
   seriesId: text('series_id'),
   // Artist / teacher / DJ profile handles on this event (migration 0022).
   artists: jsonb('artists').$type<string[]>().default([]),
+  // Pages that run it with the organiser, each with an optional role label
+  // (migration 0060, #456). Credit only: no edit rights (that's the host's team).
+  coOrganizers: jsonb('co_organizers').$type<import('../../shared/utils/coOrganizers').CoOrganizer[]>().notNull().default([]),
   syncedAt: timestamp('synced_at'),
   updatedAt: timestamp('updated_at').defaultNow(),
   // Hosting mode (migration 0026): the profile that runs this event. Its
@@ -987,6 +990,7 @@ export const events = pgTable('events', {
   index('events_city_start_idx').on(t.citySlug, t.startDate),
   index('events_venue_username_idx').on(t.venueUsername),
   index('events_organizer_username_idx').on(t.organizerUsername),
+  index('events_co_organizers_gin').using('gin', sql`${t.coOrganizers} jsonb_path_ops`),
 ])
 
 export const festivalRideShares = pgTable('festival_ride_shares', {
