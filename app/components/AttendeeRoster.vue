@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import { Users } from 'lucide-vue-next'
 import { initialsOf } from '#shared/utils/initials'
 // Public verified-attendee roster for a festival.
@@ -106,7 +107,7 @@ function initials(name: string | null): string {
         >
           <img
             v-if="a.photoUrl"
-            :src="a.photoUrl"
+            :src="sizedImage(a.photoUrl, IMG.avatar)"
             :alt="a.displayName ?? 'Attendee'"
             class="w-10 h-10 rounded-full object-cover shrink-0"
           />

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * PromoterProfile — the tabbed profile page for promoter-type profiles.
  * Three tabs (Concerts · Artists · Book), following Option C from the sketch
@@ -206,7 +207,7 @@ const initials = (name: string) => initialsOf(name, 2, '')
         <div class="max-w-2xl mx-auto px-4 py-4">
           <button class="inline-flex items-center gap-1 text-xs font-bold text-primary font-sans" @click="openArtist = null"><ChevronLeft class="w-3.5 h-3.5" /> {{ profile.name }}</button>
           <div class="mt-4 h-40 rounded-2xl bg-gradient-to-br from-wd-red-600 to-wd-orange-500 flex items-end p-4 text-white overflow-hidden relative">
-            <img v-if="openArtist.photo" :src="openArtist.photo" :alt="openArtist.name" class="absolute inset-0 w-full h-full object-cover object-top opacity-60">
+            <img v-if="openArtist.photo" :src="sizedImage(openArtist.photo, IMG.large)" :alt="openArtist.name" class="absolute inset-0 w-full h-full object-cover object-top opacity-60">
             <div class="relative z-10">
               <p class="text-eyebrow uppercase tracking-[0.2em] opacity-90 font-sans">Artist</p>
               <h2 class="font-display text-2xl leading-tight">{{ openArtist.name }}</h2>
@@ -311,7 +312,7 @@ const initials = (name: string) => initialsOf(name, 2, '')
                 <li v-for="a in roster" :key="a.username">
                   <button class="w-full text-left rounded-2xl border border-border overflow-hidden" @click="viewArtist(a)">
                     <div class="aspect-square overflow-hidden relative" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500))">
-                      <img v-if="a.photo" :src="a.photo" :alt="a.name" class="w-full h-full object-cover object-top">
+                      <img v-if="a.photo" :src="sizedImage(a.photo, IMG.card)" :alt="a.name" class="w-full h-full object-cover object-top">
                       <div v-else class="w-full h-full flex items-center justify-center text-white font-display text-3xl">{{ initials(a.name) }}</div>
                     </div>
                     <div class="p-2.5">
@@ -344,7 +345,7 @@ const initials = (name: string) => initialsOf(name, 2, '')
                 <li v-for="a in roster" :key="a.username">
                   <button class="w-full rounded-xl border border-border p-3 flex items-center gap-3 text-left hover:border-primary/40" @click="startBooking(a)">
                     <div class="w-10 h-10 rounded-full overflow-hidden shrink-0" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500))">
-                      <img v-if="a.photo" :src="a.photo" :alt="a.name" class="w-full h-full object-cover object-top">
+                      <img v-if="a.photo" :src="sizedImage(a.photo, IMG.card)" :alt="a.name" class="w-full h-full object-cover object-top">
                       <div v-else class="w-full h-full flex items-center justify-center text-white font-bold text-xs">{{ initials(a.name) }}</div>
                     </div>
                     <span class="flex-1 text-sm font-bold">{{ a.name }}</span>

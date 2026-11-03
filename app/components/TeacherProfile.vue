@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * TeacherProfile — inline artist preview shown on the festival page when
  * an artist is tapped in the Lineup. Filters the schedule (via the page's
@@ -44,7 +45,7 @@ function toEmbedUrl(url: string): string {
     <div class="flex items-start gap-4">
       <img
         v-if="teacher.photo && !imgError"
-        :src="teacher.photo"
+        :src="sizedImage(teacher.photo, IMG.avatar)"
         :alt="teacher.name"
         class="w-20 h-20 rounded-full object-cover shrink-0 shadow-sm"
         @error="imgError = true"

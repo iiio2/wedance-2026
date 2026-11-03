@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * The event's content plan (businessPosts): every post it's promoted with —
  * the flyer, one per artist, the line-up, passes, programme, countdown, last
@@ -195,8 +196,8 @@ const download = (url: string) => url.replace('/upload/', '/upload/fl_attachment
       <ul class="grid grid-cols-1 gap-2">
         <li v-for="p in posts" :key="p.id" class="flex min-w-0 gap-3 rounded-2xl border bg-card p-3" :class="p.status === 'dropped' ? 'opacity-50' : ''">
           <button type="button" class="relative shrink-0 overflow-hidden rounded-lg border bg-muted" :class="p.format === 'story' ? 'h-24 w-[3.4rem]' : 'h-24 w-[4.8rem]'" :aria-label="`Open ${title(p)}`" @click="open(p)">
-            <img v-if="p.flyer?.url" :src="p.flyer.url" alt="" class="size-full object-cover">
-            <img v-else-if="p.subjectPhoto" :src="p.subjectPhoto" alt="" class="size-full object-cover opacity-40 grayscale">
+            <img v-if="p.flyer?.url" :src="sizedImage(p.flyer.url, IMG.card)" alt="" class="size-full object-cover">
+            <img v-else-if="p.subjectPhoto" :src="sizedImage(p.subjectPhoto, IMG.avatar)" alt="" class="size-full object-cover opacity-40 grayscale">
             <span v-else class="grid size-full place-items-center"><ImageIcon class="size-5 text-muted-foreground" aria-hidden="true" /></span>
             <span v-if="p.painting" class="absolute inset-0 grid place-items-center bg-card/60"><Loader2 class="size-5 animate-spin text-secondary" aria-hidden="true" /></span>
           </button>

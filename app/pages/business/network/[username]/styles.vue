@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /business/network/<handle>/styles — the profile's flyer styles (businessLooks):
  * its own (read off its flyers, kept from a painting, or written here) and
@@ -144,7 +145,7 @@ function addColour(id: string) {
         <p class="mt-1 font-display text-xl font-bold">Add 2–5 flyers you’ve posted</p>
         <p class="mt-1 text-sm text-muted-foreground">WeDance reads the scene, colours and lettering, and every new flyer in this style is painted with your flyers as its reference, so it looks like yours.</p>
         <div class="mt-3 flex flex-wrap items-center gap-2">
-          <img v-for="u in uploads" :key="u" :src="u" alt="" class="h-24 rounded-lg border">
+          <img v-for="u in uploads" :key="u" :src="sizedImage(u, IMG.avatar)" alt="" class="h-24 rounded-lg border">
           <span v-for="n in uploading" :key="`u${n}`" class="grid h-24 w-16 place-items-center rounded-lg border bg-muted text-xs text-muted-foreground">…</span>
           <label v-if="uploads.length + uploading < 5" class="flex h-24 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-input text-center text-[11px] text-muted-foreground has-[:focus-visible]:shadow-wd-focus">
             <Plus class="size-4" aria-hidden="true" /> Add flyers
@@ -176,7 +177,7 @@ function addColour(id: string) {
           <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             <article v-for="l in group.list" :key="l.id" class="flex flex-col overflow-hidden rounded-2xl border bg-card">
               <button type="button" class="relative block aspect-[4/5] w-full overflow-hidden bg-muted" :aria-label="`Edit ${l.name}`" @click="editing = l.id">
-                <img v-if="l.preview" :src="l.preview" :alt="`A flyer in ${l.name}`" class="size-full object-cover">
+                <img v-if="l.preview" :src="sizedImage(l.preview, IMG.card)" :alt="`A flyer in ${l.name}`" class="size-full object-cover">
                 <span v-else class="flex size-full flex-col items-center justify-center gap-2 p-4 text-center" :style="{ background: swatch(l.palette) }">
                   <span class="rounded-xl bg-card/85 px-3 py-2 font-display text-lg font-bold leading-tight">{{ l.name }}</span>
                   <span v-if="!l.palette.length" class="flex items-center gap-1 text-xs text-muted-foreground"><ImageIcon class="size-3.5" aria-hidden="true" /> Not painted yet</span>
@@ -214,7 +215,7 @@ function addColour(id: string) {
                 <Textarea v-model="drafts[editLook.id]!.description" :rows="10" class="font-mono text-xs leading-relaxed" />
               </Field>
             </div>
-            <img v-if="editLook.preview" :src="editLook.preview" alt="" class="hidden w-full rounded-xl border sm:block">
+            <img v-if="editLook.preview" :src="sizedImage(editLook.preview, IMG.card)" alt="" class="hidden w-full rounded-xl border sm:block">
           </div>
           <div>
             <p class="text-sm font-bold">Colours</p>
@@ -232,7 +233,7 @@ function addColour(id: string) {
           </div>
           <div v-if="editLook.references.length">
             <p class="text-sm font-bold">Read from</p>
-            <div class="mt-1.5 flex gap-2"><img v-for="r in editLook.references.slice(0, 5)" :key="r.url" :src="r.url" alt="A flyer it was read from" class="h-20 rounded-md border"></div>
+            <div class="mt-1.5 flex gap-2"><img v-for="r in editLook.references.slice(0, 5)" :key="r.url" :src="sizedImage(r.url, IMG.avatar)" alt="A flyer it was read from" class="h-20 rounded-md border"></div>
           </div>
           <div class="flex flex-wrap items-center gap-2 border-t pt-3">
             <Button type="button" variant="pill" size="pill-sm" :disabled="!dirty(editLook)" :loading="busy === editLook.id" @click="save(editLook)">Save</Button>

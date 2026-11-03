@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * Festival card — the /festivals listing row (anatomy: /docs/design/patterns/cards).
  *
@@ -72,7 +73,7 @@ const dateRange = computed(() => {
       <div class="flex items-start gap-4">
         <img
           v-if="festival.logo"
-          :src="festival.logo"
+          :src="sizedImage(festival.logo, IMG.avatar)"
           :alt="festival.name"
           class="w-14 h-14 rounded-full shrink-0 shadow-sm"
         >
@@ -121,7 +122,7 @@ const dateRange = computed(() => {
             <div v-if="festival.goingAvatars?.length" class="flex items-center">
               <div class="flex -space-x-2" aria-hidden="true">
                 <template v-for="(a, i) in festival.goingAvatars.slice(0, 5)" :key="i">
-                  <img v-if="a.photo" :src="a.photo" alt="" class="w-6 h-6 rounded-full border-2 border-white object-cover">
+                  <img v-if="a.photo" :src="sizedImage(a.photo, IMG.avatar)" alt="" class="w-6 h-6 rounded-full border-2 border-white object-cover">
                   <div
                     v-else
                     class="w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white"

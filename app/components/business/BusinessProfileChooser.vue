@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * Entry to a per-profile Business page (Website, Contacts) from the sidebar:
  * the profile the switcher is set to, or the only one I manage, opens right
@@ -34,7 +35,7 @@ onMounted(async () => {
       <ul v-else class="mt-6 divide-y rounded-2xl border bg-card shadow-wd-card">
         <li v-for="p in profiles" :key="p.username">
           <NuxtLink :to="`/business/network/${p.username}/${section}`" class="flex items-center gap-3 p-4 hover:bg-accent">
-            <img v-if="p.photo" :src="p.photo" alt="" class="size-10 rounded-full object-cover">
+            <img v-if="p.photo" :src="sizedImage(p.photo, IMG.avatar)" alt="" class="size-10 rounded-full object-cover">
             <span v-else class="grid size-10 place-items-center rounded-full bg-primary/15 font-bold text-primary">{{ initialOf(p.name) }}</span>
             <span class="min-w-0 flex-1">
               <span class="block truncate font-bold">{{ p.name }}</span>

@@ -51,6 +51,10 @@ Auto-deploys on push to `main` via Vercel + GitHub integration.
   `const result = validate(); if (!result.success) return` and send `result.data`. Each input
   gets `v-bind="fieldAttrs('field', 'x-field-error')"` plus `<FieldError id="x-field-error" :message="errors.field" />`,
   so a failed submit flags every invalid field at once. `<form>`s get `novalidate`.
+- Images: every `<img>` showing a stored photo/flyer/cover uses
+  `:src="sizedImage(url, IMG.avatar|card|large|hero)"` (`shared/utils/image.ts`; `AvatarImage` does it
+  itself). Raw Cloudinary originals (3.5 MB flyer PNGs) used 64 GB/month and got the account switched off
+  (Nov 2026). Download buttons keep the original URL.
 
 ## Data (migrated from v4 — 2026-07-15)
 

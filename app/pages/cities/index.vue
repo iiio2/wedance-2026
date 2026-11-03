@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /cities — the directory, backed by real migrated data (entity.listCities).
  * Each city card shows its real community size (venues · artists · organizers)
@@ -223,7 +224,7 @@ const accentFor = (slug: string) => accents[[...slug].reduce((a, c) => a + c.cha
           <!-- Landmark photo (Wikimedia) with the city name overlaid; accent bar when no photo -->
           <div v-if="c.image" class="relative h-32 overflow-hidden">
             <img
-              :src="c.image"
+              :src="sizedImage(c.image, IMG.card)"
               :alt="`${c.city} — landmark`"
               class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               loading="lazy"

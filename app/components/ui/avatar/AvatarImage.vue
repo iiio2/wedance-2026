@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { AvatarImage } from "reka-ui"
+import { sizedImage, IMG } from "#shared/utils/image"
 
-const props = defineProps()
+// Avatars are small: ask Cloudinary for a thumbnail, never the original upload.
+const props = defineProps<{ src: string }>()
 </script>
 
 <template>
-  <AvatarImage v-bind="props" class="h-full w-full object-cover">
+  <AvatarImage :src="sizedImage(props.src, IMG.avatar)" class="h-full w-full object-cover">
     <slot />
   </AvatarImage>
 </template>

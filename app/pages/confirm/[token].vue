@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import { SESSION_TYPE_LABEL, isWorkshop, sessionTimeRange, sessionType } from '#shared/utils/programme'
 /**
  * /confirm/<token> — the page an artist opens from an organizer's link (or a
@@ -305,7 +306,7 @@ const fmtDate = (d: string | Date | null, tz?: string | null) => d ? new Date(d)
               <p class="mt-3 text-xs font-bold">{{ isVenue ? 'Line-up' : 'Also in the line-up' }}</p>
               <div class="mt-1.5 flex flex-wrap gap-2">
                 <span v-for="a in data.event.lineup" :key="a.username" class="inline-flex items-center gap-1.5 rounded-full border bg-background py-0.5 pl-0.5 pr-2 text-xs">
-                  <img v-if="a.photo" :src="a.photo" alt="" class="size-5 rounded-full object-cover"><span v-else class="size-5 rounded-full bg-muted" /> {{ a.name }}
+                  <img v-if="a.photo" :src="sizedImage(a.photo, IMG.avatar)" alt="" class="size-5 rounded-full object-cover"><span v-else class="size-5 rounded-full bg-muted" /> {{ a.name }}
                 </span>
               </div>
             </template>
@@ -392,7 +393,7 @@ const fmtDate = (d: string | Date | null, tz?: string | null) => d ? new Date(d)
                 <section class="rounded-2xl border bg-card p-4">
                   <p class="text-sm font-bold">Posts about you</p>
                   <div v-if="data.event.flyer" class="mt-2 flex items-start gap-3">
-                    <img :src="data.event.flyer.url" alt="The event’s flyer" class="w-28 rounded-lg border">
+                    <img :src="sizedImage(data.event.flyer.url, IMG.card)" alt="The event’s flyer" class="w-28 rounded-lg border">
                     <p class="text-sm text-muted-foreground">The event’s flyer {{ data.event.flyer.pictured ? 'uses your photo' : 'names you' }}. More posts, like your own announcement, will show here before they go out.</p>
                   </div>
                   <p v-else class="mt-1 text-sm text-muted-foreground">Nothing posted yet. Posts about you, like your announcement, will show here before they go out.</p>
@@ -436,7 +437,7 @@ const fmtDate = (d: string | Date | null, tz?: string | null) => d ? new Date(d)
               <p class="text-xs text-muted-foreground">{{ isVenue ? 'The room, the floor, the bar: organizers and dancers look at these. Tap the star for the main one.' : 'Organizers pick from these for flyers. Tap the star for your main photo.' }}</p>
               <div class="mt-3 flex flex-wrap gap-3">
                 <div v-for="url in [...currentPhotos, ...addPhotos]" :key="url" class="relative">
-                  <img :src="url" alt="Your photo" class="h-32 w-24 rounded-xl border object-cover">
+                  <img :src="sizedImage(url, IMG.card)" alt="Your photo" class="h-32 w-24 rounded-xl border object-cover">
                   <button type="button" class="absolute left-1 top-1 rounded-full bg-card/90 p-1" :aria-label="form.mainPhoto === url ? 'Main photo' : 'Make this the main photo'" :aria-pressed="form.mainPhoto === url" @click="form.mainPhoto = url">
                     <Star class="size-3.5" :class="form.mainPhoto === url ? 'fill-current text-wd-amber-600' : ''" />
                   </button>

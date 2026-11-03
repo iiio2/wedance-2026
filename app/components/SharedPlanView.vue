@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import { isWorkshop } from '#shared/utils/programme'
 import type { Workshop, Teacher, PlanEntry, DanceRole } from '~/types/festival'
 import { UserPlus, Check, Heart, Calendar, ArrowRight } from 'lucide-vue-next'
@@ -72,7 +73,7 @@ const roleLabel: Record<DanceRole, string> = { lead: 'Lead', follow: 'Follow' }
     <!-- Sharer profile card -->
     <div class="rounded-xl border bg-gradient-to-br from-primary/5 to-primary/10 p-6 text-center space-y-4">
       <img
-        :src="sharer.photo"
+        :src="sizedImage(sharer.photo, IMG.avatar)"
         :alt="sharer.name"
         class="w-16 h-16 rounded-full object-cover mx-auto border-2 border-primary/20"
       />

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /cities/[city] — a specific city.
  * Restyled 2026-07-02 to match V3 tropical direction.
@@ -431,7 +432,7 @@ watch(selectedStyle, (style) => {
     <section v-if="hero" class="relative">
       <div class="relative w-full h-64 sm:h-96 overflow-hidden">
         <img
-          :src="hero.image"
+          :src="sizedImage(hero.image, IMG.hero)"
           :alt="`${city.name} — landmark`"
           class="absolute inset-0 w-full h-full object-cover"
           loading="eager"
@@ -842,7 +843,7 @@ watch(selectedStyle, (style) => {
               <div class="flex items-start gap-4">
                 <img
                   v-if="f.logo"
-                  :src="f.logo"
+                  :src="sizedImage(f.logo, IMG.avatar)"
                   :alt="f.name"
                   class="w-14 h-14 rounded-full shrink-0 shadow-sm object-cover"
                   loading="lazy"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import type { Teacher } from '~/types/festival'
 import { initialsOf } from '#shared/utils/initials'
 
@@ -36,7 +37,7 @@ function teacherInitials(name: string) {
         :title="teacher.name"
       >
         <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-transparent transition-all group-hover:-translate-y-0.5" style="box-shadow: 0 2px 8px rgba(59,31,18,0.08);">
-          <img v-if="teacher.photo && !failedPhotos.has(teacher.id)" :src="teacher.photo" :alt="teacher.name" class="w-full h-full object-cover" @error="onImgError(teacher.id)">
+          <img v-if="teacher.photo && !failedPhotos.has(teacher.id)" :src="sizedImage(teacher.photo, IMG.card)" :alt="teacher.name" class="w-full h-full object-cover" @error="onImgError(teacher.id)">
           <div v-else class="w-full h-full flex items-center justify-center text-sm font-black" :style="{ background: WD.red600 + '18', color: WD.red600 }">{{ teacherInitials(teacher.name) }}</div>
         </div>
         <span class="w-full text-xs text-center leading-tight line-clamp-2 break-words wrap-anywhere font-sans text-muted-foreground">
@@ -59,7 +60,7 @@ function teacherInitials(name: string) {
             ? { borderColor: 'var(--primary)', boxShadow: '0 2px 10px rgba(220,38,38,0.25)' }
             : { borderColor: 'transparent' }"
         >
-          <img v-if="teacher.photo && !failedPhotos.has(teacher.id)" :src="teacher.photo" :alt="teacher.name" class="w-full h-full object-cover" @error="onImgError(teacher.id)">
+          <img v-if="teacher.photo && !failedPhotos.has(teacher.id)" :src="sizedImage(teacher.photo, IMG.card)" :alt="teacher.name" class="w-full h-full object-cover" @error="onImgError(teacher.id)">
           <div v-else class="w-full h-full flex items-center justify-center text-sm font-black" :style="{ background: WD.red600 + '18', color: WD.red600 }">{{ teacherInitials(teacher.name) }}</div>
         </div>
         <span

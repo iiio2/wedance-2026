@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * SiteTabBar — the phone bottom tab bar plus its "Me" sheet. Used by
  * SiteHeader (dancing: Explore · Cities · My plan · Me) and the Business
@@ -80,7 +81,7 @@ function askSignOut() {
       <div class="w-full bg-card rounded-t-3xl pt-3 px-5 shadow-2xl pb-[calc(1rem+var(--wd-tabbar-h,0px))]">
         <div class="mx-auto w-10 h-1 rounded-full bg-border mb-4" />
         <NuxtLink :to="profileTo" class="flex items-center gap-3 mb-3">
-          <img v-if="photo" :src="photo" alt="" class="w-11 h-11 rounded-full object-cover">
+          <img v-if="photo" :src="sizedImage(photo, IMG.avatar)" alt="" class="w-11 h-11 rounded-full object-cover">
           <span v-else class="w-11 h-11 rounded-full bg-primary/15 text-primary grid place-items-center font-bold">{{ initial }}</span>
           <span>
             <span class="block font-display font-bold text-lg leading-tight">{{ displayName }}</span>

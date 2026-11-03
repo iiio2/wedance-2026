@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import type { YearPlanFestival, DanceRole } from '~/types/festival'
 import { UserPlus, Check, Calendar, MapPin, ChevronRight, Heart, Gift, ArrowRight, Globe, Music, Sparkles } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
@@ -97,7 +98,7 @@ function formatDateRange(start: string, end: string): string {
     <div class="rounded-xl border-2 border-dashed p-6 text-center space-y-4" style="border-color:color-mix(in srgb, var(--wd-red-600) 26.7%, transparent); background:rgba(255,255,255,0.8);">
       <img
         v-if="sharer.photo"
-        :src="sharer.photo"
+        :src="sizedImage(sharer.photo, IMG.avatar)"
         :alt="sharer.name"
         class="w-16 h-16 rounded-full object-cover mx-auto border-2"
         style="border-color:color-mix(in srgb, var(--wd-red-600) 26.7%, transparent);"
@@ -236,7 +237,7 @@ function formatDateRange(start: string, end: string): string {
             >
               <img
                 v-if="f.logo"
-                :src="f.logo"
+                :src="sizedImage(f.logo, IMG.avatar)"
                 :alt="f.name"
                 class="w-10 h-10 rounded-lg object-cover shrink-0"
               />

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /business/new — create a new artist / venue / organizer profile. The creator owns
  * it straight away and lands in the editor.
@@ -139,7 +140,7 @@ const reasonLabel: Record<string, string> = { instagram: 'same Instagram', handl
         <p class="text-xs text-muted-foreground">If one of these is yours, take it over instead of creating a second page.</p>
         <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
           <div v-for="p in existing" :key="p.username" class="flex flex-wrap items-center gap-3 rounded-xl bg-card p-3">
-            <img v-if="p.photo" :src="p.photo" alt="" class="size-9 rounded-lg object-cover">
+            <img v-if="p.photo" :src="sizedImage(p.photo, IMG.avatar)" alt="" class="size-9 rounded-lg object-cover">
             <span v-else class="size-9 rounded-lg bg-muted" />
             <div class="min-w-[10rem] flex-1">
               <NuxtLink :to="`/@${p.username}`" target="_blank" class="block truncate text-sm font-bold hover:underline">{{ p.name }}</NuxtLink>

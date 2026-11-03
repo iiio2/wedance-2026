@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import type { DiscoverDancer, DanceListEntry, DanceEndorsement, Workshop, SwipeCard, SwipeCardDinner, SwipeCardActivity, SwipeCardOnboardingDanceCard, SwipeCardOnboardingProfile, DanceRole } from '~/types/festival'
 import { Heart, X, Sparkles, Check, ChevronDown, ChevronUp, RotateCcw, Star, MessageCircle, UtensilsCrossed, Compass, Camera, Users, Share2 } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
@@ -635,7 +636,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
           <div v-else-if="isProfileCard" class="relative aspect-square bg-muted">
             <img
               v-if="profilePhotoUrl"
-              :src="profilePhotoUrl"
+              :src="sizedImage(profilePhotoUrl, IMG.card)"
               class="w-full h-full object-cover"
             />
             <div v-else class="w-full h-full bg-gradient-to-br from-rose-100 to-pink-200 flex items-center justify-center">
@@ -666,7 +667,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
           <!-- DANCER CARD -->
           <div v-else-if="currentDancer" class="relative aspect-square bg-muted">
             <img
-              :src="currentDancer.photo"
+              :src="sizedImage(currentDancer.photo, IMG.card)"
               :alt="currentDancer.name"
               class="w-full h-full object-cover"
               @error="markBroken(currentDancer.id)"
@@ -818,7 +819,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
         <!-- Photo upload -->
         <div class="flex items-center gap-3">
           <label class="relative w-10 h-10 rounded-full bg-pink-100 border-2 border-dashed border-pink-300 flex items-center justify-center cursor-pointer hover:border-pink-400 transition-colors overflow-hidden shrink-0">
-            <img v-if="profilePhotoUrl" :src="profilePhotoUrl" class="w-full h-full object-cover" />
+            <img v-if="profilePhotoUrl" :src="sizedImage(profilePhotoUrl, IMG.card)" class="w-full h-full object-cover" />
             <Camera v-else class="w-4 h-4 text-pink-400" />
             <input type="file" accept="image/*" class="hidden" @change="onPhotoChange" />
           </label>
@@ -887,7 +888,7 @@ function endorsementCount(dancer: DiscoverDancer, styleName: string): number {
               @click="toggleDanced(entry.dancer.id)"
             >
               <img
-                :src="entry.dancer.photo"
+                :src="sizedImage(entry.dancer.photo, IMG.avatar)"
                 :alt="entry.dancer.name"
                 class="w-8 h-8 rounded-full object-cover shrink-0"
                 :class="entry.danced ? 'opacity-60' : ''"

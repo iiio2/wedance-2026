@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * An artist's page, edited from an event's line-up: the same fields as the
  * profile editor (name, city, about, dance styles, photos, links) plus videos.
@@ -117,13 +118,13 @@ async function save() {
       <div class="sm:col-span-2">
         <p class="text-sm font-bold">Photos</p>
         <div class="mt-2 flex flex-wrap gap-2">
-          <img v-for="u in p.photos" :key="u" :src="u" alt="" class="h-20 w-16 rounded-lg border object-cover" :class="u === p.photo ? 'ring-2 ring-primary' : ''">
+          <img v-for="u in p.photos" :key="u" :src="sizedImage(u, IMG.avatar)" alt="" class="h-20 w-16 rounded-lg border object-cover" :class="u === p.photo ? 'ring-2 ring-primary' : ''">
           <span v-for="u in pendingPhotos" :key="u" class="relative">
-            <img :src="u" alt="Waiting for approval" class="h-20 w-16 rounded-lg border object-cover opacity-70">
+            <img :src="sizedImage(u, IMG.avatar)" alt="Waiting for approval" class="h-20 w-16 rounded-lg border object-cover opacity-70">
             <Clock class="absolute bottom-1 left-1 size-4 rounded-full bg-card p-0.5 text-wd-amber-800" aria-hidden="true" />
           </span>
           <span v-for="(u, i) in addPhotos" :key="u" class="relative">
-            <img :src="u" alt="New photo" class="h-20 w-16 rounded-lg border object-cover">
+            <img :src="sizedImage(u, IMG.avatar)" alt="New photo" class="h-20 w-16 rounded-lg border object-cover">
             <button type="button" class="absolute right-0.5 top-0.5 rounded-full bg-card/90 p-0.5" aria-label="Remove new photo" @click="addPhotos.splice(i, 1)"><X class="size-3" /></button>
           </span>
           <label class="flex h-20 w-16 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-input text-center text-[10px] text-muted-foreground has-[:focus-visible]:shadow-wd-focus">

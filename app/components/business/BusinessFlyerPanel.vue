@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * The flyer, beside the event editor. None yet → make it; made → up to date,
  * or out of date with what changed since and a one-click refresh in the same
@@ -68,7 +69,7 @@ const download = (url: string) => url.replace('/upload/', '/upload/fl_attachment
 
         <!-- Made -->
         <template v-else>
-          <img :src="st.kept!.url!" alt="The event’s flyer" class="mx-auto mt-3 w-40 rounded-xl border" :class="status === 'stale' ? 'opacity-60' : ''">
+          <img :src="sizedImage(st.kept!.url!, IMG.card)" alt="The event’s flyer" class="mx-auto mt-3 w-40 rounded-xl border" :class="status === 'stale' ? 'opacity-60' : ''">
           <p v-if="st.kept!.lookName" class="mt-1.5 text-center text-xs text-muted-foreground">{{ st.kept!.lookName }} look</p>
           <p v-if="status === 'fresh' && st.kept!.check && !st.kept!.check.ok" class="mt-2 rounded-xl bg-warning/10 p-2 text-xs">
             We couldn’t read: {{ st.kept!.check.missing.join(' · ') }}. Check the flyer before posting.

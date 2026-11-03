@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * An image on a profile's website (RAZ-412): upload one, or paste a link. Paths
  * like /images/x.jpg are the site's own files, previewed from its address.
@@ -30,7 +31,7 @@ async function upload(e: Event) {
   <Field :label="label" :error="error ?? undefined">
     <template #default>
       <div class="flex items-start gap-3">
-        <img v-if="preview" :src="preview" alt="" class="h-20 w-28 shrink-0 rounded-lg border object-cover">
+        <img v-if="preview" :src="sizedImage(preview, IMG.card)" alt="" class="h-20 w-28 shrink-0 rounded-lg border object-cover">
         <div class="min-w-0 flex-1 space-y-2">
           <Input :model-value="model ?? ''" placeholder="https://… or upload" @update:model-value="(v: string | number) => model = String(v) || undefined" />
           <div class="flex gap-2">

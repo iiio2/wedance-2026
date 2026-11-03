@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /@<handle> — the unified profile route (v4-style). Resolves, in order:
  *   1. a professional profile (venue / artist / organizer) → rich layout here
@@ -265,7 +266,7 @@ useHead(() => ({
             <!-- Centered hero photo circle -->
             <div class="flex flex-col items-center">
               <button v-if="profile.photo" class="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" :class="allPhotos.length > 1 ? 'ring-2 ring-primary ring-offset-2' : ''" @click="openGallery(0)">
-                <img :src="profile.photo" :alt="profile.name" class="w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover object-top" style="border:3px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent);">
+                <img :src="sizedImage(profile.photo, IMG.card)" :alt="profile.name" class="w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover object-top" style="border:3px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent);">
               </button>
               <div v-else class="w-32 h-32 sm:w-40 sm:h-40 rounded-full flex items-center justify-center text-4xl font-bold text-white" style="background:linear-gradient(135deg,var(--wd-red-600),var(--wd-orange-500));">{{ initials }}</div>
               <div class="flex items-center gap-2 mt-4">

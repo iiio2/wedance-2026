@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * Homepage — promoted from /sketches/landing/v3 on 2026-06-30.
  *
@@ -373,7 +374,7 @@ function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]
                 <ul class="grid grid-cols-2 gap-2">
                   <template v-if="hasRealProof">
                     <li v-for="(a, i) in proofData!.attendees" :key="a.name" class="flex items-center gap-2 p-1">
-                      <img v-if="a.photo" :src="a.photo" :alt="a.name" class="w-9 h-9 rounded-full object-cover shadow" />
+                      <img v-if="a.photo" :src="sizedImage(a.photo, IMG.avatar)" :alt="a.name" class="w-9 h-9 rounded-full object-cover shadow" />
                       <div v-else class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow" :style="{background: avatarColor(i)}">{{ avatarInitial(a.name) }}</div>
                       <div class="min-w-0">
                         <div class="text-sm font-bold truncate">{{ a.name }}</div>

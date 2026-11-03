@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import type { Workshop, Teacher, PlanEntry, DanceRole, TicketOption, DancePartner, FestivalFriend, PartnerMatch, DiscoverDancer, RideShare, GroupDinner, ExtraActivity, FreemiumState } from '~/types/festival'
 import { X, ClipboardList, Save, Check, Ticket, CalendarPlus, MapPin, Car, Shirt, UtensilsCrossed, Compass, ChevronDown, Users, Handshake, Sparkles, ExternalLink, BedDouble, Home, Search, MessageCircle } from 'lucide-vue-next'
 import { Badge } from '~/components/ui/badge'
@@ -538,7 +539,7 @@ const googleMapsUrl = computed(() => {
                 :key="friend.id"
                 class="flex items-center gap-2 py-1"
               >
-                <img :src="friend.photo" :alt="friend.name" class="w-6 h-6 rounded-full" />
+                <img :src="sizedImage(friend.photo, IMG.avatar)" :alt="friend.name" class="w-6 h-6 rounded-full" />
                 <span class="text-xs font-medium">{{ friend.name }}</span>
                 <Badge variant="secondary" class="text-[9px] px-1 py-0 ml-auto">
                   {{ friend.workshopIds.length }} picks
@@ -582,7 +583,7 @@ const googleMapsUrl = computed(() => {
                 :key="match.id"
                 class="flex items-center gap-2 py-1"
               >
-                <img :src="match.photo" :alt="match.name" class="w-6 h-6 rounded-full" />
+                <img :src="sizedImage(match.photo, IMG.avatar)" :alt="match.name" class="w-6 h-6 rounded-full" />
                 <div class="min-w-0 flex-1">
                   <span class="text-xs font-medium">{{ match.name }}</span>
                   <span class="text-[10px] text-muted-foreground ml-1">{{ match.level }} · {{ match.role }}</span>
@@ -764,7 +765,7 @@ const googleMapsUrl = computed(() => {
             <div v-if="rides.length" class="space-y-1.5">
               <p class="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Others sharing rides</p>
               <div v-for="ride in rides" :key="ride.id" class="flex items-center gap-2 py-1">
-                <img v-if="ride.dancerPhoto && !failedRidePhotos.has(ride.id)" :src="ride.dancerPhoto" :alt="ride.dancerName" class="w-6 h-6 rounded-full object-cover" @error="failedRidePhotos.add(ride.id)" />
+                <img v-if="ride.dancerPhoto && !failedRidePhotos.has(ride.id)" :src="sizedImage(ride.dancerPhoto, IMG.avatar)" :alt="ride.dancerName" class="w-6 h-6 rounded-full object-cover" @error="failedRidePhotos.add(ride.id)" />
                 <span v-else class="w-6 h-6 rounded-full shrink-0 inline-flex items-center justify-center text-[9px] font-bold uppercase bg-secondary text-secondary-foreground">{{ initialOf(ride.dancerName) }}</span>
                 <div class="min-w-0 flex-1">
                   <span class="text-xs font-medium">{{ ride.dancerName }}</span>
@@ -854,7 +855,7 @@ const googleMapsUrl = computed(() => {
                     <MessageCircle class="w-3 h-3" /> Open group chat
                   </a>
                   <div v-if="dinner.groupMembers?.length" class="flex -space-x-1">
-                    <img v-for="m in dinner.groupMembers" :key="m.name" :src="m.photo" :alt="m.name" class="w-4 h-4 rounded-full border border-background" />
+                    <img v-for="m in dinner.groupMembers" :key="m.name" :src="sizedImage(m.photo, IMG.avatar)" :alt="m.name" class="w-4 h-4 rounded-full border border-background" />
                   </div>
                 </div>
               </template>

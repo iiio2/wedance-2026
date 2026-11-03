@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /artists — the artist directory, backed by real migrated profiles
  * (entity.listArtists). The tRPC client is client-only, so we fetch on mount.
@@ -195,7 +196,7 @@ const NuxtLinkC = resolveComponent('NuxtLink')
         >
           <img
             v-if="a.photo"
-            :src="a.photo"
+            :src="sizedImage(a.photo, IMG.card)"
             :alt="a.name"
             class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
           >

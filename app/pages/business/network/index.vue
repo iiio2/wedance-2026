@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /business/network — "Network" (RAZ-408). My pages, the artists, venues and
  * organizers I work with, and my claim requests.
@@ -184,7 +185,7 @@ async function add(username: string) {
             :to="`/business/network/${p.username}`"
             class="group flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-wd-card transition-colors hover:bg-accent/40"
           >
-            <img v-if="p.photo" :src="p.photo" :alt="p.name" class="size-12 rounded-xl object-cover bg-muted">
+            <img v-if="p.photo" :src="sizedImage(p.photo, IMG.avatar)" :alt="p.name" class="size-12 rounded-xl object-cover bg-muted">
             <div v-else class="size-12 rounded-xl bg-muted" />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
@@ -226,7 +227,7 @@ async function add(username: string) {
             <p v-if="searching" class="text-xs text-muted-foreground px-1">Searching…</p>
             <p v-else-if="query.trim().length >= 2 && !results.length" class="text-xs text-muted-foreground px-1">No one found. Try their name or @handle.</p>
             <div v-for="r in results" :key="r.username" class="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-muted/60">
-              <img v-if="r.photo" :src="r.photo" :alt="r.name" class="size-9 rounded-lg object-cover bg-muted">
+              <img v-if="r.photo" :src="sizedImage(r.photo, IMG.avatar)" :alt="r.name" class="size-9 rounded-lg object-cover bg-muted">
               <div v-else class="size-9 rounded-lg bg-muted" />
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-bold truncate">{{ r.name }} <span class="font-normal text-muted-foreground">· {{ typeLabel[r.type] || r.type }}</span></p>
@@ -276,7 +277,7 @@ async function add(username: string) {
               class="group flex items-start gap-4 rounded-2xl border bg-card p-4 shadow-wd-card"
             >
               <NuxtLink :to="`/@${c.username}`" class="shrink-0">
-                <img v-if="c.photo" :src="c.photo" :alt="c.name" class="size-12 rounded-xl object-cover bg-muted">
+                <img v-if="c.photo" :src="sizedImage(c.photo, IMG.avatar)" :alt="c.name" class="size-12 rounded-xl object-cover bg-muted">
                 <div v-else class="size-12 rounded-xl bg-muted" />
               </NuxtLink>
               <div class="flex-1 min-w-0">

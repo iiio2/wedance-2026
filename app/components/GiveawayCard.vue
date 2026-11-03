@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * A single active giveaway (native ad product). Shows the sponsor, prize, and a
  * free-entry email form calling `giveaway.enter`. Free-entry only — no purchase,
@@ -72,7 +73,7 @@ const endsLabel = computed(() => {
       <div class="flex items-start gap-4">
         <img
           v-if="giveaway.imageUrl"
-          :src="giveaway.imageUrl"
+          :src="sizedImage(giveaway.imageUrl, IMG.avatar)"
           :alt="giveaway.sponsorName"
           class="h-14 w-14 shrink-0 rounded-xl object-cover shadow-sm"
         >

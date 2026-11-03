@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * Instagram-story-like fullscreen photo gallery.
  * Opens over the page; swipe / tap left-right to navigate; tap close or backdrop to dismiss.
@@ -68,7 +69,7 @@ onUnmounted(() => { window.removeEventListener('keydown', onKey); document.body.
 
       <!-- Photo -->
       <img
-        :src="photos[current]"
+        :src="sizedImage(photos[current], IMG.large)"
         :alt="`Photo ${current + 1}`"
         class="max-h-[90vh] max-w-[90vw] object-contain select-none"
         draggable="false"

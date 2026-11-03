@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * Who's going — the faces at the top of "Shall we dance?" on festival and event pages.
  *
@@ -242,7 +243,7 @@ function initials(name: string): string {
           >
             <img
               v-if="d.photo"
-              :src="d.photo"
+              :src="sizedImage(d.photo, IMG.avatar)"
               :alt="d.name"
               class="w-10 h-10 rounded-full object-cover shrink-0"
             />

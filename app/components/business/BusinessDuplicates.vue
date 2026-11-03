@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * "Possible duplicates" of a page I run (#458): pages with the same Instagram
  * account, a similar name in the same city or the same address. Merge one into
@@ -98,7 +99,7 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
     <div v-if="dupes.length" class="mt-4 grid grid-cols-[minmax(0,1fr)] gap-2">
       <p class="text-sm font-bold">Possible duplicates</p>
       <div v-for="d in dupes" :key="d.username" class="flex flex-wrap items-center gap-3 rounded-xl border p-3">
-        <img v-if="d.photo" :src="d.photo" alt="" class="size-9 rounded-lg object-cover">
+        <img v-if="d.photo" :src="sizedImage(d.photo, IMG.avatar)" alt="" class="size-9 rounded-lg object-cover">
         <span v-else class="size-9 rounded-lg bg-muted" />
         <div class="min-w-[10rem] flex-1">
           <NuxtLink :to="`/@${d.username}`" target="_blank" class="inline-flex max-w-full items-center gap-1 truncate text-sm font-bold hover:underline">{{ d.name }} <ExternalLink class="size-3 shrink-0" aria-hidden="true" /></NuxtLink>

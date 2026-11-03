@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /business/network/<handle>/team — who manages this profile. Owners approve
  * join requests, change roles and titles, remove people, and see the history.
@@ -117,7 +118,7 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
         <p v-if="!team.members.length" class="mt-3 rounded-2xl border bg-card p-4 text-sm text-muted-foreground">Nobody manages this page. Its owner can claim it from an organizer’s invite link or “Is this you? Claim this page” on <NuxtLink :to="`/@${team.profile.username}`" class="font-bold text-foreground hover:underline">/@{{ team.profile.username }}</NuxtLink>.</p>
         <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
           <div v-for="m in team.members" :key="m.dancerId" class="flex flex-wrap items-center gap-3 rounded-2xl border bg-card p-4">
-            <img v-if="m.photo" :src="m.photo" alt="" class="size-10 rounded-full object-cover">
+            <img v-if="m.photo" :src="sizedImage(m.photo, IMG.avatar)" alt="" class="size-10 rounded-full object-cover">
             <div v-else class="size-10 rounded-full bg-muted" />
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-bold">{{ m.name }}<span v-if="m.me" class="font-normal text-muted-foreground"> (you)</span></p>

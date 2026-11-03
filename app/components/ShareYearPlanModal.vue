@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import type { YearPlanFestival } from '~/types/festival'
 import { Link, Gift, Copy, Check } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
@@ -153,7 +154,7 @@ async function nativeShare() {
               :key="f.slug"
               class="flex items-center gap-2 text-xs"
             >
-              <img v-if="f.logo" :src="f.logo" :alt="f.name" class="w-6 h-6 rounded object-cover shrink-0" />
+              <img v-if="f.logo" :src="sizedImage(f.logo, IMG.avatar)" :alt="f.name" class="w-6 h-6 rounded object-cover shrink-0" />
               <div
                 v-else
                 class="w-6 h-6 rounded flex items-center justify-center text-eyebrow font-bold text-white shrink-0"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /admin/users — every user with when they joined, last logged in, were last
  * active and how many days they've used WeDance. Sort by any of those, either
@@ -179,7 +180,7 @@ async function dismiss(page: { username: string }, dancerId: string) {
     <div v-else-if="data" class="mt-4 overflow-hidden rounded-2xl border bg-card" :class="loading ? 'opacity-60' : ''">
       <ul class="divide-y">
         <li v-for="u in data.rows" :key="u.id" class="flex flex-wrap items-center gap-3 px-4 py-3">
-          <img v-if="u.photo" :src="u.photo" alt="" class="size-9 shrink-0 rounded-full object-cover">
+          <img v-if="u.photo" :src="sizedImage(u.photo, IMG.avatar)" alt="" class="size-9 shrink-0 rounded-full object-cover">
           <span v-else class="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">{{ initialOf(u.name) }}</span>
           <div class="min-w-[12rem] flex-1">
             <div class="flex flex-wrap items-center gap-2">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * Pick WeDance profiles for an event: the venue (single) or the line-up
  * (multiple). Search by name or @handle; if someone isn't on WeDance yet,
@@ -103,7 +104,7 @@ async function addFromInstagram() {
         :key="h"
         class="inline-flex items-center gap-2 rounded-full border bg-card py-1 pl-1 pr-2 text-sm"
       >
-        <img v-if="known.get(h)?.photo" :src="known.get(h)!.photo!" alt="" class="size-6 rounded-full object-cover">
+        <img v-if="known.get(h)?.photo" :src="sizedImage(known.get(h)!.photo!, IMG.avatar)" alt="" class="size-6 rounded-full object-cover">
         <span v-else class="size-6 rounded-full bg-muted" />
         <span class="font-bold">{{ known.get(h)?.name || '@' + h }}</span>
         <button type="button" class="text-muted-foreground hover:text-foreground" :aria-label="`Remove ${known.get(h)?.name || h}`" @click="remove(h)">
@@ -127,7 +128,7 @@ async function addFromInstagram() {
           class="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-accent/50"
           @click="pick(r)"
         >
-          <img v-if="r.photo" :src="r.photo" alt="" class="size-8 rounded-lg object-cover">
+          <img v-if="r.photo" :src="sizedImage(r.photo, IMG.avatar)" alt="" class="size-8 rounded-lg object-cover">
           <span v-else class="size-8 rounded-lg bg-muted" />
           <span class="min-w-0">
             <span class="block truncate text-sm font-bold">{{ r.name }}</span>

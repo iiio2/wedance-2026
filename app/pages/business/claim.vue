@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /business/claim — find an existing artist / venue / organizer profile and ask to
  * manage it. ?profile=<handle> pre-fills the search (linked from /@handle).
@@ -135,7 +136,7 @@ const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', or
     <div v-if="results.length" class="mt-4 grid grid-cols-[minmax(0,1fr)] gap-2">
       <div v-for="r in results" :key="r.username" class="rounded-2xl border bg-card p-4">
         <div class="flex items-center gap-3">
-          <img v-if="r.photo" :src="r.photo" :alt="r.name" class="size-10 rounded-xl object-cover bg-muted">
+          <img v-if="r.photo" :src="sizedImage(r.photo, IMG.avatar)" :alt="r.name" class="size-10 rounded-xl object-cover bg-muted">
           <div v-else class="size-10 rounded-xl bg-muted" />
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">

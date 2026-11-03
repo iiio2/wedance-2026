@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * The dancer side of a person's page (#474, one handle per person). Shown on
  * /@handle when its owner marked the page as "this is me": how they dance, the
@@ -80,7 +81,7 @@ const hasDancing = computed(() => !!props.person.role || props.person.danceStyle
             :to="festivalPath(f.slug)"
             class="flex items-center gap-3 rounded-xl border p-3 no-underline transition-colors hover:border-primary/40"
           >
-            <img v-if="f.logo" :src="f.logo" :alt="f.name" class="w-10 h-10 rounded-lg object-cover shrink-0">
+            <img v-if="f.logo" :src="sizedImage(f.logo, IMG.avatar)" :alt="f.name" class="w-10 h-10 rounded-lg object-cover shrink-0">
             <div
               v-else
               class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
@@ -106,7 +107,7 @@ const hasDancing = computed(() => !!props.person.role || props.person.danceStyle
             :to="`/@${r.username}`"
             class="flex items-center gap-3 rounded-xl border p-3 no-underline transition-colors hover:border-primary/40"
           >
-            <img v-if="r.photo" :src="r.photo" :alt="r.name" class="w-10 h-10 rounded-full object-cover shrink-0">
+            <img v-if="r.photo" :src="sizedImage(r.photo, IMG.avatar)" :alt="r.name" class="w-10 h-10 rounded-full object-cover shrink-0">
             <div
               v-else
               class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold text-white"

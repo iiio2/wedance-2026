@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /events/<name>-<short id> (old /events/<id> links redirect here) — a single event, rendered through the SAME rich view as a
  * festival (an event is just a smaller festival). It reuses FestivalHero and the
@@ -319,7 +320,7 @@ useHead(() => ({
         <!-- About -->
         <section v-if="ev.message || ev.cover || ev.link || ev.price || ev.agenda?.length || ev.coOrganizers?.length" id="about" class="scroll-mt-16">
           <h2 class="text-2xl font-black leading-tight mb-3 font-display text-foreground">About</h2>
-          <img v-if="ev.cover" :src="ev.cover" :alt="ev.title" class="w-full max-h-[28rem] object-contain rounded-2xl mb-4 bg-wd-brown-900/[3.9%]" loading="lazy">
+          <img v-if="ev.cover" :src="sizedImage(ev.cover, IMG.hero)" :alt="ev.title" class="w-full max-h-[28rem] object-contain rounded-2xl mb-4 bg-wd-brown-900/[3.9%]" loading="lazy">
           <div class="flex flex-wrap items-center gap-2 mb-4">
             <span v-if="ev.eventType" class="text-eyebrow font-black uppercase tracking-widest px-2 py-1 rounded bg-secondary/[9.4%] text-secondary">{{ ev.eventType }}</span>
             <DanceStyleChips :styles="ev.styles || []" size="md" class="gap-2" />

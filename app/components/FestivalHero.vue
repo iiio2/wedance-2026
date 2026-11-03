@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import { ticketProvider } from '~/lib/outbound'
 import type { Festival } from '~/types/festival'
 import { Instagram, Globe, Facebook, Users, Star, Ticket, Check, Plus } from 'lucide-vue-next'
@@ -114,7 +115,7 @@ const rays = Array.from({ length: 24 }, (_, i) => {
         <div class="shrink-0 relative">
           <img
             v-if="festival.logo"
-            :src="festival.logo"
+            :src="sizedImage(festival.logo, IMG.avatar)"
             :alt="festival.name"
             class="w-20 h-20 rounded-full border-4 border-background"
             :style="{ boxShadow: '4px 5px 0 -1px ' + festival.accentColor }"

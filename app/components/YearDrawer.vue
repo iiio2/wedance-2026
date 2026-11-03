@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import { X, CalendarDays, Save, MapPin, Calendar, Check, ChevronDown, Target, Wallet, Clock, Users, CalendarPlus, ExternalLink, Footprints, GraduationCap, Video } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { GoalSchema, validateForm } from '#shared/validation'
@@ -216,7 +217,7 @@ const simpleChecklistItems = [
               <NuxtLink :to="`${festivalPath(f.slug)}`" class="flex items-start gap-2 min-w-0 hover:text-primary transition-colors">
                 <img
                   v-if="f.logo"
-                  :src="f.logo"
+                  :src="sizedImage(f.logo, IMG.avatar)"
                   :alt="f.name"
                   class="w-6 h-6 rounded-full shrink-0"
                 />

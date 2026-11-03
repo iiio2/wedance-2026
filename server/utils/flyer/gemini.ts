@@ -4,6 +4,7 @@
  */
 import sharp from 'sharp'
 import { logAiCall, aiLabel } from '../aiUsage'
+import { sizedImage, IMG } from '../../../shared/utils/image'
 
 const API = 'https://generativelanguage.googleapis.com/v1beta/models'
 export const IMAGE_MODEL = 'gemini-3.1-flash-image-preview'
@@ -142,12 +143,16 @@ export async function writeText(prompt: string): Promise<string> {
   return (json?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text ?? '').join('').trim()
 }
 
-/** Fetch a photo URL as an inline image (line-up reference photos). */
+/**
+ * Fetch a photo URL as an inline image (line-up reference photos, the style
+ * reference, the flyer being changed). A Cloudinary picture comes compressed at
+ * up to 1080 px wide — the size Gemini paints at — not as the 3.5 MB PNG.
+ */
 export async function fetchImage(url: string): Promise<InlineImage | null> {
   try {
     // Photos stored as site paths ("/people/silvio.jpg", the festival imports).
     const abs = url.startsWith('/') ? `${(useRuntimeConfig().siteUrl || 'https://2026.wedance.vip').replace(/\/$/, '')}${url}` : url
-    const res = await fetch(abs)
+    const res = await fetch(sizedImage(abs, IMG.large))
     if (!res.ok) return null
     return await asInline(Buffer.from(await res.arrayBuffer()))
   } catch {

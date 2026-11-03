@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import type { Festival, Teacher, Workshop, PlanEntry, DanceRole, DancePartner, FestivalFriend, PartnerMatch, ExtraActivity, SwipeCard, FreemiumState } from '~/types/festival'
 import { ArrowRight, Sparkles, Check, Pencil, Ticket } from 'lucide-vue-next'
 import { isWorkshop, isEveningItem } from '#shared/utils/programme'
@@ -1172,7 +1173,7 @@ useHead({
           >
             <img
               v-if="festival.logo"
-              :src="festival.logo"
+              :src="sizedImage(festival.logo, IMG.avatar)"
               :alt="festival.name"
               class="w-6 h-6 rounded-full shrink-0"
             >

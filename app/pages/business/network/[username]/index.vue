@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /business/network/<handle> — edit a profile you manage: details, photos (one is the main
  * photo used on cards and flyers), links (with the business's other Instagram accounts),
@@ -244,7 +245,7 @@ const photoHint = computed(() => loaded.value?.type === 'artist'
           <p class="mt-1 text-sm text-muted-foreground">{{ photoHint }}</p>
           <div v-if="form.photos.length" class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div v-for="ph in form.photos" :key="ph.url" class="rounded-xl border overflow-hidden bg-muted">
-              <img :src="ph.url" alt="" class="aspect-square w-full object-cover">
+              <img :src="sizedImage(ph.url, IMG.card)" alt="" class="aspect-square w-full object-cover">
               <div class="flex items-center justify-between gap-1 p-1.5 bg-card">
                 <AdminStatus v-if="form.photo === ph.url" tone="success"><Star class="size-3" aria-hidden="true" /> Main</AdminStatus>
                 <Button v-else type="button" size="sm" variant="ghost" class="h-7 px-2 text-xs" @click="form.photo = ph.url">Make main</Button>
