@@ -190,6 +190,7 @@ export const PROFILE_REFS: { table: string; col: string; same?: string; notSelf?
   { table: 'follows', col: 'profile_id', same: 'x.dancer_id = t.dancer_id' },
   { table: 'profile_members', col: 'profile_id', same: 'x.dancer_id = t.dancer_id' },
   { table: 'profile_claims', col: 'profile_id', same: 'x.dancer_id = t.dancer_id' },
+  { table: 'profile_owner_suggestions', col: 'profile_id', same: 'x.dancer_id = t.dancer_id', idCol: 'dancer_id' },
   { table: 'profile_invites', col: 'profile_id', same: 'x.event_id = t.event_id' },
   { table: 'tracked_links', col: 'profile_id', same: 'x.event_id = t.event_id' },
   { table: 'profile_suggestions', col: 'profile_id', same: `x.kind = t.kind and x.value = t.value and x.status = 'pending' and t.status = 'pending'` },

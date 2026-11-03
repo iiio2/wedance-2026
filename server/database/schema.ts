@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, boolean, timestamp, date, unique, index, json, jsonb, doublePrecision, uniqueIndex, numeric, check } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, integer, boolean, timestamp, date, unique, index, json, jsonb, doublePrecision, uniqueIndex, numeric, check, primaryKey } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 // ---------------------------------------------------------------------------
@@ -72,7 +72,19 @@ export const sessions = pgTable('sessions', {
   token: text('token').notNull().unique(),
   createdAt: timestamp('created_at').defaultNow(),
   expiresAt: timestamp('expires_at').notNull(),
-})
+}, (t) => [
+  index('sessions_dancer_id_idx').on(t.dancerId, t.createdAt),
+])
+
+// Days a user used WeDance while signed in (migration 0057): one row per user per
+// UTC day, written by createContext (server/utils/activeDays.ts). Backfilled from
+// sessions.created_at. Powers "days used" in Admin → Users.
+export const dancerActiveDays = pgTable('dancer_active_days', {
+  dancerId: uuid('dancer_id').notNull().references(() => dancers.id, { onDelete: 'cascade' }),
+  day: date('day').notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.dancerId, t.day] }),
+])
 
 export const festivals = pgTable('festivals', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -385,6 +397,19 @@ export const profiles = pgTable('profiles', {
   // v4 imports: { v4ProfileId, firebaseId, v4Type }. v3 sync: { source: 'wedance-v3', sourceId, … }.
   sourceRef: jsonb('source_ref').$type<Record<string, unknown>>(),
 })
+
+// Who probably runs a page nobody manages yet (migration 0058), read from who can
+// edit it on wedance.vip (v3): their own account, Team Members, or its creator.
+// Leads for Admin → Users ("Make owner"), never access. scripts/import-page-owner-suggestions.ts.
+export const profileOwnerSuggestions = pgTable('profile_owner_suggestions', {
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  dancerId: uuid('dancer_id').notNull().references(() => dancers.id, { onDelete: 'cascade' }),
+  source: text('source').notNull().$type<'v3-own' | 'v3-team' | 'v3-creator'>(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.profileId, t.dancerId] }),
+  index('profile_owner_suggestions_dancer_idx').on(t.dancerId),
+])
 
 // A duplicate merged into the profile that stays (migration 0056, #458). The copy
 // is hidden with source_ref.mergedInto (so /@copy forwards); this row is the audit

@@ -4,6 +4,7 @@ import { useDb } from '../utils/db'
 import { dancers, sessions } from '../database/schema'
 import { ACCESS_PREFIX } from '../oauth/crypto'
 import { resolveAccessToken } from '../oauth/tokens'
+import { recordActiveDay } from '../utils/activeDays'
 
 export interface Context {
   db: ReturnType<typeof useDb>
@@ -64,6 +65,7 @@ export async function createContext(
       // still scoped (empty) so nothing beyond public reads runs.
       return { db, dancerId: null, isAdmin: false, scopes: [], grantedProfileIds: [], origin: extra?.origin ?? null, voterSessionId: null, waitUntil: extra?.waitUntil }
     }
+    recordActiveDay(db, auth.dancerId, extra?.waitUntil)
     return {
       db,
       dancerId: auth.dancerId,
@@ -103,6 +105,7 @@ export async function createContext(
       if (dancer) {
         dancerId = dancer.id
         isAdmin = dancer.isAdmin ?? false
+        recordActiveDay(db, dancer.id, extra?.waitUntil)
       }
     }
   }

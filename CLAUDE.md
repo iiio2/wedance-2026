@@ -65,6 +65,13 @@ from wedance-v4 (Postgres) via `scripts/migrate/`, idempotent + reversible
   source (v3 Firestore ends 2022), so "this week"/upcoming feeds have no real data
   until organizers create events going forward.
 - **667 follow edges → `follows`**.
+- **Page teams were NOT migrated** (only 8 of 6,426 v4 pages have one). Leads live in
+  `profile_owner_suggestions` (0058), read from wedance.vip (v3, live — v4 was only the import
+  snapshot) with v3's own edit rule (`use/auth.js` `can`): `v3-own` (the page is their account),
+  `v3-team` (Team Members), `v3-creator` (created it, only if they created ≤5 pages — heavy
+  creators list other people's venues). `scripts/import-page-owner-suggestions.ts` (dry-run default,
+  `--write`, `:runQuery` only). Shown in Admin → Users ("Make owner" → `admin.addPageOwner`, emails
+  "You now manage …"; "Not them" → `admin.dismissSuggestion`). Never in the claims queue.
 **Update 2026-10-04:** the "no upcoming events" note above is obsolete — wedance.vip
 (v3 Firestore `posts`, type `event`) is actively maintained (~1,300 upcoming events,
 ~1,000 of them in Munich). They are mirrored into `events` by the v3 sync below.
@@ -281,7 +288,7 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `server_event_inquiry_submitted` | `feedback.inquiry` | `event_type`, `city` |
 | `server_festival_draft_submitted` | `festival.submitDraft` (server only) | `submission_id`, `festival`, `signed_in` |
 | `server_profile_claim_requested` / `server_team_join_requested` | `businessTeam.requestAccess`, `business.requestClaim` | `profile`, `profile_type`, `kind`, `evidence_type` |
-| `server_profile_claimed` | `business.decideClaim` approve (claimant's id), `artistInvites.claim` | `profile`, `via` (review / invite) |
+| `server_profile_claimed` | `business.decideClaim` approve (claimant's id), `artistInvites.claim`, `admin.addPageOwner` | `profile`, `via` (review / invite / admin — an admin made them owner in Admin → Users) |
 | `server_business_profile_created` | `business.create` | `profile`, `profile_type` |
 | `server_profile_merged` | `business.merge` (web + MCP `merge_profiles`) | `profile` (kept), `merged_profile`, `profile_type`, `same_type`, `moved`, `$groups` |
 | `server_rsvp_answered` | `rsvp.answer` (signed out → unconfirmed; signed in → confirmed at once) | `event_id`, `answer`, `signed_in`, `confirmed`, `$groups` |
