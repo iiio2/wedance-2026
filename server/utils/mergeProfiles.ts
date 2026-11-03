@@ -22,6 +22,14 @@
  * people, venues with events at different addresses, and names that are just
  * a city ("Budapest").
  *
+ * A second group: same type and the same Instagram account, whatever the name
+ * (the v4 import made a fan page per Instagram mention: "dancegods-company" and
+ * "dancegodscompany.official2"). The account is the business, so organizers
+ * merge — unless both are claimed. Artists merge only when the copy is
+ * a numbered copy or a bare handle; two artists sharing an account are often a
+ * couple ("alexei.emilia"), so they go to review. Venues merge only in the same
+ * city (one account can run several places).
+ *
  * Merging moves every reference to the copy onto the one that stays, fills the
  * one that stays's EMPTY fields from the copy, and hides the copy with
  * `source_ref.mergedInto` (so /@copy forwards, and the v3 sync links to the one
@@ -43,6 +51,7 @@ export type DupRow = {
   lat: number | null
   lng: number | null
   sourceRef: Record<string, any> | null
+  instagram?: string[] // main account + aliases (instagramHandles)
 }
 export type MergeVerdict = { row: DupRow; merge: boolean; reason: string }
 export type DupGroup = { type: string; key: string; keep: DupRow; others: MergeVerdict[] }
@@ -83,8 +92,8 @@ function meters(a: DupRow, b: DupRow) {
 }
 // Every reference moves to the one that stays, so its events don't decide it:
 // the real, plain handle does (it's the URL people share).
-// Handle quality: a real name, then a website ("my-mia.de"), then "name2", then a Google id.
-const handleQuality = (u: string) => (isPlaceHandle(u) ? 3 : /\d$/.test(u) ? 2 : /\.[a-z]{2,6}$/i.test(u) ? 1 : 0)
+// Handle quality: a real name, then a website ("my-mia.de"), then "name2", then a Google id or a URL-encoded handle ("salsaaut%c3%a9ntica").
+const handleQuality = (u: string) => (isPlaceHandle(u) || /%[0-9a-f]{2}/i.test(u) ? 3 : /\d$/.test(u) ? 2 : /\.[a-z]{2,6}$/i.test(u) ? 1 : 0)
 const rank = (r: DupRow) => [r.managed ? 0 : 1, r.claimed ? 0 : 1, handleQuality(r.username), -r.events, r.username.length, r.username.toLowerCase()] as const
 const byRank = (a: DupRow, b: DupRow) => {
   const x = rank(a), y = rank(b)
@@ -140,8 +149,47 @@ export function findDuplicates(rows: DupRow[], cityKeys: Set<string>): DupGroup[
       out.push({ type, key, keep, others })
     }
   }
+  // Same type + same Instagram account. A row a name group already merges away
+  // is left out (its next run sees it gone).
+  const mergedAway = new Set(out.flatMap(g => g.others.filter(o => o.merge).map(o => o.row.id)))
+  const inNameGroup = new Set(out.flatMap(g => [g.keep.id, ...g.others.map(o => o.row.id)]))
+  const byIg = new Map<string, DupRow[]>()
+  for (const r of rows) {
+    if (mergedAway.has(r.id)) continue
+    for (const h of new Set(r.instagram ?? [])) {
+      if (h.length < 3 || SHARED_ACCOUNTS.has(h)) continue
+      const g = `${r.type}|${h}`
+      byIg.set(g, [...(byIg.get(g) ?? []), r])
+    }
+  }
+  const seen = new Set<string>()
+  for (const [g, all] of byIg) {
+    const fresh = all.filter(r => !seen.has(r.id))
+    if (fresh.length < 2) continue
+    // Pairs a name group already decided stay with it.
+    if (fresh.every(r => inNameGroup.has(r.id)) && new Set(fresh.map(r => nameKey(r.name))).size === 1) continue
+    const [type, handle] = g.split('|') as [string, string]
+    const sorted = [...fresh].sort(byRank)
+    const keep = sorted[0]!
+    const others = sorted.slice(1).map((row): MergeVerdict => {
+      if (row.managed) return { row, merge: false, reason: 'same Instagram, both run by people on WeDance' }
+      if (row.claimed && keep.claimed) return { row, merge: false, reason: 'same Instagram, both claimed' }
+      if (type === 'artist') {
+        const stub = nameKey(row.name) === plain(row.username) && !row.events
+        if (base(row.username) === base(keep.username) || plain(row.username) === plain(keep.username) || stub) return { row, merge: true, reason: 'same Instagram, artist copy' }
+        return { row, merge: false, reason: 'same Instagram, two artists (a couple?)' }
+      }
+      if (type === 'venue' && (!row.citySlug || row.citySlug !== keep.citySlug)) return { row, merge: false, reason: 'same Instagram, venues in different cities' }
+      return { row, merge: true, reason: 'same Instagram' }
+    })
+    for (const r of sorted) seen.add(r.id)
+    out.push({ type, key: `ig:${handle}`, keep, others })
+  }
   return out
 }
+
+// Instagram accounts that many unrelated pages link to (a platform, not the business).
+const SHARED_ACCOUNTS = new Set(['wedance', 'wedance.vip', 'wedanceteam', 'wedance_vip', 'instagram', 'p', 'explore', 'reel', 'stories'])
 
 /** Handles in an event's line-up, flyer options and festival programme, renamed. */
 export function renameInEvent(ev: { artists: string[] | null; flyerOptions: any; festival: any }, from: string, to: string) {

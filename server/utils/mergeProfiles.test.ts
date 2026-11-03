@@ -6,6 +6,43 @@ const row = (o: Partial<DupRow>): DupRow => ({ id: `id${++n}`, username: `u${n}`
 const cities = new Set(['budapest', 'munich'])
 
 describe('findDuplicates', () => {
+  it('groups organizers with the same Instagram whatever the name, keeping the plain handle', () => {
+    const gs = findDuplicates([
+      row({ username: 'dancegods-company', name: 'Dance Gods Company', events: 4, instagram: ['dancegodscompany.official'] }),
+      row({ username: 'dancegodscompany.official2', name: 'dancegodscompany.official2', instagram: ['dancegodscompany.official'] }),
+    ], cities)
+    expect(gs).toHaveLength(1)
+    expect(gs[0]!.keep.username).toBe('dancegods-company')
+    expect(gs[0]!.others.map(o => [o.row.username, o.merge, o.reason])).toEqual([['dancegodscompany.official2', true, 'same Instagram']])
+  })
+  it('sends two artists sharing an Instagram (a couple) and two claimed pages to review', () => {
+    const [a] = findDuplicates([
+      row({ type: 'artist', username: 'alexei-ramos', name: 'Alexei Ramos', events: 2, instagram: ['alexei.emilia'] }),
+      row({ type: 'artist', username: 'emilia-pedra', name: 'Emilia Pedra', events: 1, instagram: ['alexei.emilia'] }),
+    ], cities)
+    expect(a!.others[0]).toMatchObject({ merge: false, reason: 'same Instagram, two artists (a couple?)' })
+    const [c] = findDuplicates([
+      row({ username: 'one', name: 'One', claimed: true, instagram: ['shared.ig'] }),
+      row({ username: 'two', name: 'Two', claimed: true, instagram: ['shared.ig'] }),
+    ], cities)
+    expect(c!.others[0]).toMatchObject({ merge: false, reason: 'same Instagram, both claimed' })
+  })
+  it('keeps venues in different cities apart and ignores shared platform accounts', () => {
+    const [v] = findDuplicates([
+      row({ type: 'venue', username: 'club-muc', name: 'Club', instagram: ['club.chain'] }),
+      row({ type: 'venue', username: 'club-ber', name: 'Club Berlin', citySlug: 'berlin', instagram: ['club.chain'] }),
+    ], cities)
+    expect(v!.others[0]).toMatchObject({ merge: false, reason: 'same Instagram, venues in different cities' })
+    expect(findDuplicates([row({ username: 'x1', name: 'X One', instagram: ['wedance'] }), row({ username: 'y1', name: 'Y Two', instagram: ['wedance'] })], cities)).toEqual([])
+  })
+  it('never keeps a URL-encoded handle', () => {
+    const [g] = findDuplicates([row({ username: 'salsaaut%c3%a9ntica', name: 'Salsa Auténtica' }), row({ username: 'salsaautentica2022', name: 'Salsa Auténtica', events: 3 })], cities)
+    expect(g!.keep.username).toBe('salsaautentica2022')
+  })
+  it('does not group a name pair twice when they also share an Instagram', () => {
+    const gs = findDuplicates([row({ username: 'salon.cubano', events: 3, instagram: ['salon'] }), row({ username: 'salon.cubano2', instagram: ['salon'] })], cities)
+    expect(gs).toHaveLength(1)
+  })
   it('keeps the busiest copy and merges numbered and empty copies', () => {
     const [g] = findDuplicates([row({ username: 'salon.cubano2' }), row({ username: 'salon.cubano', events: 9 }), row({ username: 'salon.cubano3', events: 1 })], cities)
     expect(g!.keep.username).toBe('salon.cubano')
