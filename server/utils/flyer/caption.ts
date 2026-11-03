@@ -10,6 +10,7 @@ import { writeJson } from './gemini'
 import { withAi } from '../aiUsage'
 import { priceLines, programmeLines } from '../../../shared/utils/flyer'
 import { captionPrompt, composeCaption, instagramOf, type CaptionContext, type CaptionWords } from '../../../shared/utils/caption'
+import { programmePostItems, programmePostLine } from '../../../shared/utils/programme'
 import type { PostKind } from '../../../shared/utils/posts'
 
 const short = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })
@@ -45,7 +46,7 @@ export async function captionContext(db: any, ev: any, post: { kind: PostKind; s
             sessions: sessions.filter(x => x.artist === who || (x.with ?? []).includes(who)).map(x => `${short(x.date)} ${x.time} ${x.title}`),
           } : null,
           passes: ((ev.festival?.passes ?? []) as any[]).filter(x => x.name).map(x => `${x.name}: ${x.price} €`),
-          programme: sessions.filter(x => x.type !== 'party').slice(0, 8).map(x => `${short(x.date)} ${x.time} ${x.title} · ${[x.artist, ...(x.with ?? [])].filter(Boolean).map(nameOf).join(' & ')}`),
+          programme: programmePostItems(sessions).slice(0, 8).map(x => programmePostLine(x, short(x.date), [x.artist, ...(x.with ?? [])].filter(Boolean).map(nameOf).join(' & '))),
         }
       : null,
   }

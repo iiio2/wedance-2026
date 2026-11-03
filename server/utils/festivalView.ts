@@ -9,6 +9,7 @@ import { and, eq, inArray, like, sql } from 'drizzle-orm'
 import { profiles, planItems, profileInvites, profileMembers } from '../database/schema'
 import { eventLocalDate } from '../../shared/utils/eventTime'
 import type { Festival, Teacher, Workshop } from '../../app/types/festival'
+import { isWorkshop, sessionType } from '../../shared/utils/programme'
 import type { FestivalDetails } from '../../shared/types/festivalDetails'
 
 const weekday = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' })
@@ -81,11 +82,12 @@ export async function festivalView(db: any, ev: any): Promise<{ festival: Festiv
       day: weekday(s.date),
       room: s.room ?? '',
       style: s.style,
-      level: s.level,
+      // A level only on a workshop (older data put "Beginner" on parties).
+      ...(isWorkshop(s.type) && s.level ? { level: s.level } : {}),
       teacherId: s.artist,
       ...(s.with?.length ? { withIds: s.with } : {}),
       goingCount: going.get(s.id) ?? 0,
-      type: s.type,
+      type: sessionType(s.type),
       ...(s.venue ? { venue: s.venue } : {}),
       ...(s.description ? { description: s.description } : {}),
     }))

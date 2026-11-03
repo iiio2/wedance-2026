@@ -8,7 +8,7 @@ import { eventPath } from '../../shared/utils/eventSlug'
 import { eventLocalDate, eventLocalTime, eventLocalWeekday } from '../../shared/utils/eventTime'
 import { LANGUAGES } from '../../shared/utils/caption'
 import type { FestivalSession } from '../../shared/types/festivalDetails'
-import { agendaToSessions, defaultDuration, emptyEventDetails, newSessionId, type AgendaLine } from '../../shared/utils/programme'
+import { agendaToSessions, cleanSession, emptyEventDetails, inferDurations, newSessionId, sessionEnd, type AgendaLine, type DraftSession } from '../../shared/utils/programme'
 import { setupChecklist, setupNext } from './checklist'
 import { dupeReasonText } from '../utils/profileDupes'
 
@@ -85,7 +85,7 @@ const localDay = (e: any) => eventLocalDate(e.startDate, e.timezone || 'Europe/B
 export function festivalProgram(sessions: FestivalSession[] | undefined) {
   return [...(sessions ?? [])]
     .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))
-    .map(s => ({ id: s.id, date: s.date, time: s.time, duration: s.duration, type: s.type, title: s.title, artist: s.artist || null, with: s.with ?? [], style: s.style, level: s.level, room: s.room ?? null, venue: s.venue ?? null }))
+    .map(s => ({ id: s.id, date: s.date, time: s.time, end_time: sessionEnd(s), duration: s.duration, type: s.type, title: s.title, artist: s.artist || null, with: s.with ?? [], style: s.style, level: s.type === 'workshop' ? (s.level ?? null) : null, room: s.room ?? null, venue: s.venue ?? null }))
 }
 /** What a reader gets as the programme: the sessions, or an old event's agenda read as sessions. */
 export function readProgramme(e: { agenda?: AgendaLine[] | null; festival?: { sessions?: FestivalSession[] } | null; date?: string; startTime?: string; startDate?: any; timezone?: string | null }) {
@@ -111,37 +111,45 @@ async function editorView(t: ToolCtx, id: string) {
 // converted on write and never stored.
 const SESSION_TYPES = {
   workshop: 'workshop', class: 'workshop', lesson: 'workshop', masterclass: 'workshop', bootcamp: 'workshop',
-  party: 'party', social: 'party', show: 'party', concert: 'party', performance: 'party', dj: 'party',
+  party: 'party', social: 'party', dj: 'party', afterparty: 'party',
+  show: 'show', performance: 'show',
+  concert: 'concert', live: 'concert', band: 'concert',
+  doors: 'doors',
+  other: 'other',
 } as const satisfies Record<string, FestivalSession['type']>
 const programmeItem = z.object({
   id: z.string().trim().min(1).max(60).optional().describe('Keep the id from get_my_event when editing an existing item (dancers’ picks hang on it); leave out for a new one.'),
   date: ymd.optional().describe('Day of this item (YYYY-MM-DD); default the event’s first day.'),
   time: hhmm,
-  duration: z.number().int().min(5).max(1440).optional().describe('Minutes; default 60 for a workshop/class, 240 for a party/show.'),
-  type: z.enum(Object.keys(SESSION_TYPES) as [keyof typeof SESSION_TYPES, ...(keyof typeof SESSION_TYPES)[]]).describe('What it is: workshop/class (taught) or party/social/show/concert/dj (dancing, performing).'),
-  title: z.string().trim().min(1).max(160).describe('e.g. "Salsa on2 beginners", "Halloween party with DJ Max".'),
+  end_time: hhmm.optional().describe('When it ends (HH:MM, past midnight is fine). Wins over duration.'),
+  duration: z.number().int().min(0).max(1440).optional().describe('Minutes, instead of end_time. Leave both out and it runs until the next item that day; the last item until the event’s end_time, else a default (doors 0 = just a moment, show 60, concert 90, party 180, workshop 60). "until 22:00" in the title also works.'),
+  type: z.enum(Object.keys(SESSION_TYPES) as [keyof typeof SESSION_TYPES, ...(keyof typeof SESSION_TYPES)[]]).describe('What it is: workshop (a taught class; also class, lesson, masterclass, bootcamp), party (social dancing, DJ; also social, dj, afterparty), show (a performance), concert (live music; also live, band), doors (doors open: a moment, not a slot), other.'),
+  title: z.string().trim().min(1).max(160).describe('e.g. "Salsa on2 beginners", "Halloween party with DJ Max", "Open doors".'),
   artist: z.string().max(200).transform(h => h.trim().replace(/^@/, '')).optional().describe('Handle of who teaches or plays it (added to the line-up).'),
   with: z.array(z.string().min(1).max(200).transform(h => h.trim().replace(/^@/, ''))).max(6).optional().describe('More handles: a teaching partner, a band.'),
   style: z.string().trim().max(40).optional().describe('e.g. "Salsa", "Bachata".'),
-  level: z.enum(['Beginner', 'Intermediate', 'Advanced']).optional(),
+  level: z.enum(['Beginner', 'Intermediate', 'Advanced']).optional().describe('Workshops only; leave out for anything else.'),
   room: z.string().trim().max(60).optional(),
   venue: z.string().trim().max(200).optional().describe('Only when it’s somewhere else than the event’s venue.'),
   description: z.string().trim().max(1000).optional(),
 })
 type ProgrammeItem = z.output<typeof programmeItem>
 
-/** Programme items from a tool call as stored sessions (the router's festival.sessions shape). */
-export function programmeToSessions(items: ProgrammeItem[], eventDate: string): FestivalSession[] {
-  return items.map((p, i) => {
-    const type = SESSION_TYPES[p.type]
-    return {
-      id: p.id || newSessionId(i), date: p.date || eventDate, time: p.time,
-      duration: p.duration ?? defaultDuration(type), type, title: p.title,
-      artist: p.artist ?? '', ...(p.with?.length ? { with: p.with } : {}),
-      style: p.style ?? '', level: p.level ?? 'Beginner',
-      ...(p.room ? { room: p.room } : {}), ...(p.venue ? { venue: p.venue } : {}), ...(p.description ? { description: p.description } : {}),
-    }
-  })
+/**
+ * Programme items from a tool call as stored sessions (the router's
+ * festival.sessions shape): the type as stored, a level only on a workshop,
+ * and a length for every item (end_time → duration → inferred, see inferDurations).
+ */
+export function programmeToSessions(items: ProgrammeItem[], eventDate: string, event: { endDate?: string | null; endTime?: string | null } = {}): FestivalSession[] {
+  const drafts: DraftSession[] = items.map((p, i) => ({
+    id: p.id || newSessionId(i), date: p.date || eventDate, time: p.time,
+    ...(p.end_time ? { endTime: p.end_time } : {}), ...(p.duration !== undefined ? { duration: p.duration } : {}),
+    type: SESSION_TYPES[p.type], title: p.title,
+    artist: p.artist ?? '', ...(p.with?.length ? { with: p.with } : {}),
+    style: p.style ?? '', ...(SESSION_TYPES[p.type] === 'workshop' ? { level: p.level ?? 'Beginner' } : {}),
+    ...(p.room ? { room: p.room } : {}), ...(p.venue ? { venue: p.venue } : {}), ...(p.description ? { description: p.description } : {}),
+  }))
+  return inferDurations(drafts, { date: eventDate, ...event }).map(cleanSession)
 }
 
 /**
@@ -154,11 +162,11 @@ export function programmeToSessions(items: ProgrammeItem[], eventDate: string): 
 export function programmeFields(
   cur: { agenda?: AgendaLine[] | null; festival?: Record<string, any> | null } | null,
   args: { programme?: ProgrammeItem[]; agenda?: AgendaLine[] },
-  ev: { date: string; startTime: string; artists?: string[] },
+  ev: { date: string; startTime: string; endDate?: string | null; endTime?: string | null; artists?: string[] },
 ) {
   const { key: _key, ...details } = { ...emptyEventDetails(), ...(cur?.festival ?? {}) } as Record<string, any>
   const sessions: FestivalSession[] = args.programme
-    ? programmeToSessions(args.programme, ev.date)
+    ? programmeToSessions(args.programme, ev.date, ev)
     : args.agenda
       ? agendaToSessions(args.agenda, ev)
       : details.sessions?.length ? details.sessions : agendaToSessions(cur?.agenda ?? [], ev)
@@ -191,7 +199,7 @@ const PATCH_FIELDS = {
   cover: z.string().url().nullable().optional().describe('Cover image URL.'),
   ticket_url: z.string().url().nullable().optional(),
   price: z.string().max(400).optional().describe('One price per line, e.g. "Workshops free\\nParty 10€".'),
-  programme: z.array(programmeItem).max(300).optional().describe('The programme, for every type: a party’s class and DJ sets, a festival’s workshops and parties by day. Replaces the whole programme (pass every item; [] clears it). Shown on the event page and, unless switched off in the editor, on the flyer.'),
+  programme: z.array(programmeItem).max(300).optional().describe('The programme, for every type: a party’s doors, class, show and DJ sets; a concert’s doors and sets; a festival’s workshops, shows and parties by day. Each item takes a type, a start time and optionally end_time or duration (else it runs until the next item, the last one until the event’s end_time). Replaces the whole programme (pass every item; [] clears it). Shown on the event page and, unless switched off in the editor, on the flyer.'),
   agenda: z.array(z.object({ time: z.string().max(20), what: z.string().max(160) })).max(20).optional().describe('Old format, prefer programme. Lines like [{time:"19:00", what:"Beginner class"}] are turned into programme items.'),
 }
 type Patch = { [K in keyof typeof PATCH_FIELDS]?: any }

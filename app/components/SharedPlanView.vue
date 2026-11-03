@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isWorkshop } from '#shared/utils/programme'
 import type { Workshop, Teacher, PlanEntry, DanceRole } from '~/types/festival'
 import { UserPlus, Check, Heart, Calendar, ArrowRight } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
@@ -138,7 +139,7 @@ const roleLabel: Record<DanceRole, string> = { lead: 'Lead', follow: 'Follow' }
             <div class="flex items-center justify-between">
               <div class="min-w-0 flex-1">
                 <p class="text-sm font-medium leading-tight">{{ w.title }}</p>
-                <p v-if="w.type === 'party'" class="text-xs text-muted-foreground">
+                <p v-if="!isWorkshop(w.type)" class="text-xs text-muted-foreground">
                   {{ w.time }}<span v-if="w.venue"> · {{ w.venue }}</span>
                 </p>
                 <p v-else class="text-xs text-muted-foreground">

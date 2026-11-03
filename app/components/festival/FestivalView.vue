@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Festival, Teacher, Workshop, PlanEntry, DanceRole, DancePartner, FestivalFriend, PartnerMatch, ExtraActivity, SwipeCard, FreemiumState } from '~/types/festival'
 import { ArrowRight, Sparkles, Check, Pencil, Ticket } from 'lucide-vue-next'
+import { isWorkshop, isEveningItem } from '#shared/utils/programme'
 import { Button } from '~/components/ui/button'
 import { artistPlaces, artistLanguages } from '~/data/artists'
 import { WD } from '~/lib/brand'
@@ -224,10 +225,10 @@ const rolePickerTitle = computed(() => {
 
 function removeConflicting(next: Map<string, PlanEntry>, workshop: Workshop) {
   // Remove any existing pick at the same day+time (different room)
-  if (workshop.type === 'party') return
+  if (!isWorkshop(workshop.type)) return
   for (const [existingId] of next) {
     const existing = workshops.find((w) => w.id === existingId)
-    if (existing && existing.id !== workshop.id && existing.type !== 'party' && existing.day === workshop.day && existing.time === workshop.time) {
+    if (existing && existing.id !== workshop.id && isWorkshop(existing.type) && existing.day === workshop.day && existing.time === workshop.time) {
       next.delete(existingId)
       persistWorkshopRemove(existingId)
     }
@@ -251,8 +252,8 @@ function toggleWorkshop(id: string) {
     plan.value = next
   } else {
     const workshop = workshops.find((w) => w.id === id)
-    if (workshop?.type === 'party') {
-      // Parties don't need role/partner — add directly
+    if (workshop && !isWorkshop(workshop.type)) {
+      // Parties, shows, concerts don't need role/partner — add directly
       next.set(id, { workshopId: id, role: null, partnerStatus: 'solo' })
       persistWorkshopAdd(id)
       trackWorkshop('add', id, 'solo')
@@ -934,10 +935,10 @@ const plannedDays = computed(() => {
   return days
 })
 const plannedWorkshopCount = computed(() =>
-  workshops.filter((w) => planIds.value.has(w.id) && w.type !== 'party').length,
+  workshops.filter((w) => planIds.value.has(w.id) && isWorkshop(w.type)).length,
 )
 const hasPartyInPlan = computed(() =>
-  workshops.some((w) => planIds.value.has(w.id) && w.type === 'party'),
+  workshops.some((w) => planIds.value.has(w.id) && isEveningItem(w.type)),
 )
 
 function cheapestDayCoverage(dayPasses: TicketOption[], targetDays: Set<string>): TicketOption[] {
@@ -983,8 +984,8 @@ const recommendation = computed<Recommendation | null>(() => {
 // Before the dancer picks anything: the cheapest way to the whole programme.
 const bestValueNames = computed(() => new Set((recommendFor(
   new Set(workshops.map((w) => w.day)),
-  workshops.filter((w) => w.type !== 'party').length,
-  workshops.some((w) => w.type === 'party'),
+  workshops.filter((w) => isWorkshop(w.type)).length,
+  workshops.some((w) => isEveningItem(w.type)),
 )?.tickets ?? []).map((t) => t.name)))
 
 function recommendFor(days: Set<string>, workshopCount: number, wantsParty: boolean): Recommendation | null {

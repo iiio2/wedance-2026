@@ -26,7 +26,7 @@ defineEmits<{
       <div>
         <h3 class="font-semibold text-sm leading-tight">{{ workshop.title }}</h3>
         <p class="text-xs text-muted-foreground mt-1">
-          {{ teacher.name }} <span :title="workshop.level">{{ chilis(workshop.level) }}</span>
+          {{ teacher.name }} <span v-if="workshop.level" :title="workshop.level">{{ chilis(workshop.level) }}</span>
         </p>
         <div class="flex items-center justify-end gap-2 mt-1">
           <span class="text-xs text-muted-foreground">{{ workshop.goingCount }} going</span>

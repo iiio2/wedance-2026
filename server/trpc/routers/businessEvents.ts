@@ -15,7 +15,8 @@ import { joinRequestsForOwner } from './businessTeam'
 import { eventPath } from '../../../shared/utils/eventSlug'
 import { flyerStatusFor } from '../../utils/flyer/paint'
 import { asksWaitingFor } from './venueAsks'
-import type { FestivalDetails } from '../../../shared/types/festivalDetails'
+import { SESSION_TYPES, type FestivalDetails } from '../../../shared/types/festivalDetails'
+import { cleanSession, inferDurations } from '../../../shared/utils/programme'
 import { seriesDates, weekdayOf, MAX_SERIES } from '../../../shared/utils/recurrence'
 import { eventGaps } from '../../../shared/utils/eventChecklist'
 import { randomUUID } from 'node:crypto'
@@ -67,13 +68,15 @@ const festivalInput = z.object({
     id: z.string().trim().min(1).max(60),
     date: ymdStr,
     time: z.string().regex(/^\d{2}:\d{2}$/, 'Give every session a time.'),
-    duration: z.number().int().min(5).max(1440),
-    type: z.enum(['workshop', 'party']),
+    // Left out = worked out on save (until the next item, the event's end, or the type's default).
+    duration: z.number().int().min(0).max(1440).optional(),
+    type: z.enum(SESSION_TYPES),
     title: text(160).min(1, 'Give every session a title.'),
     artist: text(200).default(''),
     with: z.array(text(200)).max(6).optional(),
     style: text(40).default(''),
-    level: z.enum(['Beginner', 'Intermediate', 'Advanced']).default('Beginner'),
+    // Workshops only; dropped on every other type.
+    level: z.enum(['Beginner', 'Intermediate', 'Advanced']).optional(),
     room: text(60).optional(),
     venue: text(200).optional(),
     description: text(1000).optional(),
@@ -113,6 +116,18 @@ const eventInput = z.object({
   festival: festivalInput.nullable().optional(),
 })
 type EventInput = z.infer<typeof eventInput>
+
+/**
+ * The programme as stored: every session gets a length (#455: until the next
+ * item that day, else the event's end, else the type's default) and a level
+ * only when it's a workshop. Mutates `input.festival` in place.
+ */
+function settleProgramme<T extends { date: string; endDate?: string | null; endTime?: string | null; festival?: any }>(input: T): T {
+  if (input.festival?.sessions) {
+    input.festival.sessions = inferDurations(input.festival.sessions, input).map(cleanSession)
+  }
+  return input
+}
 
 export async function profilesIManage(ctx: { db: any; dancerId: string } & GrantCtx) {
   const rows = await ctx.db
@@ -479,6 +494,7 @@ export const businessEventsRouter = router({
   create: protectedProcedure
     .input(eventInput.extend({ hostUsername: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      settleProgramme(input)
       // A connected app publishes only with business:publish.
       if (input.published) assertScope(ctx, 'business:publish')
       const host = await requireMember(ctx, input.hostUsername)
@@ -498,6 +514,7 @@ export const businessEventsRouter = router({
   update: protectedProcedure
     .input(eventInput.extend({ id: z.string().uuid(), hostUsername: z.string().min(1).optional() }))
     .mutation(async ({ ctx, input }) => {
+      settleProgramme(input)
       const ev = await requireEventManager(ctx, input.id)
       // Publishing, or changing an event that's already live, is public.
       if (input.published || ev.published) assertScope(ctx, 'business:publish')
@@ -589,6 +606,7 @@ export const businessEventsRouter = router({
   createSeries: protectedProcedure
     .input(seriesInput)
     .mutation(async ({ ctx, input }) => {
+      settleProgramme(input)
       if (input.published) assertScope(ctx, 'business:publish')
       const host = await requireMember(ctx, input.hostUsername)
       const { dates, skipped } = planSeries(input)
@@ -601,7 +619,7 @@ export const businessEventsRouter = router({
         const row = await toRow(ctx.db, host, { ...template, date, festival: undefined } as EventInput)
         const slug = `${slugify(input.name)}-${randomSuffix(5)}`
         const shift = new Date(`${date}T12:00:00Z`).getTime() - new Date(`${input.date}T12:00:00Z`).getTime()
-        const festival = input.festival ? { ...shiftFestivalSessions({ ...input.festival, key: slug }, shift)!, key: slug } : null
+        const festival = input.festival ? { ...shiftFestivalSessions({ ...input.festival, key: slug } as FestivalDetails /* durations settled above */, shift)!, key: slug } : null
         rows.push({ ...row, ...(i === 0 ? { id: firstId } : {}), hostProfileId: host.id, source: 'wedance-business', seriesId, slug, ...(festival ? { festival } : {}) })
       }
       const created = await ctx.db.insert(events).values(rows).returning({ id: events.id, startDate: events.startDate, timezone: events.timezone })

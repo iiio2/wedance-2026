@@ -7,7 +7,9 @@
  * whole column of mostly-empty cells.
  */
 import type { Workshop, Teacher } from '~/types/festival'
-import { MapPin, Music, Users, Star } from 'lucide-vue-next'
+import { MapPin, Music, Users, Star, Sparkles, MicVocal, DoorOpen, CalendarClock } from 'lucide-vue-next'
+import type { Component } from 'vue'
+import { SESSION_TYPE_LABEL, isWorkshop, sessionTimeRange, sessionType } from '#shared/utils/programme'
 import { chilis } from '~/lib/levels'
 import { WD } from '~/lib/brand'
 import { accentText, readableAccent } from '~/lib/accent'
@@ -71,7 +73,7 @@ function filteredForDay(day: string) {
   return props.workshops
     .filter((w) => {
       if (w.day !== day) return false
-      if (w.type === 'party') return false
+      if (!isWorkshop(w.type)) return false
       if (props.selectedTeacherId && w.teacherId !== props.selectedTeacherId && !w.withIds?.includes(props.selectedTeacherId)) return false
       if (selectedStyle.value && w.style !== selectedStyle.value) return false
       if (selectedLevel.value && w.level !== selectedLevel.value) return false
@@ -80,11 +82,21 @@ function filteredForDay(day: string) {
     .sort((a, b) => a.time.localeCompare(b.time))
 }
 
-function partiesForDay(day: string) {
+// Everything that isn't a class (party, show, concert, doors, other): its own
+// card, in time order, with its type's icon and label. No level, no style filter.
+function happeningsForDay(day: string) {
   return props.workshops
-    .filter((w) => w.day === day && w.type === 'party')
+    .filter((w) => w.day === day && !isWorkshop(w.type))
     .sort((a, b) => a.time.localeCompare(b.time))
 }
+const hasWorkshopsOn = (day: string) => props.workshops.some(w => w.day === day && isWorkshop(w.type))
+
+const TYPE_ICON: Record<string, Component> = { party: Music, show: Sparkles, concert: MicVocal, doors: DoorOpen, other: CalendarClock }
+const iconOf = (w: Workshop) => TYPE_ICON[sessionType(w.type)] ?? CalendarClock
+const labelOf = (w: Workshop) => SESSION_TYPE_LABEL[sessionType(w.type)]
+const isDoors = (w: Workshop) => w.type === 'doors'
+// Style and level filters only apply to classes: no classes, no filter bar.
+const hasWorkshops = computed(() => props.workshops.some(w => isWorkshop(w.type)))
 
 function teacherFor(workshop: Workshop): Teacher | undefined {
   const main = props.teachers.find((t) => t.id === workshop.teacherId)
@@ -111,7 +123,7 @@ const levelColor: Record<string, string> = {
 <template>
   <div class="space-y-6">
     <!-- Filters — V3 warm palette -->
-    <div class="rounded-2xl bg-card border border-border p-4 sm:p-5">
+    <div v-if="hasWorkshops" class="rounded-2xl bg-card border border-border p-4 sm:p-5">
       <div class="text-eyebrow uppercase tracking-[0.3em] font-bold mb-2 text-secondary">Filter</div>
       <div class="flex flex-wrap gap-2 mb-3">
         <Button
@@ -178,12 +190,16 @@ const levelColor: Record<string, string> = {
             >
               {{ w.time }}
             </div>
+            <div v-if="sessionTimeRange(w) !== w.time" class="mt-1 text-xs tabular-nums text-muted-foreground">
+              –{{ sessionTimeRange(w).split('–')[1] }}
+            </div>
           </div>
 
           <!-- Middle: badges, title, teacher + room + going -->
           <div class="flex-1 min-w-0">
             <div class="flex items-center flex-wrap gap-2">
               <span
+                v-if="w.style"
                 class="text-eyebrow font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
                 :style="{ background: styleAccent(w.style) + '18', color: accentText(styleAccent(w.style)) }"
               >
@@ -235,17 +251,18 @@ const levelColor: Record<string, string> = {
       </div>
 
       <p
-        v-else-if="partiesForDay(day).length === 0"
+        v-else-if="hasWorkshopsOn(day)"
         class="rounded-2xl p-6 text-center border-2 border-dashed text-sm border-input bg-white/50 text-muted-foreground font-sans"
       >
         No workshops match your filters for {{ day }}.
       </p>
 
-      <!-- Parties for this day — bigger, warmer, standalone -->
+      <!-- Parties, shows, concerts, doors for this day — bigger, warmer, standalone -->
       <div
-        v-for="party in partiesForDay(day)"
+        v-for="party in happeningsForDay(day)"
         :key="party.id"
-        class="rounded-2xl p-4 sm:p-5 border flex items-start gap-3 sm:gap-4"
+        class="rounded-2xl border flex items-start gap-3 sm:gap-4"
+        :class="isDoors(party) ? 'p-3' : 'p-4 sm:p-5'"
         :style="{
           background: 'linear-gradient(135deg, color-mix(in srgb, var(--wd-red-600) 3.1%, transparent), color-mix(in srgb, var(--wd-orange-500) 3.1%, transparent))',
           borderColor: 'color-mix(in srgb, var(--wd-red-600) 20%, transparent)',
@@ -256,13 +273,16 @@ const levelColor: Record<string, string> = {
           <div class="text-lg font-black leading-none tabular-nums text-primary font-display">
             {{ party.time }}
           </div>
+          <div v-if="sessionTimeRange(party) !== party.time" class="mt-1 text-xs tabular-nums text-muted-foreground">
+            –{{ sessionTimeRange(party).split('–')[1] }}
+          </div>
         </div>
         <div class="flex-1 min-w-0">
           <div class="inline-flex items-center gap-1.5 text-eyebrow font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style="background:color-mix(in srgb, var(--wd-red-600) 9.4%, transparent); color:var(--wd-red-800);">
-            <Music class="w-3 h-3" aria-hidden="true" />
-            Party
+            <component :is="iconOf(party)" class="w-3 h-3" aria-hidden="true" />
+            {{ labelOf(party) }}
           </div>
-          <h4 class="text-base sm:text-lg font-black leading-tight mt-1 font-display text-foreground">
+          <h4 class="font-black leading-tight mt-1 font-display text-foreground" :class="isDoors(party) ? 'text-sm sm:text-base' : 'text-base sm:text-lg'">
             {{ party.title }}
           </h4>
           <p v-if="party.description" class="text-xs mt-1 font-sans text-muted-foreground">
@@ -280,6 +300,7 @@ const levelColor: Record<string, string> = {
           </div>
         </div>
         <Button
+          v-if="!isDoors(party)"
           type="button"
           :variant="planIds.has(party.id) ? 'pill' : 'outline-pill'"
           size="pill-sm"

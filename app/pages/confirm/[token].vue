@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { SESSION_TYPE_LABEL, isWorkshop, sessionTimeRange, sessionType } from '#shared/utils/programme'
 /**
  * /confirm/<token> — the page an artist opens from an organizer's link (or a
  * venue asked to host the event: then it answers can host · another date ·
@@ -372,9 +373,9 @@ const fmtDate = (d: string | Date | null, tz?: string | null) => d ? new Date(d)
                   <p class="text-sm font-bold">Your programme</p>
                   <ul v-if="data.event.programme.length" class="mt-2 grid gap-1.5">
                     <li v-for="(x, i) in data.event.programme" :key="i" class="rounded-xl bg-background px-3 py-2 text-sm">
-                      <span class="font-bold tabular-nums">{{ fmtSession(x.date) }} · {{ x.time }}</span><span v-if="x.duration" class="text-muted-foreground"> · {{ x.duration }} min</span>
+                      <span class="font-bold tabular-nums">{{ fmtSession(x.date) }} · {{ sessionTimeRange(x) }}</span>
                       <span class="block">{{ x.title }}<span v-if="x.with.length" class="text-muted-foreground"> · with {{ x.with.join(' & ') }}</span></span>
-                      <span class="block text-xs text-muted-foreground">{{ [x.type === 'party' ? 'Party' : x.style, x.type !== 'party' && x.level, x.room && `Room ${x.room}`, x.venue].filter(Boolean).join(' · ') }}</span>
+                      <span class="block text-xs text-muted-foreground">{{ [isWorkshop(x.type) ? x.style : SESSION_TYPE_LABEL[sessionType(x.type)], isWorkshop(x.type) && x.level, x.room && `Room ${x.room}`, x.venue].filter(Boolean).join(' · ') }}</span>
                     </li>
                   </ul>
                   <p v-else class="mt-1 text-sm text-muted-foreground">No sessions with your name in the programme yet.</p>

@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server'
 import { quoteUntrusted, dataText } from './format'
 import { checkConfirmToken, mintConfirmToken } from './confirm'
 import { z } from 'zod'
-import { TOOLS, visibleTools } from './tools'
+import { TOOLS, visibleTools, festivalProgram } from './tools'
 import { legacyAgendaOf } from '../../shared/utils/programme'
 import { appRouter } from '../trpc'
 import { PROCEDURE_SCOPES, checkProcedureScope } from '../trpc/scopes'
@@ -144,7 +144,7 @@ describe('get_event programme', () => {
     expect(r.programme).toMatchObject([
       { date: '2026-11-06', time: '19:00', type: 'workshop', duration: 60, title: 'Class' },
       // No clock time → the event's start (19:00 in Vienna).
-      { date: '2026-11-06', time: '19:00', type: 'party', duration: 240, title: 'Party with DJ Max' },
+      { date: '2026-11-06', time: '19:00', type: 'party', duration: 180, title: 'Party with DJ Max' },
     ])
     expect(r.festival).toBeNull()
   })
@@ -186,13 +186,46 @@ describe('create_event / update_event write the programme as festival.sessions',
     expect(input.festival).not.toHaveProperty('key')
     expect(input.festival.sessions).toMatchObject([
       { date: '2026-10-31', time: '20:00', duration: 60, type: 'workshop', title: 'Bachata beginners', artist: 'ana', style: 'Bachata', level: 'Beginner' },
-      { date: '2026-10-31', time: '21:00', duration: 30, type: 'party', title: 'Halloween show', artist: '', level: 'Advanced' },
-      { date: '2026-10-31', time: '22:00', duration: 240, type: 'party', title: 'Party with DJ Max', artist: 'djmax' },
+      // A show is a show now (#455), with no level; the party's length is its type's default.
+      { date: '2026-10-31', time: '21:00', duration: 30, type: 'show', title: 'Halloween show', artist: '' },
+      { date: '2026-10-31', time: '22:00', duration: 180, type: 'party', title: 'Party with DJ Max', artist: 'djmax' },
     ])
+    expect(input.festival.sessions[1]).not.toHaveProperty('level')
+    expect(input.festival.sessions[2]).not.toHaveProperty('level')
     expect(new Set(input.festival.sessions.map((s: any) => s.id)).size).toBe(3)
     expect(input.artists).toEqual(['maria', 'ana', 'djmax'])
     // The editor shows a programme, not "Your earlier agenda".
     expect(legacyAgendaOf(input)).toEqual([])
+  })
+
+  it('create_event: doors, show and afterparty keep their types; lengths from end_time, the next item, the event end (#455)', async () => {
+    const { calls, t } = fake()
+    await tool('create_event').run(t, args('create_event', {
+      ...party, start_time: '18:00', end_time: '22:00',
+      programme: [
+        { time: '18:00', type: 'doors', title: 'Open Doors', level: 'Beginner' },
+        { time: '19:00', type: 'performance', title: 'B-FEST show' },
+        { time: '20:30', type: 'afterparty', title: 'Afterparty' },
+        { time: '21:00', type: 'concert', title: 'Live set', end_time: '21:45', duration: 10 },
+      ],
+    }))
+    const s = calls.create![0].festival.sessions
+    expect(s.map((x: any) => [x.type, x.time, x.duration])).toEqual([['doors', '18:00', 0], ['show', '19:00', 90], ['party', '20:30', 30], ['concert', '21:00', 45]])
+    for (const x of s) expect(x).not.toHaveProperty('level')
+    for (const x of s) expect(x).not.toHaveProperty('endTime')
+  })
+
+  it('the programme schema takes every new type directly and mentions end_time', () => {
+    const shape: any = tool('create_event').input.programme
+    const item = shape.unwrap().element
+    for (const type of ['workshop', 'party', 'show', 'concert', 'doors', 'other']) expect(() => item.parse({ time: '20:00', type, title: 'x' })).not.toThrow()
+    expect(item.shape.end_time).toBeDefined()
+    expect(shape.description).toMatch(/end_time/)
+  })
+
+  it('get_my_event reads a session’s end_time and shows no level on a party', async () => {
+    const sessions = [{ id: 's-p', date: '2026-10-31', time: '20:30', duration: 90, type: 'party', title: 'Afterparty', artist: '', style: '', level: 'Beginner' }]
+    expect(festivalProgram(sessions as any)[0]).toMatchObject({ time: '20:30', end_time: '22:00', type: 'party', level: null })
   })
 
   it('create_event: a legacy agenda is converted like the editor’s “Put it in the programme”', async () => {
@@ -202,8 +235,9 @@ describe('create_event / update_event write the programme as festival.sessions',
     expect(input.agenda).toEqual([])
     expect(input.festival.sessions).toMatchObject([
       { date: '2026-10-31', time: '09:30', duration: 60, type: 'workshop', title: 'Salsa class', artist: '', style: '', level: 'Beginner' },
-      { date: '2026-10-31', time: '20:00', duration: 240, type: 'party', title: 'Halloween party' },
+      { date: '2026-10-31', time: '20:00', duration: 180, type: 'party', title: 'Halloween party' },
     ])
+    expect(input.festival.sessions[1]).not.toHaveProperty('level')
     expect(legacyAgendaOf(input)).toEqual([])
   })
 

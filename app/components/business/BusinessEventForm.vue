@@ -166,7 +166,7 @@ const venueText = computed(() => venueManual.value
 const legacyAgenda = computed(() => legacyAgendaOf(form))
 function agendaToProgramme() {
   if (!form.festival) return
-  form.festival.sessions = agendaToSessions(legacyAgenda.value, { date: form.date, startTime: form.startTime })
+  form.festival.sessions = agendaToSessions(legacyAgenda.value, { date: form.date, startTime: form.startTime, endDate: form.endDate || null, endTime: form.endTime || null })
   form.agenda = []
   open.value = new Set([...open.value, 'agenda'])
 }
@@ -301,7 +301,7 @@ const hostText = computed(() => props.hosts.find(h => h.username === form.hostUs
         <Button v-if="mode === 'edit'" type="button" variant="ghost" size="sm" :aria-expanded="isOpen('agenda')" @click="toggle('agenda')"><template v-if="isOpen('agenda')"><Check /> Done</template><template v-else><Pencil /> Edit</template></Button>
       </div>
       <template v-if="form.festival">
-        <BusinessFestivalEditor v-if="isOpen('agenda')" v-model="form.festival" part="programme" :days="festivalDays" :lineup="form.artists" :styles="form.styles" class="mt-3" />
+        <BusinessFestivalEditor v-if="isOpen('agenda')" v-model="form.festival" part="programme" :days="festivalDays" :lineup="form.artists" :styles="form.styles" :end-date="form.endDate || form.date" :end-time="form.endTime" class="mt-3" />
         <p v-else class="mt-1 text-sm text-muted-foreground">{{ sessionsText }}</p>
       </template>
       <!-- An event from before the programme: its old agenda, until it's in the programme. -->

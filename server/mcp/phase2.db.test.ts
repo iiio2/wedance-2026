@@ -124,7 +124,7 @@ describe.skipIf(!DATABASE_URL)('MCP phase 2 (DB)', () => {
       const [row] = await db.select().from(schema.events).where(eq(schema.events.id, one.id))
       expect(row.agenda).toEqual([])
       expect(row.festival.key).toBe(row.slug)
-      expect(row.festival.sessions).toMatchObject([{ date: futureThursday, time: '20:00', type: 'workshop' }, { date: futureThursday, time: '21:00', type: 'party', duration: 240 }])
+      expect(row.festival.sessions).toMatchObject([{ date: futureThursday, time: '20:00', type: 'workshop' }, { date: futureThursday, time: '21:00', type: 'party', duration: 180 }])
       // The editor and get_my_event read it as a programme.
       expect((await web(ids.org).businessEvents.get({ id: one.id })).festival?.sessions).toHaveLength(2)
       expect(json(await callTool(TOOL_BY_NAME.get('get_my_event')!, { event_id: one.id }, writer)).programme.map((s: any) => s.title.untrusted_text)).toEqual(['Bachata beginners', 'Halloween party'])

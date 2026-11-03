@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isWorkshop, isEveningItem } from '#shared/utils/programme'
 import type { TicketOption, Workshop } from '~/types/festival'
 import { Ticket, ExternalLink, Sparkles, Bell, ArrowRightLeft, Users, BellRing } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
@@ -31,7 +32,7 @@ const plannedDays = computed(() => {
 })
 
 const hasPartyInPlan = computed(() => {
-  return props.workshops.some((w) => props.planIds.has(w.id) && w.type === 'party')
+  return props.workshops.some((w) => props.planIds.has(w.id) && isEveningItem(w.type))
 })
 
 interface Recommendation {
@@ -44,7 +45,7 @@ interface Recommendation {
 
 // Count planned workshops (excluding parties)
 const plannedWorkshopCount = computed(() => {
-  return props.workshops.filter((w) => props.planIds.has(w.id) && w.type !== 'party').length
+  return props.workshops.filter((w) => props.planIds.has(w.id) && isWorkshop(w.type)).length
 })
 
 // Find cheapest combination of day passes to cover all planned days

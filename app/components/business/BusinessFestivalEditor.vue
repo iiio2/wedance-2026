@@ -12,7 +12,8 @@
  */
 import type { PropType } from 'vue'
 import { Plus, X, ChevronDown, ChevronUp, Pencil, Check } from 'lucide-vue-next'
-import type { FestivalDetails, FestivalPass, FestivalSession } from '#shared/types/festivalDetails'
+import type { FestivalDetails, FestivalPass, FestivalSession, SessionType } from '#shared/types/festivalDetails'
+import { SESSION_TYPES, SESSION_TYPE_LABEL, DEFAULT_DURATION, inferDurations, isWorkshop, sessionKindLabel, sessionTimeRange } from '#shared/utils/programme'
 
 type Editable = Omit<FestivalDetails, 'key'>
 const model = defineModel<Editable>({ required: true })
@@ -24,6 +25,9 @@ const props = defineProps({
   lineup: { type: Array as PropType<string[]>, default: () => [] },
   /** The event's music: the styles a session can be. Empty = every style. */
   styles: { type: Array as PropType<string[]>, default: () => [] },
+  /** The event's end (last day + time), for the last session's length. */
+  endDate: { type: String, default: '' },
+  endTime: { type: String, default: '' },
 })
 
 // Lists always exist, so rows can be added straight away.
@@ -80,11 +84,30 @@ const byDay = computed(() => {
 const open = ref<string | null>(null)
 const heldTime = ref<string | null>(null)
 watch(open, (id) => { heldTime.value = id ? sessions.value.find(x => x.id === id)?.time ?? null : null })
-function addSession(date: string, type: 'workshop' | 'party') {
+// A new session has no length: it's worked out (until the next item, the
+// event's end, or the type's default) unless the organiser types minutes.
+const START: Record<SessionType, string> = { workshop: '18:00', party: '22:00', show: '21:00', concert: '21:00', doors: '20:00', other: '20:00' }
+function addSession(date: string, type: SessionType) {
   const id = `s-${Math.random().toString(36).slice(2, 8)}`
-  sessions.value.push({ id, date, time: type === 'party' ? '22:00' : '18:00', duration: type === 'party' ? 240 : 60, type, title: '', artist: '', style: '', level: 'Beginner' } as FestivalSession)
+  sessions.value.push({ id, date, time: START[type], duration: undefined, type, title: '', artist: '', style: '', ...(type === 'workshop' ? { level: 'Beginner' } : {}) } as unknown as FestivalSession)
   open.value = id
 }
+const TYPE_OPTIONS = SESSION_TYPES.map(t => ({ label: SESSION_TYPE_LABEL[t], value: t }))
+const ADD_TYPES: SessionType[] = ['workshop', 'party', 'show', 'concert', 'doors']
+// The length each session will get on save, so the row shows "19:00–20:30".
+const settled = computed(() => {
+  const all = sessions.value.map(s => ({ ...s, duration: typeof s.duration === 'number' && Number.isFinite(s.duration) ? s.duration : undefined }))
+  const out = inferDurations(all, { date: props.days[0], endDate: props.endDate || props.days[props.days.length - 1], endTime: props.endTime })
+  return new Map(out.map(s => [s.id, s]))
+})
+const rangeOf = (s: FestivalSession) => sessionTimeRange(settled.value.get(s.id) ?? s)
+// Changing the type: a level only on a workshop; an untouched length follows the new type.
+function setType(s: FestivalSession, t: SessionType) {
+  s.type = t
+  if (!isWorkshop(t)) delete s.level
+  else s.level ??= 'Beginner'
+}
+const autoHint = (s: FestivalSession) => (typeof s.duration === 'number' && Number.isFinite(s.duration)) ? undefined : `Empty = until the next item, the event’s end, or ${DEFAULT_DURATION[s.type] || 0} min.`
 function removeSession(id: string) {
   const i = sessions.value.findIndex(s => s.id === id)
   if (i > -1) sessions.value.splice(i, 1)
@@ -169,31 +192,31 @@ const LEVELS = ['Beginner', 'Intermediate', 'Advanced']
 
   <!-- Programme -->
   <div v-else>
-      <p class="text-xs text-muted-foreground">Workshops and parties, day by day. Dancers pick from it to build their plan.</p>
+      <p class="text-xs text-muted-foreground">Workshops, shows, concerts and parties, day by day. Dancers pick from it to build their plan.</p>
       <p v-if="!days.length" class="mt-3 text-sm text-muted-foreground">Set the date under “When” to plan its days.</p>
       <div v-for="d in byDay" :key="d.date" class="mt-4 first:mt-0">
         <h3 class="text-xs font-bold uppercase tracking-wider text-secondary">{{ fmtDay(d.date) }} <span v-if="!days.includes(d.date)" class="normal-case text-destructive">· outside the event’s dates</span></h3>
         <ul class="mt-2 grid gap-2">
           <li v-for="s in d.items" :key="s.id" class="rounded-xl border">
             <button type="button" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm" :aria-expanded="open === s.id" @click="open = open === s.id ? null : s.id">
-              <span class="w-12 shrink-0 font-bold tabular-nums">{{ s.time }}</span>
+              <span class="w-24 shrink-0 font-bold tabular-nums">{{ rangeOf(s) }}</span>
               <span class="min-w-0 flex-1 truncate">
                 <span class="font-bold">{{ s.title || 'Untitled' }}</span>
-                <span class="text-muted-foreground">{{ [s.type === 'party' ? 'Party' : s.style, s.artist && [s.artist, ...(s.with ?? [])].map(nameOf).join(' & '), s.room].filter(Boolean).map(x => ` · ${x}`).join('') }}</span>
+                <span class="text-muted-foreground">{{ [sessionKindLabel(s), s.artist && [s.artist, ...(s.with ?? [])].map(nameOf).join(' & '), s.room].filter(Boolean).map(x => ` · ${x}`).join('') }}</span>
               </span>
               <ChevronUp v-if="open === s.id" class="size-4 shrink-0" aria-hidden="true" /><ChevronDown v-else class="size-4 shrink-0" aria-hidden="true" />
             </button>
             <div v-if="open === s.id" class="grid gap-3 border-t p-3 sm:grid-cols-4">
               <Field :id="`s-title-${s.id}`" label="Title" class="sm:col-span-4"><Input v-model="s.title" placeholder="Bootcamp Son" /></Field>
-              <Field :id="`s-type-${s.id}`" label="Type"><Select v-model="s.type" :options="[{ label: 'Workshop', value: 'workshop' }, { label: 'Party / concert', value: 'party' }]" /></Field>
+              <Field :id="`s-type-${s.id}`" label="Type"><Select :model-value="s.type" :options="TYPE_OPTIONS" @update:model-value="(v: any) => setType(s, v)" /></Field>
               <Field :id="`s-date-${s.id}`" label="Day"><Select v-model="s.date" :options="(days.includes(s.date) ? days : [...days, s.date]).map(x => ({ label: fmtDay(x), value: x }))" /></Field>
               <Field :id="`s-time-${s.id}`" label="Starts"><Input v-model="s.time" type="time" /></Field>
-              <Field :id="`s-dur-${s.id}`" label="Minutes"><Input v-model.number="s.duration" type="number" min="5" step="5" /></Field>
+              <Field :id="`s-dur-${s.id}`" label="Minutes" :hint="autoHint(s)"><Input :model-value="s.duration ?? ''" type="number" min="0" step="5" :placeholder="`${settled.get(s.id)?.duration ?? ''} (auto)`" @update:model-value="(v: any) => (s.duration = v === '' || v == null || Number.isNaN(Number(v)) ? (undefined as any) : Number(v))" /></Field>
               <Field :id="`s-artist-${s.id}`" label="Artist" class="sm:col-span-2" hint="From the line-up.">
                 <Select v-model="s.artist" :options="[{ label: 'Nobody', value: '' }, ...lineup.map(h => ({ label: nameOf(h), value: h }))]" />
               </Field>
               <div v-if="lineup.length > 1" class="sm:col-span-4">
-                <p class="text-sm font-bold">Teaching with <span class="font-normal text-muted-foreground">(optional)</span></p>
+                <p class="text-sm font-bold">{{ isWorkshop(s.type) ? 'Teaching with' : 'With' }} <span class="font-normal text-muted-foreground">(optional)</span></p>
                 <div class="mt-1 flex flex-wrap gap-1.5">
                   <Button
                     v-for="h in lineup.filter(x => x !== s.artist)"
@@ -216,7 +239,7 @@ const LEVELS = ['Beginner', 'Intermediate', 'Advanced']
                   @update:model-value="(v: string[]) => (s.style = v[0] ?? '')"
                 />
               </Field>
-              <Field :id="`s-level-${s.id}`" label="Level"><Select v-model="s.level" :options="LEVELS" /></Field>
+              <Field v-if="isWorkshop(s.type)" :id="`s-level-${s.id}`" label="Level"><Select v-model="s.level" :options="LEVELS" /></Field>
               <Field :id="`s-room-${s.id}`" label="Room" optional><Input v-model="s.room" placeholder="Havana" /></Field>
               <Field :id="`s-venue-${s.id}`" label="Other venue" optional class="sm:col-span-3" hint="Only if not the main venue."><Input v-model="s.venue" placeholder="Danzón, Johannesgasse 3, 1010 Vienna" /></Field>
               <Field :id="`s-desc-${s.id}`" label="Description" optional class="sm:col-span-4"><Textarea v-model="s.description" :rows="2" /></Field>
@@ -226,9 +249,8 @@ const LEVELS = ['Beginner', 'Intermediate', 'Advanced']
             </div>
           </li>
         </ul>
-        <div class="mt-2 flex gap-2">
-          <Button type="button" variant="ghost" size="sm" @click="addSession(d.date, 'workshop')"><Plus /> Workshop</Button>
-          <Button type="button" variant="ghost" size="sm" @click="addSession(d.date, 'party')"><Plus /> Party</Button>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <Button v-for="t in ADD_TYPES" :key="t" type="button" variant="ghost" size="sm" @click="addSession(d.date, t)"><Plus /> {{ SESSION_TYPE_LABEL[t] }}</Button>
         </div>
       </div>
   </div>

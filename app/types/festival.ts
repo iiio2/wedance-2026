@@ -54,12 +54,14 @@ export interface Workshop {
   day: string
   room: string
   style: string
-  level: 'Beginner' | 'Intermediate' | 'Advanced'
+  /** Workshops only. */
+  level?: 'Beginner' | 'Intermediate' | 'Advanced'
   teacherId: string
   /** Who they teach it with (more line-up ids). */
   withIds?: string[]
   goingCount: number
-  type?: 'workshop' | 'party'
+  /** Missing = workshop (older mock data). */
+  type?: 'workshop' | 'party' | 'show' | 'concert' | 'doors' | 'other'
   venue?: string
   description?: string
 }
