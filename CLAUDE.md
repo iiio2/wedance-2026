@@ -217,6 +217,19 @@ Empty fields only; claimed/managed pages are never written (except the dancer's 
   Apify, writes nothing) → `--write [--limit N] [--handles a,b]`. Needs `APIFY_TOKEN`, the Cloudinary
   keys and `DATABASE_URL` — check the target before `--write`.
 
+## Event from an Instagram post (#453)
+
+Paste the link of an organiser's post or reel → a complete DRAFT: MCP `import_from_instagram` and the
+"Paste an Instagram post" field on `/business/events/new`, both → `eventImport.fromInstagram`
+(`server/trpc/routers/eventImport.ts`). Post via Apify `apify~instagram-scraper`
+(`server/utils/instagram/post.ts`, `APIFY_TOKEN`) → Gemini reads the caption into fields
+(`server/utils/instagram/eventExtract.ts`, `GEMINI_API_KEY`) → line-up / venue through
+`addFromInstagram` / `addVenue` (so #452 fills them) → `businessEvents.create`; cover = the post's
+picture re-hosted. The caption is untrusted: quoted to the model as data, the answer bounded by a JSON
+schema and checked again (handles must be in the post, links written in the caption). The post's
+organisers are kept in `events.source_ref.instagram.organizers` — TODO(#456) link them as co-organisers.
+The same post for the same page returns the existing draft. Missing env → a clear error, no crash.
+
 ## Analytics (PostHog)
 
 **Setup.** Client: `app/plugins/03.posthog.client.ts` (posthog-js, EU host, manual `$pageview`
@@ -294,6 +307,7 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `ask_locals_post` · `video_submit` · `video_vote` · `city_battle_vote` | city components | `city`, … |
 | `review_submitted` · `giveaway_entered` · `election_nominated` | `ReviewsSection` · `GiveawayCard` · `elections/[handle]` | target ids |
 | `event_created` / `event_published` | `business/events/new.vue`; publish = draft→live in `business/events/[id]` | `event_id`, `is_festival`, `city`, `style`, `published` |
+| `event_imported` | `business/events/new.vue` "Paste an Instagram post" (#453) | `event_id`, `source` (instagram), `created` (false = this post's draft already existed), `lineup`, `has_cover` |
 | `business_profile_created` | `business/new.vue` | `profile`, `profile_type`, `from_instagram` |
 | `public_page_set` | `settings/index.vue` "Your public page" (one handle per person, #474) | `cleared`, `profile_type` |
 | `profile_merged` | `BusinessDuplicates` (Business → page → Duplicates) | `profile` (kept), `merged_profile`, `moved` |
@@ -317,6 +331,7 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `server_login_completed` | `auth.login`, `auth.verifyMagicLink` | `method` |
 | `server_onboarding_completed` | `auth.completeOnboarding` | `intent` |
 | `server_event_created` | `businessEvents.create`, `businessEvents.createSeries` | `event_id`, `is_festival`, `host_type`, `city`, `published`, `series_id`, `dates` |
+| `server_event_imported` | `eventImport.fromInstagram` (web + MCP `import_from_instagram`; the draft itself also fires `server_event_created`) | `event_id`, `source` (instagram), `kind` (post / reel), `lineup`, `organizers`, `has_venue_page`, `has_cover`, `has_ticket`, `sessions`, `$groups` |
 | `server_event_published` | `create`/`createSeries` with `published`, `update` draft→live, `publishSeries` | `event_id`, `is_festival`, `series_id`, `dates` |
 | `server_booking_request_submitted` | `booking.request` (was server_booking_requested until 2026-10-20) | `booking_id`, `signed_in` |
 | `server_booking_inquiry_sent` | `inquiries.send` (was server_inquiry_sent until 2026-10-20) | `inquiry_id`, `profile`, `delivered`, `signed_in` |

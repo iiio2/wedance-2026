@@ -1,0 +1,149 @@
+{
+  "is_event": true,
+  "name": "HALLOWEEN at B-FEST Boutique",
+  "type": "Party",
+  "date": "2026-10-31",
+  "end_date": null,
+  "start_time": "18:00",
+  "end_time": "22:00",
+  "city": "Berlin",
+  "styles": [
+    "Burlesque",
+    "Belly Dance"
+  ],
+  "prices": [
+    {
+      "label": null,
+      "amount": 15,
+      "currency": "EUR",
+      "or_more": true,
+      "free": false
+    }
+  ],
+  "ticket_url": null,
+  "venue": {
+    "handle": "GalerieHeinzGalinski",
+    "name": "Galerie Heinz Galinski",
+    "address": "Heinz-Galinski-Straße 13",
+    "city": "Berlin"
+  },
+  "people": [
+    {
+      "handle": "GalerieHeinzGalinski",
+      "name": null,
+      "role": "venue"
+    },
+    {
+      "handle": "azziemccutcheon",
+      "name": "AZZIE MCCUTCHEON",
+      "role": "performer"
+    },
+    {
+      "handle": "dance_witch_jenna",
+      "name": "CHARLEY HORSE",
+      "role": "performer"
+    },
+    {
+      "handle": "b_messer_",
+      "name": "DARIA",
+      "role": "performer"
+    },
+    {
+      "handle": "leilanourdance",
+      "name": "LEILA NOUR",
+      "role": "performer"
+    },
+    {
+      "handle": "the_lucycharm",
+      "name": "LUCY CHARM",
+      "role": "performer"
+    },
+    {
+      "handle": "melina_rival_burlesque",
+      "name": "MELINA RIVAL",
+      "role": "performer"
+    },
+    {
+      "handle": "valentina.lamoon",
+      "name": "VALENTINA LAMOON",
+      "role": "performer"
+    },
+    {
+      "handle": "sunnyday.burlesque",
+      "name": "SUNNY DAY",
+      "role": "performer"
+    },
+    {
+      "handle": "latoya_loves_to_dance",
+      "name": "LATOYA",
+      "role": "host"
+    },
+    {
+      "handle": "joachimherrler",
+      "name": "BOBBY PERU",
+      "role": "host"
+    },
+    {
+      "handle": "adelaidebeauvoir",
+      "name": null,
+      "role": "organizer"
+    },
+    {
+      "handle": "aslihan.dans",
+      "name": null,
+      "role": "organizer"
+    },
+    {
+      "handle": "mr.whitenoize",
+      "name": null,
+      "role": "organizer"
+    },
+    {
+      "handle": "lateatnate",
+      "name": null,
+      "role": "organizer"
+    },
+    {
+      "handle": "burlesqueingermany",
+      "name": null,
+      "role": "other"
+    }
+  ],
+  "programme": [
+    {
+      "date": null,
+      "time": "18:00",
+      "end_time": null,
+      "type": "doors",
+      "title": "Open Doors",
+      "artists": []
+    },
+    {
+      "date": null,
+      "time": "19:00",
+      "end_time": null,
+      "type": "show",
+      "title": "Show",
+      "artists": [
+        "azziemccutcheon",
+        "dance_witch_jenna",
+        "b_messer_",
+        "leilanourdance",
+        "the_lucycharm",
+        "melina_rival_burlesque",
+        "valentina.lamoon",
+        "sunnyday.burlesque",
+        "latoya_loves_to_dance",
+        "joachimherrler"
+      ]
+    },
+    {
+      "date": null,
+      "time": "20:30",
+      "end_time": "22:00",
+      "type": "party",
+      "title": "After Party",
+      "artists": []
+    }
+  ]
+}

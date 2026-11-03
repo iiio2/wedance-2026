@@ -4,6 +4,7 @@
  * the server would reject, with a readable message instead of a zod dump.
  */
 import * as v from 'valibot'
+import { parseInstagramLink } from '../utils/instagram'
 import { DANCE_LEVELS } from '../utils/styleLevelMix'
 import {
   DANCE_ROLES,
@@ -359,4 +360,16 @@ export const BusinessCreateSchema = v.object({
 
 export const RenameHandleSchema = v.object({
   handle: requiredHandle('Pick a handle.'),
+})
+
+// ── Business (eventImport.fromInstagram) ─────────────────────────────────────
+
+/** "Paste an Instagram post" on the new-event page (#453): a post or reel link, not a page. */
+export const InstagramPostImportSchema = v.object({
+  url: v.pipe(
+    v.string(), v.trim(), v.nonEmpty('Paste the link of the post.'), v.maxLength(500, 'That link is too long.'),
+    v.check(s => !!parseInstagramLink(s), 'Paste an Instagram link, like instagram.com/p/…'),
+    v.check(s => parseInstagramLink(s)?.kind !== 'profile', 'That’s a page, not a post: open the event’s post and copy its link.'),
+  ),
+  profile: v.pipe(v.string(), v.nonEmpty('Pick who runs this event.')),
 })

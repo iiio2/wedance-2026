@@ -118,6 +118,8 @@ export const PROCEDURE_SCOPES: Record<string, Scope | null> = {
   // A new page the dancer runs; it joins the app's grant (server/oauth/grants.ts).
   'business.create': 'business:write',
   'businessEvents.addVenue': 'business:write',
+  // A draft from an Instagram post (#453); its pages and the event go through the procedures above.
+  'eventImport.fromInstagram': 'business:write',
   // Completing an unclaimed page the dancer added or has on their events (#454); no grant needed.
   'listedProfiles.update': 'business:write',
   'businessFlyers.make': 'business:write',

@@ -41,6 +41,7 @@ import { rsvpRouter } from './routers/rsvp'
 import { organizerSubscriptionRouter } from './routers/organizerSubscription'
 import { attendanceRouter } from './routers/attendance'
 import { oauthRouter } from './routers/oauth'
+import { eventImportRouter } from './routers/eventImport'
 
 export const appRouter = router({
   auth: authRouter,
@@ -69,6 +70,7 @@ export const appRouter = router({
   follow: followRouter,
   business: businessRouter,
   businessEvents: businessEventsRouter,
+  eventImport: eventImportRouter,
   businessFlyers: businessFlyersRouter,
   listedProfiles: listedProfilesRouter,
   artistInvites: artistInvitesRouter,

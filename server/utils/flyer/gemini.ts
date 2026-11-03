@@ -120,6 +120,23 @@ export async function readText(image: InlineImage): Promise<string[]> {
   try { return JSON.parse(text).lines ?? [] } catch { return [] }
 }
 
+/**
+ * Structured data out of text (#453: an event out of an Instagram caption).
+ * `system` holds the rules; `text` is the material, which may be untrusted —
+ * the JSON schema bounds what can come back, and callers validate it again.
+ */
+export async function extractJson<T>(system: string, text: string, schema: unknown, purpose: string): Promise<T | null> {
+  const json = await call(TEXT_MODEL, {
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: 'user', parts: [{ text }] }],
+    generationConfig: { responseMimeType: 'application/json', responseSchema: schema, temperature: 0 },
+  }, purpose)
+  const out = (json?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text ?? '').join('')
+  try { return JSON.parse(out) as T } catch { return null }
+}
+
+export const textModelEnabled = () => !!useRuntimeConfig().geminiApiKey
+
 export async function writeText(prompt: string): Promise<string> {
   const json = await call(TEXT_MODEL, { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7 } }, aiLabel() ?? 'text')
   return (json?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text ?? '').join('').trim()
