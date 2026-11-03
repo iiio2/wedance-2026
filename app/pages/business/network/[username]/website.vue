@@ -207,7 +207,8 @@ const LANG_NAMES: Record<string, string> = { en: 'English', de: 'Deutsch', es: '
             </div>
             <BusinessSiteText v-if="has(sec, 'body')" v-model="sec.body" label="Text" hint="A blank line starts a new paragraph." multiline :lang="lang" :main="main" />
             <BusinessSiteImage v-if="has(sec, 'image')" v-model="sec.image" label="Photo" :domain="site.domain" />
-            <Field v-if="has(sec, 'video')" label="YouTube video" hint="The link to the video."><Input v-model="sec.video" placeholder="https://www.youtube.com/watch?v=…" /></Field>
+            <Field v-if="has(sec, 'video') && sec.kind === 'hero'" label="Background video" hint="A video file (.mp4) that plays silently on a loop behind the title. The photo shows while it loads and where video can't play."><Input v-model="sec.video" placeholder="https://…/hero.mp4" /></Field>
+            <Field v-else-if="has(sec, 'video')" label="YouTube video" hint="The link to the video."><Input v-model="sec.video" placeholder="https://www.youtube.com/watch?v=…" /></Field>
             <BusinessSiteText v-if="has(sec, 'address')" v-model="sec.address" label="Address" :lang="lang" :main="main" />
             <Field v-if="has(sec, 'mapUrl')" label="Map link" hint="Google Maps link people tap for directions."><Input v-model="sec.mapUrl" placeholder="https://maps.google.com/?q=…" /></Field>
             <Field v-if="has(sec, 'days')" label="How far ahead" hint="Days of events to list.">

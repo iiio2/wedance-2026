@@ -23,7 +23,7 @@ export type SectionKind = (typeof SECTION_KINDS)[number]
 
 /** What each kind is for, and which fields the editor shows for it. */
 export const SECTION_INFO: Record<SectionKind, { label: string; hint: string; fields: (keyof SiteSection)[]; items?: { label: string; fields: (keyof SiteItem)[] } }> = {
-  hero: { label: 'Hero', hint: 'The top of the page: a big title over a photo, with buttons.', fields: ['eyebrow', 'title', 'titleAccent', 'body', 'image', 'buttons'] },
+  hero: { label: 'Hero', hint: 'The top of the page: a big title over a photo or a silent background video, with buttons.', fields: ['eyebrow', 'title', 'titleAccent', 'body', 'image', 'video', 'buttons'] },
   text: { label: 'Text', hint: 'A heading and paragraphs, with up to four big numbers or words beside it.', fields: ['eyebrow', 'title', 'titleAccent', 'body', 'image', 'items', 'callout'], items: { label: 'Highlights', fields: ['title', 'body'] } },
   cards: { label: 'Cards', hint: 'A row of cards: offers, steps, stops, reasons. Optionally a video under them.', fields: ['eyebrow', 'title', 'titleAccent', 'body', 'items', 'video', 'callout'], items: { label: 'Cards', fields: ['tag', 'title', 'body', 'image', 'url'] } },
   events: { label: 'Events', hint: 'Your upcoming events on WeDance, each with a sign-up button. Edit the events themselves under Events.', fields: ['eyebrow', 'title', 'titleAccent', 'body', 'days', 'callout'] },
