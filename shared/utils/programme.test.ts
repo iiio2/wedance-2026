@@ -102,6 +102,8 @@ describe('time helpers', () => {
     expect(untilInText('Show 19:00–20:30')).toBe('20:30')
     expect(untilInText('Salsa On2')).toBeNull()
     expect(untilInText('till 25:00')).toBeNull()
+    expect(untilInText('Afterparty till 22.30')).toBe('22:30')
+    expect(untilInText('Entry 5-10.00 €')).toBeNull()
   })
   it('sessionEnd: none for a moment; wraps past midnight', () => {
     expect(sessionEnd({ time: '18:00', duration: 0 })).toBeNull()

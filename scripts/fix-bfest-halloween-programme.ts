@@ -11,8 +11,8 @@
  *
  * No levels. Session ids, titles and everything else stay as they are
  * (dancers' picks hang on the ids). Items are found by their start time
- * (18:00 / 19:00 / 20:30); anything else in the programme makes the script
- * stop without writing. Idempotent: re-running after --write reports "already fixed".
+ * (18:00 / 19:00 / 20:30) on the event's day, each with its old (or already
+ * fixed) type; anything else makes the script stop without writing. Idempotent: re-running after --write reports "already fixed".
  *
  * Usage:
  *   bun scripts/fix-bfest-halloween-programme.ts           # dry-run (default): prints before/after, no writes
@@ -30,18 +30,22 @@ import { drizzle } from 'drizzle-orm/neon-http'
 import { eq } from 'drizzle-orm'
 import * as schema from '../server/database/schema'
 import type { FestivalSession } from '../shared/types/festivalDetails'
+import { eventLocalDate } from '../shared/utils/eventTime'
 
 export const EVENT_ID = 'f7934cfd-67fd-44dd-a010-0305cbc188e0'
-const PLAN: Record<string, { type: FestivalSession['type']; duration: number }> = {
-  '18:00': { type: 'doors', duration: 0 },
-  '19:00': { type: 'show', duration: 90 },
-  '20:30': { type: 'party', duration: 90 },
+// `from`: the types each item had when it was made (workshop/party only) or already has after the fix.
+const PLAN: Record<string, { type: FestivalSession['type']; duration: number; from: FestivalSession['type'][] }> = {
+  '18:00': { type: 'doors', duration: 0, from: ['workshop', 'doors'] },
+  '19:00': { type: 'show', duration: 90, from: ['party', 'show'] },
+  '20:30': { type: 'party', duration: 90, from: ['party'] },
 }
 
-/** The fixed sessions, or an error naming what doesn't match the plan. */
-export function fixSessions(sessions: FestivalSession[]): { sessions: FestivalSession[] } | { error: string } {
+/** The fixed sessions, or an error naming what doesn't match the plan. `date` = the event's local day. */
+export function fixSessions(sessions: FestivalSession[], date: string): { sessions: FestivalSession[] } | { error: string } {
   const times = sessions.map(s => s.time).sort()
   if (times.join(',') !== Object.keys(PLAN).sort().join(',')) return { error: `expected sessions at ${Object.keys(PLAN).join(', ')}, found ${times.join(', ') || 'none'}` }
+  const off = sessions.find(s => s.date !== date || !PLAN[s.time]!.from.includes(s.type))
+  if (off) return { error: `the ${off.time} item is a ${off.type} on ${off.date}, expected ${PLAN[off.time]!.from.join('/')} on ${date}` }
   return {
     sessions: sessions.map((s) => {
       const { level: _level, ...rest } = s
@@ -59,14 +63,14 @@ if (import.meta.main) {
   console.error(`B-FEST programme fix · ${WRITE ? 'WRITE' : 'dry-run'} · target DB ${process.env.NEON_FETCH_ENDPOINT ? `${host} via ${process.env.NEON_FETCH_ENDPOINT}` : host}`)
 
   const db = drizzle(neon(dbUrl), { schema })
-  const [ev] = await db.select({ id: schema.events.id, name: schema.events.name, festival: schema.events.festival })
+  const [ev] = await db.select({ id: schema.events.id, name: schema.events.name, festival: schema.events.festival, startDate: schema.events.startDate, timezone: schema.events.timezone })
     .from(schema.events).where(eq(schema.events.id, EVENT_ID))
   if (!ev) { console.error(`No event ${EVENT_ID} in this database.`); process.exit(1) }
   const festival = (ev.festival ?? {}) as Record<string, any>
   const before = (festival.sessions ?? []) as FestivalSession[]
   console.log(JSON.stringify({ event: ev.name, before }, null, 2))
 
-  const r = fixSessions(before)
+  const r = fixSessions(before, eventLocalDate(ev.startDate, ev.timezone || 'Europe/Berlin'))
   if ('error' in r) { console.error(`Not touching it: ${r.error}.`); process.exit(1) }
   if (JSON.stringify(r.sessions) === JSON.stringify(before)) { console.error('Already fixed, nothing to do.'); process.exit(0) }
   console.log(JSON.stringify({ after: r.sessions }, null, 2))

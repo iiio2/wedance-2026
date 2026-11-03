@@ -58,12 +58,16 @@ export function minutesUntil(start: string, end: string): number {
   return d > 0 ? d : d + 1440
 }
 
-/** An end time written in a title or note: "Afterparty until 22:00", "bis 1:30", "19:00–20:30". */
+/**
+ * An end time written in a title: "Afterparty until 22:00", "bis 1.30",
+ * "19:00–20:30". A bare dash needs a colon, so a price ("Entry 5-10.00 €") isn't read as a time.
+ */
 export function untilInText(text: string | null | undefined): string | null {
-  const m = /(?:\b(?:until|till|til|to|bis)\s+|[–—-]\s*)(\d{1,2})[:.](\d{2})\b/i.exec(text ?? '')
+  const m = /\b(?:until|till|til|to|bis)\s+(\d{1,2})[:.](\d{2})\b|[–—-]\s*(\d{1,2}):(\d{2})\b/i.exec(text ?? '')
   if (!m) return null
-  const h = Number(m[1]); const min = Number(m[2])
-  return h < 24 && min < 60 ? `${String(h).padStart(2, '0')}:${m[2]}` : null
+  const hh = m[1] ?? m[3]!; const mm = m[2] ?? m[4]!
+  const h = Number(hh); const min = Number(mm)
+  return h < 24 && min < 60 ? `${String(h).padStart(2, '0')}:${mm}` : null
 }
 
 /** A session before its length is known: duration left out, or an explicit end time. */
@@ -92,7 +96,8 @@ export function inferDurations<T extends DraftSession>(
     const explicitEnd = clockTime(own)
     if (time && explicitEnd) return fix(minutesUntil(time, explicitEnd))
     if (typeof given === 'number' && Number.isFinite(given)) return fix(given)
-    const titled = untilInText(s.title) ?? untilInText(s.description)
+    // Only the title: a description's prices and other times would misfire.
+    const titled = untilInText(s.title)
     if (time && titled) return fix(minutesUntil(time, titled))
     const type = sessionType(s.type)
     if (type === 'doors' || !time) return fix(DEFAULT_DURATION[type])

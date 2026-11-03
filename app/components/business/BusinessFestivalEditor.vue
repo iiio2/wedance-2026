@@ -25,7 +25,7 @@ const props = defineProps({
   lineup: { type: Array as PropType<string[]>, default: () => [] },
   /** The event's music: the styles a session can be. Empty = every style. */
   styles: { type: Array as PropType<string[]>, default: () => [] },
-  /** The event's end (last day + time), for the last session's length. */
+  /** The event's end, for the last session's length: last day ('' = single-day, as saved) + time. */
   endDate: { type: String, default: '' },
   endTime: { type: String, default: '' },
 })
@@ -97,7 +97,7 @@ const ADD_TYPES: SessionType[] = ['workshop', 'party', 'show', 'concert', 'doors
 // The length each session will get on save, so the row shows "19:00–20:30".
 const settled = computed(() => {
   const all = sessions.value.map(s => ({ ...s, duration: typeof s.duration === 'number' && Number.isFinite(s.duration) ? s.duration : undefined }))
-  const out = inferDurations(all, { date: props.days[0], endDate: props.endDate || props.days[props.days.length - 1], endTime: props.endTime })
+  const out = inferDurations(all, { date: props.days[0], endDate: props.endDate || null, endTime: props.endTime })
   return new Map(out.map(s => [s.id, s]))
 })
 const rangeOf = (s: FestivalSession) => sessionTimeRange(settled.value.get(s.id) ?? s)

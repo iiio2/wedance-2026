@@ -124,9 +124,12 @@ type EventInput = z.infer<typeof eventInput>
  * item that day, else the event's end, else the type's default) and a level
  * only when it's a workshop. Mutates `input.festival` in place.
  */
-function settleProgramme<T extends { date: string; endDate?: string | null; endTime?: string | null; festival?: any }>(input: T): T {
+function settleProgramme<T extends { date: string; endDate?: string | null; endTime?: string | null; festival?: any }>(
+  input: T,
+  bounds: { date: string; endDate?: string | null; endTime?: string | null } = input,
+): T {
   if (input.festival?.sessions) {
-    input.festival.sessions = inferDurations(input.festival.sessions, input).map(cleanSession)
+    input.festival.sessions = inferDurations(input.festival.sessions, bounds).map(cleanSession)
   }
   return input
 }
@@ -516,8 +519,12 @@ export const businessEventsRouter = router({
   update: protectedProcedure
     .input(eventInput.extend({ id: z.string().uuid(), hostUsername: z.string().min(1).optional() }))
     .mutation(async ({ ctx, input }) => {
-      settleProgramme(input)
       const ev = await requireEventManager(ctx, input.id)
+      // An update without an end keeps the stored one for the last session's length.
+      const tz = ev.timezone || 'Europe/Berlin'
+      settleProgramme(input, input.endTime || input.endDate || !ev.endDate
+        ? input
+        : { date: input.date, endDate: eventLocalDate(ev.endDate, tz), endTime: eventLocalTime(ev.endDate, tz) })
       // Publishing, or changing an event that's already live, is public.
       if (input.published || ev.published) assertScope(ctx, 'business:publish')
       let host: { id: string; username: string; type: string; name: string } | null
