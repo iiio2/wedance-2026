@@ -1,3 +1,5 @@
+import { HANDLE_MAX, isValidHandle } from './handle'
+
 /**
  * Instagram handle from whatever people paste: a profile URL (with or without
  * www., trailing slash, ?igsh=… share params), "@handle" or a bare handle.
@@ -14,9 +16,15 @@ export function parseInstagramHandle(input: string | null | undefined): string |
   return /^[a-z0-9._]{1,30}$/.test(raw) && !/^\.|\.$|\.\./.test(raw) ? raw : null
 }
 
-/** "ritmo_jg" → "ritmo-jg": a WeDance handle (letters, numbers, dashes). */
+/**
+ * The WeDance handle for an Instagram handle: the same one ("caliente.nights"),
+ * lowercased. Only when that can't be a handle (too short, "admin", ends like a
+ * file: "salsa.js") do dots and underscores become dashes ("salsa-js").
+ */
 export function handleFromInstagram(ig: string): string {
-  return ig.replace(/[._]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
+  const same = ig.toLowerCase()
+  if (isValidHandle(same)) return same
+  return same.replace(/[._]+/g, '-').replace(/^-+|-+$/g, '').slice(0, HANDLE_MAX)
 }
 
 /** "ritmo_jg" → "Ritmo Jg": a starting point for the display name, to be edited. */

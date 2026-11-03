@@ -2,7 +2,7 @@
 /**
  * /business/network/<handle> — edit a profile you manage: details, photos (one is the main
  * photo used on cards and flyers), links (with the business's other Instagram accounts),
- * venue details for venues, and duplicates to merge into this page.
+ * venue details for venues, its handle, and duplicates to merge into this page.
  */
 import { ExternalLink, Star, Trash2, Check, Users, Palette, Inbox, Globe, Contact, X } from 'lucide-vue-next'
 import { parseInstagramHandle } from '#shared/utils/instagram'
@@ -43,6 +43,11 @@ const dirty = computed(() => !!snapshot.value && state() !== snapshot.value)
 const SOCIALS = ['instagram', 'website', 'facebook'] as const
 function socialOf(p: Profile, platform: string) {
   return p.socials.find(s => s.platform.toLowerCase() === platform)?.url ?? ''
+}
+
+// New handle: the editor moves to its new address (the old one now redirects).
+async function onRenamed(handle: string) {
+  await navigateTo(`/business/network/${handle}`, { replace: true })
 }
 
 // quiet: refresh in place (after a merge) without unmounting the page.
@@ -296,6 +301,8 @@ const photoHint = computed(() => loaded.value?.type === 'artist'
           <span v-else-if="savedAt && !saving" class="inline-flex items-center gap-1 text-sm text-wd-green-700"><Check class="size-4" aria-hidden="true" /> Saved</span>
         </div>
       </form>
+
+      <BusinessHandle :username="loaded.username" :instagram="socialOf(loaded, 'instagram')" class="mt-8" @renamed="onRenamed" />
 
       <BusinessDuplicates :username="loaded.username" :name="loaded.name" class="mt-8" @merged="load(true)" />
     </template>

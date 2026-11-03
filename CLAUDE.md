@@ -142,6 +142,11 @@ firebase-admin). Code: `scripts/sync-v3-events.ts` (CLI) + `server/utils/v3Event
   ≤75 m for venues) behind `business.findExisting` (Create form), `business.duplicates`, `addVenue`
   and MCP `create_my_page` (returns `possible_duplicates` unless `create_anyway`).
 - Bulk clean-up of obvious copies: `scripts/merge-duplicate-profiles.ts` (dry-run default).
+- **Handles = Instagram:** a chosen page handle follows `shared/utils/handle.ts` `handleError` — `[a-z0-9._-]`,
+  3–40, no dot/dash at either end, no "..", not `RESERVED_HANDLES`, not ending like a file (`.png`, `.js`…). Used by
+  `business.create` / `business.renameHandle` (zod) and the forms (valibot `optionalHandle` / `requiredHandle`).
+  `handleFromInstagram` keeps the Instagram handle as is. Rename (Business → page → Handle, owners) keeps the old
+  handle in `source_ref.oldHandles` (→ `entity.movedTo` redirect) and moves handle refs via `moveHandleRefs`.
 - **Env:** `DATABASE_URL` (target — check it before `--write`; the Vercel-pulled `.env`
   is PRODUCTION), `WEDANCE_V3_SERVICE_ACCOUNT` (JSON) or `WEDANCE_V3_SERVICE_ACCOUNT_FILE`
   (default `~/Secrets/wedance.json`).

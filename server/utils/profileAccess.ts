@@ -128,7 +128,7 @@ export async function logAccess(db: Db, entry: {
   profileId: string
   actorId: string | null
   subjectId?: string | null
-  action: 'created' | 'requested' | 'approved' | 'rejected' | 'role_changed' | 'removed' | 'left' | 'merged' | 'unmerged'
+  action: 'created' | 'requested' | 'approved' | 'rejected' | 'role_changed' | 'removed' | 'left' | 'merged' | 'unmerged' | 'renamed'
   role?: string | null
   note?: string | null
 }) {

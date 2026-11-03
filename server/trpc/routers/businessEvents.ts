@@ -11,6 +11,7 @@ import { findLikelyDuplicates, notMerged } from '../../utils/profileDupes'
 import { onlyGranted, type GrantCtx } from '../../utils/profileAccess'
 import { assertScope } from '../scopes'
 import { parseInstagramHandle, handleFromInstagram, instagramUrl } from '../../../shared/utils/instagram'
+import { isValidHandle } from '../../../shared/utils/handle'
 import { joinRequestsForOwner } from './businessTeam'
 import { eventPath } from '../../../shared/utils/eventSlug'
 import { flyerStatusFor } from '../../utils/flyer/paint'
@@ -842,7 +843,7 @@ export const businessEventsRouter = router({
       if (existing) return existing
       let username = handleFromInstagram(handle)
       const [taken] = await ctx.db.select({ id: profiles.id }).from(profiles).where(eq(profiles.username, username))
-      if (taken) username = `${username}-${randomSuffix(4)}`
+      if (taken || !isValidHandle(username)) username = `${username}-${randomSuffix(4)}`
       const [p] = await ctx.db.insert(profiles)
         .values({ username, type: input.type, name: input.name || handle, socials: [{ platform: 'instagram', url }], sourceRef: { source: 'wedance-business', addedBy: ctx.dancerId } })
         .returning({ username: profiles.username, name: profiles.name, type: profiles.type, city: profiles.city, photo: profiles.photo })
@@ -876,7 +877,7 @@ export const businessEventsRouter = router({
       if (same) return { username: same.username, name: same.name, type: same.type, city: same.city, address: same.address, created: false }
       let username = ig ? handleFromInstagram(ig) : (slugify(input.name) || `venue-${randomSuffix(6)}`)
       const [taken] = await ctx.db.select({ id: profiles.id }).from(profiles).where(eq(profiles.username, username))
-      if (taken) username = `${username}-${randomSuffix(4)}`
+      if (taken || !isValidHandle(username)) username = `${username}-${randomSuffix(4)}`
       const [p] = await ctx.db.insert(profiles)
         .values({
           username, type: 'venue', name: input.name, address: input.address, city: loc.city, citySlug: loc.citySlug,

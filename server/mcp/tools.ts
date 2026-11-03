@@ -708,7 +708,7 @@ export const TOOLS: ToolDef[] = [
     input: {
       type: z.enum(['organizer', 'venue', 'artist', 'promoter']), name: z.string().trim().min(1).max(120), city: z.string().max(120).optional(),
       instagram: z.string().min(2).max(300).optional().describe('Instagram handle or URL of the page.'),
-      handle: z.string().min(3).max(40).transform(h => h.replace(/^@/, '').toLowerCase()).optional().describe('Wanted WeDance handle (wedance.vip/@handle); made from the name when left out.'),
+      handle: z.string().min(3).max(40).transform(h => h.replace(/^@/, '').toLowerCase()).optional().describe('Wanted WeDance handle (wedance.vip/@handle) — their Instagram handle works as is: 3–40 lowercase letters, numbers, dots, underscores or dashes. Made from the Instagram handle or name when left out.'),
       create_anyway: z.boolean().optional().describe('Only after the user said none of the possible_duplicates is theirs.'),
     },
     run: async (t, a) => {

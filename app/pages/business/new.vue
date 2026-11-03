@@ -9,6 +9,7 @@
  */
 import { Instagram, ArrowRight } from 'lucide-vue-next'
 import { parseInstagramHandle, handleFromInstagram, nameFromInstagram } from '#shared/utils/instagram'
+import { BusinessCreateSchema } from '#shared/validation'
 
 definePageMeta({ layout: 'business' })
 useHead({ title: 'Create a profile | WeDance' })
@@ -32,12 +33,11 @@ const form = reactive({
   instagram: String(route.query.instagram ?? ''),
   name: '', city: '', handle: '',
 })
-const nameError = ref<string | undefined>()
+const { errors, validate, fieldAttrs } = useFormValidation(BusinessCreateSchema, form)
 const saving = ref(false)
 const error = ref<string | null>(null)
 
 const igHandle = computed(() => parseInstagramHandle(form.instagram))
-const igError = computed(() => (form.instagram.trim() && !igHandle.value ? 'Paste a link like instagram.com/name, or @name.' : undefined))
 
 // Fill empty fields from the Instagram handle; never overwrite what was typed.
 const filledFromIg = reactive({ name: '', handle: '' })
@@ -67,19 +67,13 @@ watch(() => [igHandle.value, form.name.trim(), form.handle.trim(), form.city, fo
 }, { immediate: true })
 
 async function submit() {
-  nameError.value = form.name.trim() ? undefined : 'Add a name.'
-  if (nameError.value || igError.value) return
+  const result = validate()
+  if (!result.success) return
   saving.value = true
   error.value = null
   try {
-    const { username } = await $trpc.business.create.mutate({
-      type: form.type,
-      name: form.name,
-      city: form.city || undefined,
-      instagram: igHandle.value || undefined,
-      handle: form.handle.trim() || undefined,
-    })
-    useTrack().track('business_profile_created', { profile: username, profile_type: form.type, from_instagram: !!igHandle.value })
+    const { username } = await $trpc.business.create.mutate(result.data)
+    useTrack().track('business_profile_created', { profile: username, profile_type: form.type, from_instagram: !!result.data.instagram })
     await navigateTo(next || `/business/network/${username}`)
   } catch (e: any) {
     error.value = e?.message || 'Could not create the profile.'
@@ -114,16 +108,16 @@ const reasonLabel: Record<string, string> = { instagram: 'same Instagram', handl
         </div>
       </fieldset>
 
-      <Field id="new-instagram" label="Instagram" optional :error="igError" hint="Paste the Instagram link to fill in the handle and a name. You can change both." class="mt-4">
+      <Field id="new-instagram" label="Instagram" optional :error="errors.instagram" hint="Paste the Instagram link: your page gets the same handle (@name.like_this) and a name to start from. You can change both." class="mt-4">
         <div class="relative">
           <Instagram class="size-4 absolute left-3.5 top-3.5 text-muted-foreground" aria-hidden="true" />
-          <Input v-model="form.instagram" placeholder="https://www.instagram.com/…" class="pl-10" autocomplete="off" />
+          <Input v-model="form.instagram" placeholder="https://www.instagram.com/…" class="pl-10" autocomplete="off" v-bind="fieldAttrs('instagram', 'new-instagram-error')" />
         </div>
       </Field>
 
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        <Field id="new-name" label="Name" :error="nameError">
-          <Input v-model="form.name" placeholder="e.g. La Clave en Múnich" />
+        <Field id="new-name" label="Name" :error="errors.name">
+          <Input v-model="form.name" placeholder="e.g. La Clave en Múnich" v-bind="fieldAttrs('name', 'new-name-error')" />
         </Field>
         <Field id="new-city" label="City">
           <CityCombobox v-model="form.city" placeholder="e.g. Munich" />
@@ -133,9 +127,10 @@ const reasonLabel: Record<string, string> = { instagram: 'same Instagram', handl
           label="Handle"
           optional
           class="sm:col-span-2"
-          :hint="`Your page address: ${host}/@${form.handle || 'your-name'}. We pick one from the name if you leave it empty.`"
+          :error="errors.handle"
+          :hint="`Your page address: ${host}/@${form.handle.trim().replace(/^@/, '').toLowerCase() || 'your-name'}. Keep it the same as your Instagram so people find you. Letters, numbers, dots, underscores or dashes; left empty, we use your Instagram handle or name.`"
         >
-          <Input v-model="form.handle" placeholder="laclave" />
+          <Input v-model="form.handle" placeholder="laclave.munich" autocapitalize="off" autocomplete="off" spellcheck="false" v-bind="fieldAttrs('handle', 'new-handle-error')" />
         </Field>
       </div>
 

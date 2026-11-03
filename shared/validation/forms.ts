@@ -13,10 +13,13 @@ import {
   newPassword,
   notCollected,
   optionalEmail,
+  optionalHandle,
+  optionalInstagram,
   optionalIsoDate,
   optionalIsoTime,
   optionalText,
   optionalWebUrl,
+  requiredHandle,
   requiredText,
   trimmedText,
   webUrl,
@@ -343,3 +346,17 @@ export const GiveawaySchema = v.pipe(
     ['endsAt'],
   ),
 )
+
+// ── Business (business.create) ───────────────────────────────────────────────
+
+export const BusinessCreateSchema = v.object({
+  type: v.picklist(['artist', 'venue', 'organizer', 'promoter']),
+  instagram: optionalInstagram(),
+  name: v.pipe(requiredText('Add a name.'), v.maxLength(120, 'Keep the name under 120 characters.')),
+  city: optionalText(120),
+  handle: optionalHandle(),
+})
+
+export const RenameHandleSchema = v.object({
+  handle: requiredHandle('Pick a handle.'),
+})

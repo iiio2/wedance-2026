@@ -490,7 +490,7 @@ export const profileAccessLog = pgTable('profile_access_log', {
   profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
   actorId: uuid('actor_id').references(() => dancers.id, { onDelete: 'set null' }),
   subjectId: uuid('subject_id').references(() => dancers.id, { onDelete: 'set null' }),
-  action: text('action').notNull().$type<'created' | 'requested' | 'approved' | 'rejected' | 'role_changed' | 'removed' | 'left' | 'merged' | 'unmerged'>(),
+  action: text('action').notNull().$type<'created' | 'requested' | 'approved' | 'rejected' | 'role_changed' | 'removed' | 'left' | 'merged' | 'unmerged' | 'renamed'>(),
   role: text('role'),
   note: text('note'),
   createdAt: timestamp('created_at').defaultNow(),

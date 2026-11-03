@@ -5,12 +5,13 @@ import { router, publicProcedure, protectedProcedure, adminProcedure } from '../
 import { profiles, profileMembers, profileClaims, dancers, cities, events, bookableSpaces, bookingRequests, profileMerges } from '../../database/schema'
 import { WEEKDAYS } from '../../../shared/types/venueDetails'
 import { slugify, randomSuffix } from '../../utils/slug'
-import { parseInstagramHandle, instagramUrl } from '../../../shared/utils/instagram'
+import { parseInstagramHandle, handleFromInstagram, instagramUrl } from '../../../shared/utils/instagram'
+import { handleError } from '../../../shared/utils/handle'
 import { grant, logAccess, assertProfileGranted, notManagedError, onlyGranted, type GrantCtx } from '../../utils/profileAccess'
 import { notifyDecision, notifyInfoRequired } from './businessTeam'
 import { addProfileToOwnGrant } from '../../oauth/grants'
 import { profileGroup, trackServer } from '../../utils/posthog'
-import { mergeProfile, undoMerge } from '../../utils/mergeProfiles'
+import { mergeProfile, moveHandleRefs, undoMerge } from '../../utils/mergeProfiles'
 import { findLikelyDuplicates, linksInstagramSql, notMerged } from '../../utils/profileDupes'
 
 /**
@@ -74,12 +75,22 @@ async function hasTeam(db: any, profileId: string) {
 }
 
 // /@handle is shared by dancers and profiles, so a new handle must be free in both.
-async function handleTaken(db: any, handle: string) {
-  const [p] = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.username, handle))
+// One namespace: pages, dancers, and the old handles both keep for redirects.
+export async function handleTaken(db: any, handle: string) {
+  const h = handle.toLowerCase()
+  const [p] = await db.select({ id: profiles.id }).from(profiles)
+    .where(sql`lower(${profiles.username}) = ${h} or ${profiles.sourceRef}->'oldHandles' ? ${h}`).limit(1)
   if (p) return true
-  const [d] = await db.select({ id: dancers.id }).from(dancers).where(eq(dancers.username, handle))
+  const [d] = await db.select({ id: dancers.id }).from(dancers)
+    .where(sql`lower(${dancers.username}) = ${h} or ${dancers.oldUsernames} ? ${h}`).limit(1)
   return !!d
 }
+
+// A handle someone picks (create, rename): the Instagram-compatible rule in shared/utils/handle.ts.
+const chosenHandle = z.string().trim().toLowerCase().superRefine((h, c) => {
+  const err = handleError(h)
+  if (err) c.addIssue({ code: 'custom', message: err })
+})
 
 // City pickers save the canonical English name (CityCombobox); its slug lives in
 // `cities`. Fall back to slugify for a name the table doesn't know yet.
@@ -100,12 +111,12 @@ const isManaged = sql<boolean>`exists (select 1 from "profile_members" m where m
 export const linksInstagram = (handle: string) => sql`(${linksInstagramSql(handle)} and ${notMerged})`
 
 // Owners only (or admins): merging moves a page's team, events and followers.
-async function requireOwner(ctx: { db: any; dancerId: string; isAdmin?: boolean } & GrantCtx, username: string) {
+async function requireOwner(ctx: { db: any; dancerId: string; isAdmin?: boolean } & GrantCtx, username: string, doing = 'merge it') {
   const p = await requireMember(ctx, username)
   if (ctx.isAdmin) return p
   const [m] = await ctx.db.select({ role: profileMembers.role }).from(profileMembers)
     .where(and(eq(profileMembers.profileId, p.id), eq(profileMembers.dancerId, ctx.dancerId)))
-  if (m?.role !== 'owner') throw new TRPCError({ code: 'FORBIDDEN', message: `Only an owner of @${username} can merge it.` })
+  if (m?.role !== 'owner') throw new TRPCError({ code: 'FORBIDDEN', message: `Only an owner of @${username} can ${doing}.` })
   return p
 }
 
@@ -336,7 +347,7 @@ export const businessRouter = router({
       name: editableFields.name,
       city: editableFields.city.optional(),
       instagram: z.string().trim().max(300).optional(),
-      handle: z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/, 'Use 3–40 letters, numbers or dashes.').optional(),
+      handle: chosenHandle.optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const ig = input.instagram ? parseInstagramHandle(input.instagram) : null
@@ -359,7 +370,9 @@ export const businessRouter = router({
         }
         if (dupe) throw new TRPCError({ code: 'CONFLICT', message: `@${ig} already has a page on WeDance: ${dupe.name} (@${dupe.username}). Claim it or join its team instead.` })
       }
-      let handle = input.handle || slugify(input.name)
+      // Left empty: the Instagram handle as is (how people know them), else the name.
+      let handle = input.handle || (ig ? handleFromInstagram(ig) : '') || slugify(input.name)
+      if (!input.handle && handleError(handle)) handle = `${handle || 'page'}-${randomSuffix(4)}`
       if (await handleTaken(ctx.db, handle)) {
         if (input.handle) throw new TRPCError({ code: 'CONFLICT', message: `@${handle} is taken — if that page is yours, claim it instead.` })
         handle = `${slugify(input.name)}-${randomSuffix(4)}`
@@ -378,6 +391,34 @@ export const businessRouter = router({
       await addProfileToOwnGrant(ctx, p!.id)
       trackServer(ctx, 'business_profile_created', { profile: p!.username, profile_type: input.type, ...profileGroup(p!.username) })
       return { username: p!.username }
+    }),
+
+  // An owner changes the page's address (/@old → /@new), e.g. to match its
+  // Instagram. The old handle keeps redirecting (source_ref.oldHandles →
+  // entity.movedTo) and stays this page's; events, line-ups and reviews that
+  // name the page by handle move along (moveHandleRefs, as in a merge).
+  renameHandle: protectedProcedure
+    .input(z.object({ username: z.string().min(1), handle: chosenHandle }))
+    .mutation(async ({ ctx, input }) => {
+      const p = await requireOwner(ctx, input.username, 'change its handle')
+      const from = p.username as string
+      const to = input.handle
+      if (to === from) return { username: from }
+      const own = (((p.sourceRef as any)?.oldHandles ?? []) as string[]).map(h => String(h).toLowerCase())
+      // Back to one of its own old handles (or a case change) is fine; any other handle in use is not.
+      if (to !== from.toLowerCase() && !own.includes(to) && await handleTaken(ctx.db, to))
+        throw new TRPCError({ code: 'CONFLICT', message: `@${to} is taken.` })
+      await moveHandleRefs(ctx.db, from, to)
+      const oldHandles = [...new Set([...own, from])].filter(h => h !== to)
+      await ctx.db.execute(sql`update profiles set username = ${to},
+        source_ref = coalesce(source_ref, '{}'::jsonb) || jsonb_build_object('oldHandles', ${JSON.stringify(oldHandles)}::jsonb)
+        where id = ${p.id}`)
+      // Copies merged into this page, and its merge history (undo moves refs by handle).
+      await ctx.db.execute(sql`update profiles set source_ref = jsonb_set(source_ref, '{mergedInto}', to_jsonb(${to}::text)) where source_ref->>'mergedInto' = ${from}`)
+      await ctx.db.execute(sql`update profile_merges set to_username = ${to} where to_username = ${from}`)
+      await ctx.db.execute(sql`update profile_merges set from_username = ${to} where from_username = ${from}`)
+      await logAccess(ctx.db, { profileId: p.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'renamed', note: `@${from} → @${to}` })
+      return { username: to }
     }),
 
   get: protectedProcedure
