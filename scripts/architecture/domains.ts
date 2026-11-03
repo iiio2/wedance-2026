@@ -19,7 +19,7 @@ export const DOMAINS: Domain[] = [
     id: 'identity',
     title: 'Identity & auth',
     summary: 'Dancer accounts, credentials and login sessions, and the apps (MCP assistants) dancers connect via OAuth.',
-    tables: ['dancers', 'sessions', 'oauthClients', 'oauthGrants', 'oauthCodes', 'oauthTokens', 'mcpAudit', 'mcpRateLimits'],
+    tables: ['dancers', 'sessions', 'dancerActiveDays', 'oauthClients', 'oauthGrants', 'oauthCodes', 'oauthTokens', 'mcpAudit', 'mcpRateLimits'],
   },
   {
     id: 'festivals',
@@ -43,7 +43,7 @@ export const DOMAINS: Domain[] = [
     id: 'directory',
     title: 'Profiles & cities',
     summary: 'Venue / artist / organiser profiles under /@handle, canonical cities, follows and the per-city community-group directory.',
-    tables: ['profiles', 'profileMembers', 'profileClaims', 'profileMerges', 'profileAccessLog', 'profileSuggestions', 'profileInvites', 'follows', 'legacyFollows', 'profileAffiliations', 'handles', 'organizerSubscriptions', 'networkLinks', 'profileSites', 'profileContacts', 'cities', 'communityGroups', 'communityGroupReports'],
+    tables: ['profiles', 'profileMembers', 'profileClaims', 'profileMerges', 'profileAccessLog', 'profileSuggestions', 'profileOwnerSuggestions', 'profileInvites', 'follows', 'legacyFollows', 'profileAffiliations', 'handles', 'organizerSubscriptions', 'networkLinks', 'profileSites', 'profileContacts', 'cities', 'communityGroups', 'communityGroupReports'],
   },
   {
     id: 'booking',
