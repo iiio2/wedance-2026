@@ -28,14 +28,19 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { dancers, profiles } from '../database/schema'
 import { instagramHandles } from './mergeProfiles'
+import { findDeadPhotos } from './photoCheck'
 import {
   accessToken, buildCityIndex, citySlugify, decodeValue, learnPlaceLocalities, mapStyles, mapV3Event, normName, parseVenue, resolveCity, V3_SOURCE,
-  type CityIndex, type EventLinks, type ServiceAccount, type V3Doc,
+  type CityIndex, type EventLinks, type ServiceAccount, type V3Doc, type Venue,
 } from './v3EventSync'
 
 type PType = 'venue' | 'organizer' | 'artist'
 const V3_TYPE: Record<string, PType> = { Venue: 'venue', Organiser: 'organizer', FanPage: 'organizer', Artist: 'artist' }
 const BOT = 'wedance-bot'
+// v3 visibility values that hide a page (wedance.vip shows everything else).
+const HIDDEN = new Set(['Members', 'Unlisted'])
+// v3 page type → 2026 profile type (a FanPage is an organiser page).
+const PAGE_TYPE: Record<string, PType> = { Venue: 'venue', Organiser: 'organizer', FanPage: 'organizer', Artist: 'artist' }
 
 // ---------------------------------------------------------------------------
 // v3 fetch
@@ -165,6 +170,11 @@ export function planProfiles(input: {
   takenHandles: Set<string> // lowercased handles already used by dancers (the /@ namespace is shared)
   cityIndex: CityIndex
   placeLocality: Map<string, string>
+  // Every visible v3 business page (venue, organiser, fan page, artist) in any
+  // city, not only those behind upcoming events or artists in synced cities.
+  allPages?: boolean
+  // Photo URLs that answer 4xx (findDeadPhotos): never copied, and cleared on rows this sync created.
+  deadPhotos?: Set<string>
 }): ProfilePlan {
   const { cityIndex } = input
   const plan: ProfilePlan = {
@@ -238,6 +248,7 @@ export function planProfiles(input: {
   // Profiles touched in this run (by key) so repeated references reuse one decision.
   const decided = new Map<string, string>() // key → username
   const reconciled = new Set<string>()
+  const livePhoto = (v: unknown) => { const u = httpUrl(v); return u && !input.deadPhotos?.has(u) ? u : null }
   // Uniqueness is checked case-insensitively; case is kept (Google place ids are case-sensitive).
   const pick = (base: string) => {
     let h = base; let i = 2
@@ -259,33 +270,42 @@ export function planProfiles(input: {
       const sticky = t === 'venue' && (k === 'address' || k === 'name')
       if (ours && !sticky ? JSON.stringify((row as any)[k] ?? null) !== JSON.stringify(next) : (k !== 'name' && empty((row as any)[k]))) (patch as any)[k] = next
     }
+    if (ours && row.photo && input.deadPhotos?.has(row.photo) && !patch.photo) patch.photo = null
     if (!Object.keys(patch).length) return
     if (ours) { plan.ops.push({ op: 'update', id: row.id, username: row.username, fields: patch }); plan.stats[t].updated++ }
     else { plan.ops.push({ op: 'fill', id: row.id, username: row.username, fields: patch }); plan.stats[t].filled++ }
   }
 
-  /** Organiser / artist from a v3 reference (embedded snapshot + optional profile doc). */
-  function resolvePerson(t: PType, ref: { id?: string | null; username?: string | null; name?: string | null; photo?: string | null; bio?: string | null; [k: string]: any }, fallbackCity: { slug: string; name: string } | null): string | null {
+  /**
+   * Organiser / artist from a v3 reference (embedded snapshot + optional profile
+   * doc) — or a venue page, when `venue` (its Google place) is given.
+   */
+  function resolvePerson(t: PType, ref: { id?: string | null; username?: string | null; name?: string | null; photo?: string | null; bio?: string | null; [k: string]: any }, fallbackCity: { slug: string; name: string } | null, venue: Venue | null = null): string | null {
     const handle = str(ref.username)?.toLowerCase() ?? null
     if (handle === BOT) return null
     const key = `${t}|${ref.id ?? ''}|${handle ?? ''}`
     if (decided.has(key)) return decided.get(key)!
     const doc = (ref.id && v3ById.get(ref.id)) || (handle && v3ByHandle.get(handle)) || null
     const v3id = doc?.id ?? ref.id ?? null
-    const isPublic = doc ? doc.visibility === 'Public' : true // no doc → only the public event snapshot exists
+    // As on wedance.vip: only "Members" and "Unlisted" hide a page (no visibility = public).
+    // No doc → only the public event snapshot exists.
+    const isPublic = doc ? !HIDDEN.has(doc.visibility) : true
     const src = doc && isPublic ? doc : ref
     const city = cityOfPlace(doc?.place) ?? fallbackCity
     const name = str(src.name) ?? str(ref.name) ?? str(ref.username)
     const fields = {
       name: name ?? '', city: city?.name ?? null, citySlug: city?.slug ?? null,
-      photo: httpUrl(src.photo), bio: str(src.bio)?.slice(0, 2000) ?? null,
-      styles: mapStyles(src.styles).styles, address: null, socials: toSocials(src),
+      photo: livePhoto(src.photo), bio: str(src.bio)?.slice(0, 2000) ?? null,
+      styles: mapStyles(src.styles).styles, address: venue?.address ?? null, socials: toSocials(src),
     }
     const igRow = instagramHandles({ socials: fields.socials }).map(h => byInstagram.get(h)).find(Boolean) ?? null
-    let row = (v3id && byId.get(v3id)) || (handle && byHandle.get(handle)) || igRow || byNameCity.get(nameKey(t, name, city?.slug) ?? '') || null
+    const aKey = venue ? addressKey(venue.address) : null
+    const placeRow = venue?.placeId ? byHandle.get(venue.placeId.toLowerCase()) ?? null : null
+    const addrRow = aKey && city ? venueByAddr.get(`${aKey}|${city.slug}`) ?? null : null
+    let row = (v3id && byId.get(v3id)) || (handle && byHandle.get(handle)) || placeRow || igRow || byNameCity.get(nameKey(t, name, city?.slug) ?? '') || addrRow || null
     let how: MatchHow
     if (row) {
-      how = v3id && byId.get(v3id) === row ? 'v3-id' : handle && byHandle.get(handle) === row ? 'handle' : igRow === row ? 'instagram' : 'name+city'
+      how = v3id && byId.get(v3id) === row ? 'v3-id' : handle && byHandle.get(handle) === row ? 'handle' : placeRow === row ? 'place-id' : igRow === row ? 'instagram' : addrRow === row && byNameCity.get(nameKey(t, name, city?.slug) ?? '') !== row ? 'address+city' : 'name+city'
       plan.stats[t].matched++
       if (isPublic) reconcile(row, t, fields)
       decided.set(key, row.username)
@@ -294,12 +314,15 @@ export function planProfiles(input: {
       if (doc && !isPublic && !ref.name) { plan.stats[t].skippedPrivate++; return null }
       how = 'created'
       const username = pick(handle)
-      const f: ProfileFields = { username, type: t, ...fields, sourceRef: { source: V3_SOURCE, sourceId: v3id ?? `handle:${handle}`, v3Type: doc?.type ?? (t === 'artist' ? 'Artist' : 'Organiser'), v3Username: ref.username } }
+      const geo = venue ? { ...(venue.placeId ? { placeId: venue.placeId } : {}), ...(venue.lat != null && venue.lng != null ? { lat: venue.lat, lng: venue.lng } : {}) } : {}
+      const f: ProfileFields = { username, type: t, ...fields, sourceRef: { source: V3_SOURCE, sourceId: v3id ?? `handle:${handle}`, v3Type: doc?.type ?? (t === 'artist' ? 'Artist' : 'Organiser'), v3Username: ref.username, ...geo } }
       plan.ops.push({ op: 'create', fields: f }); plan.stats[t].created++
       plan.newProfiles.set(username, f.name)
       const fake = { id: '', ...f, claimed: false } as unknown as ExistingProfile
       put(byHandle, username, fake); if (v3id) put(byId, v3id, fake); put(byNameCity, nameKey(t, f.name, f.citySlug), fake)
       for (const ig of instagramHandles(f)) put(byInstagram, ig, fake)
+      if (aKey && city) put(venueByAddr, `${aKey}|${city.slug}`, fake)
+      if (venue?.placeId) put(byHandle, venue.placeId.toLowerCase(), fake)
       decided.set(key, username)
     }
     plan.how[t][how] = (plan.how[t][how] ?? 0) + 1
@@ -414,11 +437,23 @@ export function planProfiles(input: {
     if (slug) syncedCities.add(slug)
   }
   for (const p of input.v3Profiles) {
-    if (p.type !== 'Artist') continue
+    if (p.type !== 'Artist' || input.allPages) continue
     const city = cityOfPlace(p.place)
     if (!city || !syncedCities.has(city.slug)) continue
-    if (p.visibility !== 'Public') { plan.stats.artist.skippedPrivate++; continue }
+    if (HIDDEN.has(p.visibility)) { plan.stats.artist.skippedPrivate++; continue }
     resolvePerson('artist', { id: p.id, username: p.username, name: p.name }, city)
+  }
+
+  // --- every visible v3 business page, any city (allPages) -----------------
+  if (input.allPages) {
+    for (const p of input.v3Profiles) {
+      const t = PAGE_TYPE[p.type as string]
+      if (!t || !str(p.username)) continue
+      if (HIDDEN.has(p.visibility)) { plan.stats[t].skippedPrivate++; continue }
+      const venue = t === 'venue' ? parseVenue(p.address && typeof p.address === 'object' ? { ...p.address, name: p.name } : p.address) : null
+      const city = (venue ? resolveCity(venue.locality, cityIndex) : null) ?? cityOfPlace(p.place)
+      resolvePerson(t, { id: p.id, username: p.username, name: p.name }, city, venue)
+    }
   }
   return plan
 }
@@ -464,7 +499,7 @@ export type ProfileSummary = {
 
 /** Plan (and with write=true apply) the profile side; returns the links for syncV3Events. */
 export async function syncV3Profiles(opts: {
-  db: any; docs: V3Doc[]; v3Profiles: V3Profile[]; write: boolean; now?: number; log?: (s: string) => void
+  db: any; docs: V3Doc[]; v3Profiles: V3Profile[]; write: boolean; now?: number; log?: (s: string) => void; allPages?: boolean; checkPhotos?: boolean
 }): Promise<{ plan: ProfilePlan; summary: ProfileSummary }> {
   const now = opts.now ?? Date.now()
   const { existing, takenHandles } = await loadExistingProfiles(opts.db)
@@ -472,7 +507,18 @@ export async function syncV3Profiles(opts: {
   const placeLocality = learnPlaceLocalities(opts.docs)
   const known = new Map(existing.map(r => [r.username.toLowerCase(), r.name]))
   const eligibleIds = new Set(opts.docs.filter(d => mapV3Event(d, { now, cityIndex, placeLocality, knownProfiles: known }).ok).map(d => d.id))
-  const plan = planProfiles({ events: opts.docs, eligibleIds, v3Profiles: opts.v3Profiles, existing, takenHandles, cityIndex, placeLocality })
+  const planInput = { events: opts.docs, eligibleIds, v3Profiles: opts.v3Profiles, existing, takenHandles, cityIndex, placeLocality, allPages: opts.allPages }
+  let plan = planProfiles(planInput)
+  // Check the photos the plan would write, plus those already on rows this sync created; then plan again without the dead ones.
+  const photos = [
+    ...plan.ops.map(o => o.fields.photo),
+    ...existing.filter(r => r.sourceRef?.source === V3_SOURCE).map(r => r.photo),
+  ].filter((u): u is string => !!u)
+  const deadPhotos = (opts.checkPhotos ?? !process.env.VITEST) ? await findDeadPhotos(photos) : new Set<string>()
+  if (deadPhotos.size) {
+    opts.log?.(`photos: ${deadPhotos.size} of ${new Set(photos).size} no longer load — left empty`)
+    plan = planProfiles({ ...planInput, deadPhotos })
+  }
   if (opts.write) await applyProfilePlan(opts.db, plan, opts.log)
   return {
     plan,

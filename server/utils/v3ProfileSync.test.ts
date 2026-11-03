@@ -259,3 +259,63 @@ describe('C3 imported profiles carry public safe fields only (RAZ-686)', () => {
     expect(artists).toEqual(['public.artist'])
   })
 })
+
+describe('planProfiles — every v3 business page (allPages)', () => {
+  const BERLIN = 'ChIJAVkDPzdOqEcRcDteW0YgIQQ'
+  const idx = buildCityIndex([{ city: 'Munich', citySlug: 'munich' }, { city: 'Berlin', citySlug: 'berlin' }])
+  const all = (v3Profiles: any[], existing: ExistingProfile[] = []) =>
+    planProfiles({ events: [], eligibleIds: new Set(), v3Profiles, existing, takenHandles: new Set(), cityIndex: idx, placeLocality: new Map([[MUNICH, 'München'], [BERLIN, 'Berlin']]), allPages: true })
+  const creates = (p: ReturnType<typeof all>) => p.ops.flatMap(o => (o.op === 'create' ? [o.fields] : []))
+
+  it('creates pages with no event, in any city; a fan page becomes an organiser page', () => {
+    const p = all([
+      { id: 'o1', type: 'Organiser', username: 'BerlinSalsa', name: 'Berlin Salsa', visibility: 'Public', place: BERLIN },
+      { id: 'f1', type: 'FanPage', username: 'timba.fans', name: 'Timba Fans', visibility: 'Public', place: MUNICH },
+    ])
+    expect(creates(p).map(f => [f.username, f.type, f.citySlug])).toEqual([['berlinsalsa', 'organizer', 'berlin'], ['timba.fans', 'organizer', 'munich']])
+  })
+
+  it('treats a missing visibility as public (as wedance.vip does) and skips Members / Unlisted', () => {
+    const p = all([
+      { id: 'a1', type: 'Artist', username: 'no.visibility', name: 'No Visibility', place: MUNICH },
+      { id: 'a2', type: 'Artist', username: 'members.only', name: 'Members Only', visibility: 'Members', place: MUNICH },
+      { id: 'a3', type: 'Artist', username: 'unlisted', name: 'Unlisted', visibility: 'Unlisted', place: MUNICH },
+    ])
+    expect(creates(p).map(f => f.username)).toEqual(['no.visibility'])
+    expect(p.stats.artist.skippedPrivate).toBe(2)
+  })
+
+  it('creates a venue page with its address, city and place id from the v3 Google place', () => {
+    const p = all([{ id: 'v1', type: 'Venue', username: 'cafe-cubano', name: 'Café Cubano', address: venue('Café Cubano', 'Leopoldstr. 1, München', { place_id: 'ChIJcafe00000000000' }) }])
+    expect(creates(p)[0]).toMatchObject({ username: 'cafe-cubano', type: 'venue', address: 'Leopoldstr. 1, München', citySlug: 'munich', sourceRef: { source: 'wedance-v3', sourceId: 'v1', placeId: 'ChIJcafe00000000000' } })
+  })
+
+  it('matches an existing venue by its Google place id handle and never touches a claimed page', () => {
+    const p = all([
+      { id: 'v2', type: 'Venue', username: 'bar.x', name: 'Bar X', address: venue('Bar X', 'Hauptstr. 2, München', { place_id: 'ChIJbarx0000000000' }), photo: 'https://img/x.png' },
+      { id: 'o9', type: 'Organiser', username: 'Mine', name: 'Mine', visibility: 'Public', place: MUNICH, bio: 'from v3' },
+    ], [
+      row({ username: 'ChIJbarx0000000000', type: 'venue', name: 'Bar X' }),
+      row({ username: 'mine', type: 'organizer', name: 'Mine', claimed: true }),
+    ])
+    expect(creates(p)).toEqual([])
+    expect(p.how.venue['place-id']).toBe(1)
+    expect(p.ops.filter(o => o.op !== 'create').map(o => o.username)).toEqual(['ChIJbarx0000000000'])
+  })
+  it('leaves dead photos empty and clears a dead photo from a page this sync created', () => {
+    const dead = 'https://res.cloudinary.com/x/dead.jpg'
+    const v3 = [
+      { id: 'o1', type: 'Organiser', username: 'gone.photo', name: 'Gone Photo', visibility: 'Public', place: MUNICH, photo: dead },
+      { id: 'o2', type: 'Organiser', username: 'ours', name: 'Ours', visibility: 'Public', place: MUNICH, photo: dead },
+      { id: 'o3', type: 'Organiser', username: 'theirs', name: 'Theirs', visibility: 'Public', place: MUNICH, photo: dead },
+    ]
+    const existing = [
+      row({ username: 'ours', type: 'organizer', name: 'Ours', citySlug: 'munich', city: 'Munich', photo: dead, sourceRef: { source: 'wedance-v3', sourceId: 'o2' } }),
+      row({ username: 'theirs', type: 'organizer', name: 'Theirs', citySlug: 'munich', city: 'Munich', photo: dead }),
+    ]
+    const p = planProfiles({ events: [], eligibleIds: new Set(), v3Profiles: v3 as any, existing, takenHandles: new Set(), cityIndex: idx, placeLocality: new Map([[MUNICH, 'München']]), allPages: true, deadPhotos: new Set([dead]) })
+    expect(creates(p)[0]).toMatchObject({ username: 'gone.photo', photo: null })
+    expect(p.ops.find(o => o.op !== 'create' && o.username === 'ours')?.fields).toMatchObject({ photo: null })
+    expect(p.ops.find(o => o.op !== 'create' && o.username === 'theirs')).toBeUndefined()
+  })
+})

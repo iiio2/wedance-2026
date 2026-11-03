@@ -404,12 +404,12 @@ export function learnPlaceLocalities(docs: V3Doc[]): Map<string, string> {
 
 export type ServiceAccount = { project_id: string; client_email: string; private_key: string; token_uri?: string }
 
-export async function accessToken(sa: ServiceAccount): Promise<string> {
+export async function accessToken(sa: ServiceAccount, scope = 'https://www.googleapis.com/auth/datastore'): Promise<string> {
   const now = Math.floor(Date.now() / 1000)
   const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
   const unsigned = `${b64({ alg: 'RS256', typ: 'JWT' })}.${b64({
     iss: sa.client_email,
-    scope: 'https://www.googleapis.com/auth/datastore',
+    scope,
     aud: sa.token_uri ?? 'https://oauth2.googleapis.com/token',
     iat: now,
     exp: now + 3600,

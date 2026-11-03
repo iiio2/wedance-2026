@@ -114,8 +114,9 @@ firebase-admin). Code: `scripts/sync-v3-events.ts` (CLI) + `server/utils/v3Event
   (`shared/utils/eventTime.ts`). Festival/Congress/Weekender → `is_festival`.
 - **Shown on:** `/cities/[city]` (this-week calendar, "Coming up", festivals) and
   `/events/[id]` via the `events` tRPC router.
-- **Profiles (since 0022):** the same run also syncs the venues, organisers and
-  artists behind those events (`server/utils/v3ProfileSync.ts`) and links each event
+- **Profiles (since 0022):** the same run also syncs **every visible v3 business page** — venues,
+  organisers, fan pages (→ organizer), artists, in any city, with or without events
+  (`--events-only` = just the pages behind events) — (`server/utils/v3ProfileSync.ts`) and links each event
   (`venue_username`, `organizer_username`, `artists[]`), which feeds the city page's
   "Who's on the floor" tabs and the schedule on `/@handle`. Dedupe order — people:
   v3 profile id (`source_ref.firebaseId` from the v4 migration) → handle → name+city;
@@ -124,13 +125,26 @@ firebase-admin). Code: `scripts/sync-v3-events.ts` (CLI) + `server/utils/v3Event
   classes → ≤75 m from a venue this sync created. Unmatched venues are created
   (address-only ones are named after the street). Claimed profiles are never
   written; other unclaimed rows only get EMPTY fields filled; rows this sync created
-  (`source_ref.source='wedance-v3'`) follow v3. Only `visibility: Public` v3 profiles
-  are copied, and only public fields (name, handle, photo, bio, social links, city,
+  (`source_ref.source='wedance-v3'`) follow v3. As on wedance.vip, only `Members` /
+  `Unlisted` hide a v3 page (no visibility = public); only public fields (name, handle, photo, bio, social links, city,
   styles, venue address) — never email/phone. Rollback:
   `DELETE FROM profiles WHERE source_ref->>'source'='wedance-v3'` (after clearing the
   event links: `UPDATE events SET venue_username=NULL, artists='[]' WHERE source='wedance-v3'`).
   Display check: `bun e2e/synced-profiles.check.ts <venueHandle> <organiserHandle>`.
   Instagram accounts (main in `socials` + `profiles.instagram_aliases`) also match people.
+
+## wedance.vip → 2026 user sync
+
+`bun run sync:v3-users` (dry-run default, `--write`, `--json`) mirrors wedance.vip accounts into
+`dancers` — the v4 migration stopped ~April 2026. Code: `scripts/sync-v3-users.ts` +
+`server/utils/v3UserSync.ts` (`planUsers`, unit-tested). Read only: Firebase Auth `accounts:batchGet`
++ Firestore `:runQuery`. Match by v3 id (`source_ref.firebaseId`) then email; new people get name /
+photo / bio / city / Instagram from their v3 profile, their v3 sign-up date, no handle, and
+`source_ref.source='wedance-v3'`; existing people only get EMPTY fields + their v3 id (never the
+`source` tag, never a new name or password). **Passwords:** Google returns `REDACTED` hashes unless
+the service account has the "Firebase Authentication Admin" role — until then new people sign in by
+magic link; re-running fills hashes only where a dancer has none. Rollback (new people only):
+`DELETE FROM dancers WHERE source_ref->>'source'='wedance-v3' AND NOT EXISTS (SELECT 1 FROM sessions s WHERE s.dancer_id=dancers.id)`.
 
 ## Duplicate profiles (#458)
 

@@ -25,6 +25,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "bun run server/database/seed.ts",
     "sync:v3-events": "bun scripts/sync-v3-events.ts",
+    "sync:v3-users": "bun scripts/sync-v3-users.ts",
     "dev:db-proxy": "bun scripts/dev/neon-http-proxy.ts",
     "seed:pinakothek": "bun scripts/seed-pinakothek.ts"
   },
