@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { eq, and, sql, inArray } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import { profiles, bookableSpaces, networkLinks } from '../../database/schema'
+import { personForPage } from '../../utils/personPage'
 
 /**
  * Professional profiles (venue / artist / organizer) resolved by handle for the
@@ -183,6 +184,8 @@ export const entityRouter = router({
         .where(eq(bookableSpaces.profileId, p.id))
 
       const spaces = [...spacesRaw].sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      // The person this page is (one handle per person, #474), when they've said so.
+      const person = await personForPage(ctx.db, p.id)
 
       return {
         profile: {
@@ -214,6 +217,7 @@ export const entityRouter = router({
           claimed: p.claimed ?? false,
         },
         spaces,
+        person,
       }
     }),
 

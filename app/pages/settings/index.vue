@@ -100,6 +100,41 @@ async function save() {
   }
 }
 
+// "This is me" (#474): one of the caller's own artist / organiser pages as their
+// public identity — one link for their Instagram bio.
+const { $trpc } = useNuxtApp()
+type MyPage = Awaited<ReturnType<typeof $trpc.profile.myPage.query>>
+const myPage = ref<MyPage | null>(null)
+const pageChoice = ref<string>('')
+const pageSaving = ref(false)
+const pageError = ref('')
+const pageSaved = ref(false)
+async function loadMyPage() {
+  try {
+    myPage.value = await $trpc.profile.myPage.query()
+    pageChoice.value = myPage.value.current ?? ''
+  } catch { myPage.value = null }
+}
+watch(isSignedIn, (s) => { if (s) loadMyPage() }, { immediate: true })
+const publicLink = computed(() => myPage.value?.current ? `/@${myPage.value.current}` : (username.value ? `/u/${username.value}` : null))
+
+async function savePage() {
+  pageError.value = ''
+  pageSaved.value = false
+  pageSaving.value = true
+  try {
+    const res = await $trpc.profile.setPage.mutate({ username: pageChoice.value || null })
+    if (myPage.value) myPage.value = { ...myPage.value, current: res.page }
+    pageSaved.value = true
+    const picked = myPage.value?.options.find(o => o.username === res.page)
+    useTrack().track('public_page_set', { cleared: !res.page, profile_type: picked?.type ?? null })
+  } catch (e: unknown) {
+    pageError.value = (e as { message?: string })?.message || 'Could not save. Please try again.'
+  } finally {
+    pageSaving.value = false
+  }
+}
+
 async function submitPassword() {
   pwError.value = ''
   pwSaved.value = false
@@ -146,8 +181,8 @@ async function submitDelete() {
       <div class="flex items-baseline justify-between">
         <h1 class="text-4xl text-foreground font-display">Settings</h1>
         <NuxtLink
-          v-if="username"
-          :to="`/u/${username}`"
+          v-if="publicLink"
+          :to="publicLink"
           class="inline-flex items-center gap-1 text-xs font-bold text-primary"
         >View public <ExternalLink class="w-3 h-3" aria-hidden="true" /></NuxtLink>
       </div>
@@ -240,6 +275,44 @@ async function submitDelete() {
           {{ loading ? 'Saving…' : 'Save changes' }}
         </Button>
       </form>
+
+      <!-- YOUR PAGE (#474): one handle per person -->
+      <template v-if="myPage?.options.length">
+        <h2 class="mt-12 text-lg font-bold text-foreground font-display">Your public page</h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Dancer, teacher, DJ, organiser — one link for all of you. Pick the page that is <span class="italic">you</span>:
+          your profile link opens it, and it shows your dancing and the other pages you run. Put that link in your Instagram bio.
+        </p>
+        <form class="mt-4 space-y-3" novalidate @submit.prevent="savePage">
+          <fieldset class="space-y-2">
+            <legend class="sr-only">Your public page</legend>
+            <label
+              v-for="o in myPage.options"
+              :key="o.username"
+              class="flex items-center gap-3 rounded-xl border border-border bg-card p-3 cursor-pointer has-[:checked]:border-primary"
+            >
+              <input v-model="pageChoice" type="radio" name="public-page" :value="o.username" class="accent-[var(--wd-red-600)]">
+              <span class="flex-1 min-w-0 text-sm">
+                <span class="block font-bold text-foreground truncate">{{ o.name }}</span>
+                <span class="block text-xs text-muted-foreground">wedance.vip/@{{ o.username }}</span>
+              </span>
+            </label>
+            <label class="flex items-center gap-3 rounded-xl border border-border bg-card p-3 cursor-pointer has-[:checked]:border-primary">
+              <input v-model="pageChoice" type="radio" name="public-page" value="" class="accent-[var(--wd-red-600)]">
+              <span class="flex-1 min-w-0 text-sm">
+                <span class="block font-bold text-foreground">Just my dancer profile</span>
+                <span v-if="username" class="block text-xs text-muted-foreground">wedance.vip/u/{{ username }}</span>
+              </span>
+            </label>
+          </fieldset>
+          <p class="text-xs text-muted-foreground">Schools, festivals and venues stay pages of their own — they have a team and their own Instagram.</p>
+          <p v-if="pageError" role="alert" class="text-sm font-bold text-primary">{{ pageError }}</p>
+          <p v-if="pageSaved" role="status" class="inline-flex items-center gap-1.5 text-sm font-bold text-wd-green-600"><Check class="w-4 h-4" aria-hidden="true" /> Saved</p>
+          <Button type="submit" variant="soft" size="lg" class="w-full h-12" :loading="pageSaving" :disabled="pageChoice === (myPage.current ?? '')">
+            {{ pageSaving ? 'Saving…' : 'Save' }}
+          </Button>
+        </form>
+      </template>
 
       <!-- CONNECTED APPS -->
       <h2 class="mt-12 text-lg font-bold text-foreground font-display">Connected apps</h2>

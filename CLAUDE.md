@@ -275,6 +275,7 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `review_submitted` · `giveaway_entered` · `election_nominated` | `ReviewsSection` · `GiveawayCard` · `elections/[handle]` | target ids |
 | `event_created` / `event_published` | `business/events/new.vue`; publish = draft→live in `business/events/[id]` | `event_id`, `is_festival`, `city`, `style`, `published` |
 | `business_profile_created` | `business/new.vue` | `profile`, `profile_type`, `from_instagram` |
+| `public_page_set` | `settings/index.vue` "Your public page" (one handle per person, #474) | `cleared`, `profile_type` |
 | `profile_merged` | `BusinessDuplicates` (Business → page → Duplicates) | `profile` (kept), `merged_profile`, `moved` |
 | `profile_claim_started` / `team_join_started` | `business/claim.vue` (form opened) | `profile`, `kind` |
 | `profile_claim_requested` / `team_join_requested` | `business/claim.vue` (sent) | `profile`, `kind`, `evidence_type` |

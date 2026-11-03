@@ -244,6 +244,8 @@ export const PROFILE_REFS: { table: string; col: string; same?: string; notSelf?
   { table: 'profile_suggestions', col: 'profile_id', same: `x.kind = t.kind and x.value = t.value and x.status = 'pending' and t.status = 'pending'` },
   { table: 'profile_contacts', col: 'profile_id', same: 'lower(x.email) = lower(t.email)' },
   { table: 'profile_sites', col: 'profile_id', same: 'true', idCol: 'profile_id' },
+  // A person's own page (#474): one person per page, so a kept page someone already is stays theirs.
+  { table: 'dancers', col: 'page_profile_id', same: 'true' },
   // Pairs (notSelf): never link the kept profile to itself.
   { table: 'network_links', col: 'profile_id', same: 'x.other_profile_id = t.other_profile_id', notSelf: 'other_profile_id' },
   { table: 'network_links', col: 'other_profile_id', same: 'x.profile_id = t.profile_id', notSelf: 'profile_id' },

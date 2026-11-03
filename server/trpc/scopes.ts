@@ -71,6 +71,8 @@ export const PROCEDURE_SCOPES: Record<string, Scope | null> = {
   'giveaway.enter': 'social:write',
   'cityVideo.vote': 'social:write',
   'profile.update': 'social:write',
+  'profile.myPage': 'social:write',
+  'profile.setPage': 'social:write',
   // Applying shares the dancer's message and email with the gig's poster, like inquiries.send.
   'gigs.applyTo': 'social:write',
 

@@ -2,7 +2,8 @@
 /**
  * /@<handle> — the unified profile route (v4-style). Resolves, in order:
  *   1. a professional profile (venue / artist / organizer) → rich layout here
- *   2. a dancer (by username) → redirect to the existing /u/<handle> page
+ *   2. a dancer (by username) → redirect to their own page when they picked one
+ *      ("this is me", #474), else to the existing /u/<handle> page
  *   3. neither → a graceful "not on WeDance yet" stub (no 404)
  *
  * Venue layout adapts to the booking model:
@@ -66,8 +67,9 @@ async function resolve() {
     const moved = await $trpc.entity.movedTo.query({ handle: handle.value }).catch(() => null)
     if (moved) { await navigateTo(`/@${moved.handle}`, { replace: true, redirectCode: 301 }); return }
     try {
-      await $trpc.profile.getByUsername.query({ username: handle.value })
-      await navigateTo(`/u/${handle.value}`, { replace: true })
+      const dancer = await $trpc.profile.getByUsername.query({ username: handle.value })
+      // Their own page is their identity (#474); else their dancer profile.
+      await navigateTo(dancer.pageHandle ? `/@${dancer.pageHandle}` : `/u/${handle.value}`, { replace: true })
       return
     } catch {
       const dancerMoved = await $trpc.profile.movedTo.query({ username: handle.value }).catch(() => null)
@@ -319,6 +321,9 @@ useHead(() => ({
           </div>
         </div>
       </section>
+
+      <!-- The person this page is: their dancer side and other pages (#474) -->
+      <PersonDancerSide v-if="data?.person" :person="data.person" />
 
       <!-- ══════ Promoter: tabbed layout ══════ -->
       <PromoterProfile v-if="isPromoter" :profile="profile" :can-manage="canManage" />

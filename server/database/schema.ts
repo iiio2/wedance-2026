@@ -43,6 +43,10 @@ export const dancers = pgTable('dancers', {
   // Privacy: when false the public profile is hidden from everyone but the
   // owner (getByUsername 404s for other viewers). Default public.
   profilePublic: boolean('profile_public').default(true),
+  // The page that IS this person (0059, #474): one of their own artist/organiser
+  // pages. When set, that /@handle is their public identity — /u/<username> and
+  // /@<username> forward to it, and it shows their dancer side.
+  pageProfileId: uuid('page_profile_id').unique().references((): any => profiles.id, { onDelete: 'set null' }),
   // Email + password auth (FirebaseScrypt, ported from wedance-v4). Empty string
   // default = "no password set" — a dancer created via magic-link/festival flow
   // has no credentials and cannot log in via password until they register one.

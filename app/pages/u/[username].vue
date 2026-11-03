@@ -34,6 +34,11 @@ async function load() {
   failed.value = false
   try {
     profile.value = await $trpc.profile.getByUsername.query({ username: username.value })
+    // One handle per person (#474): their own page is who they are.
+    if (profile.value.pageHandle) {
+      await navigateTo(`/@${profile.value.pageHandle}`, { replace: true, redirectCode: 301 })
+      return
+    }
     // A dancer is a person: no handle in the event, only the kind of view.
     useTrack().trackOnce(username.value, 'profile_viewed', {
       profile_type: 'dancer',
