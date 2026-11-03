@@ -22,6 +22,7 @@ import { seriesDates, weekdayOf, MAX_SERIES } from '../../../shared/utils/recurr
 import { eventGaps } from '../../../shared/utils/eventChecklist'
 import { randomUUID } from 'node:crypto'
 import { profileGroup, trackServer } from '../../utils/posthog'
+import { scheduleInstagramImport } from '../../utils/instagram/profileImport'
 
 /**
  * Business mode — events a profile runs, and the /business home inbox.
@@ -836,18 +837,26 @@ export const businessEventsRouter = router({
       if (!handle) throw new TRPCError({ code: 'BAD_REQUEST', message: 'That doesn’t look like an Instagram handle.' })
       const url = instagramUrl(handle)
       // Same Instagram account only — a matching WeDance handle is not proof it's the same person.
-      const [existing] = await ctx.db.select({ username: profiles.username, name: profiles.name, type: profiles.type, city: profiles.city, photo: profiles.photo })
+      const [existing] = await ctx.db.select({ id: profiles.id, username: profiles.username, name: profiles.name, type: profiles.type, city: profiles.city, photo: profiles.photo })
         .from(profiles)
         .where(linksInstagram(handle))
         .limit(1)
-      if (existing) return existing
+      if (existing) {
+        const { id, ...page } = existing
+        // Still a bare handle (added before #452, or the import failed): try again.
+        if (!page.photo) scheduleInstagramImport(ctx, [{ profileId: id, handle }])
+        return page
+      }
       let username = handleFromInstagram(handle)
       const [taken] = await ctx.db.select({ id: profiles.id }).from(profiles).where(eq(profiles.username, username))
       if (taken || !isValidHandle(username)) username = `${username}-${randomSuffix(4)}`
       const [p] = await ctx.db.insert(profiles)
         .values({ username, type: input.type, name: input.name || handle, socials: [{ platform: 'instagram', url }], sourceRef: { source: 'wedance-business', addedBy: ctx.dancerId } })
-        .returning({ username: profiles.username, name: profiles.name, type: profiles.type, city: profiles.city, photo: profiles.photo })
-      return p!
+        .returning({ id: profiles.id, username: profiles.username, name: profiles.name, type: profiles.type, city: profiles.city, photo: profiles.photo })
+      const { id, ...page } = p!
+      // Name, photo, bio, website and city from Instagram, after the response (#452).
+      scheduleInstagramImport(ctx, [{ profileId: id, handle }])
+      return page
     }),
 
   // A venue that isn't on WeDance yet, from its name and address (and Instagram
@@ -865,8 +874,12 @@ export const businessEventsRouter = router({
       if (input.instagram && !ig) throw new TRPCError({ code: 'BAD_REQUEST', message: 'That doesn’t look like an Instagram handle.' })
       const cols = { username: profiles.username, name: profiles.name, type: profiles.type, city: profiles.city, address: profiles.address }
       if (ig) {
-        const [byIg] = await ctx.db.select(cols).from(profiles).where(linksInstagram(ig)).limit(1)
-        if (byIg) return { ...byIg, created: false }
+        const [byIg] = await ctx.db.select({ ...cols, id: profiles.id, photo: profiles.photo }).from(profiles).where(linksInstagram(ig)).limit(1)
+        if (byIg) {
+          const { id, photo, ...page } = byIg
+          if (!photo) scheduleInstagramImport(ctx, [{ profileId: id, handle: ig }])
+          return { ...page, created: false }
+        }
       }
       const loc = await cityInfo(ctx.db, input.city)
       // A venue in that city with a similar name or the same address (#458).
@@ -884,8 +897,11 @@ export const businessEventsRouter = router({
           socials: ig ? [{ platform: 'instagram', url: instagramUrl(ig) }] : [],
           sourceRef: { source: 'wedance-business', addedBy: ctx.dancerId },
         })
-        .returning(cols)
-      return { ...p!, created: true }
+        .returning({ ...cols, id: profiles.id })
+      const { id, ...page } = p!
+      // Photo, bio, website (and the name/city when missing) from its Instagram (#452).
+      if (ig) scheduleInstagramImport(ctx, [{ profileId: id, handle: ig }])
+      return { ...page, created: true }
     }),
 
   // /business home: what needs me + the next 14 days, across every profile I manage.

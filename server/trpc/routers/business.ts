@@ -13,6 +13,7 @@ import { addProfileToOwnGrant } from '../../oauth/grants'
 import { profileGroup, trackServer } from '../../utils/posthog'
 import { mergeProfile, moveHandleRefs, undoMerge } from '../../utils/mergeProfiles'
 import { findLikelyDuplicates, linksInstagramSql, notMerged } from '../../utils/profileDupes'
+import { scheduleInstagramImport } from '../../utils/instagram/profileImport'
 
 /**
  * Business mode — artists, venues and organizers managing their own profile.
@@ -366,6 +367,7 @@ export const businessRouter = router({
           await logAccess(ctx.db, { profileId: dupe.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'created', role: 'owner', note: 'Took over a page they had added from Instagram.' })
           await addProfileToOwnGrant(ctx, dupe.id)
           trackServer(ctx, 'business_profile_created', { profile: dupe.username, profile_type: input.type, ...profileGroup(dupe.username) })
+          scheduleInstagramImport(ctx, [{ profileId: dupe.id, handle: ig, allowOwned: true }])
           return { username: dupe.username as string }
         }
         if (dupe) throw new TRPCError({ code: 'CONFLICT', message: `@${ig} already has a page on WeDance: ${dupe.name} (@${dupe.username}). Claim it or join its team instead.` })
@@ -390,6 +392,8 @@ export const businessRouter = router({
       // Made through a connected app: that app may run it right away (#447).
       await addProfileToOwnGrant(ctx, p!.id)
       trackServer(ctx, 'business_profile_created', { profile: p!.username, profile_type: input.type, ...profileGroup(p!.username) })
+      // Their own new page: empty fields from their Instagram, after the response (#452).
+      if (ig) scheduleInstagramImport(ctx, [{ profileId: p!.id, handle: ig, allowOwned: true }])
       return { username: p!.username }
     }),
 

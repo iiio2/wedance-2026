@@ -197,6 +197,26 @@ bun run dev:db-proxy          # Neon-HTTP-compatible proxy on :4444
 #       NEON_FETCH_ENDPOINT=http://localhost:4444/sql
 ```
 
+## Instagram profile import (Apify, #452)
+
+Pages added from an Instagram handle (`businessEvents.addFromInstagram`, `addVenue` with
+`instagram`, `business.create` / MCP `create_my_page`) are filled from that account's public
+profile **after the response** (`ctx.waitUntil`): name (only while it is still the handle),
+photo (re-hosted on Cloudinary `wedance-2026/profiles`, never hot-linked), bio, bio link as a
+`website`/social link, city (when it matches `cities`) and, for venues, the business address.
+Empty fields only; claimed/managed pages are never written (except the dancer's own new page from
+`business.create`). Handles added within ~1.5 s share one actor run. Each attempt is stored in
+`source_ref.instagram_import = { at, ok, handle, fields | error }`.
+
+- Code: `server/utils/instagram/apify.ts` (generic `runActor(actorId, input)` + `fetchInstagramProfiles`,
+  per-handle cache — reuse it for post imports), `server/utils/instagram/profileImport.ts`
+  (fill rules, batching), `server/utils/rehostImage.ts` (Cloudinary, shared with `update_listed_profile`).
+- **Env:** `APIFY_TOKEN` (Vercel production). Unset = silent no-op (logged once). Actor:
+  `apify~instagram-profile-scraper` via `run-sync-get-dataset-items`.
+- **Backfill:** `bun scripts/backfill-instagram-profiles.ts` (lists candidates) → `--fetch` (calls
+  Apify, writes nothing) → `--write [--limit N] [--handles a,b]`. Needs `APIFY_TOKEN`, the Cloudinary
+  keys and `DATABASE_URL` — check the target before `--write`.
+
 ## Analytics (PostHog)
 
 **Setup.** Client: `app/plugins/03.posthog.client.ts` (posthog-js, EU host, manual `$pageview`
