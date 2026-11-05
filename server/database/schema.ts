@@ -1446,6 +1446,8 @@ export const oauthGrants = pgTable('oauth_grants', {
   revokedAt: timestamp('revoked_at'),
   revokedReason: text('revoked_reason'),
   lastUsedAt: timestamp('last_used_at'),
+  // The MCP tool list this app was last served (tools/list): { version, names, at } (0061).
+  mcpToolsListed: jsonb('mcp_tools_listed').$type<import('../mcp/version').ListedTools>(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [

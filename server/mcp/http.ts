@@ -7,6 +7,8 @@ import { grantKey, hit, ipKey, LIMITS } from '../oauth/rateLimit'
 import { buildMcpServer } from './server'
 import { mcpCaller } from './caller'
 import { useDb } from '../utils/db'
+import { visibleTools } from './tools'
+import { listedTools, readListedTools, recordListedTools, rpcMethods } from './version'
 
 /**
  * Streamable HTTP for MCP, stateless (each POST is answered on its own, as a
@@ -29,7 +31,15 @@ export function authChallenge(event: H3Event, origin: string, error?: { code: st
 }
 
 async function serve(event: H3Event, req: Request, ctx: Context, origin: string) {
-  const server = buildMcpServer(ctx, origin, mcpCaller(event, ctx.oauthClientId))
+  // Which tool list this app has (see version.ts): read for calls, remembered on tools/list.
+  const methods = ctx.oauthGrantId ? rpcMethods(await req.clone().json().catch(() => null)) : []
+  const grantId = ctx.oauthGrantId
+  const previous = grantId && methods.some(m => m === 'tools/call' || m === 'tools/list') ? await readListedTools(ctx.db, grantId) : null
+  if (grantId && methods.includes('tools/list')) {
+    const now = listedTools(visibleTools({ scopes: ctx.scopes ?? [], grantedProfileIds: ctx.grantedProfileIds ?? [], isAdmin: ctx.isAdmin }))
+    event.waitUntil(recordListedTools(ctx.db, grantId, now, previous))
+  }
+  const server = buildMcpServer(ctx, origin, mcpCaller(event, ctx.oauthClientId), previous)
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
   try {
     await server.connect(transport)

@@ -38,7 +38,7 @@ function sitePatchOrError(site: ProfileSite, a: SitePatch): ProfileSite {
  */
 
 export type Caller = ReturnType<typeof appRouter.createCaller>
-export interface ToolCtx { caller: Caller; ctx: Context; origin: string; client?: McpCaller }
+export interface ToolCtx { caller: Caller; ctx: Context; origin: string; client?: McpCaller; /** The tool list this app was last served (version.ts). */ listed?: import('./version').ListedTools | null }
 
 export interface ToolDef {
   name: string

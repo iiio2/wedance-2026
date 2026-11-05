@@ -4,19 +4,21 @@ import { TRPCError } from '@trpc/server'
 import { appRouter } from '../trpc'
 import type { Context } from '../trpc/context'
 import { hasScope } from '../oauth/config'
-import { TOOL_BY_NAME, visibleTools, type ToolCtx, type ToolDef } from './tools'
+import { TOOLS, TOOL_BY_NAME, visibleTools, type ToolCtx, type ToolDef } from './tools'
 import { dataText, fail, ok, type ToolResult } from './format'
 import { checkConfirmToken, confirmedArgs, mintConfirmToken } from './confirm'
 import { claimConfirmNonce, finishAudit, writeAudit, type AuditWho } from './audit'
 import type { McpCaller } from './caller'
 import { trackServer } from '../utils/posthog'
+import { toolsVersion, updateNotice, type ListedTools } from './version'
 
 /**
  * One McpServer per request (stateless, so it runs on Vercel): only the tools
  * this token may use are registered, which is also what tools/list returns.
  */
 
-export const SERVER_INFO = { name: 'wedance', title: 'WeDance', version: '1.0.0' }
+// The version changes with the tool catalogue, so a client can tell it has an old list.
+export const SERVER_INFO = { name: 'wedance', title: 'WeDance', version: `1.0.0+${toolsVersion(TOOLS)}` }
 
 const INSTRUCTIONS = `WeDance is a dance community platform (salsa, bachata, kizomba and more): events, festivals, venues, artists, organizers.
 - Times are local to the event's city; dates are YYYY-MM-DD.
@@ -53,8 +55,20 @@ function errorText(e: unknown): { message: string; code: string } {
   return { message: (e as Error)?.message || 'Something went wrong.', code: 'ERROR' }
 }
 
-/** Run one tool call: scope check, two-step confirmation, audit. Exported for tests. */
+/** Run one tool call, plus a notice when this app's tool list is out of date (version.ts). Exported for tests. */
 export async function callTool(tool: ToolDef, rawArgs: Record<string, unknown>, t: ToolCtx): Promise<ToolResult> {
+  const result = await runTool(tool, rawArgs, t)
+  const ctx = t.ctx
+  const notice = ctx.oauthGrantId
+    ? updateNotice(t.listed, visibleTools({ scopes: ctx.scopes ?? [], grantedProfileIds: ctx.grantedProfileIds ?? [], isAdmin: ctx.isAdmin }), t.client?.app)
+    : null
+  // Server-written, so it sits outside the data block: an instruction for the model, not user text.
+  if (notice) result.content = [{ type: 'text', text: notice.text }, ...result.content]
+  return result
+}
+
+/** One tool call: scope check, two-step confirmation, audit. */
+async function runTool(tool: ToolDef, rawArgs: Record<string, unknown>, t: ToolCtx): Promise<ToolResult> {
   const started = Date.now()
   // The SDK validates too; parsing here as well applies defaults the same way
   // for every entry point, so a preview and its confirmation hash identically.
@@ -132,9 +146,9 @@ export async function callTool(tool: ToolDef, rawArgs: Record<string, unknown>, 
   }
 }
 
-export function buildMcpServer(ctx: Context, origin: string, client?: McpCaller): McpServer {
+export function buildMcpServer(ctx: Context, origin: string, client?: McpCaller, listed?: ListedTools | null): McpServer {
   const server = new McpServer(SERVER_INFO, { instructions: INSTRUCTIONS, capabilities: { tools: {}, resources: {}, prompts: {} } })
-  const t: ToolCtx = { caller: appRouter.createCaller(ctx), ctx, origin, client }
+  const t: ToolCtx = { caller: appRouter.createCaller(ctx), ctx, origin, client, listed }
   const listing = { scopes: ctx.scopes ?? [], grantedProfileIds: ctx.grantedProfileIds ?? [], isAdmin: ctx.isAdmin }
 
   for (const tool of visibleTools(listing)) {
