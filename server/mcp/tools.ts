@@ -13,6 +13,17 @@ import { setupChecklist, setupNext } from './checklist'
 import { dupeReasonText } from '../utils/profileDupes'
 import { parseInstagramLink } from '../../shared/utils/instagram'
 import { mergeSocials } from '../../shared/utils/socials'
+import { applySitePatch, sectionKinds, siteChanges, sitePatchInput, SitePatchError, type SitePatch } from './site'
+import { TRPCError } from '@trpc/server'
+import type { ProfileSite } from '../../shared/types/profileSite'
+
+/** A site patch from tool args; a bad patch is the caller's error, not a crash. */
+function sitePatchOrError(site: ProfileSite, a: SitePatch): ProfileSite {
+  try { return applySitePatch(site, a) } catch (e) {
+    if (e instanceof SitePatchError) throw new TRPCError({ code: 'BAD_REQUEST', message: e.message })
+    throw e
+  }
+}
 
 /**
  * The WeDance MCP tools. A thin adapter: every tool calls the tRPC router
@@ -614,9 +625,11 @@ export const TOOLS: ToolDef[] = [
   // ── Organizers, artists, promoters (business) ────────────────────────────────
   {
     name: 'my_profiles', title: 'My business pages', scopes: ['business:read'], business: true, annotations: READ,
-    description: 'The business pages (organizer, venue, artist, promoter) this app may act for, with the dancer’s role on each.',
+    description: 'The business pages (organizer, venue, artist, promoter) this app may act for, with the dancer’s role on each. website: the page’s own site that WeDance runs as its CMS (null = none) — edit it with get_my_site / update_my_site.',
     input: {},
-    run: async (t) => ((await t.caller.business.myProfiles()) as any).managed,
+    run: async (t) => ((await t.caller.business.myProfiles()) as any).managed.map(({ hasSite, siteDomain, ...p }: any) => ({
+      ...p, website: hasSite ? { domain: siteDomain ?? null, managed_on_wedance: true, edit_with: 'get_my_site / update_my_site' } : null,
+    })),
   },
   {
     name: 'my_events', title: 'My events', scopes: ['business:read'], business: true, annotations: READ,
@@ -957,7 +970,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'update_business_profile', title: 'Edit a business page', scopes: ['business:publish'], business: true, annotations: OUTWARD, confirm: true,
-    description: 'Change one of my public pages (artist, venue, organizer, promoter): name, bio, city, styles, photo, address, socials (website, Instagram, Facebook…), and for a promoter page the influencer flag. Preview → confirm. Only pages the user runs (my_profiles); an unclaimed page they added or have on their events: update_listed_profile.',
+    description: 'Change one of my public pages (artist, venue, organizer, promoter): name, bio, city, styles, photo, address, socials (links shown on the WeDance page: website, Instagram, Facebook…), and for a promoter page the influencer flag. Changing what is ON the page’s own website (when WeDance runs it, see my_profiles website) is update_my_site. Preview → confirm. Only pages the user runs (my_profiles); an unclaimed page they added or have on their events: update_listed_profile.',
     input: {
       profile, name: z.string().trim().min(1).max(120).optional(), bio: z.string().max(4000).optional(), city: z.string().max(120).optional(),
       styles: z.array(z.string().trim().min(1).max(40)).max(20).optional(), photo: z.string().url().nullable().optional(), address: z.string().max(300).optional(),
@@ -980,6 +993,37 @@ export const TOOLS: ToolDef[] = [
       // business.update replaces the whole list; merge per platform so a website edit keeps the Instagram.
       const merged = socials ? mergeSocials(((await t.caller.business.get({ username })) as any).socials, socials) : undefined
       return t.caller.business.update({ username, ...fields, ...(merged ? { socials: merged } : {}) })
+    },
+  },
+  {
+    name: 'get_my_site', title: 'Read my website', scopes: ['business:read'], business: true, annotations: READ,
+    description: 'The page’s own website (e.g. dancegodscompany.com) when WeDance runs it: WeDance is that site’s CMS, so its words, images, sections, languages, SEO and welcome email are edited here, not in another CMS. Returns the site (every text per language), each section’s id and kind, and what each kind is for. Events sections list the page’s WeDance events by themselves (change those with update_event). Read it before update_my_site. exists: false = no site content yet (update_my_site can start one).',
+    input: { profile },
+    run: async (t, a) => {
+      const r: any = await t.caller.businessSite.get({ username: a.profile })
+      return {
+        page: r.profile, exists: r.exists, updatedAt: r.updatedAt,
+        domain: r.site.domain ?? null,
+        site: r.site,
+        section_kinds: sectionKinds,
+        edit_on_web: url(t, `/business/network/${a.profile}/website`),
+      }
+    },
+  },
+  {
+    name: 'update_my_site', title: 'Edit my website', scopes: ['business:publish'], business: true, annotations: OUTWARD, confirm: true,
+    description: 'Change the page’s own website that WeDance runs (see get_my_site): texts, images, buttons, sections (add, change, hide, remove, reorder), languages, SEO, welcome email, domain. Only what you pass changes: sections by id, texts per language (other languages stay). Goes live on the site right away. Preview → confirm. Only pages the user runs (my_profiles). Not the page’s link list on WeDance (that’s socials in update_business_profile).',
+    input: { profile, ...sitePatchInput, confirm_token: confirmToken },
+    preview: async (t, a) => {
+      const r: any = await t.caller.businessSite.get({ username: a.profile })
+      const next = sitePatchOrError(r.site, a)
+      return { page: r.profile.name, domain: next.domain ?? null, ...siteChanges(r.site, next) }
+    },
+    run: async (t, a) => {
+      const r: any = await t.caller.businessSite.get({ username: a.profile })
+      const next = sitePatchOrError(r.site, a)
+      const saved: any = await t.caller.businessSite.save({ username: a.profile, site: next })
+      return { saved: true, updatedAt: saved.updatedAt, domain: next.domain ?? null, sections: next.sections.map(x => ({ id: x.id, kind: x.kind, hidden: !!x.hidden })) }
     },
   },
   {

@@ -31,6 +31,7 @@ const INSTRUCTIONS = `WeDance is a dance community platform (salsa, bachata, kiz
   5. create_event with venue_handle, co_organizers, ticket_url, price, description and programme items, each naming its artist.
   6. Work through the "missing" list create_event returns; the flyer: flyer_options → make_flyer → flyer_status.
   7. Show the user the event (get_my_event) and the flyer; publish_event only when they agree.
+- Websites: WeDance is the CMS of a page's own website (my_profiles shows it as website, e.g. dancegodscompany.com). To change what's on that site — texts, images, sections, languages, SEO — use get_my_site then update_my_site; never say you have no access to the site's CMS. Events on it come from the page's WeDance events.
 - Completing pages: an unclaimed page the user added (add_venue, add_profile_from_instagram) or has on their events is fixed with update_listed_profile (address, city, bio, photo, socials, styles), e.g. a venue missing its address. update_business_profile is only for pages the user runs (my_profiles). "You don't manage this page" means exactly that: don't ask the user to reconnect.`
 
 const normalizeHandles = (args: Record<string, unknown>) => {

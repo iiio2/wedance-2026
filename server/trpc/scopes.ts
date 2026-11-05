@@ -80,6 +80,8 @@ export const PROCEDURE_SCOPES: Record<string, Scope | null> = {
   'business.myProfiles': 'business:read',
   'business.spaces': 'business:read',
   'business.get': 'business:read',
+  // The page's own website, WeDance as its CMS (RAZ-412).
+  'businessSite.get': 'business:read',
   // Duplicate check before create_my_page (#458).
   'business.findExisting': 'business:read',
   'businessEvents.list': 'business:read',
@@ -137,6 +139,8 @@ export const PROCEDURE_SCOPES: Record<string, Scope | null> = {
 
   // business:publish — goes public or reaches another person.
   'business.update': 'business:publish',
+  // update_my_site: goes live on the page's own website at once.
+  'businessSite.save': 'business:publish',
   // merge_profiles (#458): moves a page's events, followers and team — publish, behind confirm.
   'business.merge': 'business:publish',
   'artistInvites.link': 'business:publish',

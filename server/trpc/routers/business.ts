@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { eq, and, or, ilike, desc, inArray, sql } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure, adminProcedure } from '../trpc'
-import { profiles, profileMembers, profileClaims, dancers, cities, events, bookableSpaces, bookingRequests, profileMerges } from '../../database/schema'
+import { profiles, profileMembers, profileClaims, dancers, cities, events, bookableSpaces, bookingRequests, profileMerges, profileSites } from '../../database/schema'
 import { WEEKDAYS } from '../../../shared/types/venueDetails'
 import { slugify, randomSuffix } from '../../utils/slug'
 import { parseInstagramHandle, handleFromInstagram, instagramUrl } from '../../../shared/utils/instagram'
@@ -159,9 +159,13 @@ export const businessRouter = router({
         photo: profiles.photo,
         role: profileMembers.role,
         roles: profiles.roles,
+        // The page's own website when WeDance is its CMS (RAZ-412).
+        hasSite: sql<boolean>`${profileSites.profileId} IS NOT NULL`,
+        siteDomain: sql<string | null>`${profileSites.content}->>'domain'`,
       })
       .from(profileMembers)
       .innerJoin(profiles, eq(profiles.id, profileMembers.profileId))
+      .leftJoin(profileSites, eq(profileSites.profileId, profiles.id))
       // A merged copy keeps the members the kept page already had; it isn't a page to run.
       .where(and(eq(profileMembers.dancerId, ctx.dancerId), notMerged))
       .orderBy(profiles.name)
