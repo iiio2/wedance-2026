@@ -100,7 +100,8 @@ const isActive = (item: { match: (p: string) => boolean }) => item.match(route.p
       <div v-if="state === 'ok'" class="hidden sm:flex justify-end px-4 md:px-8 pt-4">
         <AccountMenu mode="business" />
       </div>
-      <div class="max-w-4xl mx-auto px-4 py-5 md:py-8">
+      <!-- Editors with side-by-side panes (the website editor) ask for more room: definePageMeta({ wide: true }). -->
+      <div :class="route.meta.wide ? 'max-w-6xl' : 'max-w-4xl'" class="mx-auto px-4 py-5 md:py-8">
         <AdminState v-if="state === 'checking'" kind="loading" class="py-24" />
 
         <div
