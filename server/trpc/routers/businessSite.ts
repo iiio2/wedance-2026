@@ -7,6 +7,9 @@ import { requireMember } from './business'
 import { profileGroup, trackServer } from '../../utils/posthog'
 import { MAX_SITE_VERSIONS, siteVersion, writeSite } from '../../utils/siteVersions'
 import { TRPCError } from '@trpc/server'
+import { sitePreviewToken } from '../../utils/sitePreview'
+import { SITE_PREVIEW_TTL_S, hostedSiteUrl } from '../../../shared/utils/hostedSite'
+import { isPublished } from '../../../shared/types/profileSite'
 
 /**
  * A profile's website and contacts, managed on WeDance (RAZ-412):
@@ -76,6 +79,24 @@ export const businessSiteRouter = router({
       if (!r.unchanged) trackServer(ctx, 'site_saved', { profile: p.username, profile_type: p.type, first_save: false, sections: site.sections?.length ?? 0, locales: site.locales?.length ?? 0, restored: true, ...profileGroup(p.username) })
       return { updatedAt: r.updatedAt, unchanged: r.unchanged, versionId: r.versionId, restoredFrom: v.id, summary: r.summary }
     }),
+
+  /**
+   * Where the site lives on WeDance (sites.wedance.vip/<handle>) and a link
+   * that shows it even while it's a draft — for the page's team, valid 7 days.
+   */
+  previewLink: protectedProcedure.input(z.object({ username: z.string().min(1) })).query(async ({ ctx, input }) => {
+    const p = await requireMember(ctx, input.username)
+    const [row] = await ctx.db.select({ content: profileSites.content }).from(profileSites).where(eq(profileSites.profileId, p.id))
+    const token = sitePreviewToken(p.id)
+    const url = hostedSiteUrl(p.username)
+    return {
+      url,
+      previewUrl: `${url}?preview=${encodeURIComponent(token)}`,
+      published: row ? isPublished(row.content as any) : false,
+      exists: !!row,
+      expiresAt: new Date(Date.now() + SITE_PREVIEW_TTL_S * 1000),
+    }
+  }),
 
   contacts: protectedProcedure.input(z.object({ username: z.string().min(1) })).query(async ({ ctx, input }) => {
     const p = await requireMember(ctx, input.username)

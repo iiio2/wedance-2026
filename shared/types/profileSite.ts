@@ -72,6 +72,40 @@ export type ProfileSite = {
   /** The email someone gets after signing up on the site. */
   welcome?: { subject?: L10n; body?: L10n }
   sections: SiteSection[]
+  /**
+   * The look of a WeDance-hosted site (hosted websites v1): a preset from
+   * shared/utils/siteThemes.ts, optionally one accent colour and a heading
+   * font. Hand-built sites leave it out and keep their own look.
+   */
+  theme?: SiteThemeSettings
+  /** false = not shown on sites.wedance.vip yet (a draft); missing = published, as every site was before. */
+  published?: boolean
+  /** Who runs the site, for its Impressum (German law) and privacy page. */
+  legal?: SiteLegal
+}
+
+export type SiteThemeSettings = {
+  preset?: string
+  /** #rrggbb; buttons, small headings and highlights follow it. */
+  accent?: string
+  font?: string
+  logo?: string
+  favicon?: string
+}
+
+export type SiteLegal = {
+  /** Person or business responsible, as it should appear. */
+  name?: string
+  /** Street, postcode, city, country. */
+  address?: string
+  email?: string
+  phone?: string
+  /** USt-IdNr. / VAT id, if any. */
+  vatId?: string
+  /** Register court + number, if registered (e.g. "Amtsgericht München, HRB 12345"). */
+  register?: string
+  /** Responsible for the content (§ 18 MStV), when not the same person. */
+  responsible?: string
 }
 
 // --- validation (the editor and the API share it) ---------------------------
@@ -99,13 +133,31 @@ export const siteSectionSchema = z.object({
   items: z.array(item).max(24).optional(),
   callout: z.object({ title: l10n, body: l10n, button: button.optional() }).optional(),
 })
+const short = (n: number) => z.string().trim().max(n).optional()
+export const siteThemeSchema = z.object({
+  preset: z.string().max(40).optional(),
+  accent: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'A colour like #c9a227.').optional(),
+  font: z.string().max(40).optional(),
+  logo: url.optional(),
+  favicon: url.optional(),
+})
+export const siteLegalSchema = z.object({
+  name: short(200), address: short(400), email: short(200), phone: short(60),
+  vatId: short(40), register: short(200), responsible: short(300),
+})
 export const profileSiteSchema = z.object({
   domain: url.optional(),
   locales: z.array(z.string().min(2).max(12)).min(1).max(10),
   seo: z.object({ title: l10n, description: l10n, image: url.optional() }).optional(),
   welcome: z.object({ subject: l10n, body: l10n }).optional(),
   sections: z.array(siteSectionSchema).max(40),
+  theme: siteThemeSchema.optional(),
+  published: z.boolean().optional(),
+  legal: siteLegalSchema.optional(),
 })
+
+/** Shown on sites.wedance.vip: everything except an explicit draft. */
+export const isPublished = (site: Pick<ProfileSite, 'published'>) => site.published !== false
 
 // --- one language, for the site to render ------------------------------------
 

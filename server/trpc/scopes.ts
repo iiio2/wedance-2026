@@ -84,6 +84,7 @@ export const PROCEDURE_SCOPES: Record<string, Scope | null> = {
   'businessSite.get': 'business:read',
   'businessSite.history': 'business:read',
   'businessSite.version': 'business:read',
+  'businessSite.previewLink': 'business:read',
   // Duplicate check before create_my_page (#458).
   'business.findExisting': 'business:read',
   'businessEvents.list': 'business:read',
