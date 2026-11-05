@@ -46,8 +46,8 @@ const switcherOptions = computed(() => [
   ...managed.value.map(p => ({ label: p.name, value: p.username })),
 ])
 
-// /business/website, /business/network/<handle>/website (and the same for contacts).
-const siteSection = (p: string) => /^\/business(\/network\/[^/]+)?\/(website|contacts)\/?$/.exec(p)?.[2] ?? null
+// /business/website, /business/network/<handle>/website (and its -history; the same for contacts).
+const siteSection = (p: string) => /^\/business(\/network\/[^/]+)?\/(website|contacts)(-history)?\/?$/.exec(p)?.[2] ?? null
 
 const nav = [
   { to: '/business', label: 'Home', icon: Home, match: (p: string) => p === '/business' },

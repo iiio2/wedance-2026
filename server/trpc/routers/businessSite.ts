@@ -1,10 +1,12 @@
 import { z } from 'zod'
 import { and, desc, eq } from 'drizzle-orm'
 import { router, protectedProcedure } from '../trpc'
-import { profileContacts, profileSites } from '../../database/schema'
+import { dancers, profileContacts, profileSites, profileSiteVersions } from '../../database/schema'
 import { profileSiteSchema, type ProfileSite } from '../../../shared/types/profileSite'
 import { requireMember } from './business'
 import { profileGroup, trackServer } from '../../utils/posthog'
+import { MAX_SITE_VERSIONS, siteVersion, writeSite } from '../../utils/siteVersions'
+import { TRPCError } from '@trpc/server'
 
 /**
  * A profile's website and contacts, managed on WeDance (RAZ-412):
@@ -30,13 +32,49 @@ export const businessSiteRouter = router({
     .input(z.object({ username: z.string().min(1), site: profileSiteSchema }))
     .mutation(async ({ ctx, input }) => {
       const p = await requireMember(ctx, input.username)
-      const now = new Date()
       const site = input.site as ProfileSite
-      const [had] = await ctx.db.select({ id: profileSites.profileId }).from(profileSites).where(eq(profileSites.profileId, p.id))
-      await ctx.db.insert(profileSites).values({ profileId: p.id, content: site, updatedAt: now, updatedBy: ctx.dancerId })
-        .onConflictDoUpdate({ target: profileSites.profileId, set: { content: site, updatedAt: now, updatedBy: ctx.dancerId } })
-      trackServer(ctx, 'site_saved', { profile: p.username, profile_type: p.type, first_save: !had, sections: site.sections?.length ?? 0, locales: site.locales?.length ?? 0, ...profileGroup(p.username) })
-      return { updatedAt: now }
+      const r = await writeSite(ctx, p.id, site)
+      if (!r.unchanged) trackServer(ctx, 'site_saved', { profile: p.username, profile_type: p.type, first_save: r.firstSave, sections: site.sections?.length ?? 0, locales: site.locales?.length ?? 0, restored: false, ...profileGroup(p.username) })
+      return { updatedAt: r.updatedAt, unchanged: r.unchanged, versionId: r.versionId, summary: r.summary }
+    }),
+
+  // Version history (0062): newest first, without the content.
+  history: protectedProcedure
+    .input(z.object({ username: z.string().min(1), limit: z.number().int().min(1).max(MAX_SITE_VERSIONS).default(50) }))
+    .query(async ({ ctx, input }) => {
+      const p = await requireMember(ctx, input.username)
+      const rows = await ctx.db.select({
+        id: profileSiteVersions.id, savedAt: profileSiteVersions.savedAt, via: profileSiteVersions.via, clientApp: profileSiteVersions.clientApp,
+        summary: profileSiteVersions.summary, restoredFrom: profileSiteVersions.restoredFrom, byName: dancers.name, byId: profileSiteVersions.savedBy,
+      }).from(profileSiteVersions).leftJoin(dancers, eq(dancers.id, profileSiteVersions.savedBy))
+        .where(eq(profileSiteVersions.profileId, p.id)).orderBy(desc(profileSiteVersions.savedAt)).limit(input.limit)
+      return {
+        profile: { username: p.username, name: p.name },
+        versions: rows.map((r: any, i: number) => ({ ...r, by: r.byId ? { id: r.byId, name: r.byName ?? 'Someone' } : null, byId: undefined, byName: undefined, current: i === 0 })),
+      }
+    }),
+
+  /** One version's full content (to look at it before restoring). */
+  version: protectedProcedure
+    .input(z.object({ username: z.string().min(1), id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const p = await requireMember(ctx, input.username)
+      const v = await siteVersion(ctx.db, p.id, input.id)
+      if (!v) throw new TRPCError({ code: 'NOT_FOUND', message: 'No such version of this website.' })
+      return { id: v.id, savedAt: v.savedAt, summary: v.summary, site: v.content as ProfileSite }
+    }),
+
+  /** Put an earlier version live again — saved as a new version, so it can be undone too. */
+  restore: protectedProcedure
+    .input(z.object({ username: z.string().min(1), id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const p = await requireMember(ctx, input.username)
+      const v = await siteVersion(ctx.db, p.id, input.id)
+      if (!v) throw new TRPCError({ code: 'NOT_FOUND', message: 'No such version of this website.' })
+      const site = v.content as ProfileSite
+      const r = await writeSite(ctx, p.id, site, { restoredFrom: v.id })
+      if (!r.unchanged) trackServer(ctx, 'site_saved', { profile: p.username, profile_type: p.type, first_save: false, sections: site.sections?.length ?? 0, locales: site.locales?.length ?? 0, restored: true, ...profileGroup(p.username) })
+      return { updatedAt: r.updatedAt, unchanged: r.unchanged, versionId: r.versionId, restoredFrom: v.id, summary: r.summary }
     }),
 
   contacts: protectedProcedure.input(z.object({ username: z.string().min(1) })).query(async ({ ctx, input }) => {

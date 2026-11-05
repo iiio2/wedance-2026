@@ -127,31 +127,7 @@ export function applySitePatch(site: ProfileSite, patch: SitePatch): ProfileSite
   return next
 }
 
-const label = (x: SiteSection, lang: string) => ({ id: x.id, kind: x.kind, title: x.title?.[lang] ?? Object.values(x.title ?? {})[0] ?? '' })
-
-/** What a patch changes, for the preview the user agrees to. */
-export function siteChanges(before: ProfileSite, after: ProfileSite) {
-  const lang = after.locales[0] ?? 'en'
-  const was = new Map(before.sections.map(x => [x.id, x]))
-  const now = new Map(after.sections.map(x => [x.id, x]))
-  const changed = after.sections.filter(x => was.has(x.id)).flatMap((x) => {
-    const old = was.get(x.id)!
-    const keys = [...new Set([...Object.keys(old), ...Object.keys(x)])].filter(k => JSON.stringify((old as any)[k]) !== JSON.stringify((x as any)[k]))
-    return keys.length ? [{ ...label(x, lang), changes: Object.fromEntries(keys.map(k => [k, { from: (old as any)[k] ?? null, to: (x as any)[k] ?? null }])) }] : []
-  })
-  const site = (['domain', 'locales', 'seo', 'welcome'] as const)
-    .filter(k => JSON.stringify(before[k]) !== JSON.stringify(after[k]))
-    .map(k => ({ field: k, from: before[k] ?? null, to: after[k] ?? null }))
-  const orderBefore = before.sections.filter(x => now.has(x.id)).map(x => x.id)
-  const orderAfter = after.sections.filter(x => was.has(x.id)).map(x => x.id)
-  return {
-    site,
-    added: after.sections.filter(x => !was.has(x.id)),
-    changed,
-    removed: before.sections.filter(x => !now.has(x.id)).map(x => label(x, lang)),
-    reordered: JSON.stringify(orderBefore) !== JSON.stringify(orderAfter) ? after.sections.map(x => label(x, lang)) : null,
-  }
-}
+export { siteChanges } from '../../shared/utils/siteDiff'
 
 /** Section kinds for the assistant: what each is for and its fields. */
 export const sectionKinds = Object.fromEntries(Object.entries(SECTION_INFO).map(([k, v]) => [k, { label: v.label, hint: v.hint, fields: v.fields, ...(v.items ? { items: v.items } : {}) }]))

@@ -13,6 +13,7 @@ import { setupChecklist, setupNext } from './checklist'
 import { dupeReasonText } from '../utils/profileDupes'
 import { parseInstagramLink } from '../../shared/utils/instagram'
 import { mergeSocials } from '../../shared/utils/socials'
+import { siteChangeSummary } from '../../shared/utils/siteDiff'
 import { applySitePatch, sectionKinds, siteChanges, sitePatchInput, SitePatchError, type SitePatch } from './site'
 import { TRPCError } from '@trpc/server'
 import type { ProfileSite } from '../../shared/types/profileSite'
@@ -1012,7 +1013,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'update_my_site', title: 'Edit my website', scopes: ['business:publish'], business: true, annotations: OUTWARD, confirm: true,
-    description: 'Change the page’s own website that WeDance runs (see get_my_site): texts, images, buttons, sections (add, change, hide, remove, reorder), languages, SEO, welcome email, domain. Only what you pass changes: sections by id, texts per language (other languages stay). Goes live on the site right away. Preview → confirm. Only pages the user runs (my_profiles). Not the page’s link list on WeDance (that’s socials in update_business_profile).',
+    description: 'Change the page’s own website that WeDance runs (see get_my_site): texts, images, buttons, sections (add, change, hide, remove, reorder), languages, SEO, welcome email, domain. Only what you pass changes: sections by id, texts per language (other languages stay). Goes live on the site right away; every save is kept as a version (site_history, restore_site_version to undo). Preview → confirm. Only pages the user runs (my_profiles). Not the page’s link list on WeDance (that’s socials in update_business_profile).',
     input: { profile, ...sitePatchInput, confirm_token: confirmToken },
     preview: async (t, a) => {
       const r: any = await t.caller.businessSite.get({ username: a.profile })
@@ -1023,7 +1024,43 @@ export const TOOLS: ToolDef[] = [
       const r: any = await t.caller.businessSite.get({ username: a.profile })
       const next = sitePatchOrError(r.site, a)
       const saved: any = await t.caller.businessSite.save({ username: a.profile, site: next })
-      return { saved: true, updatedAt: saved.updatedAt, domain: next.domain ?? null, sections: next.sections.map(x => ({ id: x.id, kind: x.kind, hidden: !!x.hidden })) }
+      return {
+        saved: !saved.unchanged, updatedAt: saved.updatedAt, version_id: saved.versionId, changes: saved.summary,
+        domain: next.domain ?? null, sections: next.sections.map(x => ({ id: x.id, kind: x.kind, hidden: !!x.hidden })),
+        undo: 'site_history lists every version; restore_site_version puts an earlier one back.',
+      }
+    },
+  },
+  {
+    name: 'site_history', title: 'My website’s history', scopes: ['business:read'], business: true, annotations: READ,
+    description: 'Every saved version of the page’s own website, newest first: when, who saved it, from where (the WeDance editor or an AI app such as ChatGPT or Claude) and what changed. To undo a change, pick the version before it and use restore_site_version.',
+    input: { profile, limit: z.number().int().min(1).max(100).default(20) },
+    run: async (t, a) => {
+      const r: any = await t.caller.businessSite.history({ username: a.profile, limit: a.limit })
+      return {
+        page: r.profile,
+        versions: r.versions.map((v: any) => ({
+          version_id: v.id, saved_at: v.savedAt, by: v.by?.name ?? null, via: v.via === 'mcp' ? (v.clientApp ?? 'AI app') : v.via === 'web' ? 'WeDance editor' : 'before history',
+          changes: v.summary, restored_from: v.restoredFrom, current: v.current,
+        })),
+        edit_on_web: url(t, `/business/network/${a.profile}/website-history`),
+      }
+    },
+  },
+  {
+    name: 'restore_site_version', title: 'Restore an earlier website version', scopes: ['business:publish'], business: true, annotations: OUTWARD, confirm: true,
+    description: 'Undo website changes: put an earlier version (version_id from site_history) live again. It is saved as a new version, so the restore can be undone the same way. Goes live right away. Preview → confirm.',
+    input: { profile, version_id: z.string().uuid().describe('From site_history.'), confirm_token: confirmToken },
+    preview: async (t, a) => {
+      const [cur, v]: any[] = await Promise.all([
+        t.caller.businessSite.get({ username: a.profile }),
+        t.caller.businessSite.version({ username: a.profile, id: a.version_id }),
+      ])
+      return { page: cur.profile.name, version: { version_id: v.id, saved_at: v.savedAt, changes_then: v.summary }, what_changes_now: siteChangeSummary(cur.site, v.site), ...siteChanges(cur.site, v.site) }
+    },
+    run: async (t, a) => {
+      const r: any = await t.caller.businessSite.restore({ username: a.profile, id: a.version_id })
+      return { restored: !r.unchanged, updatedAt: r.updatedAt, version_id: r.versionId, restored_from: r.restoredFrom, changes: r.summary }
     },
   },
   {

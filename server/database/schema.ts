@@ -1383,6 +1383,25 @@ export const profileSites = pgTable('profile_sites', {
   updatedBy: uuid('updated_by').references(() => dancers.id, { onDelete: 'set null' }),
 })
 
+// Every saved version of a profile's website (0062): what it was, who saved it,
+// from where (the web editor or an AI app over MCP), and what changed. A
+// restore saves an old version again as a new one, so it can be undone too.
+export const profileSiteVersions = pgTable('profile_site_versions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  content: jsonb('content').$type<import('../../shared/types/profileSite').ProfileSite>().notNull(),
+  savedAt: timestamp('saved_at').notNull().defaultNow(),
+  savedBy: uuid('saved_by').references(() => dancers.id, { onDelete: 'set null' }),
+  /** web | mcp | backfill */
+  via: text('via').notNull().default('web'),
+  /** For via=mcp: chatgpt, claude, cursor… */
+  clientApp: text('client_app'),
+  summary: jsonb('summary').$type<string[]>().notNull().default([]),
+  restoredFrom: uuid('restored_from'),
+}, (t) => [
+  index('profile_site_versions_profile_idx').on(t.profileId, t.savedAt),
+])
+
 // People who signed up on a profile's website (RAZ-412, migration 0045): the
 // profile's contacts on WeDance. One row per email per profile; signing up
 // again updates it. Linked to a dancer when the email has a WeDance account.

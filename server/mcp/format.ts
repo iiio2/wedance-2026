@@ -11,6 +11,8 @@ export const UNTRUSTED_KEYS = new Set([
   'description', 'bio', 'question', 'text', 'message', 'note', 'notes', 'caption', 'title', 'answer', 'recommendation',
   'comment', 'about', 'programmeNote', 'guidelines', 'value', 'reviewerNote', 'evidence', 'what', 'organization', 'subject',
   'body', 'content', 'detail', 'alternative', 'prizeDescription', 'priceInfo',
+  // Website history lines quote section titles ("Changed Hero “…”").
+  'changes', 'changes_then', 'what_changes_now',
 ])
 
 /**

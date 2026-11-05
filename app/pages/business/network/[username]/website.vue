@@ -6,7 +6,7 @@
  * "Events" section lists the profile's events on WeDance. Sign-ups from the
  * site land in Contacts.
  */
-import { ArrowUp, ArrowDown, Eye, EyeOff, Trash2, Plus, Check, ExternalLink, ChevronDown, ChevronRight, Contact, Globe } from 'lucide-vue-next'
+import { ArrowUp, ArrowDown, Eye, EyeOff, Trash2, Plus, Check, ExternalLink, ChevronDown, ChevronRight, Contact, Globe, History } from 'lucide-vue-next'
 import { SECTION_INFO, SECTION_KINDS, SITE_LOCALES, missingTexts, newId, pick, type ProfileSite, type SectionKind, type SiteSection, type SiteItem, type L10n } from '#shared/types/profileSite'
 
 definePageMeta({ layout: 'business' })
@@ -119,6 +119,9 @@ const LANG_NAMES: Record<string, string> = { en: 'English', de: 'Deutsch', es: '
       >
         <Button variant="outline-pill" size="pill-sm" as-child>
           <NuxtLink :to="`/business/network/${profile.username}/contacts`"><Contact /> Contacts</NuxtLink>
+        </Button>
+        <Button variant="outline-pill" size="pill-sm" as-child>
+          <NuxtLink :to="`/business/network/${profile.username}/website-history`"><History /> History</NuxtLink>
         </Button>
         <Button v-if="site.domain" variant="outline-pill" size="pill-sm" as-child>
           <a :href="site.domain" target="_blank" rel="noopener"><ExternalLink /> View site</a>
