@@ -17,9 +17,9 @@ export const SCOPE_INFO: Record<Scope, { title: string; detail: string }> = {
   'me:read': { title: 'See your profile and plan', detail: 'Your name, city and styles, what’s in your plan, your tickets and who you follow.' },
   'plan:write': { title: 'Change your plan', detail: 'Add or remove events, say whether you’re going, join festivals, offer rides and look for roommates. Ticket purchases only ever return a payment link you open yourself.' },
   'social:write': { title: 'Post and react for you', detail: 'Ask the locals, recommend places, RSVP to hangouts, join dinners, follow pages, write reviews, enter giveaways, vote on city videos and send booking requests.' },
-  'business:read': { title: 'Read your business pages', detail: 'For the pages you pick below: events, inbox, booking requests, team and insights.' },
+  'business:read': { title: 'Read your business pages', detail: 'For the pages you pick below: events, inbox, booking requests, team, insights and the page’s own website.' },
   'business:write': { title: 'Draft for your business pages', detail: 'Create and edit draft events, make flyers and captions, plan posts and set availability. Nothing goes public with this alone.' },
-  'business:publish': { title: 'Publish for your business pages', detail: 'Publish events, edit live pages, invite artists, answer invites and change your team. The app shows you a preview and asks again before each one.' },
+  'business:publish': { title: 'Publish for your business pages', detail: 'Publish events, edit live pages and the page’s own website, invite artists, answer invites and change your team. The app shows you a preview and asks again before each one.' },
   'admin': { title: 'WeDance admin', detail: 'Admin actions on WeDance. Only for WeDance admins using an approved app.' },
 }
 
