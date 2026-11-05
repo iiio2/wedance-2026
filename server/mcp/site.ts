@@ -1,6 +1,6 @@
 /**
  * Editing a page's own website over MCP (RAZ-412): WeDance is the CMS of sites
- * like dancegodscompany.com or montuno.club — they render
+ * on their own domain — they render
  * /api/profiles/<username>/site. An assistant changes a few things at a time,
  * so update_my_site takes a patch, not the whole site: sections merge by id,
  * texts merge per language. Pure, for tests.
@@ -38,7 +38,7 @@ export const sectionPatchSchema = z.object({
 export type SectionPatch = z.infer<typeof sectionPatchSchema>
 
 export const sitePatchInput = {
-  domain: z.string().trim().max(2000).optional().describe('The site’s address, e.g. https://dancegodscompany.com.'),
+  domain: z.string().trim().max(2000).optional().describe('The site’s address, e.g. https://yourdanceschool.com.'),
   locales: z.array(z.string().min(2).max(12)).min(1).max(10).optional().describe('The site’s languages, first = default (texts fall back to it). Replaces the list.'),
   seo: z.object({ title: l10n.optional(), description: l10n.optional(), image: z.string().max(2000).optional() }).optional()
     .describe('Search/share title, description (per language) and image.'),

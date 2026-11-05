@@ -6,11 +6,11 @@ import { TOOLS } from './tools'
 import { quoteUntrusted } from './format'
 
 const site = (): ProfileSite => ({
-  domain: 'https://dancegodscompany.com',
+  domain: 'https://salsaschool.example',
   locales: ['en', 'de'],
-  seo: { title: { en: 'Dance Gods', de: 'Dance Gods' } },
+  seo: { title: { en: 'Salsa School', de: 'Salsa School' } },
   sections: [
-    { id: 'hero', kind: 'hero', title: { en: 'Dance like gods', de: 'Tanz wie Götter' }, image: 'https://img/hero.jpg', buttons: [{ label: { en: 'Join' }, url: '#signup' }] },
+    { id: 'hero', kind: 'hero', title: { en: 'Dance with us', de: 'Tanz mit uns' }, image: 'https://img/hero.jpg', buttons: [{ label: { en: 'Join' }, url: '#signup' }] },
     { id: 'about', kind: 'text', title: { en: 'About us' }, body: { en: 'We teach.' } },
     { id: 'events', kind: 'events', title: { en: 'Classes' } },
   ],
@@ -28,7 +28,7 @@ describe('mergeL10n', () => {
 describe('applySitePatch', () => {
   it('changes an English title and keeps the German one and the other fields', () => {
     const next = applySitePatch(site(), { sections: [{ id: 'hero', title: { en: 'Dance like a god' } }] })
-    expect(next.sections[0]).toEqual({ ...site().sections[0], title: { en: 'Dance like a god', de: 'Tanz wie Götter' } })
+    expect(next.sections[0]).toEqual({ ...site().sections[0], title: { en: 'Dance like a god', de: 'Tanz mit uns' } })
     expect(next.sections.slice(1)).toEqual(site().sections.slice(1))
   })
 
@@ -50,9 +50,9 @@ describe('applySitePatch', () => {
   })
 
   it('site-wide fields: domain gets https, SEO merges per language, welcome email', () => {
-    const next = applySitePatch(site(), { domain: 'dancegods.de', seo: { description: { en: 'Salsa in Munich' } }, welcome: { subject: { en: 'Welcome!' } } })
-    expect(next.domain).toBe('https://dancegods.de')
-    expect(next.seo).toEqual({ title: { en: 'Dance Gods', de: 'Dance Gods' }, description: { en: 'Salsa in Munich' } })
+    const next = applySitePatch(site(), { domain: 'salsaschool.example.org', seo: { description: { en: 'Salsa in Munich' } }, welcome: { subject: { en: 'Welcome!' } } })
+    expect(next.domain).toBe('https://salsaschool.example.org')
+    expect(next.seo).toEqual({ title: { en: 'Salsa School', de: 'Salsa School' }, description: { en: 'Salsa in Munich' } })
     expect(next.welcome).toEqual({ subject: { en: 'Welcome!' } })
   })
 
@@ -81,7 +81,7 @@ describe('siteChanges (the preview)', () => {
     const before = site()
     const after = applySitePatch(before, { sections: [{ id: 'hero', title: { en: 'New' } }, { kind: 'cta', title: { en: 'Join WhatsApp' } }], remove_sections: ['about'], order: ['events'] })
     const c = siteChanges(before, after)
-    expect(c.changed).toEqual([{ id: 'hero', kind: 'hero', title: 'New', changes: { title: { from: { en: 'Dance like gods', de: 'Tanz wie Götter' }, to: { en: 'New', de: 'Tanz wie Götter' } } } }])
+    expect(c.changed).toEqual([{ id: 'hero', kind: 'hero', title: 'New', changes: { title: { from: { en: 'Dance with us', de: 'Tanz mit uns' }, to: { en: 'New', de: 'Tanz mit uns' } } } }])
     expect(c.added.map(x => x.kind)).toEqual(['cta'])
     expect(c.removed).toEqual([{ id: 'about', kind: 'text', title: 'About us' }])
     expect(c.reordered?.map(x => x.id)).toEqual(['events', 'hero', after.sections[2]!.id])
@@ -95,11 +95,11 @@ describe('MCP site tools', () => {
   function fake(stored: ProfileSite | null = site()) {
     const saved: any[] = []
     const businessSite = {
-      get: async () => ({ profile: { username: 'dancegods', name: 'Dance Gods Company' }, site: stored ?? { locales: ['en'], sections: [] }, exists: !!stored, updatedAt: null }),
+      get: async () => ({ profile: { username: 'salsaschool', name: 'Salsa School' }, site: stored ?? { locales: ['en'], sections: [] }, exists: !!stored, updatedAt: null }),
       save: async (i: any) => { saved.push(i); return { updatedAt: new Date('2026-11-05T12:00:00Z') } },
     }
     const business = { myProfiles: async () => ({ managed: [
-      { username: 'dancegods', name: 'Dance Gods Company', type: 'organizer', role: 'owner', hasSite: true, siteDomain: 'https://dancegodscompany.com' },
+      { username: 'salsaschool', name: 'Salsa School', type: 'organizer', role: 'owner', hasSite: true, siteDomain: 'https://salsaschool.example' },
       { username: 'other', name: 'Other', type: 'artist', role: 'owner', hasSite: false, siteDomain: null },
     ] }) }
     return { saved, t: { caller: { businessSite, business }, ctx: {}, origin: 'https://2026.wedance.vip' } as any }
@@ -107,7 +107,7 @@ describe('MCP site tools', () => {
 
   it('my_profiles says which page has a website run on WeDance', async () => {
     const r: any = await tool('my_profiles').run(fake().t, {})
-    expect(r[0].website).toMatchObject({ domain: 'https://dancegodscompany.com', managed_on_wedance: true })
+    expect(r[0].website).toMatchObject({ domain: 'https://salsaschool.example', managed_on_wedance: true })
     expect(r[0]).not.toHaveProperty('hasSite')
     expect(r[1].website).toBeNull()
   })
@@ -115,32 +115,32 @@ describe('MCP site tools', () => {
   it('update_my_site is two-step and its preview shows the change', async () => {
     expect(tool('update_my_site').confirm).toBe(true)
     const { t, saved } = fake()
-    const p: any = await tool('update_my_site').preview!(t, args('update_my_site', { profile: '@dancegods', sections: [{ id: 'about', body: { en: 'We teach salsa.' } }] }))
+    const p: any = await tool('update_my_site').preview!(t, args('update_my_site', { profile: '@salsaschool', sections: [{ id: 'about', body: { en: 'We teach salsa.' } }] }))
     expect(p.changed[0].changes.body).toEqual({ from: { en: 'We teach.' }, to: { en: 'We teach salsa.' } })
     expect(saved).toEqual([])
   })
 
   it('update_my_site saves the patched site, other sections untouched', async () => {
     const { t, saved } = fake()
-    await tool('update_my_site').run(t, args('update_my_site', { profile: 'dancegods', sections: [{ id: 'about', body: { en: 'We teach salsa.' } }] }))
-    expect(saved[0].username).toBe('dancegods')
+    await tool('update_my_site').run(t, args('update_my_site', { profile: 'salsaschool', sections: [{ id: 'about', body: { en: 'We teach salsa.' } }] }))
+    expect(saved[0].username).toBe('salsaschool')
     expect(saved[0].site.sections[1].body).toEqual({ en: 'We teach salsa.' })
     expect(saved[0].site.sections[0]).toEqual(site().sections[0])
-    expect(saved[0].site.domain).toBe('https://dancegodscompany.com')
+    expect(saved[0].site.domain).toBe('https://salsaschool.example')
   })
 
   it('a bad patch is a BAD_REQUEST, nothing saved', async () => {
     const { t, saved } = fake()
-    await expect(tool('update_my_site').run(t, args('update_my_site', { profile: 'dancegods', remove_sections: ['nope'] }))).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+    await expect(tool('update_my_site').run(t, args('update_my_site', { profile: 'salsaschool', remove_sections: ['nope'] }))).rejects.toMatchObject({ code: 'BAD_REQUEST' })
     expect(saved).toEqual([])
   })
 
   it('get_my_site returns site texts as untrusted, per language', async () => {
-    const r: any = await tool('get_my_site').run(fake().t, args('get_my_site', { profile: 'dancegods' }))
-    expect(r.domain).toBe('https://dancegodscompany.com')
+    const r: any = await tool('get_my_site').run(fake().t, args('get_my_site', { profile: 'salsaschool' }))
+    expect(r.domain).toBe('https://salsaschool.example')
     expect(r.section_kinds.hero.hint).toBeTruthy()
     const out: any = quoteUntrusted(r)
-    expect(out.site.sections[0].title.de).toEqual({ untrusted_text: 'Tanz wie Götter' })
+    expect(out.site.sections[0].title.de).toEqual({ untrusted_text: 'Tanz mit uns' })
     expect(out.site.sections[0].buttons[0].label.en).toEqual({ untrusted_text: 'Join' })
     expect(out.site.sections[0].buttons[0].url).toBe('#signup')
     expect(out.site.sections[0].id).toBe('hero')

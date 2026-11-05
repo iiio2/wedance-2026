@@ -997,7 +997,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'get_my_site', title: 'Read my website', scopes: ['business:read'], business: true, annotations: READ,
-    description: 'The page’s own website (e.g. dancegodscompany.com) when WeDance runs it: WeDance is that site’s CMS, so its words, images, sections, languages, SEO and welcome email are edited here, not in another CMS. Returns the site (every text per language), each section’s id and kind, and what each kind is for. Events sections list the page’s WeDance events by themselves (change those with update_event). Read it before update_my_site. exists: false = no site content yet (update_my_site can start one).',
+    description: 'The page’s own website (on its own domain) when WeDance runs it: WeDance is that site’s CMS, so its words, images, sections, languages, SEO and welcome email are edited here, not in another CMS. Returns the site (every text per language), each section’s id and kind, and what each kind is for. Events sections list the page’s WeDance events by themselves (change those with update_event). Read it before update_my_site. exists: false = no site content yet (update_my_site can start one).',
     input: { profile },
     run: async (t, a) => {
       const r: any = await t.caller.businessSite.get({ username: a.profile })
