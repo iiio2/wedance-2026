@@ -17,17 +17,23 @@ import { isPublished } from '../../../shared/types/profileSite'
  * every language, the welcome email), /business/network/<username>/contacts
  * lists who signed up on it. The site reads /api/profiles/<username>/site.
  */
-const blank = (): ProfileSite => ({ locales: ['en'], sections: [] })
+// A new site starts as a draft: it's public only once its team presses Publish.
+const blank = (): ProfileSite => ({ locales: ['en'], sections: [], published: false })
 
 export const businessSiteRouter = router({
   get: protectedProcedure.input(z.object({ username: z.string().min(1) })).query(async ({ ctx, input }) => {
     const p = await requireMember(ctx, input.username)
     const [row] = await ctx.db.select().from(profileSites).where(eq(profileSites.profileId, p.id))
+    const contact = ((p as any).contact ?? {}) as { email?: string; phone?: string }
     return {
       profile: { username: p.username, name: p.name },
       site: (row?.content as ProfileSite | undefined) ?? blank(),
       exists: !!row,
       updatedAt: row?.updatedAt ?? null,
+      /** Where WeDance hosts it. */
+      hostedUrl: hostedSiteUrl(p.username),
+      /** What the page already knows, to fill the site's legal details from. */
+      legalHints: { name: p.name ?? '', address: (p as any).address ?? '', email: contact.email ?? '', phone: contact.phone ?? '' },
     }
   }),
 

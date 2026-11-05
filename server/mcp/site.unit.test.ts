@@ -69,6 +69,14 @@ describe('applySitePatch', () => {
     expect(() => applySitePatch(site(), { sections: [{ id: 'hero', anchor: 'Not Valid' }] })).toThrow(/Anchors/)
   })
 
+  it('look, legal details and publishing: only the keys passed change, "" clears one', () => {
+    const s0 = { ...site(), theme: { preset: 'tropical', accent: '#e11d48' }, legal: { name: 'Salsa School', email: 'hi@salsaschool.example' }, published: false }
+    const next = applySitePatch(s0, { theme: { accent: '', font: 'montserrat' }, legal: { email: '', address: ' Hauptstr. 1, 80331 München ' }, published: true })
+    expect(next.theme).toEqual({ preset: 'tropical', font: 'montserrat' })
+    expect(next.legal).toEqual({ name: 'Salsa School', address: 'Hauptstr. 1, 80331 München' })
+    expect(next.published).toBe(true)
+  })
+
   it('never changes the site it was given', () => {
     const s = site()
     applySitePatch(s, { sections: [{ id: 'hero', title: { en: 'X' } }], remove_sections: ['about'] })

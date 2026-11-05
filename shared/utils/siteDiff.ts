@@ -25,7 +25,7 @@ export function siteChanges(before: ProfileSite, after: ProfileSite) {
     const keys = [...new Set([...Object.keys(old), ...Object.keys(x)])].filter(k => !same((old as any)[k], (x as any)[k]))
     return keys.length ? [{ ...label(x, lang), changes: Object.fromEntries(keys.map(k => [k, { from: (old as any)[k] ?? null, to: (x as any)[k] ?? null }])) }] : []
   })
-  const site = (['domain', 'locales', 'seo', 'welcome'] as const)
+  const site = (['domain', 'locales', 'seo', 'welcome', 'theme', 'published', 'legal'] as const)
     .filter(k => !same(before[k], after[k]))
     .map(k => ({ field: k, from: before[k] ?? null, to: after[k] ?? null }))
   const orderBefore = before.sections.filter(x => now.has(x.id)).map(x => x.id)
@@ -44,7 +44,8 @@ const FIELD_NAMES: Record<string, string> = {
   image: 'image', video: 'video', address: 'address', mapUrl: 'map', days: 'days ahead', buttons: 'buttons', items: 'items',
   callout: 'callout', hidden: 'visibility', kind: 'kind', description: 'description', subject: 'subject',
 }
-const SITE_FIELDS: Record<string, string> = { domain: 'address', locales: 'languages', seo: 'search & sharing', welcome: 'welcome email' }
+const SITE_FIELDS: Record<string, string> = { domain: 'own domain', locales: 'languages', seo: 'search & sharing', welcome: 'welcome email', theme: 'look', legal: 'legal details' }
+const THEME_FIELDS: Record<string, string> = { preset: 'style', accent: 'accent colour', font: 'font', logo: 'logo', favicon: 'favicon' }
 
 const isL10n = (v: unknown): v is L10n => !!v && typeof v === 'object' && !Array.isArray(v) && Object.values(v as object).every(x => typeof x === 'string')
 /** "title (en, de)" when only some languages of a text changed. */
@@ -71,6 +72,13 @@ export function siteChangeSummary(before: ProfileSite | null, after: ProfileSite
   const lines: string[] = []
   for (const s of c.site) {
     const name = SITE_FIELDS[s.field] ?? s.field
+    if (s.field === 'published') { lines.push(s.to === false ? 'Made it a draft' : 'Published'); continue }
+    if (s.field === 'theme') {
+      const a = (s.from ?? {}) as Record<string, unknown>, b = (s.to ?? {}) as Record<string, unknown>
+      const parts = [...new Set([...Object.keys(a), ...Object.keys(b)])].filter(k => !same(a[k], b[k])).map(k => THEME_FIELDS[k] ?? k)
+      lines.push(parts.length ? `Changed look: ${parts.join(', ')}` : 'Changed look')
+      continue
+    }
     // seo / welcome: which of their texts, in which languages.
     if (s.field === 'seo' || s.field === 'welcome') {
       const a = (s.from ?? {}) as Record<string, unknown>, b = (s.to ?? {}) as Record<string, unknown>

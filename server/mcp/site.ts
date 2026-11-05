@@ -6,7 +6,8 @@
  * texts merge per language. Pure, for tests.
  */
 import { z } from 'zod'
-import { SECTION_INFO, SECTION_KINDS, newId, profileSiteSchema, siteSectionSchema, type L10n, type ProfileSite, type SiteSection } from '../../shared/types/profileSite'
+import { SECTION_INFO, SECTION_KINDS, newId, profileSiteSchema, siteSectionSchema, type L10n, type ProfileSite, type SiteSection, type SiteLegal, type SiteThemeSettings } from '../../shared/types/profileSite'
+import { SITE_FONTS, SITE_THEMES } from '../../shared/utils/siteThemes'
 
 /** Section fields that hold text per language ({ en: '…', de: '…' }). */
 const L10N_FIELDS = ['navLabel', 'eyebrow', 'title', 'titleAccent', 'body', 'address'] as const
@@ -47,6 +48,18 @@ export const sitePatchInput = {
   sections: z.array(sectionPatchSchema).max(40).optional().describe('Sections to change (by id) or add (no id, with kind). Only the fields you pass change.'),
   remove_sections: z.array(z.string().max(40)).max(40).optional().describe('Ids of sections to delete. To keep one off the page but saved, set hidden: true instead.'),
   order: z.array(z.string().max(40)).max(40).optional().describe('Section ids in the new order; sections you leave out follow in their current order.'),
+  theme: z.object({
+    preset: z.enum(Object.keys(SITE_THEMES) as [string, ...string[]]).optional().describe('The style: ' + Object.entries(SITE_THEMES).map(([id, t]) => `${id} (${t.label})`).join(', ') + '.'),
+    accent: z.string().regex(/^(#[0-9a-fA-F]{6})?$/).optional().describe('One accent colour #rrggbb for buttons and highlights; "" = the style\'s own.'),
+    font: z.string().max(40).optional().describe('Heading font: ' + Object.keys(SITE_FONTS).join(', ') + '; "" = the style\'s own.'),
+    logo: z.string().max(2000).optional().describe('Logo image URL (replaces the name in the top bar); "" removes it.'),
+    favicon: z.string().max(2000).optional().describe('Browser-tab icon URL; "" removes it.'),
+  }).optional().describe('The look on sites.wedance.vip. Only the keys you pass change.'),
+  legal: z.object({
+    name: z.string().max(200).optional(), address: z.string().max(400).optional(), email: z.string().max(200).optional(),
+    phone: z.string().max(60).optional(), vatId: z.string().max(40).optional(), register: z.string().max(200).optional(), responsible: z.string().max(300).optional(),
+  }).optional().describe('Who runs the site, for its Impressum and privacy page (required for German businesses). Only the keys you pass change; "" clears one. Use the user\'s own words; never invent these.'),
+  published: z.boolean().optional().describe('true = live on sites.wedance.vip; false = back to a draft (only preview links show it).'),
 }
 export type SitePatch = { [K in keyof typeof sitePatchInput]?: z.infer<(typeof sitePatchInput)[K]> }
 
@@ -122,6 +135,26 @@ export function applySitePatch(site: ProfileSite, patch: SitePatch): ProfileSite
       body: mergeL10n(site.welcome?.body, patch.welcome.body),
     }))
   }
+  if (patch.theme) {
+    const theme: SiteThemeSettings = { ...(site.theme ?? {}) }
+    for (const [k, v] of Object.entries(patch.theme)) {
+      if (v === undefined) continue
+      if (v) (theme as any)[k] = v
+      else delete (theme as any)[k]
+    }
+    next.theme = theme
+  }
+  if (patch.legal) {
+    const legal: SiteLegal = { ...(site.legal ?? {}) }
+    for (const [k, v] of Object.entries(patch.legal)) {
+      if (v === undefined) continue
+      if (v.trim()) (legal as any)[k] = v.trim()
+      else delete (legal as any)[k]
+    }
+    if (Object.keys(legal).length) next.legal = legal
+    else delete next.legal
+  }
+  if (patch.published !== undefined) next.published = patch.published
   const ok = profileSiteSchema.safeParse(next)
   if (!ok.success) throw new SitePatchError(ok.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; '))
   return next

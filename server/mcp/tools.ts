@@ -14,6 +14,7 @@ import { dupeReasonText } from '../utils/profileDupes'
 import { parseInstagramLink } from '../../shared/utils/instagram'
 import { mergeSocials } from '../../shared/utils/socials'
 import { siteChangeSummary } from '../../shared/utils/siteDiff'
+import { SITE_FONTS, SITE_THEMES } from '../../shared/utils/siteThemes'
 import { applySitePatch, sectionKinds, siteChanges, sitePatchInput, SitePatchError, type SitePatch } from './site'
 import { TRPCError } from '@trpc/server'
 import type { ProfileSite } from '../../shared/types/profileSite'
@@ -998,22 +999,26 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'get_my_site', title: 'Read my website', scopes: ['business:read'], business: true, annotations: READ,
-    description: 'The page’s own website (on its own domain) when WeDance runs it: WeDance is that site’s CMS, so its words, images, sections, languages, SEO and welcome email are edited here, not in another CMS. Returns the site (every text per language), each section’s id and kind, and what each kind is for. Events sections list the page’s WeDance events by themselves (change those with update_event). Read it before update_my_site. exists: false = no site content yet (update_my_site can start one).',
+    description: 'The page’s own website when WeDance runs it — hosted at sites.wedance.vip/<handle> (address), or on its own domain: WeDance is that site’s CMS, so its words, images, sections, languages, SEO, welcome email, look and legal details are edited here, not in another CMS. Returns the site (every text per language), whether it is published, each section’s id and kind, what each kind is for, and the looks and fonts to choose from. Events sections list the page’s WeDance events by themselves (change those with update_event). Read it before update_my_site. exists: false = no site yet (update_my_site starts one, as a draft).',
     input: { profile },
     run: async (t, a) => {
       const r: any = await t.caller.businessSite.get({ username: a.profile })
       return {
         page: r.profile, exists: r.exists, updatedAt: r.updatedAt,
+        address: r.hostedUrl,
+        published: r.site.published !== false,
         domain: r.site.domain ?? null,
         site: r.site,
         section_kinds: sectionKinds,
+        looks: Object.fromEntries(Object.entries(SITE_THEMES).map(([id, th]) => [id, th.label])),
+        fonts: Object.fromEntries(Object.entries(SITE_FONTS).map(([id, f]) => [id, f.label])),
         edit_on_web: url(t, `/business/network/${a.profile}/website`),
       }
     },
   },
   {
     name: 'update_my_site', title: 'Edit my website', scopes: ['business:publish'], business: true, annotations: OUTWARD, confirm: true,
-    description: 'Change the page’s own website that WeDance runs (see get_my_site): texts, images, buttons, sections (add, change, hide, remove, reorder), languages, SEO, welcome email, domain. Only what you pass changes: sections by id, texts per language (other languages stay). Goes live on the site right away; every save is kept as a version (site_history, restore_site_version to undo). Preview → confirm. Only pages the user runs (my_profiles). Not the page’s link list on WeDance (that’s socials in update_business_profile).',
+    description: 'Change the page’s own website that WeDance runs (see get_my_site), hosted at sites.wedance.vip/<handle>: texts, images, buttons, sections (add, change, hide, remove, reorder), languages, SEO, welcome email, own domain, the look (style, accent colour, font, logo, favicon), the legal details for its Impressum, and publishing (published: true / false). Only what you pass changes: sections by id, texts per language (other languages stay). A new site starts as a draft; a published site shows changes right away. Every save is kept as a version (site_history, restore_site_version to undo). Preview → confirm.',
     input: { profile, ...sitePatchInput, confirm_token: confirmToken },
     preview: async (t, a) => {
       const r: any = await t.caller.businessSite.get({ username: a.profile })

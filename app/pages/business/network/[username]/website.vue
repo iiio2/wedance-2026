@@ -10,7 +10,7 @@
  * language being edited applies everywhere; every save is a version (History).
  */
 import { Check, ExternalLink, Contact, History, ArrowLeft, Plus, LayoutList, Settings2, Mail, Languages, CircleAlert } from 'lucide-vue-next'
-import { SECTION_INFO, SITE_LOCALES, missingTexts, newId, type ProfileSite, type SectionKind, type SiteSection } from '#shared/types/profileSite'
+import { SECTION_INFO, SITE_LOCALES, isPublished, missingTexts, newId, type ProfileSite, type SectionKind, type SiteSection } from '#shared/types/profileSite'
 
 definePageMeta({ layout: 'business', wide: true })
 const route = useRoute()
@@ -23,10 +23,14 @@ const site = ref<ProfileSite | null>(null)
 const saved = ref('')
 const error = ref<string | null>(null)
 const savedAt = ref<Date | null>(null)
+const hostedUrl = ref('')
+const legalHints = ref<{ name: string; address: string; email: string; phone: string }>({ name: '', address: '', email: '', phone: '' })
 async function load() {
   try {
     const r = await $trpc.businessSite.get.query({ username: username.value })
     profile.value = r.profile
+    hostedUrl.value = r.hostedUrl
+    legalHints.value = r.legalHints
     site.value = structuredClone(r.site) as ProfileSite
     saved.value = JSON.stringify(site.value)
     savedAt.value = r.updatedAt ? new Date(r.updatedAt) : null
@@ -62,6 +66,15 @@ async function save() {
     justSaved.value = true
     setTimeout(() => { justSaved.value = false }, 4000)
   } catch (e: any) { error.value = e?.message || 'Couldn’t save.' } finally { saving.value = false }
+}
+// Publishing saves everything, live; unpublishing makes it a draft again (both are versions in History).
+const published = computed(() => !!site.value && isPublished(site.value))
+async function setPublished(on: boolean) {
+  if (!site.value) return
+  const before = site.value.published
+  site.value.published = on
+  await save()
+  if (error.value) site.value.published = before
 }
 const confirmUndo = ref(false)
 async function undoAll() { confirmUndo.value = false; await load() }
@@ -166,6 +179,8 @@ const sectionsMissing = computed(() => site.value && lang.value !== main.value ?
         </Button>
       </AdminPageHeader>
 
+      <BusinessSiteStatus :username="profile.username" :url="hostedUrl" :published="published" :has-sections="site.sections.length > 0" :dirty="dirty" :saving="saving" @publish="setPublished(true)" @unpublish="setPublished(false)" />
+
       <!-- Toolbar: what you edit, and in which language -->
       <div class="sticky top-0 z-20 -mx-4 mt-6 border-b bg-background/95 px-4 py-2 backdrop-blur">
         <div class="flex flex-wrap items-center justify-between gap-2">
@@ -237,12 +252,7 @@ const sectionsMissing = computed(() => site.value && lang.value !== main.value ?
 
       <!-- SETTINGS -->
       <div v-else-if="tab === 'settings'" class="mt-4 grid max-w-3xl gap-4">
-        <section class="rounded-2xl border bg-card p-5 shadow-wd-card">
-          <h2 class="text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Address</h2>
-          <Field label="Where the site lives" hint="Links in emails point here." class="mt-3">
-            <Input v-model="site.domain" placeholder="https://yourdanceschool.com" />
-          </Field>
-        </section>
+        <BusinessSiteLook v-model="site.theme" :domain="site.domain" :name="profile.name" />
         <section class="rounded-2xl border bg-card p-5 shadow-wd-card">
           <h2 class="text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Languages</h2>
           <p class="mt-1 text-sm text-muted-foreground">The main language comes first: a text not translated yet shows in it.</p>
@@ -265,6 +275,14 @@ const sectionsMissing = computed(() => site.value && lang.value !== main.value ?
             <BusinessSiteImage :model-value="site.seo?.image" label="Image when shared" :domain="site.domain" @update:model-value="setSeoImage" />
           </div>
         </section>
+        <BusinessSiteLegal v-model="site.legal" :hints="legalHints" />
+        <section class="rounded-2xl border bg-card p-5 shadow-wd-card">
+          <h2 class="text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary">Own domain</h2>
+          <p class="mt-1 text-sm text-muted-foreground">Your site lives at <a :href="hostedUrl" target="_blank" rel="noopener" class="font-bold underline underline-offset-2">{{ hostedUrl.replace(/^https?:\/\//, '') }}</a>. Only fill this in if it also runs on a domain of its own — search engines are then sent there.</p>
+          <Field label="Domain" optional class="mt-3">
+            <Input v-model="site.domain" placeholder="https://yourdanceschool.com" />
+          </Field>
+        </section>
       </div>
 
       <!-- WELCOME EMAIL -->
@@ -285,7 +303,7 @@ const sectionsMissing = computed(() => site.value && lang.value !== main.value ?
           <p class="min-w-0 flex-1 truncate text-sm" role="status">
             <span v-if="saving" class="font-bold">Saving…</span>
             <span v-else-if="dirty" class="font-bold text-wd-amber-800">Unsaved changes</span>
-            <span v-else-if="justSaved" class="inline-flex items-center gap-1 font-bold text-wd-green-700"><Check class="size-4 shrink-0" aria-hidden="true" /> Saved<span class="hidden sm:inline">. Your website shows it within a minute.</span></span>
+            <span v-else-if="justSaved" class="inline-flex items-center gap-1 font-bold text-wd-green-700"><Check class="size-4 shrink-0" aria-hidden="true" /> Saved<span class="hidden sm:inline">{{ published ? '. Your website shows it within a minute.' : ' as a draft. Only Preview shows it until you publish.' }}</span></span>
             <span v-else class="text-muted-foreground">All changes saved<template v-if="savedLabel"><span class="hidden sm:inline"> · {{ savedLabel }}</span></template></span>
           </p>
           <div class="flex shrink-0 items-center gap-2">

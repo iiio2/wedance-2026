@@ -26,12 +26,18 @@ describe('siteChangeSummary', () => {
     const after = { ...base(), seo: { title: { en: 'Salsa in Munich' } }, welcome: { subject: { de: 'Willkommen' } } }
     expect(siteChangeSummary(base(), after)).toEqual(['Changed search & sharing: title (en)', 'Changed welcome email: subject (de)'])
   })
+  it('publishing, drafts, look and legal details', () => {
+    expect(siteChangeSummary({ ...base(), published: false }, { ...base(), published: true })).toEqual(['Published'])
+    expect(siteChangeSummary(base(), { ...base(), published: false })).toEqual(['Made it a draft'])
+    expect(siteChangeSummary(base(), { ...base(), theme: { preset: 'tropical', accent: '#e11d48' } })).toEqual(['Changed look: style, accent colour'])
+    expect(siteChangeSummary(base(), { ...base(), legal: { name: 'Salsa School GmbH' } })).toEqual(['Changed legal details'])
+  })
   it('added, removed, hidden, reordered, site fields', () => {
     const after = base()
     after.domain = 'https://salsaschool.example.org'
     after.sections = [{ ...after.sections[1]!, hidden: true }, after.sections[0]!, { id: 'c', kind: 'cta', title: { en: 'Join the group' } }]
     expect(siteChangeSummary(base(), after)).toEqual([
-      'Changed address', 'Added Call to action “Join the group”', 'Hid Questions “Questions”', 'Removed Video', 'Reordered sections',
+      'Changed own domain', 'Added Call to action “Join the group”', 'Hid Questions “Questions”', 'Removed Video', 'Reordered sections',
     ])
   })
 })
