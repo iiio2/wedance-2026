@@ -12,6 +12,7 @@ import { agendaToSessions, cleanSession, emptyEventDetails, inferDurations, newS
 import { setupChecklist, setupNext } from './checklist'
 import { dupeReasonText } from '../utils/profileDupes'
 import { parseInstagramLink } from '../../shared/utils/instagram'
+import { mergeSocials } from '../../shared/utils/socials'
 
 /**
  * The WeDance MCP tools. A thin adapter: every tool calls the tRPC router
@@ -956,21 +957,29 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'update_business_profile', title: 'Edit a business page', scopes: ['business:publish'], business: true, annotations: OUTWARD, confirm: true,
-    description: 'Change one of my public pages (artist, venue, organizer, promoter): name, bio, city, styles, photo, address, and for a promoter page the influencer flag. Preview → confirm. Only pages the user runs (my_profiles); an unclaimed page they added or have on their events: update_listed_profile.',
+    description: 'Change one of my public pages (artist, venue, organizer, promoter): name, bio, city, styles, photo, address, socials (website, Instagram, Facebook…), and for a promoter page the influencer flag. Preview → confirm. Only pages the user runs (my_profiles); an unclaimed page they added or have on their events: update_listed_profile.',
     input: {
       profile, name: z.string().trim().min(1).max(120).optional(), bio: z.string().max(4000).optional(), city: z.string().max(120).optional(),
       styles: z.array(z.string().trim().min(1).max(40)).max(20).optional(), photo: z.string().url().nullable().optional(), address: z.string().max(300).optional(),
+      socials: z.array(z.object({
+        platform: z.string().trim().min(1).max(40).describe('instagram, facebook, website, youtube, tiktok…'),
+        url: z.string().trim().max(300).describe('Full link; empty removes that platform.'),
+      })).max(10).optional().describe('Links by platform; platforms you leave out stay as they are.'),
       influencer: z.boolean().optional().describe('Promoter pages only: true = this promoter is an influencer (their deliverable is content; promo_kit is made for them).'),
       confirm_token: confirmToken,
     },
     preview: async (t, a) => {
       const cur: any = await t.caller.business.get({ username: a.profile })
       const fields = ['name', 'bio', 'city', 'styles', 'photo', 'address', 'influencer'].filter(k => a[k] !== undefined)
-      return { page: cur.name, changes: Object.fromEntries(fields.map(k => [k, { from: cur[k], to: a[k] }])) }
+      const changes: Record<string, unknown> = Object.fromEntries(fields.map(k => [k, { from: cur[k], to: a[k] }]))
+      if (a.socials) changes.socials = { from: cur.socials ?? [], to: mergeSocials(cur.socials, a.socials) }
+      return { page: cur.name, changes }
     },
     run: async (t, a) => {
-      const { profile: username, confirm_token: _c, ...fields } = a
-      return t.caller.business.update({ username, ...fields })
+      const { profile: username, confirm_token: _c, socials, ...fields } = a
+      // business.update replaces the whole list; merge per platform so a website edit keeps the Instagram.
+      const merged = socials ? mergeSocials(((await t.caller.business.get({ username })) as any).socials, socials) : undefined
+      return t.caller.business.update({ username, ...fields, ...(merged ? { socials: merged } : {}) })
     },
   },
   {

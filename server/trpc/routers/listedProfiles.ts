@@ -5,6 +5,7 @@ import { router, protectedProcedure } from '../trpc'
 import { events, profiles, profileMembers } from '../../database/schema'
 import { cityInfo, profilesIManage } from './businessEvents'
 import { rehostImage } from '../../utils/rehostImage'
+import { mergeSocials, type Social } from '../../../shared/utils/socials'
 import type { GrantCtx } from '../../utils/profileAccess'
 
 /**
@@ -96,11 +97,7 @@ export const listedProfilesRouter = router({
       }
       if (address !== undefined) set.address = address || null
       // Per platform: a given link replaces that platform's, an empty one removes it, the rest stay.
-      if (socials) {
-        const given = new Map(socials.map(s => [s.platform, s.url]))
-        const kept = ((p.socials ?? []) as { platform: string; url: string }[]).filter(s => !given.has(s.platform.toLowerCase()))
-        set.socials = [...kept, ...socials.filter(s => s.url)]
-      }
+      if (socials) set.socials = mergeSocials(p.socials as Social[] | null, socials)
       if (photo !== undefined) set.photo = photo ? await rehostImage(photo, 'profiles') : null
       if (!Object.keys(set).length) return { saved: false, username: p.username, changed: [] as string[] }
       await ctx.db.update(profiles).set(set).where(eq(profiles.id, p.id))
