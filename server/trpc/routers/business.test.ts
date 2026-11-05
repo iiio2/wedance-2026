@@ -90,7 +90,7 @@ describe.skipIf(!DATABASE_URL)('business router', () => {
   })
 
   it('treats a v4-claimed profile without 2026 managers as claimable', async () => {
-    // Like MontunoClub: claimed=true came over from v4, nobody manages it here.
+    // Like SalsaClub: claimed=true came over from v4, nobody manages it here.
     const username = `${tag}-v4org`
     await db.insert(schema.profiles).values({ username, type: 'organizer', name: `${tag} V4 Org`, claimed: true })
     createdProfiles.push(username)

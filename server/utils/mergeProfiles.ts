@@ -12,7 +12,7 @@
  * with the most events. A copy merges into it when it's safe to say they're one:
  *   - it's an empty shell (no events, nobody runs it), or
  *   - it's a numbered copy of the same handle ("salon.cubano2"), or
- *   - its handle differs only by punctuation ("dj.lole" / "djlole"), or
+ *   - its handle differs only by punctuation ("dj.max" / "djmax"), or
  *   - (organizers, artists) the same distinctive name (8+ letters) in the same
  *     city, or
  *   - (venues) it has the same street address, is within 150 m, or has the
@@ -23,8 +23,8 @@
  * a city ("Budapest").
  *
  * A second group: same type and the same Instagram account, whatever the name
- * (the v4 import made a fan page per Instagram mention: "dancegods-company" and
- * "dancegodscompany.official2"). The account is the business, so organizers
+ * (the v4 import made a fan page per Instagram mention: "salsa-school" and
+ * "salsaschool.official2"). The account is the business, so organizers
  * merge — unless both are claimed. Artists merge only when the copy is
  * a numbered copy or a bare handle; two artists sharing an account are often a
  * couple ("alexei.emilia"), so they go to review. Venues merge only in the same
@@ -60,7 +60,7 @@ const ACCENTS: Record<string, string> = { á: 'a', à: 'a', â: 'a', ä: 'a', ã
 export const nameKey = (name: string) => name.toLowerCase().replace(/[^\u0000-\u007f]/g, c => ACCENTS[c] ?? c).replace(/[^a-z0-9]+/g, '')
 const isPlaceHandle = (u: string) => /^(ChIJ|Ei|Gh)[\w-]{15,}$/.test(u)
 const base = (u: string) => u.toLowerCase().replace(/\d+$/, '')
-// "dj.lole" = "djlole" = "dj_lole" (but not a different name).
+// "dj.max" = "djmax" = "dj_max" (but not a different name).
 const plain = (u: string) => u.toLowerCase().replace(/\d+$/, '').replace(/[^a-z0-9]+/g, '')
 const STREETY = /(stra(ss|ß)e|strasse|str\.|platz|gasse|weg\b|street|road|avenue|\bcalle\b|\d)/i
 const fold = (a: string) => a.toLowerCase().replace(/[^\u0000-\u007f]/g, c => ACCENTS[c] ?? c)

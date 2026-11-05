@@ -4,7 +4,7 @@ import { toMs, mapStyles, parseVenue, cityFromAddress, buildCityIndex, resolveCi
 const MUNICH = 'ChIJ2V-Mo_l1nkcRfZixfUq4DAE'
 const NOW = Date.parse('2026-10-04T00:00:00Z')
 const cityIndex = buildCityIndex([{ city: 'Munich', citySlug: 'munich' }, { city: 'Prague', citySlug: 'prague' }])
-const ctx = { now: NOW, cityIndex, placeLocality: new Map<string, string>(), knownProfiles: new Map([['montunoclub', 'MontunoClub']]) }
+const ctx = { now: NOW, cityIndex, placeLocality: new Map<string, string>(), knownProfiles: new Map([['salsaclub', 'SalsaClub']]) }
 
 const munichVenue = {
   name: 'Buena Vista Bar',
@@ -15,7 +15,7 @@ const munichVenue = {
   ],
   geometry: { location: { lat: 48.137, lng: 11.566 } },
 }
-const base = { id: 'abc', type: 'event', name: 'Salsa Social', eventType: 'Party', startDate: Date.parse('2026-10-10T18:00:00Z'), endDate: Date.parse('2026-10-10T22:00:00Z'), venue: munichVenue, place: MUNICH, styles: { Salsa: { selected: true } }, org: { username: 'MontunoClub' }, visibility: 'Public' }
+const base = { id: 'abc', type: 'event', name: 'Salsa Social', eventType: 'Party', startDate: Date.parse('2026-10-10T18:00:00Z'), endDate: Date.parse('2026-10-10T22:00:00Z'), venue: munichVenue, place: MUNICH, styles: { Salsa: { selected: true } }, org: { username: 'SalsaClub' }, visibility: 'Public' }
 
 describe('toMs', () => {
   it('normalises epoch ms, seconds, numeric strings, ISO strings, Timestamps', () => {
@@ -86,7 +86,7 @@ describe('mapV3Event', () => {
     expect(r.row).toMatchObject({
       sourceId: 'abc', slug: 'v3-abc', name: 'Salsa Social', type: 'Party', citySlug: 'munich', city: 'Munich',
       timezone: 'Europe/Berlin', venueName: 'Buena Vista Bar', styles: ['Salsa'],
-      organizerUsername: 'montunoclub', organizerName: 'MontunoClub', isFestival: false,
+      organizerUsername: 'salsaclub', organizerName: 'SalsaClub', isFestival: false,
     })
     expect(r.row.startDate.toISOString()).toBe('2026-10-10T18:00:00.000Z')
   })

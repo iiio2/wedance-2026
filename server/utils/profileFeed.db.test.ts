@@ -29,7 +29,7 @@ async function event(name: string, values: Partial<typeof schema.events.$inferIn
 
 describe.skipIf(!DATABASE_URL)('profile feed (#484)', () => {
   beforeAll(async () => {
-    ;[artist] = await db.insert(schema.profiles).values({ username: `${tag}-milaila`, type: 'artist', name: 'Milaila' })
+    ;[artist] = await db.insert(schema.profiles).values({ username: `${tag}-ana`, type: 'artist', name: 'Ana' })
       .returning({ id: schema.profiles.id, username: schema.profiles.username, name: schema.profiles.name })
     const handle = artist.username
     await event('workshop she teaches', { artists: ['someone-else', handle.toUpperCase()] })

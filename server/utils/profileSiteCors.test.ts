@@ -10,29 +10,29 @@ function app(handler = defineEventHandler(() => { throw createError({ statusCode
 }
 
 const get = (path: string, init: RequestInit = {}) =>
-  app()(new Request(`http://localhost${path}`, { ...init, headers: { origin: 'https://milailacapote.com', ...init.headers } }))
+  app()(new Request(`http://localhost${path}`, { ...init, headers: { origin: 'https://artist.example', ...init.headers } }))
 
 describe('profile site CORS', () => {
   it('puts the header on a 404', async () => {
-    const res = await get('/api/profiles/milailacapote/site?lang=de')
+    const res = await get('/api/profiles/artistpage/site?lang=de')
     expect(res.status).toBe(404)
     expect(res.headers.get('access-control-allow-origin')).toBe('*')
   })
 
   it('covers the events feed', async () => {
-    const res = await get('/api/profiles/milailacapote/events')
+    const res = await get('/api/profiles/artistpage/events')
     expect(res.headers.get('access-control-allow-origin')).toBe('*')
   })
 
   it('answers the preflight', async () => {
-    const res = await get('/api/profiles/milailacapote/site', { method: 'OPTIONS', headers: { 'access-control-request-method': 'GET' } })
+    const res = await get('/api/profiles/artistpage/site', { method: 'OPTIONS', headers: { 'access-control-request-method': 'GET' } })
     expect(res.status).toBe(204)
     expect(res.headers.get('access-control-allow-origin')).toBe('*')
     expect(res.headers.get('access-control-allow-methods')).toContain('GET')
   })
 
   it('leaves other routes alone', async () => {
-    const res = await get('/api/profiles/milailacapote/contacts-export')
+    const res = await get('/api/profiles/artistpage/contacts-export')
     expect(res.headers.get('access-control-allow-origin')).toBeNull()
   })
 })

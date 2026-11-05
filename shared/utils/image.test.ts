@@ -5,8 +5,8 @@ const CLD = 'https://res.cloudinary.com/djumxevsm/image/upload'
 
 describe('sizedImage', () => {
   it('adds a size, format and quality to a plain Cloudinary upload', () => {
-    expect(sizedImage(`${CLD}/v1793646578/wedance-2026/flyers/montunoclub/abc.png`, 640))
-      .toBe(`${CLD}/c_limit,w_640,f_auto,q_auto/v1793646578/wedance-2026/flyers/montunoclub/abc.png`)
+    expect(sizedImage(`${CLD}/v1793646578/wedance-2026/flyers/salsaclub/abc.png`, 640))
+      .toBe(`${CLD}/c_limit,w_640,f_auto,q_auto/v1793646578/wedance-2026/flyers/salsaclub/abc.png`)
   })
 
   it('works on uploads without a version', () => {

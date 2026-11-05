@@ -3,7 +3,7 @@ import { handleError, isValidHandle, RESERVED_HANDLES } from './handle'
 
 describe('handle rule', () => {
   it('accepts Instagram handles as they are, and the dashed handles we already have', () => {
-    for (const h of ['caliente.nights', 'caliente.nights2', 'ritmo_jg', '_salsa_', 'la-clave', 'abc', 'dj.lole', 'my-mia.de', 'x'.repeat(40)])
+    for (const h of ['caliente.nights', 'caliente.nights2', 'ritmo_jg', '_salsa_', 'la-clave', 'abc', 'dj.max', 'my-mia.de', 'x'.repeat(40)])
       expect(handleError(h), h).toBeNull()
   })
 

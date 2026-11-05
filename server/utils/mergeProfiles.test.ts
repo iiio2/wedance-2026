@@ -8,12 +8,12 @@ const cities = new Set(['budapest', 'munich'])
 describe('findDuplicates', () => {
   it('groups organizers with the same Instagram whatever the name, keeping the plain handle', () => {
     const gs = findDuplicates([
-      row({ username: 'dancegods-company', name: 'Dance Gods Company', events: 4, instagram: ['dancegodscompany.official'] }),
-      row({ username: 'dancegodscompany.official2', name: 'dancegodscompany.official2', instagram: ['dancegodscompany.official'] }),
+      row({ username: 'salsa-school', name: 'Salsa School', events: 4, instagram: ['salsaschool.official'] }),
+      row({ username: 'salsaschool.official2', name: 'salsaschool.official2', instagram: ['salsaschool.official'] }),
     ], cities)
     expect(gs).toHaveLength(1)
-    expect(gs[0]!.keep.username).toBe('dancegods-company')
-    expect(gs[0]!.others.map(o => [o.row.username, o.merge, o.reason])).toEqual([['dancegodscompany.official2', true, 'same Instagram']])
+    expect(gs[0]!.keep.username).toBe('salsa-school')
+    expect(gs[0]!.others.map(o => [o.row.username, o.merge, o.reason])).toEqual([['salsaschool.official2', true, 'same Instagram']])
   })
   it('sends two artists sharing an Instagram (a couple) and two claimed pages to review', () => {
     const [a] = findDuplicates([
@@ -73,7 +73,7 @@ describe('findDuplicates', () => {
     expect(s!.others[0]).toMatchObject({ merge: false })
   })
   it('merges organizers whose handles differ only by punctuation', () => {
-    const [g] = findDuplicates([row({ name: 'DJ Lole', username: 'djlole', events: 209 }), row({ name: 'DJ Lole', username: 'dj.lole', events: 29 })], cities)
+    const [g] = findDuplicates([row({ name: 'DJ Max', username: 'djmax', events: 209 }), row({ name: 'DJ Max', username: 'dj.max', events: 29 })], cities)
     expect(g!.others[0]).toMatchObject({ merge: true, reason: 'same handle, other punctuation' })
   })
   it('leaves venues named after a city alone', () => {

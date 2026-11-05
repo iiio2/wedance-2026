@@ -13,7 +13,7 @@ describe('unreadable', () => {
     expect(unreadable('SalsamásPasing')).toBe('not a handle')
   })
   it('leaves readable ones alone', () => {
-    for (const h of ['salsea', 'salsa.cubano', 'djlole', 'my-mia.de', 'alosha', 'evergreen-goes-luma', 'barbara-jimenez']) expect(unreadable(h)).toBeNull()
+    for (const h of ['salsea', 'salsa.cubano', 'djmax', 'my-mia.de', 'alosha', 'evergreen-goes-luma', 'barbara-jimenez']) expect(unreadable(h)).toBeNull()
   })
 })
 

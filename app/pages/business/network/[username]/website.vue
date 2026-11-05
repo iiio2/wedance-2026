@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * /business/network/<handle>/website — the profile's own website, edited here
- * (RAZ-412). WeDance is its CMS: the site (e.g. montuno.club) renders exactly
+ * (RAZ-412). WeDance is its CMS: the site (e.g. salsaclub.example) renders exactly
  * these sections from /api/profiles/<handle>/site. Events aren't typed in: an
  * "Events" section lists the profile's events on WeDance. Sign-ups from the
  * site land in Contacts.
@@ -131,7 +131,7 @@ const LANG_NAMES: Record<string, string> = { en: 'English', de: 'Deutsch', es: '
       <section class="mt-6 rounded-2xl border bg-card p-5 shadow-wd-card">
         <h2 class="flex items-center gap-1.5 text-eyebrow font-bold uppercase tracking-[0.3em] text-secondary"><Globe class="size-4" aria-hidden="true" /> The site</h2>
         <div class="mt-4 grid gap-4 sm:grid-cols-2">
-          <Field label="Address" hint="Where the site lives, e.g. https://montuno.club">
+          <Field label="Address" hint="Where the site lives, e.g. https://salsaclub.example">
             <Input v-model="site.domain" placeholder="https://…" />
           </Field>
           <div>

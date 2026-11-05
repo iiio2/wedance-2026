@@ -102,7 +102,7 @@ describe('festival.bySlug', () => {
       name: CHARANGA_NAME,
       startDate: '2026-05-23',
       endDate: '2026-05-23',
-      ticketUrl: 'https://www.tickettailor.com/events/montunoclub/2183096',
+      ticketUrl: 'https://www.tickettailor.com/events/salsaclub/2183096',
       maxFreeSpots: 0,
     })
 
@@ -113,7 +113,7 @@ describe('festival.bySlug', () => {
     expect(result?.slug).toBe(CHARANGA_SLUG)
     expect(result?.name).toBe(CHARANGA_NAME)
     expect(result?.startDate).toBe('2026-05-23')
-    expect(result?.ticketUrl).toBe('https://www.tickettailor.com/events/montunoclub/2183096')
+    expect(result?.ticketUrl).toBe('https://www.tickettailor.com/events/salsaclub/2183096')
     expect(result?.maxFreeSpots).toBe(0)
   })
 

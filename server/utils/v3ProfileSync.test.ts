@@ -80,10 +80,10 @@ describe('planProfiles — venues', () => {
 describe('planProfiles — organisers & artists', () => {
   const v = venue('Buena Vista Bar', 'Herzog-Wilhelm-Straße 8, München')
   it('links an organiser by v3 profile id (source_ref.firebaseId) and only fills empty fields', () => {
-    const p = run([ev('e1', v, { id: 'v3org', username: 'MontunoClub', name: 'Montuno Club', photo: 'https://img/x.png' })],
-      [row({ username: 'montunoclub', type: 'organizer', name: 'MontunoClub', bio: 'mine', sourceRef: { firebaseId: 'v3org' } })],
-      [{ id: 'v3org', type: 'Organiser', username: 'MontunoClub', name: 'Montuno Club', photo: 'https://img/x.png', bio: 'theirs', visibility: 'Public', place: MUNICH, email: 'x@y.z', phone: '1' }])
-    expect(p.links.get('e1')!.organizerUsername).toBe('montunoclub')
+    const p = run([ev('e1', v, { id: 'v3org', username: 'SalsaClub', name: 'Salsa Club', photo: 'https://img/x.png' })],
+      [row({ username: 'salsaclub', type: 'organizer', name: 'SalsaClub', bio: 'mine', sourceRef: { firebaseId: 'v3org' } })],
+      [{ id: 'v3org', type: 'Organiser', username: 'SalsaClub', name: 'Salsa Club', photo: 'https://img/x.png', bio: 'theirs', visibility: 'Public', place: MUNICH, email: 'x@y.z', phone: '1' }])
+    expect(p.links.get('e1')!.organizerUsername).toBe('salsaclub')
     const fill = p.ops.find(o => o.op === 'fill')!
     expect(fill.fields).toMatchObject({ photo: 'https://img/x.png' })
     expect((fill.fields as any).bio).toBeUndefined() // not empty → untouched

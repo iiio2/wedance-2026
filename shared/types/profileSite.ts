@@ -1,7 +1,7 @@
 /**
  * A profile's own website, managed on WeDance (RAZ-412): WeDance is the CMS
  * (the page's words, images, sections) and the CRM (who signed up on it). The
- * site itself (e.g. montuno.club) only renders what
+ * site itself (e.g. salsaclub.example) only renders what
  * GET /api/profiles/<username>/site returns and posts sign-ups to
  * POST /api/profiles/<username>/contacts. Events always come from the
  * profile's events on WeDance — a site never lists one by hand.
@@ -64,7 +64,7 @@ export type SiteSection = {
 }
 
 export type ProfileSite = {
-  /** The site's address, e.g. https://montuno.club (links in emails point there). */
+  /** The site's address, e.g. https://salsaclub.example (links in emails point there). */
   domain?: string
   /** First = default; texts fall back to it. */
   locales: string[]
