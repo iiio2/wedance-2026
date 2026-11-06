@@ -11,13 +11,13 @@ const props = defineProps<{ hints: { name: string; address: string; email: strin
 const legal = defineModel<SiteLegal | undefined>()
 
 function set(key: keyof SiteLegal, v: unknown) {
-  const next: SiteLegal = { ...(legal.value ?? {}), [key]: String(v ?? '') }
+  const next: SiteLegal = { ...legal.value, [key]: String(v ?? '') }
   for (const k of Object.keys(next) as (keyof SiteLegal)[]) if (!next[k]?.trim()) delete next[k]
   legal.value = Object.keys(next).length ? next : undefined
 }
 const canFill = computed(() => (['name', 'address', 'email', 'phone'] as const).some(k => props.hints[k] && !legal.value?.[k]))
 function fill() {
-  const next: SiteLegal = { ...(legal.value ?? {}) }
+  const next: SiteLegal = { ...legal.value }
   for (const k of ['name', 'address', 'email', 'phone'] as const) if (!next[k] && props.hints[k]) next[k] = props.hints[k]
   legal.value = next
 }

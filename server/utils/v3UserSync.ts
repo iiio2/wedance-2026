@@ -70,7 +70,7 @@ const instagramHandle = (v: unknown) => {
   const s = str(v)
   if (!s) return null
   const m = s.match(/instagram\.com\/([\w.]+)/i)
-  return (m ? m[1] : s.replace(/^@/, '')).toLowerCase() || null
+  return (m ? m[1] : s.replace(/^@/, ''))!.toLowerCase() || null
 }
 
 export function planUsers(input: {
@@ -122,7 +122,7 @@ export function planUsers(input: {
     if (pw && !str(row.hash)) { patch.hash = pw.hash; patch.salt = pw.salt; plan.stats.withPassword++ }
     const needsId = !str(row.sourceRef?.firebaseId)
     if (!Object.keys(patch).length && !needsId) { plan.stats.unchanged++; continue }
-    plan.ops.push({ op: 'fill', id: row.id, uid: u.localId, email, fields: patch, sourceRef: needsId ? { ...(row.sourceRef ?? {}), firebaseId: u.localId } : null })
+    plan.ops.push({ op: 'fill', id: row.id, uid: u.localId, email, fields: patch, sourceRef: needsId ? { ...row.sourceRef, firebaseId: u.localId } : null })
     plan.stats.filled++
   }
   return plan

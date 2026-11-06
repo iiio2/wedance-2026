@@ -198,7 +198,7 @@ export function renameInEvent(ev: { artists: string[] | null; coOrganizers?: { u
   // Co-organisers (#456): each page once, the first entry (and its role) wins.
   const coOrganizers = (ev.coOrganizers ?? []).map(c => ({ ...c, username: swap(c.username) }))
     .filter((c, i, all) => all.findIndex(x => x.username === c.username) === i)
-  const fo = { ...(ev.flyerOptions ?? {}) }
+  const fo = { ...ev.flyerOptions }
   for (const k of ['photos', 'names'] as const) {
     if (fo[k] && from in fo[k]) {
       const m = { ...fo[k] }
@@ -375,7 +375,7 @@ export async function mergeProfile(db: any, from: { id: string; username: string
   for (const p of (b.photos ?? []) as any[]) if (!photos.some((x: any) => x.url === p.url)) photos.push(p)
   const styles = (a.styles ?? []).length ? a.styles : (b.styles ?? [])
   const amenities = (a.amenities ?? []).length ? a.amenities : (b.amenities ?? [])
-  const contact = { ...(b.contact ?? {}), ...(a.contact ?? {}) }
+  const contact = { ...b.contact, ...a.contact }
   // The copy's Instagram accounts become aliases of the one that stays (its main one stays main).
   const mainIg = instagramHandles({ socials })
   const aliases = [...new Set([...instagramHandles(a), ...instagramHandles(b)])].filter(h => !mainIg.includes(h))

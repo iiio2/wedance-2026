@@ -179,7 +179,7 @@ export function programmeFields(
   args: { programme?: ProgrammeItem[]; agenda?: AgendaLine[] },
   ev: { date: string; startTime: string; endDate?: string | null; endTime?: string | null; artists?: string[] },
 ) {
-  const { key: _key, ...details } = { ...emptyEventDetails(), ...(cur?.festival ?? {}) } as Record<string, any>
+  const { key: _key, ...details } = { ...emptyEventDetails(), ...cur?.festival } as Record<string, any>
   const sessions: FestivalSession[] = args.programme
     ? programmeToSessions(args.programme, ev.date, ev)
     : args.agenda

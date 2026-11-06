@@ -13,7 +13,7 @@ defineProps<{ domain?: string; name: string }>()
 const theme = defineModel<SiteThemeSettings | undefined>()
 
 function set(patch: Partial<SiteThemeSettings>) {
-  const next: SiteThemeSettings = { ...(theme.value ?? {}), ...patch }
+  const next: SiteThemeSettings = { ...theme.value, ...patch }
   for (const k of Object.keys(next) as (keyof SiteThemeSettings)[]) if (!next[k]) delete next[k]
   theme.value = next
 }

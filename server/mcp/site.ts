@@ -66,7 +66,7 @@ export type SitePatch = { [K in keyof typeof sitePatchInput]?: z.infer<(typeof s
 /** Merge texts per language; "" removes a language; nothing left → undefined. */
 export function mergeL10n(cur: L10n | undefined, next: Record<string, string> | undefined): L10n | undefined {
   if (next === undefined) return cur
-  const out: L10n = { ...(cur ?? {}) }
+  const out: L10n = { ...cur }
   for (const [lang, text] of Object.entries(next)) {
     if (text.trim()) out[lang] = text
     else delete out[lang]
@@ -123,7 +123,7 @@ export function applySitePatch(site: ProfileSite, patch: SitePatch): ProfileSite
   }
   if (patch.locales) next.locales = patch.locales
   if (patch.seo) {
-    const seo = { ...(site.seo ?? {}) }
+    const seo = { ...site.seo }
     seo.title = mergeL10n(seo.title, patch.seo.title)
     seo.description = mergeL10n(seo.description, patch.seo.description)
     if (patch.seo.image !== undefined) seo.image = patch.seo.image || undefined
@@ -136,7 +136,7 @@ export function applySitePatch(site: ProfileSite, patch: SitePatch): ProfileSite
     }))
   }
   if (patch.theme) {
-    const theme: SiteThemeSettings = { ...(site.theme ?? {}) }
+    const theme: SiteThemeSettings = { ...site.theme }
     for (const [k, v] of Object.entries(patch.theme)) {
       if (v === undefined) continue
       if (v) (theme as any)[k] = v
@@ -145,7 +145,7 @@ export function applySitePatch(site: ProfileSite, patch: SitePatch): ProfileSite
     next.theme = theme
   }
   if (patch.legal) {
-    const legal: SiteLegal = { ...(site.legal ?? {}) }
+    const legal: SiteLegal = { ...site.legal }
     for (const [k, v] of Object.entries(patch.legal)) {
       if (v === undefined) continue
       if (v.trim()) (legal as any)[k] = v.trim()

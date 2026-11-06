@@ -216,7 +216,7 @@ describe.skipIf(!DATABASE_URL)('C3 city discovery — integration', () => {
       const thisWeek = new Set([...feed.syncedThisWeek.map((e: any) => e.id), ...feed.bookedThisWeek.map((b: any) => b.id)])
       expect(shown.some(id => thisWeek.has(id))).toBe(false)
       // Grouped by date, in date order.
-      expect(groups.map(g => g.date)).toEqual([...groups.map(g => g.date)].sort())
+      expect(groups.map(g => g.date)).toEqual(groups.map(g => g.date).sort())
     })
 
     it('festivals and other cities stay out of the weekly feed', async () => {
