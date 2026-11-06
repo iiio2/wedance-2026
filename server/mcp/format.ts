@@ -11,7 +11,16 @@ export const UNTRUSTED_KEYS = new Set([
   'description', 'bio', 'question', 'text', 'message', 'note', 'notes', 'caption', 'title', 'answer', 'recommendation',
   'comment', 'about', 'programmeNote', 'guidelines', 'value', 'reviewerNote', 'evidence', 'what', 'organization', 'subject',
   'body', 'content', 'detail', 'alternative', 'prizeDescription', 'priceInfo',
+  // Website history lines quote section titles ("Changed Hero “…”").
+  'changes', 'changes_then', 'what_changes_now',
 ])
+
+/**
+ * Keys whose value may be text per language ({ en: '…', de: '…' }, a page's
+ * website): each language's string is free text too.
+ */
+const L10N_KEYS = new Set([...UNTRUSTED_KEYS, 'eyebrow', 'titleAccent', 'navLabel', 'label', 'tag', 'address'])
+const LOCALE_KEY = /^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i
 
 const MAX_DEPTH = 12
 const MAX_STRING = 4000
@@ -33,7 +42,9 @@ export function quoteUntrusted(value: unknown, key: string | null = null, depth 
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
       if (typeof v === 'function' || v === undefined) continue
       // A caption object ({ text, lines, … }) keeps its shape; its text is wrapped by key.
-      out[k] = quoteUntrusted(v, k, depth + 1)
+      // Text per language keeps its parent's key: title.en is a title.
+      const perLanguage = key !== null && L10N_KEYS.has(key) && typeof v === 'string' && k !== 'id' && LOCALE_KEY.test(k)
+      out[k] = quoteUntrusted(v, perLanguage ? 'text' : k, depth + 1)
     }
     return out
   }

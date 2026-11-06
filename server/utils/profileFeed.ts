@@ -31,8 +31,10 @@ export async function profileByHandle(db: any, handle: string): Promise<FeedProf
 }
 
 /**
- * A profile's upcoming events: the ones it runs (host) or organizes, published
- * and not over, soonest first, starting within `days`.
+ * A profile's upcoming events: the ones it runs (host), organizes or is in the
+ * line-up of (an artist teaching or playing at someone else's event), published
+ * and not over, soonest first, starting within `days`. Renaming a handle
+ * rewrites line-ups (moveHandleRefs), so the current handle is enough.
  */
 export async function profileFeedEvents(db: any, profile: FeedProfile, days = 60): Promise<ProfileFeedEvent[]> {
   const now = new Date()
@@ -47,7 +49,11 @@ export async function profileFeedEvents(db: any, profile: FeedProfile, days = 60
       eq(events.archived, false),
       gte(sql`coalesce(${events.endDate}, ${events.startDate})`, now),
       sql`${events.startDate} < ${new Date(now.getTime() + days * 86400_000)}`,
-      or(eq(events.hostProfileId, profile.id), eq(sql`lower(${events.organizerUsername})`, profile.username.toLowerCase())),
+      or(
+        eq(events.hostProfileId, profile.id),
+        eq(sql`lower(${events.organizerUsername})`, profile.username.toLowerCase()),
+        sql`exists (select 1 from jsonb_array_elements_text(case when jsonb_typeof(${events.artists}) = 'array' then ${events.artists} else '[]'::jsonb end) a where lower(a) = ${profile.username.toLowerCase()})`,
+      ),
     ))
     .orderBy(asc(events.startDate))
     .limit(200)

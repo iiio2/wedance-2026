@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /u/<username> — public dancer profile.
  *
@@ -34,6 +35,11 @@ async function load() {
   failed.value = false
   try {
     profile.value = await $trpc.profile.getByUsername.query({ username: username.value })
+    // One handle per person (#474): their own page is who they are.
+    if (profile.value.pageHandle) {
+      await navigateTo(`/@${profile.value.pageHandle}`, { replace: true, redirectCode: 301 })
+      return
+    }
     // A dancer is a person: no handle in the event, only the kind of view.
     useTrack().trackOnce(username.value, 'profile_viewed', {
       profile_type: 'dancer',
@@ -143,7 +149,7 @@ useHead(() => ({
             <div class="shrink-0">
               <img
                 v-if="profile?.photo"
-                :src="profile.photo"
+                :src="sizedImage(profile.photo, IMG.avatar)"
                 :alt="profile?.name"
                 class="w-20 h-20 rounded-full object-cover"
                 style="border:2px solid color-mix(in srgb, var(--wd-red-600) 20%, transparent);"
@@ -211,7 +217,7 @@ useHead(() => ({
           >
             <img
               v-if="f.logo"
-              :src="f.logo"
+              :src="sizedImage(f.logo, IMG.avatar)"
               :alt="f.name"
               class="w-10 h-10 rounded-lg object-cover shrink-0"
             />

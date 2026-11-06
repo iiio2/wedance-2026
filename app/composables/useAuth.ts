@@ -1,4 +1,5 @@
 import { changedFields } from '~/lib/changed-fields'
+import type { RsvpAnswer } from '#shared/utils/rsvp'
 // Auth composable — email + password + session-based authentication.
 // Magic-link methods (requestMagicLink/verifyMagicLink) are retained but
 // dormant: the primary sign-in UX is email+password, but the pages
@@ -232,6 +233,10 @@ export function useAuth() {
     role?: 'lead' | 'follow' | 'both'
     city?: string
     purpose?: 'login' | 'recovery'
+    /** Where the link lands after sign-in, plus the poll answer it confirms (RAZ-718). */
+    redirect?: string
+    do?: RsvpAnswer
+    guest?: string
   }) {
     return await $trpc.auth.requestMagicLink.mutate({
       name: data.name,
@@ -240,6 +245,9 @@ export function useAuth() {
       role: data.role,
       city: data.city,
       purpose: data.purpose,
+      redirect: data.redirect,
+      do: data.do,
+      guest: data.guest,
     })
   }
 

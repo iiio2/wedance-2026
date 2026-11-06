@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ResetPasswordSchema } from '#shared/validation'
+import { isRsvpAnswer } from '#shared/utils/rsvp'
 
 definePageMeta({ layout: false })
 
@@ -11,6 +12,7 @@ const isResetMode = computed(() => route.query.mode === 'reset')
 const status = ref<'loading' | 'reset-form' | 'success' | 'error'>('loading')
 const errorMessage = ref('')
 const dancerName = ref('')
+const backToEvent = ref(false)
 
 // Password reset form state
 const newPassword = ref('')
@@ -47,6 +49,18 @@ onMounted(async () => {
     const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
       ? route.query.redirect
       : '/my-plan'
+    // The event poll answer this link was sent for (RAZ-718): answer it again,
+    // signed in, which confirms it, then land back on the same event.
+    const eventParam = /^\/events\/([^/?#]+)/.exec(redirect)?.[1]
+    if (eventParam && isRsvpAnswer(route.query.do)) {
+      backToEvent.value = true
+      const guest = typeof route.query.guest === 'string' ? route.query.guest : undefined
+      try {
+        await useNuxtApp().$trpc.rsvp.answer.mutate({ event: decodeURIComponent(eventParam), answer: route.query.do, guestToken: guest })
+      } catch (e) {
+        console.warn('[verify] could not confirm the event answer', e)
+      }
+    }
     setTimeout(() => {
       navigateTo(redirect)
     }, 2000)
@@ -180,7 +194,7 @@ async function handleResetPassword() {
               {{ isResetMode ? 'You\'re all set!' : `Welcome, ${dancerName}!` }}
             </h1>
             <p class="text-sm text-muted-foreground font-sans">
-              {{ isResetMode ? 'Your password has been changed. Taking you to your plan…' : "You're signed in. Taking you to your plan…" }}
+              {{ isResetMode ? 'Your password has been changed. Taking you to your plan…' : backToEvent ? "You're signed in and your answer is confirmed. Taking you back to the event…" : "You're signed in. Taking you to your plan…" }}
             </p>
           </div>
         </template>

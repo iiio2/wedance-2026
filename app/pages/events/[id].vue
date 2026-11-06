@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /events/<name>-<short id> (old /events/<id> links redirect here) — a single event, rendered through the SAME rich view as a
  * festival (an event is just a smaller festival). It reuses FestivalHero and the
@@ -32,6 +33,11 @@ function onSignIn(action?: string) {
   signUpAction.value = action || 'plan'
   showSignUp.value = true
 }
+
+// The RSVP is the organiser's poll (RAZ-718), shown in the hero in place of
+// the Going button (RAZ-731).
+const rsvpPoll = ref<{ coming: number; mine: { answer: string } | null } | null>(null)
+function onPoll(p: { coming: number; mine: { answer: string } | null }) { rsvpPoll.value = p }
 
 function onPick() {
   if (!isSignedIn.value) {
@@ -180,8 +186,12 @@ function fromSyncedEvent(e: any) {
     })(),
     organizerName: e.organizerName || '',
     organizerHandle: e.organizerUsername || '',
+    // Named next to the organiser (#456): [{ username, name, role }].
+    coOrganizers: (e.coOrganizers || []) as { username: string; name: string; role: string }[],
     archived: !!e.archived,
     synced: e.source === 'wedance-v3',
+    // A dated event (not a festival) gets the RSVP poll.
+    pollable: !e.isFestival,
   }
 }
 
@@ -193,7 +203,9 @@ const accent = computed(() => styleColor[String(ev.value?.styles?.[0] || '').toL
 // Accent text darkened just enough for 4.5:1 — on the cream page, or on its own '14' tint (chips).
 const ink = (c: string) => readableOn(c, WD.cream)
 const chipInk = (c: string) => readableOn(c, mixHex(c, WD.cream, 0.078))
-const picked = computed(() => !!ev.value && weekPlanIds?.value?.has(ev.value.id))
+const picked = computed(() => rsvpPoll.value
+  ? !!rsvpPoll.value.mine && rsvpPoll.value.mine.answer !== 'next'
+  : !!ev.value && weekPlanIds?.value?.has(ev.value.id))
 const parentFestival = computed(() => ev.value?.parentFestival ?? null)
 
 // Live going count from plan items (replaces static headcount).
@@ -216,7 +228,7 @@ const asFestival = computed(() => ({
   endDate: ev.value.endDate || ev.value.eventDate,
   timezone: ev.value.timezone || null,
   venue: { name: [ev.value.spaceName, ev.value.venueName].filter(Boolean).join(' · ') },
-  attendeeCount: liveGoingCount.value,
+  attendeeCount: rsvpPoll.value ? rsvpPoll.value.coming : liveGoingCount.value,
   socialLinks: [] as any[],
   ticketUrl: ev.value.ticketUrl || undefined,
   tickets: [] as any[],
@@ -243,7 +255,7 @@ useHead(() => ({
 </script>
 
 <template>
-  <FestivalView v-if="festivalData && !pending" :data="festivalData" :type="ev?.eventType" :edit-to="canEdit ? `/business/events/${festivalData.eventId}` : undefined" />
+  <FestivalView v-if="festivalData && !pending" :data="festivalData" :type="ev?.eventType" :edit-to="canEdit ? `/business/events/${festivalData.eventId}` : undefined" :rsvp="ev?.pollable && !ev.archived ? { eventId: ev.id, path: route.path, startDate: ev.startDate, endDate: ev.endDate, timezone: ev.timezone, organizerName: ev.organizerName || (ev.organizerHandle ? `@${ev.organizerHandle}` : null) } : null" />
   <div v-else class="min-h-screen bg-background text-foreground font-display">
     <SiteHeader />
 
@@ -284,7 +296,14 @@ useHead(() => ({
       </div>
 
       <!-- Same hero as festivals -->
-      <FestivalHero :festival="asFestival" review-target-type="event" entity-label="event" cta-anchor="#discover" cta-fallback-label="I'm going" :picked="picked" :date-label="ev.when" :venue-address="ev.venueAddress" :map-url="ev.mapUrl" @pick="onPick" />
+      <FestivalHero :festival="asFestival" review-target-type="event" entity-label="event" cta-anchor="#discover" cta-fallback-label="I'm going" :picked="picked" :date-label="ev.when" :venue-address="ev.venueAddress" :map-url="ev.mapUrl" @pick="onPick">
+        <!-- The RSVP: the organiser's poll IS the hero's Going question (RAZ-731). -->
+        <template v-if="ev.pollable && !ev.archived" #cta>
+          <div id="rsvp" class="mt-4 max-w-xl scroll-mt-16">
+            <EventRsvpPoll :event-id="ev.id" :path="route.path" :start-date="ev.startDate" :end-date="ev.endDate" :timezone="ev.timezone" :organizer-name="ev.organizerName || (ev.organizerHandle ? `@${ev.organizerHandle}` : null)" surface="event" @poll="onPoll" />
+          </div>
+        </template>
+      </FestivalHero>
 
       <div v-if="ev.archived" class="max-w-3xl mx-auto px-4 pt-4 font-sans">
         <p class="rounded-xl px-4 py-3 text-sm bg-warning/[12.2%] text-wd-amber-800">This event is no longer listed by its organiser — it may have been cancelled or moved.</p>
@@ -299,9 +318,9 @@ useHead(() => ({
 
       <div class="max-w-3xl mx-auto px-4 space-y-14 pt-8 pb-20 font-sans">
         <!-- About -->
-        <section v-if="ev.message || ev.cover || ev.link || ev.price || ev.agenda?.length" id="about" class="scroll-mt-16">
+        <section v-if="ev.message || ev.cover || ev.link || ev.price || ev.agenda?.length || ev.coOrganizers?.length" id="about" class="scroll-mt-16">
           <h2 class="text-2xl font-black leading-tight mb-3 font-display text-foreground">About</h2>
-          <img v-if="ev.cover" :src="ev.cover" :alt="ev.title" class="w-full max-h-[28rem] object-contain rounded-2xl mb-4 bg-wd-brown-900/[3.9%]" loading="lazy">
+          <img v-if="ev.cover" :src="sizedImage(ev.cover, IMG.hero)" :alt="ev.title" class="w-full max-h-[28rem] object-contain rounded-2xl mb-4 bg-wd-brown-900/[3.9%]" loading="lazy">
           <div class="flex flex-wrap items-center gap-2 mb-4">
             <span v-if="ev.eventType" class="text-eyebrow font-black uppercase tracking-widest px-2 py-1 rounded bg-secondary/[9.4%] text-secondary">{{ ev.eventType }}</span>
             <DanceStyleChips :styles="ev.styles || []" size="md" class="gap-2" />
@@ -312,6 +331,10 @@ useHead(() => ({
               <User class="w-4 h-4 mt-0.5 shrink-0 text-secondary" />
               <NuxtLink v-if="ev.organizerHandle" :to="`/@${ev.organizerHandle}`" class="font-bold hover:underline">{{ ev.organizerName }}</NuxtLink>
               <span v-else class="font-bold">{{ ev.organizerName }}</span>
+            </li>
+            <li v-for="c in ev.coOrganizers || []" :key="c.username" class="flex items-start gap-2" data-testid="event-co-organizer">
+              <User class="w-4 h-4 mt-0.5 shrink-0 text-secondary" />
+              <span><NuxtLink :to="`/@${c.username}`" class="font-bold hover:underline">{{ c.name }}</NuxtLink> <span class="text-muted-foreground">· {{ c.role }}</span></span>
             </li>
             <li v-if="ev.link" class="flex items-start gap-2">
               <Globe class="w-4 h-4 mt-0.5 shrink-0 text-secondary" />

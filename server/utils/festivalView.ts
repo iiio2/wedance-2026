@@ -9,7 +9,9 @@ import { and, eq, inArray, like, sql } from 'drizzle-orm'
 import { profiles, planItems, profileInvites, profileMembers } from '../database/schema'
 import { eventLocalDate } from '../../shared/utils/eventTime'
 import type { Festival, Teacher, Workshop } from '../../app/types/festival'
+import { isWorkshop, sessionType } from '../../shared/utils/programme'
 import type { FestivalDetails } from '../../shared/types/festivalDetails'
+import { resolveCoOrganizers } from './coOrganizers'
 
 const weekday = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' })
 
@@ -51,6 +53,7 @@ export async function festivalView(db: any, ev: any): Promise<{ festival: Festiv
     attendeeCount: 0, // the page loads the live count
     ticketUrl: ev.ticketUrl ?? undefined,
     tickets: f.passes ?? [],
+    organizers: await organizersOf(db, ev),
   }
   const teachers: Teacher[] = handles.map((h) => {
     const p = byHandle.get(h)
@@ -81,11 +84,12 @@ export async function festivalView(db: any, ev: any): Promise<{ festival: Festiv
       day: weekday(s.date),
       room: s.room ?? '',
       style: s.style,
-      level: s.level,
+      // A level only on a workshop (older data put "Beginner" on parties).
+      ...(isWorkshop(s.type) && s.level ? { level: s.level } : {}),
       teacherId: s.artist,
       ...(s.with?.length ? { withIds: s.with } : {}),
       goingCount: going.get(s.id) ?? 0,
-      type: s.type,
+      type: sessionType(s.type),
       ...(s.venue ? { venue: s.venue } : {}),
       ...(s.description ? { description: s.description } : {}),
     }))
@@ -110,6 +114,17 @@ export async function confirmedArtists(db: any, ev: any, handles: string[]): Pro
     }
   }
   return out
+}
+
+// The organiser (by its page's current name) and the co-organisers, for About.
+async function organizersOf(db: any, ev: any) {
+  const co = await resolveCoOrganizers(db, ev.coOrganizers)
+  if (!ev.organizerUsername) return co.map(({ username, name, role }) => ({ username, name, role }))
+  const [main] = await db.select({ name: profiles.name }).from(profiles).where(eq(profiles.username, ev.organizerUsername)).limit(1)
+  return [
+    { username: ev.organizerUsername, name: main?.name || ev.organizerName || `@${ev.organizerUsername}`, role: 'Organiser' },
+    ...co.map(({ username, name, role }) => ({ username, name, role })),
+  ]
 }
 
 async function brandLogo(db: any, ev: any): Promise<string | null> {

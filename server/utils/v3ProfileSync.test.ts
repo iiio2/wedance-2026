@@ -80,10 +80,10 @@ describe('planProfiles — venues', () => {
 describe('planProfiles — organisers & artists', () => {
   const v = venue('Buena Vista Bar', 'Herzog-Wilhelm-Straße 8, München')
   it('links an organiser by v3 profile id (source_ref.firebaseId) and only fills empty fields', () => {
-    const p = run([ev('e1', v, { id: 'v3org', username: 'MontunoClub', name: 'Montuno Club', photo: 'https://img/x.png' })],
-      [row({ username: 'montunoclub', type: 'organizer', name: 'MontunoClub', bio: 'mine', sourceRef: { firebaseId: 'v3org' } })],
-      [{ id: 'v3org', type: 'Organiser', username: 'MontunoClub', name: 'Montuno Club', photo: 'https://img/x.png', bio: 'theirs', visibility: 'Public', place: MUNICH, email: 'x@y.z', phone: '1' }])
-    expect(p.links.get('e1')!.organizerUsername).toBe('montunoclub')
+    const p = run([ev('e1', v, { id: 'v3org', username: 'SalsaClub', name: 'Salsa Club', photo: 'https://img/x.png' })],
+      [row({ username: 'salsaclub', type: 'organizer', name: 'SalsaClub', bio: 'mine', sourceRef: { firebaseId: 'v3org' } })],
+      [{ id: 'v3org', type: 'Organiser', username: 'SalsaClub', name: 'Salsa Club', photo: 'https://img/x.png', bio: 'theirs', visibility: 'Public', place: MUNICH, email: 'x@y.z', phone: '1' }])
+    expect(p.links.get('e1')!.organizerUsername).toBe('salsaclub')
     const fill = p.ops.find(o => o.op === 'fill')!
     expect(fill.fields).toMatchObject({ photo: 'https://img/x.png' })
     expect((fill.fields as any).bio).toBeUndefined() // not empty → untouched
@@ -107,5 +107,215 @@ describe('planProfiles — organisers & artists', () => {
     const p = run([ev('e1', v, null, [{ id: 'a2', username: 'Migo.bachatero', name: 'Migo' }])], [],
       [{ id: 'a2', type: 'Artist', username: 'Migo.bachatero', name: 'Migo', visibility: 'Public', place: MUNICH }])
     expect(p.links.get('e1')!.artists).toEqual(['migo.bachatero'])
+  })
+})
+
+// RAZ-685 — C3: synced events link the same venue / organiser / artist every
+// time, by the documented priority, inside the event's city.
+describe('C3 deterministic profile matching (RAZ-685)', () => {
+  const v = venue('Buena Vista Bar', 'Herzog-Wilhelm-Straße 8, München', { place_id: 'ChIJbvb000000000000000' })
+
+  it('venue: place id beats name + city beats address + city', () => {
+    const existing = [
+      row({ username: 'by-address', name: 'Something Else', address: 'Herzog-Wilhelm-Str. 8, 80331 München' }),
+      row({ username: 'by-name', name: 'Buena Vista Bar' }),
+      row({ username: 'ChIJbvb000000000000000', name: 'Old Google Name' }),
+    ]
+    expect(run([ev('e1', v)], existing).links.get('e1')!.venueUsername).toBe('ChIJbvb000000000000000')
+    expect(run([ev('e1', v)], existing.slice(0, 2)).links.get('e1')!.venueUsername).toBe('by-name')
+    expect(run([ev('e1', v)], existing.slice(0, 1)).links.get('e1')!.venueUsername).toBe('by-address')
+  })
+
+  it('organiser: v3 profile id beats handle beats name + city', () => {
+    const org = { id: 'v3-org-1', username: 'SalsaSchool', name: 'Salsa School' }
+    const existing = [
+      row({ username: 'name-twin', type: 'organizer', name: 'Salsa School' }),
+      row({ username: 'salsaschool', type: 'organizer', name: 'Different' }),
+      row({ username: 'by-v3-id', type: 'organizer', name: 'Renamed School', sourceRef: { firebaseId: 'v3-org-1' } }),
+    ]
+    expect(run([ev('e1', v, org)], existing).links.get('e1')!.organizerUsername).toBe('by-v3-id')
+    expect(run([ev('e1', v, org)], existing.slice(0, 2)).links.get('e1')!.organizerUsername).toBe('salsaschool')
+    expect(run([ev('e1', v, org)], existing.slice(0, 1)).links.get('e1')!.organizerUsername).toBe('name-twin')
+  })
+
+  it('organiser: matches by Instagram account, main or alias (#458)', () => {
+    const org = { id: 'v3-org-ig', username: 'NewHandle', name: 'Totally New Name', instagram: 'old_school_ig' }
+    const existing = [row({ username: 'the-school', type: 'organizer', name: 'The School', socials: [{ platform: 'instagram', url: 'https://instagram.com/school_now' }], instagramAliases: ['old_school_ig'] })]
+    const p = run([ev('e1', v, org)], existing)
+    expect(p.links.get('e1')!.organizerUsername).toBe('the-school')
+    expect(p.how.organizer).toMatchObject({ instagram: 1 })
+    expect(p.ops.filter(o => o.op === 'create' && o.fields.type === 'organizer')).toHaveLength(0)
+  })
+
+  it('never matches a same-named venue or organiser in another city', () => {
+    const prague = { city: 'Prague', citySlug: 'prague' }
+    const p = run([ev('e1', venue('Buena Vista Bar', 'Herzog-Wilhelm-Straße 8, München'), { id: 'o9', username: 'TwinSchool', name: 'Twin School' })], [
+      row({ username: 'bvb-prague', name: 'Buena Vista Bar', ...prague }),
+      row({ username: 'twin-prague', type: 'organizer', name: 'Twin School', ...prague }),
+    ])
+    const links = p.links.get('e1')!
+    expect(links.venueUsername).not.toBe('bvb-prague')
+    expect(links.organizerUsername).not.toBe('twin-prague')
+    const created = p.ops.filter(o => o.op === 'create').map(o => o.op === 'create' && o.fields)
+    expect(created).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'venue', citySlug: 'munich' }),
+      expect.objectContaining({ type: 'organizer', citySlug: 'munich' }),
+    ]))
+  })
+
+  it('with several candidates picks claimed first, then a real handle over a place id, then alphabetical — whatever the row order', () => {
+    const twins = [
+      row({ username: 'zz-bvb', name: 'Buena Vista Bar' }),
+      row({ username: 'ChIJtwin00000000000000', name: 'Buena Vista Bar' }),
+      row({ username: 'aa-bvb', name: 'Buena Vista Bar' }),
+    ]
+    const plain = venue('Buena Vista Bar', 'Herzog-Wilhelm-Straße 8, München')
+    for (const order of [twins, [...twins].reverse(), [twins[1]!, twins[2]!, twins[0]!]]) {
+      expect(run([ev('e1', plain)], order).links.get('e1')!.venueUsername).toBe('aa-bvb')
+      expect(run([ev('e1', plain)], [...order, row({ username: 'zz-claimed', name: 'Buena Vista Bar', claimed: true })]).links.get('e1')!.venueUsername).toBe('zz-claimed')
+    }
+    expect(run([ev('e1', plain)], [twins[0]!, twins[1]!]).links.get('e1')!.venueUsername).toBe('zz-bvb')
+  })
+
+  it('repeated resolution produces the same links and operations', () => {
+    const events = [
+      ev('e1', v, { id: 'o1', username: 'NewSchool', name: 'New School' }, [{ id: 'a1', username: 'dj.one', name: 'DJ One' }]),
+      ev('e2', venue('Arnulfstraße 195', 'Arnulfstraße 195, 80634 München'), { id: 'o1', username: 'NewSchool' }, [{ id: 'a1', username: 'dj.one' }]),
+      ev('e3', venue('Arnulfstraße 195', 'Arnulfstraße 195, 80634 München')),
+    ]
+    const existing = [row({ username: 'aa-bvb', name: 'Buena Vista Bar' })]
+    const v3 = [{ id: 'o1', type: 'Organiser', username: 'NewSchool', name: 'New School', visibility: 'Public', place: MUNICH }]
+    const first = run(events, existing, v3)
+    const again = run(events, existing, v3)
+    const shuffled = run([...events].reverse(), [...existing].reverse(), v3)
+    expect([...again.links]).toEqual([...first.links])
+    expect(again.ops).toEqual(first.ops)
+    expect(Object.fromEntries(shuffled.links)).toEqual(Object.fromEntries(first.links))
+    // One profile per identity: the address venue and the organiser are created once.
+    expect(first.ops.filter(o => o.op === 'create').map(o => o.op === 'create' && o.fields.username).sort())
+      .toEqual([...new Set(first.ops.filter(o => o.op === 'create').map(o => o.op === 'create' && o.fields.username))].sort())
+    expect(first.links.get('e2')!.venueUsername).toBe(first.links.get('e3')!.venueUsername)
+  })
+})
+
+// RAZ-686 — C3: only public v3 profiles and only their public fields are copied.
+describe('C3 imported profiles carry public safe fields only (RAZ-686)', () => {
+  const v = venue('Buena Vista Bar', 'Herzog-Wilhelm-Straße 8, München', { international_phone_number: '+49 89 1234', formatted_phone_number: '089 1234', website: 'https://bvb.example' })
+  const PRIVATE = { email: 'private@example.com', phone: '+49 170 0000', whatsapp: '+49 170 1111', telegram: '@secret-tg', password: 'secret-password', hash: 'secret-hash', salt: 'secret-salt', birthday: '1990-01-01', gender: 'secret-gender', uid: 'secret-firebase-uid' }
+  const ALLOWED = new Set(['username', 'type', 'name', 'city', 'citySlug', 'photo', 'bio', 'styles', 'address', 'socials', 'sourceRef'])
+
+  it('creates profiles with allowed fields only — no contact or login data', () => {
+    const p = run([ev('e1', v, { id: 'o1', username: 'PubSchool', name: 'Pub School', ...PRIVATE }, [{ id: 'a1', username: 'pub.artist', name: 'Pub Artist', ...PRIVATE }])], [], [
+      { id: 'o1', type: 'Organiser', username: 'PubSchool', name: 'Pub School', bio: 'We teach', photo: 'https://img/o.png', instagram: 'pubschool', visibility: 'Public', place: MUNICH, ...PRIVATE },
+      { id: 'a1', type: 'Artist', username: 'pub.artist', name: 'Pub Artist', visibility: 'Public', place: MUNICH, ...PRIVATE },
+    ])
+    const creates = p.ops.filter(o => o.op === 'create')
+    expect(creates.map(o => o.op === 'create' && o.fields.type).sort()).toEqual(['artist', 'organizer', 'venue'])
+    for (const o of creates) {
+      if (o.op !== 'create') continue
+      expect(Object.keys(o.fields).filter(k => !ALLOWED.has(k))).toEqual([])
+      expect(o.fields.socials.every(s => ['instagram', 'facebook', 'youtube', 'tiktok', 'twitter', 'spotify', 'website'].includes(s.platform))).toBe(true)
+    }
+    const json = JSON.stringify(p.ops)
+    for (const secret of Object.values(PRIVATE)) expect(json).not.toContain(secret)
+    expect(json).not.toMatch(/1234/) // the venue's phone numbers
+  })
+
+  it('a Members-only organiser named by a public event is built from the event snapshot, never its private profile', () => {
+    const p = run([ev('e1', v, { id: 'o2', username: 'HiddenSchool', name: 'Hidden School' })], [], [
+      { id: 'o2', type: 'Organiser', username: 'HiddenSchool', name: 'Private Name', bio: 'members-only bio', photo: 'https://img/private.png', instagram: 'privateig', visibility: 'Members', place: MUNICH },
+    ])
+    const c = p.ops.find(o => o.op === 'create' && o.fields.type === 'organizer')
+    expect(c && c.op === 'create' && c.fields).toMatchObject({ name: 'Hidden School', bio: null, photo: null, socials: [] })
+    expect(JSON.stringify(p.ops)).not.toMatch(/members-only bio|private\.png|privateig|Private Name/)
+  })
+
+  // KNOWN DEFECT (follow-up RAZ-726): resolvePerson reads the v3 profile's place before
+  // checking visibility, so a Members-only profile's city reaches the public profile.
+  // Expected to fail until fixed — flip to it() then.
+  it.fails('a Members-only organiser takes its city from the public event, not from its private profile', () => {
+    const p = run([ev('e1', v, { id: 'o4', username: 'ElsewhereSchool', name: 'Elsewhere School' })], [], [
+      { id: 'o4', type: 'Organiser', username: 'ElsewhereSchool', name: 'Elsewhere School', visibility: 'Members', place: 'ChIJprivatecity00000000' },
+      { id: 'c1', type: 'City', name: 'Prague', place: 'ChIJprivatecity00000000' },
+    ])
+    const c = p.ops.find(o => o.op === 'create' && o.fields.type === 'organizer')
+    expect(c && c.op === 'create' && c.fields).toMatchObject({ city: 'Munich', citySlug: 'munich' })
+  })
+
+  it('never fills an existing profile from a Members-only v3 profile', () => {
+    const p = run([ev('e1', v, { id: 'o3', username: 'Matched' })],
+      [row({ username: 'matched', type: 'organizer', name: 'Matched', sourceRef: { firebaseId: 'o3' } })],
+      [{ id: 'o3', type: 'Organiser', username: 'Matched', name: 'Matched', bio: 'secret bio', photo: 'https://img/secret.png', visibility: 'Members', place: MUNICH }])
+    expect(p.links.get('e1')!.organizerUsername).toBe('matched')
+    expect(p.ops.filter(o => o.op !== 'create')).toEqual([])
+  })
+
+  it('skips Members-only artists of the synced city that no event names (none created)', () => {
+    const p = run([ev('e1', v)], [], [
+      { id: 'a5', type: 'Artist', username: 'members.artist', name: 'Members Artist', visibility: 'Members', place: MUNICH },
+      { id: 'a6', type: 'Artist', username: 'public.artist', name: 'Public Artist', visibility: 'Public', place: MUNICH },
+    ])
+    const artists = p.ops.filter(o => o.op === 'create' && o.fields.type === 'artist').map(o => o.op === 'create' && o.fields.username)
+    expect(artists).toEqual(['public.artist'])
+  })
+})
+
+describe('planProfiles — every v3 business page (allPages)', () => {
+  const BERLIN = 'ChIJAVkDPzdOqEcRcDteW0YgIQQ'
+  const idx = buildCityIndex([{ city: 'Munich', citySlug: 'munich' }, { city: 'Berlin', citySlug: 'berlin' }])
+  const all = (v3Profiles: any[], existing: ExistingProfile[] = []) =>
+    planProfiles({ events: [], eligibleIds: new Set(), v3Profiles, existing, takenHandles: new Set(), cityIndex: idx, placeLocality: new Map([[MUNICH, 'München'], [BERLIN, 'Berlin']]), allPages: true })
+  const creates = (p: ReturnType<typeof all>) => p.ops.flatMap(o => (o.op === 'create' ? [o.fields] : []))
+
+  it('creates pages with no event, in any city; a fan page becomes an organiser page', () => {
+    const p = all([
+      { id: 'o1', type: 'Organiser', username: 'BerlinSalsa', name: 'Berlin Salsa', visibility: 'Public', place: BERLIN },
+      { id: 'f1', type: 'FanPage', username: 'timba.fans', name: 'Timba Fans', visibility: 'Public', place: MUNICH },
+    ])
+    expect(creates(p).map(f => [f.username, f.type, f.citySlug])).toEqual([['berlinsalsa', 'organizer', 'berlin'], ['timba.fans', 'organizer', 'munich']])
+  })
+
+  it('treats a missing visibility as public (as wedance.vip does) and skips Members / Unlisted', () => {
+    const p = all([
+      { id: 'a1', type: 'Artist', username: 'no.visibility', name: 'No Visibility', place: MUNICH },
+      { id: 'a2', type: 'Artist', username: 'members.only', name: 'Members Only', visibility: 'Members', place: MUNICH },
+      { id: 'a3', type: 'Artist', username: 'unlisted', name: 'Unlisted', visibility: 'Unlisted', place: MUNICH },
+    ])
+    expect(creates(p).map(f => f.username)).toEqual(['no.visibility'])
+    expect(p.stats.artist.skippedPrivate).toBe(2)
+  })
+
+  it('creates a venue page with its address, city and place id from the v3 Google place', () => {
+    const p = all([{ id: 'v1', type: 'Venue', username: 'cafe-cubano', name: 'Café Cubano', address: venue('Café Cubano', 'Leopoldstr. 1, München', { place_id: 'ChIJcafe00000000000' }) }])
+    expect(creates(p)[0]).toMatchObject({ username: 'cafe-cubano', type: 'venue', address: 'Leopoldstr. 1, München', citySlug: 'munich', sourceRef: { source: 'wedance-v3', sourceId: 'v1', placeId: 'ChIJcafe00000000000' } })
+  })
+
+  it('matches an existing venue by its Google place id handle and never touches a claimed page', () => {
+    const p = all([
+      { id: 'v2', type: 'Venue', username: 'bar.x', name: 'Bar X', address: venue('Bar X', 'Hauptstr. 2, München', { place_id: 'ChIJbarx0000000000' }), photo: 'https://img/x.png' },
+      { id: 'o9', type: 'Organiser', username: 'Mine', name: 'Mine', visibility: 'Public', place: MUNICH, bio: 'from v3' },
+    ], [
+      row({ username: 'ChIJbarx0000000000', type: 'venue', name: 'Bar X' }),
+      row({ username: 'mine', type: 'organizer', name: 'Mine', claimed: true }),
+    ])
+    expect(creates(p)).toEqual([])
+    expect(p.how.venue['place-id']).toBe(1)
+    expect(p.ops.filter(o => o.op !== 'create').map(o => o.username)).toEqual(['ChIJbarx0000000000'])
+  })
+  it('leaves dead photos empty and clears a dead photo from a page this sync created', () => {
+    const dead = 'https://res.cloudinary.com/x/dead.jpg'
+    const v3 = [
+      { id: 'o1', type: 'Organiser', username: 'gone.photo', name: 'Gone Photo', visibility: 'Public', place: MUNICH, photo: dead },
+      { id: 'o2', type: 'Organiser', username: 'ours', name: 'Ours', visibility: 'Public', place: MUNICH, photo: dead },
+      { id: 'o3', type: 'Organiser', username: 'theirs', name: 'Theirs', visibility: 'Public', place: MUNICH, photo: dead },
+    ]
+    const existing = [
+      row({ username: 'ours', type: 'organizer', name: 'Ours', citySlug: 'munich', city: 'Munich', photo: dead, sourceRef: { source: 'wedance-v3', sourceId: 'o2' } }),
+      row({ username: 'theirs', type: 'organizer', name: 'Theirs', citySlug: 'munich', city: 'Munich', photo: dead }),
+    ]
+    const p = planProfiles({ events: [], eligibleIds: new Set(), v3Profiles: v3 as any, existing, takenHandles: new Set(), cityIndex: idx, placeLocality: new Map([[MUNICH, 'München']]), allPages: true, deadPhotos: new Set([dead]) })
+    expect(creates(p)[0]).toMatchObject({ username: 'gone.photo', photo: null })
+    expect(p.ops.find(o => o.op !== 'create' && o.username === 'ours')?.fields).toMatchObject({ photo: null })
+    expect(p.ops.find(o => o.op !== 'create' && o.username === 'theirs')).toBeUndefined()
   })
 })

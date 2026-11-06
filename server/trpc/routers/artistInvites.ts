@@ -8,9 +8,11 @@ import { eventLocalDate, eventLocalTime } from '../../../shared/utils/eventTime'
 import { requireEventManager } from './businessEvents'
 import { citySlugFor } from './business'
 import { grant, logAccess, assertProfileGranted } from '../../utils/profileAccess'
+import { addProfileToOwnGrant } from '../../oauth/grants'
 import { instagramUrl, parseInstagramHandle } from '../../../shared/utils/instagram'
 import { videoEmbedUrl } from '../../../shared/utils/video'
 import { contactsFor } from '../../../shared/utils/contacts'
+import { isEveningItem, isWorkshop } from '../../../shared/utils/programme'
 import { profileGroup, trackServer } from '../../utils/posthog'
 
 /**
@@ -111,7 +113,7 @@ async function eventContext(db: any, eventId: string, p: any) {
   const programme = sessions.length
     ? sessions.filter(s => s.artist === p.username || (s.with ?? []).includes(p.username)).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
       .map(s => ({
-        date: s.date, time: s.time, duration: s.duration, title: s.title, room: s.room ?? '', style: s.style ?? '', level: s.level ?? '', venue: s.venue ?? '', type: s.type,
+        date: s.date, time: s.time, duration: s.duration, title: s.title, room: s.room ?? '', style: s.style ?? '', level: isWorkshop(s.type) ? (s.level ?? '') : '', venue: s.venue ?? '', type: s.type,
         // Who they teach it with, by name.
         with: [s.artist, ...(s.with ?? [])].filter(h => h && h !== p.username).map(h => e.flyerOptions?.names?.[h] || others.find((o: any) => o.username === h)?.name || h),
       }))
@@ -132,7 +134,7 @@ async function eventContext(db: any, eventId: string, p: any) {
     styles: (e.styles ?? []) as string[],
     host: host ? { name: host.name, username: host.username, instagram: ((host.socials ?? []) as any[]).find(x => x.platform === 'instagram')?.url ?? null } : (e.organizerName ? { name: e.organizerName, username: null, instagram: null } : null),
     lineup: others.filter((o: any) => o.username !== p.username).map((o: any) => ({ username: o.username, name: e.flyerOptions?.names?.[o.username] || o.name, photo: o.photo })),
-    stats: { workshops: sessions.filter(s => s.type !== 'party').length, parties: sessions.filter(s => s.type === 'party').length, planning: planning?.n ?? 0 },
+    stats: { workshops: sessions.filter(s => isWorkshop(s.type)).length, parties: sessions.filter(s => isEveningItem(s.type)).length, planning: planning?.n ?? 0 },
     path: `/events/${e.festival?.key ?? e.id}`,
     programme,
     flyer: kept?.url ? { url: kept.url, pictured: ((kept.pictured ?? []) as string[]).some(n => n.toLowerCase() === myName) } : null,
@@ -478,6 +480,8 @@ export const artistInvitesRouter = router({
       }
       await grant(ctx.db, p.id, ctx.dancerId, 'owner', { by: invite?.createdBy ?? null })
       await logAccess(ctx.db, { profileId: p.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'approved', role: 'owner', note: 'Took over the page through an organizer’s invite link.' })
+      // Taken over through a connected app: that app may run it right away (#447).
+      await addProfileToOwnGrant(ctx, p.id)
       trackServer(ctx, 'profile_claimed', { profile: p.username, via: 'invite', ...profileGroup(p.username) })
       return { username: p.username, owner: true }
     }),

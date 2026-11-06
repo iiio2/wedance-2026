@@ -1,8 +1,9 @@
 import { z } from 'zod'
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, and, sql, inArray } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure } from '../trpc'
-import { dancers, cityVideos } from '../../database/schema'
+import { dancers, cityVideos, profiles, profileMembers } from '../../database/schema'
+import { canBePersonPage, pageHandleFor } from '../../utils/personPage'
 import { DANCE_LEVELS, sanitizeDanceLevels } from '../../../shared/utils/styleLevelMix'
 
 /**
@@ -47,6 +48,7 @@ export const profileRouter = router({
           youtube: dancers.youtube,
           website: dancers.website,
           profilePublic: dancers.profilePublic,
+          pageProfileId: dancers.pageProfileId,
         })
         .from(dancers)
         .where(eq(dancers.username, input.username))
@@ -90,7 +92,71 @@ export const profileRouter = router({
         isPublic: d.profilePublic ?? true,
         isOwner,
         videos,
+        // Their page, when they've marked one as "this is me" (#474): /u/ forwards there.
+        pageHandle: await pageHandleFor(ctx.db, d.pageProfileId),
       }
+    }),
+
+  // "This is me" (#474): the pages the caller owns that can be their public
+  // identity, and the one they've picked.
+  myPage: protectedProcedure
+    .query(async ({ ctx }) => {
+      const [me] = await ctx.db
+        .select({ pageProfileId: dancers.pageProfileId })
+        .from(dancers)
+        .where(eq(dancers.id, ctx.dancerId))
+      const owned = await ctx.db
+        .select({ profileId: profileMembers.profileId })
+        .from(profileMembers)
+        .where(and(eq(profileMembers.dancerId, ctx.dancerId), eq(profileMembers.role, 'owner')))
+      const ids = owned.map(m => m.profileId)
+      const pages = ids.length
+        ? await ctx.db
+            .select({ id: profiles.id, username: profiles.username, name: profiles.name, type: profiles.type, photo: profiles.photo })
+            .from(profiles)
+            .where(and(inArray(profiles.id, ids), eq(profiles.status, 'visible')))
+        : []
+      // Artist pages first: those are usually the person; organiser pages may be a brand.
+      const options = pages.filter(p => canBePersonPage(p.type))
+        .sort((a, b) => Number(b.type === 'artist') - Number(a.type === 'artist') || a.name.localeCompare(b.name))
+      const current = options.find(p => p.id === me?.pageProfileId) ?? null
+      return {
+        current: current ? current.username : null,
+        options: options.map(p => ({ username: p.username, name: p.name, type: p.type, photo: p.photo ?? null })),
+      }
+    }),
+
+  // Pick (or clear, with null) the page that is the caller. Only an owner of an
+  // artist / organiser page, and a page can be only one person.
+  setPage: protectedProcedure
+    .input(z.object({ username: z.string().min(1).max(200).nullable() }))
+    .mutation(async ({ ctx, input }) => {
+      if (input.username === null) {
+        await ctx.db.update(dancers).set({ pageProfileId: null }).where(eq(dancers.id, ctx.dancerId))
+        return { page: null }
+      }
+      const [p] = await ctx.db
+        .select({ id: profiles.id, username: profiles.username, type: profiles.type, status: profiles.status })
+        .from(profiles)
+        .where(eq(profiles.username, input.username))
+      if (!p || p.status !== 'visible') throw new TRPCError({ code: 'NOT_FOUND', message: 'Page not found.' })
+      if (!canBePersonPage(p.type)) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'A venue is a place, not a person — pick your artist or organiser page.' })
+      }
+      const [m] = await ctx.db
+        .select({ role: profileMembers.role })
+        .from(profileMembers)
+        .where(and(eq(profileMembers.profileId, p.id), eq(profileMembers.dancerId, ctx.dancerId)))
+      if (m?.role !== 'owner') throw new TRPCError({ code: 'FORBIDDEN', message: 'Only an owner of this page can make it their own.' })
+      const [taken] = await ctx.db
+        .select({ id: dancers.id })
+        .from(dancers)
+        .where(eq(dancers.pageProfileId, p.id))
+      if (taken && taken.id !== ctx.dancerId) {
+        throw new TRPCError({ code: 'CONFLICT', message: 'Another team member already uses this page as theirs.' })
+      }
+      await ctx.db.update(dancers).set({ pageProfileId: p.id }).where(eq(dancers.id, ctx.dancerId))
+      return { page: p.username }
     }),
 
   update: protectedProcedure

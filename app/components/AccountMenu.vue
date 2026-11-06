@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * AccountMenu — the desktop name button + dropdown (profile, year, settings,
  * mode switch, sign out). Same component on the dancing and business side;
@@ -41,16 +42,17 @@ function askSignOut() {
   <div ref="root" class="relative">
     <button
       type="button"
-      class="flex items-center gap-1.5 rounded-full border border-border pl-1 pr-2 h-9 hover:bg-muted transition-colors"
+      class="flex items-center gap-1.5 rounded-full border border-border p-1 sm:pr-2 h-9 hover:bg-muted transition-colors"
       aria-label="Account menu"
       aria-haspopup="menu"
       :aria-expanded="open"
       @click="open = !open"
     >
-      <img v-if="photo" :src="photo" alt="" class="w-7 h-7 rounded-full object-cover">
+      <img v-if="photo" :src="sizedImage(photo, IMG.avatar)" alt="" class="w-7 h-7 rounded-full object-cover">
       <span v-else class="w-7 h-7 rounded-full bg-primary/15 text-primary grid place-items-center text-xs font-bold">{{ initial }}</span>
-      <span class="text-sm font-semibold max-w-[10rem] truncate">{{ displayName }}</span>
-      <ChevronDown class="w-4 h-4 text-muted-foreground" />
+      <!-- Phones: avatar only, so the slim top bar has room. -->
+      <span class="hidden sm:inline text-sm font-semibold max-w-[10rem] truncate">{{ displayName }}</span>
+      <ChevronDown class="hidden sm:block w-4 h-4 text-muted-foreground" />
     </button>
     <div
       v-if="open"

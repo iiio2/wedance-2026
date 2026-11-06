@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import type { Workshop, FestivalFriend, PartnerMatch, PlanEntry, DanceRole } from '~/types/festival'
 import { Users, Heart, Share2, UserPlus, ChevronDown, ChevronRight, Check, Plus, MessageCircle, Handshake } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
@@ -123,7 +124,7 @@ function toggleMatchWorkshop(id: string) {
             @click="toggleFriend(friend.id)"
           >
             <img
-              :src="friend.photo"
+              :src="sizedImage(friend.photo, IMG.avatar)"
               :alt="friend.name"
               class="w-8 h-8 rounded-full object-cover"
             />
@@ -271,7 +272,7 @@ function toggleMatchWorkshop(id: string) {
                 class="flex items-center gap-3 p-3"
               >
                 <img
-                  :src="match.photo"
+                  :src="sizedImage(match.photo, IMG.avatar)"
                   :alt="match.name"
                   class="w-10 h-10 rounded-full object-cover shrink-0"
                 />

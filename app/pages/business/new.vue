@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /business/new — create a new artist / venue / organizer profile. The creator owns
  * it straight away and lands in the editor.
@@ -9,6 +10,7 @@
  */
 import { Instagram, ArrowRight } from 'lucide-vue-next'
 import { parseInstagramHandle, handleFromInstagram, nameFromInstagram } from '#shared/utils/instagram'
+import { BusinessCreateSchema } from '#shared/validation'
 
 definePageMeta({ layout: 'business' })
 useHead({ title: 'Create a profile | WeDance' })
@@ -32,12 +34,11 @@ const form = reactive({
   instagram: String(route.query.instagram ?? ''),
   name: '', city: '', handle: '',
 })
-const nameError = ref<string | undefined>()
+const { errors, validate, fieldAttrs } = useFormValidation(BusinessCreateSchema, form)
 const saving = ref(false)
 const error = ref<string | null>(null)
 
 const igHandle = computed(() => parseInstagramHandle(form.instagram))
-const igError = computed(() => (form.instagram.trim() && !igHandle.value ? 'Paste a link like instagram.com/name, or @name.' : undefined))
 
 // Fill empty fields from the Instagram handle; never overwrite what was typed.
 const filledFromIg = reactive({ name: '', handle: '' })
@@ -50,7 +51,7 @@ watch(igHandle, (ig) => {
 type Existing = Awaited<ReturnType<typeof $trpc.business.findExisting.query>>
 const existing = ref<Existing>([])
 let timer: ReturnType<typeof setTimeout> | undefined
-watch(() => [igHandle.value, form.name.trim(), form.handle.trim()], () => {
+watch(() => [igHandle.value, form.name.trim(), form.handle.trim(), form.city, form.type], () => {
   clearTimeout(timer)
   timer = setTimeout(async () => {
     try {
@@ -58,25 +59,22 @@ watch(() => [igHandle.value, form.name.trim(), form.handle.trim()], () => {
         name: form.name.trim() || undefined,
         handle: form.handle.trim() || undefined,
         instagram: igHandle.value || undefined,
+        // Similar names only count in the same city (#458).
+        city: form.city || undefined,
+        type: form.type as any,
       })
     } catch { existing.value = [] }
   }, 350)
 }, { immediate: true })
 
 async function submit() {
-  nameError.value = form.name.trim() ? undefined : 'Add a name.'
-  if (nameError.value || igError.value) return
+  const result = validate()
+  if (!result.success) return
   saving.value = true
   error.value = null
   try {
-    const { username } = await $trpc.business.create.mutate({
-      type: form.type,
-      name: form.name,
-      city: form.city || undefined,
-      instagram: igHandle.value || undefined,
-      handle: form.handle.trim() || undefined,
-    })
-    useTrack().track('business_profile_created', { profile: username, profile_type: form.type, from_instagram: !!igHandle.value })
+    const { username } = await $trpc.business.create.mutate(result.data)
+    useTrack().track('business_profile_created', { profile: username, profile_type: form.type, from_instagram: !!result.data.instagram })
     await navigateTo(next || `/business/network/${username}`)
   } catch (e: any) {
     error.value = e?.message || 'Could not create the profile.'
@@ -86,6 +84,7 @@ async function submit() {
 }
 
 const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', organizer: 'Organizer', promoter: 'Promoter' }
+const reasonLabel: Record<string, string> = { instagram: 'same Instagram', handle: 'same handle', name: 'similar name', address: 'same address', nearby: 'next door' }
 </script>
 
 <template>
@@ -110,16 +109,16 @@ const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', or
         </div>
       </fieldset>
 
-      <Field id="new-instagram" label="Instagram" optional :error="igError" hint="Paste the Instagram link to fill in the handle and a name. You can change both." class="mt-4">
+      <Field id="new-instagram" label="Instagram" optional :error="errors.instagram" hint="Paste the Instagram link: your page gets the same handle (@name.like_this) and a name to start from. You can change both." class="mt-4">
         <div class="relative">
           <Instagram class="size-4 absolute left-3.5 top-3.5 text-muted-foreground" aria-hidden="true" />
-          <Input v-model="form.instagram" placeholder="https://www.instagram.com/…" class="pl-10" autocomplete="off" />
+          <Input v-model="form.instagram" placeholder="https://www.instagram.com/…" class="pl-10" autocomplete="off" v-bind="fieldAttrs('instagram', 'new-instagram-error')" />
         </div>
       </Field>
 
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        <Field id="new-name" label="Name" :error="nameError">
-          <Input v-model="form.name" placeholder="e.g. La Clave en Múnich" />
+        <Field id="new-name" label="Name" :error="errors.name">
+          <Input v-model="form.name" placeholder="e.g. La Clave en Múnich" v-bind="fieldAttrs('name', 'new-name-error')" />
         </Field>
         <Field id="new-city" label="City">
           <CityCombobox v-model="form.city" placeholder="e.g. Munich" />
@@ -129,9 +128,10 @@ const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', or
           label="Handle"
           optional
           class="sm:col-span-2"
-          :hint="`Your page address: ${host}/@${form.handle || 'your-name'}. We pick one from the name if you leave it empty.`"
+          :error="errors.handle"
+          :hint="`Your page address: ${host}/@${form.handle.trim().replace(/^@/, '').toLowerCase() || 'your-name'}. Keep it the same as your Instagram so people find you. Letters, numbers, dots, underscores or dashes; left empty, we use your Instagram handle or name.`"
         >
-          <Input v-model="form.handle" placeholder="laclave" />
+          <Input v-model="form.handle" placeholder="laclave.munich" autocapitalize="off" autocomplete="off" spellcheck="false" v-bind="fieldAttrs('handle', 'new-handle-error')" />
         </Field>
       </div>
 
@@ -140,11 +140,12 @@ const typeLabel: Record<string, string> = { artist: 'Artist', venue: 'Venue', or
         <p class="text-xs text-muted-foreground">If one of these is yours, take it over instead of creating a second page.</p>
         <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
           <div v-for="p in existing" :key="p.username" class="flex flex-wrap items-center gap-3 rounded-xl bg-card p-3">
-            <img v-if="p.photo" :src="p.photo" alt="" class="size-9 rounded-lg object-cover">
+            <img v-if="p.photo" :src="sizedImage(p.photo, IMG.avatar)" alt="" class="size-9 rounded-lg object-cover">
             <span v-else class="size-9 rounded-lg bg-muted" />
             <div class="min-w-[10rem] flex-1">
               <NuxtLink :to="`/@${p.username}`" target="_blank" class="block truncate text-sm font-bold hover:underline">{{ p.name }}</NuxtLink>
               <p class="truncate text-xs text-muted-foreground">{{ typeLabel[p.type] || p.type }} · @{{ p.username }}<template v-if="p.city"> · {{ p.city }}</template></p>
+              <p v-if="p.reasons?.length" class="truncate text-xs text-muted-foreground">{{ p.reasons.map(r => reasonLabel[r] || r).join(' · ') }}</p>
             </div>
             <Button variant="outline-pill" size="pill-sm" as-child>
               <NuxtLink :to="`/business/claim?profile=${p.username}`">{{ p.managed ? 'Join the team' : 'Claim it' }} <ArrowRight /></NuxtLink>

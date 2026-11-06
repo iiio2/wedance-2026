@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * Venues to consider for the chosen days, under "Where" in the event editor:
  * who hosts nights in the city (and which music), whether they already have a
@@ -79,7 +80,7 @@ function pick(v: any) {
       <p v-if="!data.venues.length" class="mt-2 text-sm text-muted-foreground">No venues in {{ data.city }} on WeDance yet.</p>
       <ul class="mt-3 grid grid-cols-1 gap-2">
         <li v-for="v in data.venues" :key="v.username" class="flex min-w-0 gap-3 rounded-xl border bg-card p-2.5" :class="model === v.username ? 'border-primary' : ''">
-          <img v-if="v.photo" :src="v.photo" alt="" class="size-12 shrink-0 rounded-lg object-cover">
+          <img v-if="v.photo" :src="sizedImage(v.photo, IMG.avatar)" alt="" class="size-12 shrink-0 rounded-lg object-cover">
           <div v-else class="grid size-12 shrink-0 place-items-center rounded-lg bg-muted"><Building2 class="size-5 text-muted-foreground" aria-hidden="true" /></div>
           <div class="min-w-0 flex-1 text-sm">
             <p class="font-bold leading-snug">

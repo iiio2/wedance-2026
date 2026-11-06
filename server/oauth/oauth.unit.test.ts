@@ -123,7 +123,23 @@ describe('Client ID Metadata Documents — SSRF guards', () => {
     expect(() => parseClientMetadata(id, { client_id: id, redirect_uris: ['javascript:alert(1)'] })).toThrow()
     expect(() => parseClientMetadata(id, { client_id: id, redirect_uris: ['https://app.example/cb'], client_secret: 's' })).toThrow(/secret/)
     expect(() => parseClientMetadata(id, { client_id: id, redirect_uris: ['https://app.example/cb'], token_endpoint_auth_method: 'client_secret_post' })).toThrow(/none/)
+    expect(() => parseClientMetadata(id, { client_id: id, redirect_uris: ['https://app.example/cb'], token_endpoint_auth_method: 'private_key_jwt', token_endpoint_auth_methods_supported: ['private_key_jwt'] })).toThrow(/none/)
     expect(() => parseClientMetadata(id, [])).toThrow()
+  })
+  it('accepts a client that prefers private_key_jwt but also supports none (ChatGPT)', () => {
+    const id = 'https://chatgpt.com/oauth/client.json'
+    const doc = {
+      client_id: id,
+      client_name: 'ChatGPT',
+      redirect_uris: ['https://chatgpt.com/connector_platform_oauth_redirect'],
+      token_endpoint_auth_method: 'private_key_jwt',
+      token_endpoint_auth_methods_supported: ['none', 'private_key_jwt'],
+      token_endpoint_auth_signing_alg: 'RS256',
+      jwks_uri: 'https://chatgpt.com/oauth/jwks.json',
+      grant_types: ['authorization_code', 'refresh_token'],
+      response_types: ['code'],
+    }
+    expect(parseClientMetadata(id, doc)).toMatchObject({ name: 'ChatGPT', redirectUris: ['https://chatgpt.com/connector_platform_oauth_redirect'] })
   })
 })
 

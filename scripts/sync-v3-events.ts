@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
 /**
- * Mirror upcoming wedance.vip (v3) events into the 2026 `events` table, plus the
- * venue / organiser / artist profiles behind them (server/utils/v3ProfileSync.ts),
- * linked to each event so the city page's "Who's on the floor" lights up.
+ * Mirror upcoming wedance.vip (v3) events into the 2026 `events` table, plus
+ * every visible v3 business page — venues, organisers, fan pages, artists, in any
+ * city (server/utils/v3ProfileSync.ts) — linked to each event so the city page's
+ * "Who's on the floor" lights up. --events-only keeps to the pages behind events.
  *
  * Source: Firestore `posts` where type == "event" and startDate >= now (all
  * cities), read through the Firestore REST API with the v3 service account.
@@ -17,6 +18,7 @@
  *   bun run sync:v3-events              # dry-run (default): fetch + map + diff, no DB writes
  *   bun run sync:v3-events --write      # upsert profiles, then events (schema ships in migration 0018)
  *   bun run sync:v3-events --json       # machine-readable summary
+ *   bun run sync:v3-events --events-only   # only the pages behind upcoming events (the old scope)
  *
  * Env:
  *   DATABASE_URL                         target Postgres (Neon). Check which one before --write!
@@ -36,6 +38,7 @@ import { fetchV3Profiles, syncV3Profiles } from '../server/utils/v3ProfileSync'
 const args = new Set(process.argv.slice(2))
 const WRITE = args.has('--write')
 const JSON_OUT = args.has('--json')
+const ALL_PAGES = !args.has('--events-only')
 const log = (s: string) => { if (!JSON_OUT) console.error(s) }
 
 const dbUrl = process.env.DATABASE_URL
@@ -65,7 +68,7 @@ log(`  fetched ${v3Profiles.length} v3 profiles (Venue / Organiser / FanPage / A
 // migration 0018 — the script no longer applies schema itself (its old 0021/0022
 // files were folded into 0018 by #202, which broke every write run from 2026-10-10).
 
-const { plan, summary: profiles } = await syncV3Profiles({ db, docs, v3Profiles, write: WRITE, log })
+const { plan, summary: profiles } = await syncV3Profiles({ db, docs, v3Profiles, write: WRITE, log, allPages: ALL_PAGES })
 const summary = await syncV3Events({ db, docs, write: WRITE, log, links: plan.links, extraProfiles: plan.newProfiles })
 
 if (JSON_OUT) {

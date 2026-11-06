@@ -2,22 +2,28 @@ import { z } from 'zod'
 import { eq, and, or, gte, lt, inArray, isNull, desc, asc, sql } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure, publicProcedure } from '../trpc'
-import { events, profiles, profileMembers, profileClaims, cities, profileSuggestions, bookingInquiries, planItems, attendances, festivals, festivalSignups, dancers } from '../../database/schema'
+import { events, profiles, profileMembers, profileClaims, cities, profileSuggestions, bookingInquiries, planItems, attendances, festivals, festivalSignups, dancers, eventFlyers } from '../../database/schema'
 import { slugify, randomSuffix } from '../../utils/slug'
 import { resolveTimezone, seriesKey } from '../../utils/v3EventSync'
 import { zonedToUtc, eventLocalDate, eventLocalTime, eventLocalWeekday } from '../../../shared/utils/eventTime'
 import { requireMember, linksInstagram } from './business'
+import { findLikelyDuplicates, notMerged } from '../../utils/profileDupes'
 import { onlyGranted, type GrantCtx } from '../../utils/profileAccess'
 import { assertScope } from '../scopes'
 import { parseInstagramHandle, handleFromInstagram, instagramUrl } from '../../../shared/utils/instagram'
+import { isValidHandle } from '../../../shared/utils/handle'
 import { joinRequestsForOwner } from './businessTeam'
 import { eventPath } from '../../../shared/utils/eventSlug'
 import { flyerStatusFor } from '../../utils/flyer/paint'
 import { asksWaitingFor } from './venueAsks'
-import type { FestivalDetails } from '../../../shared/types/festivalDetails'
+import { SESSION_TYPES, type FestivalDetails } from '../../../shared/types/festivalDetails'
+import { cleanSession, inferDurations } from '../../../shared/utils/programme'
 import { seriesDates, weekdayOf, MAX_SERIES } from '../../../shared/utils/recurrence'
+import { eventGaps } from '../../../shared/utils/eventChecklist'
+import { cleanCoOrganizers, CO_ORGANIZERS_MAX, CO_ORGANIZER_ROLE_MAX, type CoOrganizer } from '../../../shared/utils/coOrganizers'
 import { randomUUID } from 'node:crypto'
 import { profileGroup, trackServer } from '../../utils/posthog'
+import { scheduleInstagramImport } from '../../utils/instagram/profileImport'
 
 /**
  * Business mode — events a profile runs, and the /business home inbox.
@@ -65,13 +71,15 @@ const festivalInput = z.object({
     id: z.string().trim().min(1).max(60),
     date: ymdStr,
     time: z.string().regex(/^\d{2}:\d{2}$/, 'Give every session a time.'),
-    duration: z.number().int().min(5).max(1440),
-    type: z.enum(['workshop', 'party']),
+    // Left out = worked out on save (until the next item, the event's end, or the type's default).
+    duration: z.number().int().min(0).max(1440).optional(),
+    type: z.enum(SESSION_TYPES),
     title: text(160).min(1, 'Give every session a title.'),
     artist: text(200).default(''),
     with: z.array(text(200)).max(6).optional(),
     style: text(40).default(''),
-    level: z.enum(['Beginner', 'Intermediate', 'Advanced']).default('Beginner'),
+    // Workshops only; dropped on every other type.
+    level: z.enum(['Beginner', 'Intermediate', 'Advanced']).optional(),
     room: text(60).optional(),
     venue: text(200).optional(),
     description: text(1000).optional(),
@@ -91,6 +99,11 @@ const eventInput = z.object({
   venueName: z.string().trim().max(200).nullable().optional(),
   venueAddress: z.string().trim().max(300).nullable().optional(),
   artists: z.array(z.string().min(1).max(200)).max(40).default([]),
+  // Other pages that run it with the organiser (#456): credit, no edit rights.
+  coOrganizers: z.array(z.object({
+    username: z.string().trim().min(1).max(200),
+    role: z.string().trim().max(CO_ORGANIZER_ROLE_MAX).optional(),
+  })).max(CO_ORGANIZERS_MAX).default([]),
   styles: z.array(z.string().min(1).max(40)).max(20).default([]),
   description: z.string().max(8000).default(''),
   cover: z.string().url().nullable().optional(),
@@ -112,7 +125,22 @@ const eventInput = z.object({
 })
 type EventInput = z.infer<typeof eventInput>
 
-async function profilesIManage(ctx: { db: any; dancerId: string } & GrantCtx) {
+/**
+ * The programme as stored: every session gets a length (#455: until the next
+ * item that day, else the event's end, else the type's default) and a level
+ * only when it's a workshop. Mutates `input.festival` in place.
+ */
+function settleProgramme<T extends { date: string; endDate?: string | null; endTime?: string | null; festival?: any }>(
+  input: T,
+  bounds: { date: string; endDate?: string | null; endTime?: string | null } = input,
+): T {
+  if (input.festival?.sessions) {
+    input.festival.sessions = inferDurations(input.festival.sessions, bounds).map(cleanSession)
+  }
+  return input
+}
+
+export async function profilesIManage(ctx: { db: any; dancerId: string } & GrantCtx) {
   const rows = await ctx.db
     .select({ id: profiles.id, username: profiles.username, name: profiles.name, type: profiles.type })
     .from(profileMembers)
@@ -150,7 +178,13 @@ export async function requireEventManager(ctx: { db: any; dancerId: string; isAd
       : []
   // A connected app may manage it only through a profile it was given.
   const candidates = onlyGranted(ctx, all, id => id)
-  if (all.length && !candidates.length) throw new TRPCError({ code: 'FORBIDDEN', message: 'This app wasn’t given access to the profile that runs this event. Reconnect it and tick the profile on the consent screen.' })
+  if (all.length && !candidates.length) {
+    // On the team but not in this app's grant → reconnect helps; not on the team → it doesn't (#454).
+    const [onTeam] = await ctx.db.select({ id: profileMembers.id }).from(profileMembers)
+      .where(and(inArray(profileMembers.profileId, all), eq(profileMembers.dancerId, ctx.dancerId))).limit(1)
+    if (!onTeam) throw new TRPCError({ code: 'FORBIDDEN', message: 'You don’t manage this event, so reconnecting won’t help. Its organizer or venue can edit it, or a WeDance admin.' })
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'This app wasn’t given access to the profile that runs this event. Reconnect it and tick the profile on the consent screen.' })
+  }
   const [m] = candidates.length
     ? await ctx.db.select({ id: profileMembers.id }).from(profileMembers)
       .where(and(inArray(profileMembers.profileId, candidates), eq(profileMembers.dancerId, ctx.dancerId)))
@@ -160,7 +194,7 @@ export async function requireEventManager(ctx: { db: any; dancerId: string; isAd
 }
 
 // Canonical city → slug, country and timezone (CityCombobox saves the English name).
-async function cityInfo(db: any, name: string | null | undefined) {
+export async function cityInfo(db: any, name: string | null | undefined) {
   if (!name) return { city: null, citySlug: null, country: null, timezone: 'Europe/Berlin' }
   const [c] = await db.select({ name: cities.name, slug: cities.slug, country: cities.country, countryCode: cities.countryCode, lng: cities.lng })
     .from(cities).where(sql`lower(${cities.name}) = lower(${name})`).limit(1)
@@ -177,6 +211,18 @@ async function toRow(db: any, host: { username: string; type: string } | null, i
       .from(profiles).where(eq(profiles.username, input.venueUsername))
     if (!v) throw new TRPCError({ code: 'BAD_REQUEST', message: 'That venue isn’t on WeDance.' })
     venue = v
+  }
+  // A synced event keeps its organizer when the editor isn't it (an admin, the venue).
+  const organizerUsername = host?.type === 'organizer' ? host.username : (existing?.organizerUsername ?? null)
+  let coOrganizers = cleanCoOrganizers(input.coOrganizers, [organizerUsername, host?.username])
+  if (coOrganizers.length) {
+    // Each must be a page on WeDance; stored under its handle as written there.
+    const rows: { username: string }[] = await db.select({ username: profiles.username }).from(profiles)
+      .where(inArray(sql`lower(${profiles.username})`, coOrganizers.map(c => c.username)))
+    const found = new Map(rows.map(r => [r.username.toLowerCase(), r.username]))
+    const unknown = coOrganizers.filter(c => !found.has(c.username)).map(c => `@${c.username}`)
+    if (unknown.length) throw new TRPCError({ code: 'BAD_REQUEST', message: `Not on WeDance yet: ${unknown.join(', ')}. Add their page first (from their Instagram).` })
+    coOrganizers = coOrganizers.map(c => ({ ...c, username: found.get(c.username)! }))
   }
   const loc = await cityInfo(db, input.city || venue?.city)
   const start = zonedToUtc(input.date, input.startTime, loc.timezone)
@@ -200,8 +246,8 @@ async function toRow(db: any, host: { username: string; type: string } | null, i
     venueUsername: venue?.username ?? (host?.type === 'venue' && !input.venueName ? host.username : null),
     venueName: venue?.name ?? input.venueName ?? null,
     venueAddress: venue?.address ?? input.venueAddress ?? null,
-    // A synced event keeps its organizer when the editor isn't it (an admin, the venue).
-    organizerUsername: host?.type === 'organizer' ? host.username : (existing?.organizerUsername ?? null),
+    organizerUsername,
+    coOrganizers,
     artists: input.artists,
     styles: input.styles,
     description: input.description,
@@ -225,33 +271,38 @@ async function toRow(db: any, host: { username: string; type: string } | null, i
 }
 
 // What a published event still lacks, in plain words. Shared by the list, the
-// editor and the home inbox so they always agree.
-async function checklistFor(db: any, evs: any[]) {
+// editor and the home inbox so they always agree (and, keyed, by the MCP tools).
+async function gapsFor(db: any, evs: any[]) {
   const handles = [...new Set(evs.flatMap(e => (e.artists ?? []) as string[]))]
   const artistRows = handles.length
     ? await db.select({ username: profiles.username, photo: profiles.photo, photos: profiles.photos, socials: profiles.socials }).from(profiles).where(inArray(profiles.username, handles))
     : []
   const byHandle = new Map<string, any>(artistRows.map((a: any) => [a.username, a]))
-  return new Map(evs.map((e) => {
-    const missing: string[] = []
-    if (!e.cover) missing.push('cover photo')
-    if (!e.ticketUrl && !/free|gratis|frei/i.test(e.price ?? '')) missing.push('ticket link or “free”')
-    if (!e.venueUsername && !e.venueName) missing.push('venue')
-    if (!(e.artists ?? []).length) missing.push('line-up')
-    const noIg = (e.artists ?? []).filter((h: string) => !(byHandle.get(h)?.socials ?? []).some((s: any) => s.platform === 'instagram'))
-    if (noIg.length) missing.push(`Instagram for ${noIg.map((h: string) => '@' + h).join(', ')}`)
-    const eventPhotos: Record<string, string | null> = (e.flyerOptions as any)?.photos ?? {}
-    const hasPhoto = (h: string) => byHandle.get(h)?.photo || ((byHandle.get(h)?.photos ?? []) as { url: string }[]).length > 0 || (h in eventPhotos && eventPhotos[h] !== null)
-    const noPhoto = (e.artists ?? []).filter((h: string) => !hasPhoto(h))
-    if (noPhoto.length) missing.push(`photo for ${noPhoto.map((h: string) => '@' + h).join(', ')}`)
-    return [e.id, missing]
-  }))
+  return new Map(evs.map(e => [e.id, eventGaps(e, byHandle)]))
+}
+// Where the event's flyers stand: any finished, any still painting, one kept.
+async function flyerSummary(db: any, eventId: string) {
+  const rows: { status: string; kept: boolean; url: string | null }[] = await db
+    .select({ status: eventFlyers.status, kept: sql<boolean>`${eventFlyers.keptAt} is not null`, url: eventFlyers.url })
+    .from(eventFlyers).where(eq(eventFlyers.eventId, eventId)).orderBy(desc(eventFlyers.createdAt)).limit(50)
+  const ready = rows.filter(r => r.status === 'ready')
+  return {
+    ready: ready.length,
+    painting: rows.filter(r => r.status === 'painting' || r.status === 'checking').length,
+    kept: rows.some(r => r.kept),
+    latestUrl: (rows.find(r => r.kept) ?? ready[0])?.url ?? null,
+  }
+}
+async function checklistFor(db: any, evs: any[]) {
+  const gaps = await gapsFor(db, evs)
+  return new Map([...gaps].map(([id, g]) => [id, g.map(x => x.label)]))
 }
 
 const listColumns = {
   id: events.id, name: events.name, type: events.type, startDate: events.startDate, endDate: events.endDate,
   timezone: events.timezone, published: events.published, cover: events.cover, ticketUrl: events.ticketUrl,
   price: events.price, venueUsername: events.venueUsername, venueName: events.venueName, artists: events.artists,
+  coOrganizers: events.coOrganizers,
   city: events.city, hostProfileId: events.hostProfileId, seriesId: events.seriesId,
   organizerName: events.organizerName, organizerUsername: events.organizerUsername, slug: events.slug,
   // What a flyer is made from (flyerStatusFor).
@@ -259,8 +310,10 @@ const listColumns = {
 }
 
 // A recurring series (recurring_series): the template event plus the rule.
-// Festivals aren't repeated this way (each edition has its own key and page).
-const seriesInput = eventInput.omit({ festival: true }).extend({
+// Festivals aren't repeated this way (each edition has its own key and page),
+// but a weekly party's programme is: each date gets a copy on its own day,
+// under its own key.
+const seriesInput = eventInput.extend({
   hostUsername: z.string().min(1),
   every: z.enum(['week', '2weeks', 'month']),
   until: ymd.nullable().optional(),
@@ -423,6 +476,7 @@ export const businessEventsRouter = router({
       const sameDay = !end || eventLocalDate(end, tz) === eventLocalDate(ev.startDate, tz)
         // A night that ends before noon the next day reads as one date with an end time.
         || (end.getTime() - new Date(ev.startDate).getTime() < 18 * 3600_000)
+      const gaps = (await gapsFor(ctx.db, [ev])).get(ev.id) ?? []
       return {
         id: ev.id,
         host: host ? { username: host.username, name: host.name, type: host.type } : null,
@@ -444,6 +498,7 @@ export const businessEventsRouter = router({
         venueName: venue?.name || ev.venueName || '',
         venueAddress: venue?.address || ev.venueAddress || '',
         artists: ev.artists ?? [],
+        coOrganizers: (ev.coOrganizers ?? []) as CoOrganizer[],
         styles: ev.styles ?? [],
         description: ev.description ?? '',
         cover: ev.cover || null,
@@ -454,13 +509,17 @@ export const businessEventsRouter = router({
         flyerOptions: (ev.flyerOptions ?? {}) as { showAgenda?: boolean; photos?: Record<string, string | null>; names?: Record<string, string> },
         festival: (ev.festival ?? null) as import('../../../shared/types/festivalDetails').FestivalDetails | null,
         timezone: tz,
-        missing: (await checklistFor(ctx.db, [ev])).get(ev.id) ?? [],
+        missing: gaps.map(g => g.label),
+        // The same list keyed, plus the flyer: what the MCP tools turn into next steps.
+        gaps,
+        flyer: await flyerSummary(ctx.db, ev.id),
       }
     }),
 
   create: protectedProcedure
     .input(eventInput.extend({ hostUsername: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      settleProgramme(input)
       // A connected app publishes only with business:publish.
       if (input.published) assertScope(ctx, 'business:publish')
       const host = await requireMember(ctx, input.hostUsername)
@@ -470,7 +529,8 @@ export const businessEventsRouter = router({
         // A new festival's permanent key is its first slug.
         .values({ ...row, hostProfileId: host.id, source: 'wedance-business', slug, ...(input.festival ? { festival: { ...input.festival, key: slug } } : {}) })
         .returning({ id: events.id })
-      const props = { event_id: ev!.id, is_festival: !!input.festival, host_type: host.type, city: input.city || null, ...profileGroup(host.username) }
+      // Every editor event carries details (its programme), so the type decides.
+      const props = { event_id: ev!.id, is_festival: row.isFestival, host_type: host.type, city: input.city || null, ...profileGroup(host.username) }
       trackServer(ctx, 'event_created', { ...props, published: !!input.published })
       if (input.published) trackServer(ctx, 'event_published', props)
       return { id: ev!.id }
@@ -480,6 +540,11 @@ export const businessEventsRouter = router({
     .input(eventInput.extend({ id: z.string().uuid(), hostUsername: z.string().min(1).optional() }))
     .mutation(async ({ ctx, input }) => {
       const ev = await requireEventManager(ctx, input.id)
+      // An update without an end keeps the stored one for the last session's length.
+      const tz = ev.timezone || 'Europe/Berlin'
+      settleProgramme(input, input.endTime || input.endDate || !ev.endDate
+        ? input
+        : { date: input.date, endDate: eventLocalDate(ev.endDate, tz), endTime: eventLocalTime(ev.endDate, tz) })
       // Publishing, or changing an event that's already live, is public.
       if (input.published || ev.published) assertScope(ctx, 'business:publish')
       let host: { id: string; username: string; type: string; name: string } | null
@@ -501,7 +566,7 @@ export const businessEventsRouter = router({
         hostProfileId,
       }).where(eq(events.id, ev.id))
       // Draft → live is the publish conversion (re-saving a live event is not).
-      if (input.published && !ev.published) trackServer(ctx, 'event_published', { event_id: ev.id, is_festival: !!input.festival, host_type: host?.type ?? null, city: input.city || null, ...profileGroup(host?.username) })
+      if (input.published && !ev.published) trackServer(ctx, 'event_published', { event_id: ev.id, is_festival: ['Festival', 'Weekender', 'Congress'].includes(input.type), host_type: host?.type ?? null, city: input.city || null, ...profileGroup(host?.username) })
       return { saved: true }
     }),
 
@@ -570,6 +635,7 @@ export const businessEventsRouter = router({
   createSeries: protectedProcedure
     .input(seriesInput)
     .mutation(async ({ ctx, input }) => {
+      settleProgramme(input)
       if (input.published) assertScope(ctx, 'business:publish')
       const host = await requireMember(ctx, input.hostUsername)
       const { dates, skipped } = planSeries(input)
@@ -580,7 +646,10 @@ export const businessEventsRouter = router({
       const rows = []
       for (const [i, date] of dates.entries()) {
         const row = await toRow(ctx.db, host, { ...template, date, festival: undefined } as EventInput)
-        rows.push({ ...row, ...(i === 0 ? { id: firstId } : {}), hostProfileId: host.id, source: 'wedance-business', seriesId, slug: `${slugify(input.name)}-${randomSuffix(5)}` })
+        const slug = `${slugify(input.name)}-${randomSuffix(5)}`
+        const shift = new Date(`${date}T12:00:00Z`).getTime() - new Date(`${input.date}T12:00:00Z`).getTime()
+        const festival = input.festival ? { ...shiftFestivalSessions({ ...input.festival, key: slug } as FestivalDetails /* durations settled above */, shift)!, key: slug } : null
+        rows.push({ ...row, ...(i === 0 ? { id: firstId } : {}), hostProfileId: host.id, source: 'wedance-business', seriesId, slug, ...(festival ? { festival } : {}) })
       }
       const created = await ctx.db.insert(events).values(rows).returning({ id: events.id, startDate: events.startDate, timezone: events.timezone })
       created.sort((a: any, b: any) => +new Date(a.startDate) - +new Date(b.startDate))
@@ -795,132 +864,189 @@ export const businessEventsRouter = router({
       if (!handle) throw new TRPCError({ code: 'BAD_REQUEST', message: 'That doesn’t look like an Instagram handle.' })
       const url = instagramUrl(handle)
       // Same Instagram account only — a matching WeDance handle is not proof it's the same person.
-      const [existing] = await ctx.db.select({ username: profiles.username, name: profiles.name, type: profiles.type, city: profiles.city, photo: profiles.photo })
+      const [existing] = await ctx.db.select({ id: profiles.id, username: profiles.username, name: profiles.name, type: profiles.type, city: profiles.city, photo: profiles.photo })
         .from(profiles)
         .where(linksInstagram(handle))
         .limit(1)
-      if (existing) return existing
+      if (existing) {
+        const { id, ...page } = existing
+        // Still a bare handle (added before #452, or the import failed): try again.
+        if (!page.photo) scheduleInstagramImport(ctx, [{ profileId: id, handle }])
+        return page
+      }
       let username = handleFromInstagram(handle)
       const [taken] = await ctx.db.select({ id: profiles.id }).from(profiles).where(eq(profiles.username, username))
-      if (taken) username = `${username}-${randomSuffix(4)}`
+      if (taken || !isValidHandle(username)) username = `${username}-${randomSuffix(4)}`
       const [p] = await ctx.db.insert(profiles)
         .values({ username, type: input.type, name: input.name || handle, socials: [{ platform: 'instagram', url }], sourceRef: { source: 'wedance-business', addedBy: ctx.dancerId } })
-        .returning({ username: profiles.username, name: profiles.name, type: profiles.type, city: profiles.city, photo: profiles.photo })
-      return p!
+        .returning({ id: profiles.id, username: profiles.username, name: profiles.name, type: profiles.type, city: profiles.city, photo: profiles.photo })
+      const { id, ...page } = p!
+      // Name, photo, bio, website and city from Instagram, after the response (#452).
+      scheduleInstagramImport(ctx, [{ profileId: id, handle }])
+      return page
+    }),
+
+  // A venue that isn't on WeDance yet, from its name and address (and Instagram
+  // when known): an unclaimed venue page, like addFromInstagram. Returns the page
+  // that already links that Instagram, or a venue of the same name in that city.
+  addVenue: protectedProcedure
+    .input(z.object({
+      name: z.string().trim().min(2).max(120),
+      address: z.string().trim().min(3).max(300),
+      city: z.string().trim().min(1).max(120),
+      instagram: z.string().trim().min(2).max(300).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const ig = input.instagram ? parseInstagramHandle(input.instagram) : null
+      if (input.instagram && !ig) throw new TRPCError({ code: 'BAD_REQUEST', message: 'That doesn’t look like an Instagram handle.' })
+      const cols = { username: profiles.username, name: profiles.name, type: profiles.type, city: profiles.city, address: profiles.address }
+      if (ig) {
+        const [byIg] = await ctx.db.select({ ...cols, id: profiles.id, photo: profiles.photo }).from(profiles).where(linksInstagram(ig)).limit(1)
+        if (byIg) {
+          const { id, photo, ...page } = byIg
+          if (!photo) scheduleInstagramImport(ctx, [{ profileId: id, handle: ig }])
+          return { ...page, created: false }
+        }
+      }
+      const loc = await cityInfo(ctx.db, input.city)
+      // A venue in that city with a similar name or the same address (#458).
+      const same = loc.citySlug
+        ? (await findLikelyDuplicates(ctx.db, { name: input.name, address: input.address, citySlug: loc.citySlug, type: 'venue' })).find(d => d.type === 'venue')
+        : (await ctx.db.select(cols).from(profiles)
+            .where(and(eq(profiles.type, 'venue'), sql`lower(${profiles.name}) = ${input.name.toLowerCase()}`, notMerged)).limit(1))[0]
+      if (same) return { username: same.username, name: same.name, type: same.type, city: same.city, address: same.address, created: false }
+      let username = ig ? handleFromInstagram(ig) : (slugify(input.name) || `venue-${randomSuffix(6)}`)
+      const [taken] = await ctx.db.select({ id: profiles.id }).from(profiles).where(eq(profiles.username, username))
+      if (taken || !isValidHandle(username)) username = `${username}-${randomSuffix(4)}`
+      const [p] = await ctx.db.insert(profiles)
+        .values({
+          username, type: 'venue', name: input.name, address: input.address, city: loc.city, citySlug: loc.citySlug,
+          socials: ig ? [{ platform: 'instagram', url: instagramUrl(ig) }] : [],
+          sourceRef: { source: 'wedance-business', addedBy: ctx.dancerId },
+        })
+        .returning({ ...cols, id: profiles.id })
+      const { id, ...page } = p!
+      // Photo, bio, website (and the name/city when missing) from its Instagram (#452).
+      if (ig) scheduleInstagramImport(ctx, [{ profileId: id, handle: ig }])
+      return { ...page, created: true }
     }),
 
   // /business home: what needs me + the next 14 days, across every profile I manage.
-  inbox: protectedProcedure.query(async ({ ctx }) => {
-    const mine = await profilesIManage(ctx)
-    const now = new Date()
-    const in14 = new Date(now.getTime() + 14 * 86400_000)
-    const in60 = new Date(now.getTime() + 60 * 86400_000)
-    type Item = { kind: string; tone: 'warning' | 'info' | 'danger' | 'neutral'; title: string; detail?: string; to: string }
-    const needs: Item[] = []
+  // `profile`: the sidebar switcher's page (same as list); every page I manage when absent.
+  inbox: protectedProcedure
+    .input(z.object({ profile: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const all = await profilesIManage(ctx)
+      const mine = input?.profile ? all.filter((p: any) => p.username === input.profile) : all
+      const now = new Date()
+      const in14 = new Date(now.getTime() + 14 * 86400_000)
+      const in60 = new Date(now.getTime() + 60 * 86400_000)
+      type Item = { kind: string; tone: 'warning' | 'info' | 'danger' | 'neutral'; title: string; detail?: string; to: string }
+      const needs: Item[] = []
 
-    const claims = ctx.grantedProfileIds && !ctx.isAdmin ? [] : await ctx.db
-      .select({ status: profileClaims.status, name: profiles.name, username: profiles.username })
-      .from(profileClaims).innerJoin(profiles, eq(profiles.id, profileClaims.profileId))
-      .where(and(eq(profileClaims.dancerId, ctx.dancerId), inArray(profileClaims.status, ['pending', 'rejected'])))
-    for (const c of claims) {
-      needs.push(c.status === 'pending'
-        ? { kind: 'claim', tone: 'neutral', title: `Claim for ${c.name} is waiting for review`, detail: 'We check every claim by hand.', to: '/business/network' }
-        : { kind: 'claim', tone: 'danger', title: `Claim for ${c.name} wasn’t approved`, detail: 'Send a new request with proof we can check.', to: `/business/claim?profile=${c.username}` })
-    }
-
-    // Organizers' suggestions waiting on an artist page I manage.
-    if (mine.length) {
-      const sugg = await ctx.db.select({ username: profiles.username, name: profiles.name, n: sql<number>`count(*)::int` })
-        .from(profileSuggestions).innerJoin(profiles, eq(profiles.id, profileSuggestions.profileId))
-        .leftJoin(events, eq(events.id, profileSuggestions.eventId))
-        .where(and(inArray(profileSuggestions.profileId, mine.map((p: any) => p.id)), eq(profileSuggestions.status, 'pending'), sql`${events.archived} is not true`))
-        .groupBy(profiles.username, profiles.name)
-      for (const g of sugg) {
-        needs.push({ kind: 'suggestions', tone: 'info', title: `${g.n} ${g.n === 1 ? 'change' : 'changes'} suggested for ${g.name}`, detail: 'An organizer added photos, a video or your name for their event. Approve or turn them down.', to: `/confirm/@${g.username}` })
+      const claims = ctx.grantedProfileIds && !ctx.isAdmin ? [] : await ctx.db
+        .select({ status: profileClaims.status, name: profiles.name, username: profiles.username })
+        .from(profileClaims).innerJoin(profiles, eq(profiles.id, profileClaims.profileId))
+        .where(and(eq(profileClaims.dancerId, ctx.dancerId), inArray(profileClaims.status, ['pending', 'rejected'])))
+      for (const c of claims.filter((c: any) => !input?.profile || c.username === input.profile)) {
+        needs.push(c.status === 'pending'
+          ? { kind: 'claim', tone: 'neutral', title: `Claim for ${c.name} is waiting for review`, detail: 'We check every claim by hand.', to: '/business/network' }
+          : { kind: 'claim', tone: 'danger', title: `Claim for ${c.name} wasn’t approved`, detail: 'Send a new request with proof we can check.', to: `/business/claim?profile=${c.username}` })
       }
-    }
 
-    // People asking to book a page I manage (from its page or its /book link).
-    if (mine.length) {
-      const asks = await ctx.db.select({ username: profiles.username, name: profiles.name, n: sql<number>`count(*)::int`, first: sql<string>`min(${bookingInquiries.name})` })
-        .from(bookingInquiries).innerJoin(profiles, eq(profiles.id, bookingInquiries.profileId))
-        .where(and(inArray(bookingInquiries.profileId, mine.map((p: any) => p.id)), eq(bookingInquiries.status, 'new')))
-        .groupBy(profiles.username, profiles.name)
-      for (const g of asks) {
-        needs.push({ kind: 'booking', tone: 'info', title: g.n === 1 ? `${g.first} wants to book ${g.name}` : `${g.n} people want to book ${g.name}`, detail: 'Answer them by email, then mark it answered.', to: `/business/network/${g.username}/bookings` })
+      // Organizers' suggestions waiting on an artist page I manage.
+      if (mine.length) {
+        const sugg = await ctx.db.select({ username: profiles.username, name: profiles.name, n: sql<number>`count(*)::int` })
+          .from(profileSuggestions).innerJoin(profiles, eq(profiles.id, profileSuggestions.profileId))
+          .leftJoin(events, eq(events.id, profileSuggestions.eventId))
+          .where(and(inArray(profileSuggestions.profileId, mine.map((p: any) => p.id)), eq(profileSuggestions.status, 'pending'), sql`${events.archived} is not true`))
+          .groupBy(profiles.username, profiles.name)
+        for (const g of sugg) {
+          needs.push({ kind: 'suggestions', tone: 'info', title: `${g.n} ${g.n === 1 ? 'change' : 'changes'} suggested for ${g.name}`, detail: 'An organizer added photos, a video or your name for their event. Approve or turn them down.', to: `/confirm/@${g.username}` })
+        }
       }
-    }
 
-    // Organizers waiting on a page I manage: a venue asked to host their event,
-    // an artist asked to confirm they're in the line-up.
-    for (const a of await asksWaitingFor(ctx.db, mine.map((p: any) => p.id))) {
-      const tz = a.timezone || 'Europe/Berlin'
-      const when = a.startDate ? `${eventLocalWeekday(a.startDate, tz).slice(0, 3)} ${eventLocalDate(a.startDate, tz)} · ` : ''
-      needs.push(a.kind === 'venue'
-        ? { kind: 'venue-ask', tone: 'info', title: `${a.eventName}: can ${a.profileName} host it?`, detail: `${when}say yes, suggest another date, or no, with your terms.`, to: `/confirm/${a.token}` }
-        : { kind: 'lineup-ask', tone: 'info', title: `${a.eventName}: is ${a.profileName} in?`, detail: `${when}you’re in their line-up. Confirm, check your programme and the posts about you.`, to: `/confirm/${a.token}` })
-    }
+      // People asking to book a page I manage (from its page or its /book link).
+      if (mine.length) {
+        const asks = await ctx.db.select({ username: profiles.username, name: profiles.name, n: sql<number>`count(*)::int`, first: sql<string>`min(${bookingInquiries.name})` })
+          .from(bookingInquiries).innerJoin(profiles, eq(profiles.id, bookingInquiries.profileId))
+          .where(and(inArray(bookingInquiries.profileId, mine.map((p: any) => p.id)), eq(bookingInquiries.status, 'new')))
+          .groupBy(profiles.username, profiles.name)
+        for (const g of asks) {
+          needs.push({ kind: 'booking', tone: 'info', title: g.n === 1 ? `${g.first} wants to book ${g.name}` : `${g.n} people want to book ${g.name}`, detail: 'Answer them by email, then mark it answered.', to: `/business/network/${g.username}/bookings` })
+        }
+      }
 
-    const mineIds = new Set(mine.map((p: any) => p.id))
-    for (const j of (await joinRequestsForOwner(ctx.db, ctx.dancerId)).filter((j: any) => mineIds.has(j.profileId))) {
-      needs.push({ kind: 'join', tone: 'info', title: `${j.dancerName} wants to join ${j.profileName}`, detail: `As ${j.requestedRole}${j.title ? ` · ${j.title}` : ''}. Approve or decline.`, to: `/business/network/${j.profileUsername}/team` })
-    }
+      // Organizers waiting on a page I manage: a venue asked to host their event,
+      // an artist asked to confirm they're in the line-up.
+      for (const a of await asksWaitingFor(ctx.db, mine.map((p: any) => p.id))) {
+        const tz = a.timezone || 'Europe/Berlin'
+        const when = a.startDate ? `${eventLocalWeekday(a.startDate, tz).slice(0, 3)} ${eventLocalDate(a.startDate, tz)} · ` : ''
+        needs.push(a.kind === 'venue'
+          ? { kind: 'venue-ask', tone: 'info', title: `${a.eventName}: can ${a.profileName} host it?`, detail: `${when}say yes, suggest another date, or no, with your terms.`, to: `/confirm/${a.token}` }
+          : { kind: 'lineup-ask', tone: 'info', title: `${a.eventName}: is ${a.profileName} in?`, detail: `${when}you’re in their line-up. Confirm, check your programme and the posts about you.`, to: `/confirm/${a.token}` })
+      }
 
-    const hosted = mine.length
-      ? await ctx.db.select(listColumns).from(events)
-        .where(and(inArray(events.hostProfileId, mine.map((p: any) => p.id)), eq(events.archived, false), gte(events.endDate, now), lt(events.startDate, in60)))
-        .orderBy(asc(events.startDate))
-      : []
-    const checks = await checklistFor(ctx.db, hosted)
-    const fmtDay = (e: any) => {
-      const tz = e.timezone || 'Europe/Berlin'
-      const d = eventLocalDate(e.startDate, tz)
-      return `${eventLocalWeekday(e.startDate, tz).slice(0, 3)} ${Number(d.slice(8))}.${Number(d.slice(5, 7))}.`
-    }
-    // One item per weekly series (not one per date), pointing at the next date.
-    const groups = new Map<string, { kind: 'draft' | 'missing'; first: any; count: number; missing: Set<string> }>()
-    for (const e of hosted) {
-      const gaps = checks.get(e.id) ?? []
-      const kind = !e.published ? 'draft' : (gaps.length && new Date(e.startDate) < new Date(now.getTime() + 30 * 86400_000) ? 'missing' : null)
-      if (!kind) continue
-      const key = `${kind}:${e.seriesId ?? e.id}`
-      const g = groups.get(key) ?? { kind, first: e, count: 0, missing: new Set<string>() }
-      g.count++
-      gaps.forEach(m => g.missing.add(m))
-      groups.set(key, g)
-    }
-    for (const g of groups.values()) {
-      const more = g.count > 1 ? ` (and ${g.count - 1} more ${g.count === 2 ? 'date' : 'dates'})` : ''
-      needs.push(g.kind === 'draft'
-        ? { kind: 'draft', tone: 'warning', title: `${g.first.name} is a draft`, detail: `${fmtDay(g.first)}${more} · dancers can’t see it until you publish it.`, to: `/business/events/${g.first.id}` }
-        : { kind: 'missing', tone: 'warning', title: `${g.first.name} is missing details`, detail: `${fmtDay(g.first)}${more} · add ${[...g.missing].join(', ')}.`, to: `/business/events/${g.first.id}` })
-    }
+      const mineIds = new Set(mine.map((p: any) => p.id))
+      for (const j of (await joinRequestsForOwner(ctx.db, ctx.dancerId)).filter((j: any) => mineIds.has(j.profileId))) {
+        needs.push({ kind: 'join', tone: 'info', title: `${j.dancerName} wants to join ${j.profileName}`, detail: `As ${j.requestedRole}${j.title ? ` · ${j.title}` : ''}. Approve or decline.`, to: `/business/network/${j.profileUsername}/team` })
+      }
 
-    // Flyers: published events in the next 14 days without one, or whose flyer
-    // no longer matches the details. One per series, like the items above.
-    const soon = hosted.filter((e: any) => e.published && new Date(e.startDate) < in14)
-    const flyers = await flyerStatusFor(ctx.db, soon)
-    const seenSeries = new Set<string>()
-    for (const e of soon) {
-      const st = flyers.get(e.id)!
-      const key = e.seriesId ?? e.id
-      if (seenSeries.has(key)) continue
-      if (!st.kept) { seenSeries.add(key); needs.push({ kind: 'flyer', tone: 'info', title: `${e.name} has no flyer yet`, detail: `${fmtDay(e)} · check the details, then make it in about a minute.`, to: `/business/events/${e.id}?flyer=1` }) }
-      else if (st.changes.length) { seenSeries.add(key); needs.push({ kind: 'flyer', tone: 'warning', title: `${e.name}: the flyer is out of date`, detail: `${fmtDay(e)} · you changed the details after it was made.`, to: `/business/events/${e.id}` }) }
-    }
+      const hosted = mine.length
+        ? await ctx.db.select(listColumns).from(events)
+          .where(and(inArray(events.hostProfileId, mine.map((p: any) => p.id)), eq(events.archived, false), gte(events.endDate, now), lt(events.startDate, in60)))
+          .orderBy(asc(events.startDate))
+        : []
+      const checks = await checklistFor(ctx.db, hosted)
+      const fmtDay = (e: any) => {
+        const tz = e.timezone || 'Europe/Berlin'
+        const d = eventLocalDate(e.startDate, tz)
+        return `${eventLocalWeekday(e.startDate, tz).slice(0, 3)} ${Number(d.slice(8))}.${Number(d.slice(5, 7))}.`
+      }
+      // One item per weekly series (not one per date), pointing at the next date.
+      const groups = new Map<string, { kind: 'draft' | 'missing'; first: any; count: number; missing: Set<string> }>()
+      for (const e of hosted) {
+        const gaps = checks.get(e.id) ?? []
+        const kind = !e.published ? 'draft' : (gaps.length && new Date(e.startDate) < new Date(now.getTime() + 30 * 86400_000) ? 'missing' : null)
+        if (!kind) continue
+        const key = `${kind}:${e.seriesId ?? e.id}`
+        const g = groups.get(key) ?? { kind, first: e, count: 0, missing: new Set<string>() }
+        g.count++
+        gaps.forEach(m => g.missing.add(m))
+        groups.set(key, g)
+      }
+      for (const g of groups.values()) {
+        const more = g.count > 1 ? ` (and ${g.count - 1} more ${g.count === 2 ? 'date' : 'dates'})` : ''
+        needs.push(g.kind === 'draft'
+          ? { kind: 'draft', tone: 'warning', title: `${g.first.name} is a draft`, detail: `${fmtDay(g.first)}${more} · dancers can’t see it until you publish it.`, to: `/business/events/${g.first.id}` }
+          : { kind: 'missing', tone: 'warning', title: `${g.first.name} is missing details`, detail: `${fmtDay(g.first)}${more} · add ${[...g.missing].join(', ')}.`, to: `/business/events/${g.first.id}` })
+      }
 
-    // Events run by someone else that my pages take part in (venue, organizer, line-up).
-    const othersGigs = await eventsImIn(ctx.db, mine, and(gte(events.endDate, now), lt(events.startDate, in60)))
+      // Flyers: published events in the next 14 days without one, or whose flyer
+      // no longer matches the details. One per series, like the items above.
+      const soon = hosted.filter((e: any) => e.published && new Date(e.startDate) < in14)
+      const flyers = await flyerStatusFor(ctx.db, soon)
+      const seenSeries = new Set<string>()
+      for (const e of soon) {
+        const st = flyers.get(e.id)!
+        const key = e.seriesId ?? e.id
+        if (seenSeries.has(key)) continue
+        if (!st.kept) { seenSeries.add(key); needs.push({ kind: 'flyer', tone: 'info', title: `${e.name} has no flyer yet`, detail: `${fmtDay(e)} · check the details, then make it in about a minute.`, to: `/business/events/${e.id}?flyer=1` }) }
+        else if (st.changes.length) { seenSeries.add(key); needs.push({ kind: 'flyer', tone: 'warning', title: `${e.name}: the flyer is out of date`, detail: `${fmtDay(e)} · you changed the details after it was made.`, to: `/business/events/${e.id}` }) }
+      }
 
-    const comingUp = [
-      ...hosted.map((e: any) => ({ id: e.id, name: e.name, startDate: e.startDate, timezone: e.timezone, published: e.published, role: 'host' as const, to: `/business/events/${e.id}`, missing: checks.get(e.id) ?? [] })),
-      ...othersGigs.map((g: any) => ({ id: g.id, name: g.name, startDate: g.startDate, timezone: g.timezone, published: true, role: g.role, to: g.to, missing: [] as string[] })),
-    ]
-      .filter(e => new Date(e.startDate) < in14)
-      .sort((a, b) => +new Date(a.startDate) - +new Date(b.startDate))
+      // Events run by someone else that my pages take part in (venue, organizer, line-up).
+      const othersGigs = await eventsImIn(ctx.db, mine, and(gte(events.endDate, now), lt(events.startDate, in60)))
 
-    return { profiles: mine, needs, comingUp, lineupCount: othersGigs.length }
-  }),
+      const comingUp = [
+        ...hosted.map((e: any) => ({ id: e.id, name: e.name, startDate: e.startDate, timezone: e.timezone, published: e.published, role: 'host' as const, to: `/business/events/${e.id}`, missing: checks.get(e.id) ?? [] })),
+        ...othersGigs.map((g: any) => ({ id: g.id, name: g.name, startDate: g.startDate, timezone: g.timezone, published: true, role: g.role, to: g.to, missing: [] as string[] })),
+      ]
+        .filter(e => new Date(e.startDate) < in14)
+        .sort((a, b) => +new Date(a.startDate) - +new Date(b.startDate))
+
+      return { profiles: all, needs, comingUp, lineupCount: othersGigs.length }
+    }),
 })
 
 // Published events run by someone else that my pages take part in: at my
@@ -937,6 +1063,7 @@ export async function eventsImIn(db: any, mine: { id: string; username: string; 
       or(
         inArray(events.venueUsername, handles),
         inArray(events.organizerUsername, handles),
+        ...handles.map(h => sql`${events.coOrganizers} @> ${JSON.stringify([{ username: h }])}::jsonb`),
         ...artists.map(h => sql`${events.artists} @> ${JSON.stringify([h])}::jsonb`),
       ),
       sql`(${events.hostProfileId} is null or ${events.hostProfileId} not in (${sql.join(mine.map(p => sql`${p.id}::uuid`), sql`, `)}))`,
@@ -945,8 +1072,10 @@ export async function eventsImIn(db: any, mine: { id: string; username: string; 
   const set = new Set(handles)
   return rows.map((e: any) => {
     const role = e.venueUsername && set.has(e.venueUsername) ? 'venue' as const
-      : e.organizerUsername && set.has(e.organizerUsername) ? 'organizer' as const : 'lineup' as const
-    const canEdit = !e.hostProfileId && role !== 'lineup'
+      : e.organizerUsername && set.has(e.organizerUsername) ? 'organizer' as const
+      // Co-organisers are credited, not editors (#456).
+      : (e.coOrganizers ?? []).some((c: CoOrganizer) => set.has(c.username)) ? 'coorganizer' as const : 'lineup' as const
+    const canEdit = !e.hostProfileId && (role === 'venue' || role === 'organizer')
     return { ...e, role, canEdit, host: null, missing: [] as string[], by: e.organizerName || e.venueName || null, to: canEdit ? `/business/events/${e.id}` : eventPath(e) }
   })
 }

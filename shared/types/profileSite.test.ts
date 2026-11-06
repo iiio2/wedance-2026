@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { profileSiteSchema, resolveSite, missingTexts, pick, type ProfileSite } from './profileSite'
 
 const site: ProfileSite = {
-  domain: 'https://montuno.club',
+  domain: 'https://salsaclub.example',
   locales: ['en', 'de'],
-  seo: { title: { en: 'Montuno Club', de: 'Montuno Club DE' } },
+  seo: { title: { en: 'Salsa Club', de: 'Salsa Club DE' } },
   sections: [
     { id: 'a', kind: 'text', title: { en: 'Dance is social.', de: 'Tanzen ist sozial.' }, body: { en: 'One.\n\nTwo.' }, items: [{ id: 'i', title: { en: 'Free' }, body: { en: 'Donation', de: 'Spende' } }] },
     { id: 'b', kind: 'cta', hidden: true, title: { en: 'Hidden' } },
@@ -21,7 +21,7 @@ describe('profile site (RAZ-412)', () => {
     expect(de.sections[0]!.body).toBe('One.\n\nTwo.')
     expect(de.sections[0]!.items![0]).toEqual({ id: 'i', title: 'Free', body: 'Spende' })
     expect(de.sections[1]!.callout).toEqual({ title: 'Join', button: { label: 'WhatsApp beitreten', url: 'https://chat.whatsapp.com/x' } })
-    expect(de.seo.title).toBe('Montuno Club DE')
+    expect(de.seo.title).toBe('Salsa Club DE')
   })
 
   it('an unknown language gets the main one', () => {

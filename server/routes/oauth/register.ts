@@ -1,4 +1,4 @@
-import { defineEventHandler, getMethod, setResponseStatus } from 'h3'
+import { defineEventHandler, setResponseStatus } from 'h3'
 import { allowCors, limitOAuthIp, noStore, oauthErrorResponse, readJsonObject } from '../../oauth/http'
 import { OAuthError } from '../../oauth/errors'
 import { registerClient } from '../../oauth/clients'
@@ -8,7 +8,7 @@ import { useDb } from '../../utils/db'
 // clients expect; registrations are rate limited per IP and only store what we use.
 export default defineEventHandler(async (event) => {
   allowCors(event, 'POST, OPTIONS')
-  const method = getMethod(event)
+  const method = event.method
   if (method === 'OPTIONS') { setResponseStatus(event, 204); return '' }
   try {
     if (method !== 'POST') throw new OAuthError('invalid_request', 'Use POST', 405)

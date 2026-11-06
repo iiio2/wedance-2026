@@ -21,10 +21,15 @@ describe('parseInstagramHandle', () => {
 })
 
 describe('handle and name suggestions', () => {
-  it('turns an Instagram handle into a WeDance handle and a name to edit', () => {
-    expect(handleFromInstagram('ritmo_jg')).toBe('ritmo-jg')
-    expect(handleFromInstagram('migo.bachatero')).toBe('migo-bachatero')
+  it('keeps the Instagram handle as the WeDance handle, and suggests a name to edit', () => {
+    expect(handleFromInstagram('ritmo_jg')).toBe('ritmo_jg')
+    expect(handleFromInstagram('migo.bachatero')).toBe('migo.bachatero')
+    expect(handleFromInstagram('Caliente.Nights')).toBe('caliente.nights')
     expect(nameFromInstagram('ritmo_jg')).toBe('Ritmo Jg')
     expect(nameFromInstagram('la.clave_munich')).toBe('La Clave Munich')
+  })
+
+  it('falls back to dashes when the Instagram handle can\'t be a WeDance handle', () => {
+    expect(handleFromInstagram('salsa.js')).toBe('salsa-js')
   })
 })

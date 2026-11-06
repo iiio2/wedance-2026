@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import type { Festival, Teacher, Workshop, PlanEntry, DanceRole, DancePartner, FestivalFriend, PartnerMatch, ExtraActivity, SwipeCard, FreemiumState } from '~/types/festival'
-import { ArrowRight, Sparkles, Check, Pencil } from 'lucide-vue-next'
+import { ArrowRight, Sparkles, Check, Pencil, Ticket } from 'lucide-vue-next'
+import { isWorkshop, isEveningItem } from '#shared/utils/programme'
 import { Button } from '~/components/ui/button'
 import { artistPlaces, artistLanguages } from '~/data/artists'
 import { WD } from '~/lib/brand'
@@ -25,6 +27,8 @@ const props = defineProps<{
   editTo?: string
   /** The event's type ("Weekender"), for the wording: "You manage this weekender". */
   type?: string | null
+  /** A dated event (not a festival) shown in this view: its RSVP is the organiser's poll (RAZ-718). */
+  rsvp?: { eventId: string; path: string; startDate: string; endDate?: string | null; timezone?: string | null; organizerName?: string | null } | null
 }>()
 const kind = computed(() => (props.type || 'festival').toLowerCase())
 const data = props.data
@@ -35,7 +39,26 @@ const slug = festival.slug
 
 // Live "planning" count from the DB — replaces the hardcoded mock value.
 const liveAttendeeCount = ref(festival.attendeeCount)
-const heroFestival = computed(() => ({ ...festival, attendeeCount: liveAttendeeCount.value }))
+const heroFestival = computed(() => ({
+  ...festival,
+  attendeeCount: rsvpPoll.value ? rsvpPoll.value.coming : liveAttendeeCount.value,
+  // A dated event knows its real start/end times (festival data carries dates
+  // only), so a night running past midnight reads as one date, not two.
+  ...(props.rsvp?.startDate ? { startDate: props.rsvp.startDate, endDate: props.rsvp.endDate || props.rsvp.startDate, timezone: props.rsvp.timezone || festival.timezone } : {}),
+}))
+
+// One "am I coming?" control in the hero (RAZ-731): a dated event's poll, a
+// festival's Get pass when it sells passes, else I'm going. Passes that are all
+// €0 aren't a checkout, just free entry.
+const freeEntry = computed(() => (festival.tickets?.length ?? 0) > 0 && festival.tickets!.every(t => !t.price))
+const sellsPasses = computed(() => (festival.tickets?.length ?? 0) > 0 && !freeEntry.value)
+
+// The poll answers "Going?" for a dated event, in the hero.
+const rsvpPoll = ref<{ coming: number; mine: { answer: string } | null } | null>(null)
+function onPoll(p: { coming: number; mine: { answer: string } | null }) { rsvpPoll.value = p }
+const heroPicked = computed(() => rsvpPoll.value
+  ? !!rsvpPoll.value.mine && rsvpPoll.value.mine.answer !== 'next'
+  : yearPlanIds.value.has(festival.slug))
 
 // Fetch the real count client-side (public, no auth required).
 const { $trpc } = useNuxtApp()
@@ -203,10 +226,10 @@ const rolePickerTitle = computed(() => {
 
 function removeConflicting(next: Map<string, PlanEntry>, workshop: Workshop) {
   // Remove any existing pick at the same day+time (different room)
-  if (workshop.type === 'party') return
+  if (!isWorkshop(workshop.type)) return
   for (const [existingId] of next) {
     const existing = workshops.find((w) => w.id === existingId)
-    if (existing && existing.id !== workshop.id && existing.type !== 'party' && existing.day === workshop.day && existing.time === workshop.time) {
+    if (existing && existing.id !== workshop.id && isWorkshop(existing.type) && existing.day === workshop.day && existing.time === workshop.time) {
       next.delete(existingId)
       persistWorkshopRemove(existingId)
     }
@@ -230,8 +253,8 @@ function toggleWorkshop(id: string) {
     plan.value = next
   } else {
     const workshop = workshops.find((w) => w.id === id)
-    if (workshop?.type === 'party') {
-      // Parties don't need role/partner — add directly
+    if (workshop && !isWorkshop(workshop.type)) {
+      // Parties, shows, concerts don't need role/partner — add directly
       next.set(id, { workshopId: id, role: null, partnerStatus: 'solo' })
       persistWorkshopAdd(id)
       trackWorkshop('add', id, 'solo')
@@ -761,7 +784,7 @@ const sections = computed(() =>
   allSections.filter((s) => {
     if (s === 'schedule') return workshops.length > 0
     if (s === 'lineup') return teachers.length > 0
-    if (s === 'tickets') return (festival.tickets?.length ?? 0) > 0
+    if (s === 'tickets') return sellsPasses.value
     return true
   }),
 )
@@ -913,10 +936,10 @@ const plannedDays = computed(() => {
   return days
 })
 const plannedWorkshopCount = computed(() =>
-  workshops.filter((w) => planIds.value.has(w.id) && w.type !== 'party').length,
+  workshops.filter((w) => planIds.value.has(w.id) && isWorkshop(w.type)).length,
 )
 const hasPartyInPlan = computed(() =>
-  workshops.some((w) => planIds.value.has(w.id) && w.type === 'party'),
+  workshops.some((w) => planIds.value.has(w.id) && isEveningItem(w.type)),
 )
 
 function cheapestDayCoverage(dayPasses: TicketOption[], targetDays: Set<string>): TicketOption[] {
@@ -962,8 +985,8 @@ const recommendation = computed<Recommendation | null>(() => {
 // Before the dancer picks anything: the cheapest way to the whole programme.
 const bestValueNames = computed(() => new Set((recommendFor(
   new Set(workshops.map((w) => w.day)),
-  workshops.filter((w) => w.type !== 'party').length,
-  workshops.some((w) => w.type === 'party'),
+  workshops.filter((w) => isWorkshop(w.type)).length,
+  workshops.some((w) => isEveningItem(w.type)),
 )?.tickets ?? []).map((t) => t.name)))
 
 function recommendFor(days: Set<string>, workshopCount: number, wantsParty: boolean): Recommendation | null {
@@ -1106,7 +1129,25 @@ useHead({
     </div>
 
     <div ref="heroRef">
-      <FestivalHero :festival="heroFestival" :picked="yearPlanIds.has(festival.slug)" :venue-address="festival.venue?.address" :map-url="festival.venue?.coordinates?.lat != null ? `https://www.google.com/maps/search/?api=1&query=${festival.venue.coordinates.lat},${festival.venue.coordinates.lng}` : (festival.venue?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(festival.venue.address)}` : undefined)" @pick="onPick" />
+      <FestivalHero :festival="heroFestival" :picked="heroPicked" :free-entry="freeEntry" :venue-address="festival.venue?.address" :map-url="festival.venue?.coordinates?.lat != null ? `https://www.google.com/maps/search/?api=1&query=${festival.venue.coordinates.lat},${festival.venue.coordinates.lng}` : (festival.venue?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(festival.venue.address)}` : undefined)" @pick="onPick">
+        <!-- A dated event: the organiser's poll is the Going question. -->
+        <template v-if="rsvp" #cta>
+          <div id="rsvp" class="mt-4 max-w-xl scroll-mt-16">
+            <EventRsvpPoll :event-id="rsvp.eventId" :path="rsvp.path" :start-date="rsvp.startDate" :end-date="rsvp.endDate" :timezone="rsvp.timezone" :organizer-name="rsvp.organizerName" surface="event" @poll="onPoll" />
+          </div>
+        </template>
+        <!-- A festival that sells passes: the pass is the Going. -->
+        <template v-else-if="sellsPasses" #cta>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <Button v-if="hasTicket" type="button" variant="pill" class="px-5" @click="scrollTo('tickets')">
+              <Check aria-hidden="true" /> You have a pass
+            </Button>
+            <Button v-else type="button" variant="cta" class="px-5" data-hero-get-pass @click="scrollTo('tickets')">
+              <Ticket aria-hidden="true" /> Get pass
+            </Button>
+          </div>
+        </template>
+      </FestivalHero>
     </div>
 
     <!-- Section anchor nav — V3 restyled. Festival identity slides in on
@@ -1132,7 +1173,7 @@ useHead({
           >
             <img
               v-if="festival.logo"
-              :src="festival.logo"
+              :src="sizedImage(festival.logo, IMG.avatar)"
               :alt="festival.name"
               class="w-6 h-6 rounded-full shrink-0"
             >
@@ -1297,7 +1338,7 @@ useHead({
           />
         </section>
 
-        <section v-if="festival.tickets?.length" id="tickets" class="scroll-mt-16">
+        <section v-if="sellsPasses || (festival.tickets?.length && hasTicket)" id="tickets" class="scroll-mt-16">
           <div class="mb-4">
             <div class="text-xs uppercase tracking-[0.3em] text-secondary">Passes</div>
             <h2 v-if="hasTicket" class="mt-2 text-2xl font-black leading-tight text-foreground">

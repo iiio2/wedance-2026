@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * A full, standalone, SEO-first listing of one role (artists / organisers /
  * venues) for a city — the "See all" target from /cities/[city]. SSR-rendered
@@ -124,7 +125,7 @@ useHead(() => ({
           :style="{ boxShadow: '0 2px 8px rgba(59,31,18,0.12)' }"
         >
           <img
-            :src="photo(p)"
+            :src="sizedImage(photo(p), IMG.card)"
             :alt="p.name || ''"
             loading="lazy"
             class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"

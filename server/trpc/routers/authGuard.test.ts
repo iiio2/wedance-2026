@@ -34,6 +34,7 @@ const PUBLIC_MUTATIONS_ALLOW_LIST: Record<string, string> = {
   'artistInvites.respond': 'an artist answers an organizer’s invite link without an account; only while nobody manages the page — a managed page needs its team signed in (checked inside)',
   'festival.submitDraft': 'public festival submission (moderated via admin)',
   'giveaway.enter': 'public giveaway entry — low-risk, promotional',
+  'rsvp.answer': 'the event poll counts a signed-out tap at once (RAZ-718): stored unconfirmed against an anonymous browser token, drops out after 48 h unless the magic link confirms it',
   'referral.trackVisit': 'counts a visit to a promoter’s tracked link before anyone signs in; once per browser session, unknown codes count nothing',
 }
 
@@ -166,6 +167,67 @@ describe('auth guard — anonymous caller gets UNAUTHORIZED', () => {
           throw err
         }
       }
+    })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// RAZ-688 — C3: Going (plan + attendance) and its visibility need a signed-in
+// dancer; the public reads that render counts and faces stay public.
+// ---------------------------------------------------------------------------
+describe('auth guard — C3 Going and attendance sharing (RAZ-688)', () => {
+  const procedures = (appRouter as any)._def.procedures as Record<string, any>
+  const guardOf = (path: string) => {
+    const mws: any[] = procedures[path]._def.middlewares
+    return mws.includes(adminMw) ? 'admin' : mws.includes(protectedMw) ? 'protected' : 'public'
+  }
+  const EVENT = '00000000-0000-4000-8000-000000000682'
+  const goingMutations: [string, unknown][] = [
+    ['plan.add', { itemType: 'event', itemId: EVENT }],
+    ['plan.remove', { itemType: 'event', itemId: EVENT }],
+    ['plan.setShareGoing', { itemType: 'event', itemId: EVENT, share: true }],
+    ['attendance.set', { eventId: EVENT, status: 'going' }],
+    ['attendance.setVisibility', { eventId: EVENT, visibility: 'public_full' }],
+    ['attendance.updateLogistics', { eventId: EVENT, travelBooked: true }],
+    ['wave.send', { festivalSlug: EVENT, targetDancerId: EVENT }],
+    ['wave.retract', { festivalSlug: EVENT, targetDancerId: EVENT }],
+    ['plan.discoverSwipe', { targetKind: 'event', targetId: EVENT, decision: 'yes' }],
+  ]
+
+  // A db that fails the test if anything reaches it: rejection must happen first.
+  const untouchable = new Proxy({}, { get: (_t, prop) => { throw new Error(`anonymous call reached the database (db.${String(prop)})`) } })
+  const anon = appRouter.createCaller({ db: untouchable as any, dancerId: null, isAdmin: false })
+
+  for (const [path, input] of goingMutations) {
+    it(`${path} is a protected mutation`, () => {
+      expect(procedures[path]?._def.type).toBe('mutation')
+      expect(guardOf(path)).toBe('protected')
+      expect(PUBLIC_MUTATIONS_ALLOW_LIST[path]).toBeUndefined()
+    })
+
+    it(`${path} rejects an anonymous caller before touching the database`, async () => {
+      const [ns, method] = path.split('.') as [string, string]
+      await expect((anon as any)[ns][method](input)).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
+    })
+  }
+
+  // The reads behind counts, faces and the city feed must not require sign-in.
+  const publicReads = [
+    'plan.count', 'plan.countBatch', 'plan.goingList', 'plan.goingBatch',
+    'attendance.publicList', 'attendance.counts',
+    'events.byCity', 'events.byProfile', 'events.get', 'booking.upcomingByCity',
+  ]
+  for (const path of publicReads) {
+    it(`${path} stays a public query`, () => {
+      expect(procedures[path]?._def.type).toBe('query')
+      expect(guardOf(path)).toBe('public')
+    })
+  }
+
+  // Reading your own Going / sharing state is private to you.
+  for (const path of ['plan.list', 'plan.getShareGoing', 'attendance.mine', 'wave.discoverPool']) {
+    it(`${path} requires sign-in`, () => {
+      expect(guardOf(path)).toBe('protected')
     })
   }
 })

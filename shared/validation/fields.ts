@@ -5,6 +5,8 @@
  * so the tRPC call omits them (zod rejects '' for `.url()` / `.email()`).
  */
 import * as v from 'valibot'
+import { handleError } from '../utils/handle'
+import { parseInstagramHandle } from '../utils/instagram'
 
 export const DANCE_ROLES = ['lead', 'follow', 'both'] as const
 export const PASSWORD_MIN_LENGTH = 8
@@ -83,4 +85,29 @@ export function optionalIsoTime(invalidMessage = 'Pick a valid time.') {
 /** A field this variant of the form doesn't collect: always `undefined`. */
 export function notCollected() {
   return v.pipe(v.unknown(), v.transform(() => undefined))
+}
+
+// The handle rule (shared/utils/handle.ts), with its message for what's wrong.
+const handleRule = () => v.rawCheck<string>(({ dataset, addIssue }) => {
+  const err = dataset.typed ? handleError(dataset.value) : null
+  if (err) addIssue({ message: err })
+})
+const asHandle = (s: string) => s.replace(/^@/, '').toLowerCase()
+
+/** A handle someone picks (/@handle): "@Caliente.Nights" → "caliente.nights". */
+export function requiredHandle(requiredMessage: string) {
+  return v.pipe(v.string(), v.trim(), v.nonEmpty(requiredMessage), v.transform(asHandle), handleRule())
+}
+
+/** Same, optional: blank → `undefined`. */
+export function optionalHandle() {
+  return v.pipe(v.string(), v.trim(), v.transform(s => asHandle(s) || undefined), v.optional(v.pipe(v.string(), handleRule())))
+}
+
+/** An Instagram link or @handle → the handle; blank → `undefined`. */
+export function optionalInstagram(invalidMessage = 'Paste a link like instagram.com/name, or @name.') {
+  return v.pipe(
+    v.string(), v.trim(), v.transform(blankToUndefined),
+    v.optional(v.pipe(v.string(), v.check(s => !!parseInstagramHandle(s), invalidMessage), v.transform(s => parseInstagramHandle(s)!))),
+  )
 }

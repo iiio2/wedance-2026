@@ -100,6 +100,41 @@ async function save() {
   }
 }
 
+// "This is me" (#474): one of the caller's own artist / organiser pages as their
+// public identity — one link for their Instagram bio.
+const { $trpc } = useNuxtApp()
+type MyPage = Awaited<ReturnType<typeof $trpc.profile.myPage.query>>
+const myPage = ref<MyPage | null>(null)
+const pageChoice = ref<string>('')
+const pageSaving = ref(false)
+const pageError = ref('')
+const pageSaved = ref(false)
+async function loadMyPage() {
+  try {
+    myPage.value = await $trpc.profile.myPage.query()
+    pageChoice.value = myPage.value.current ?? ''
+  } catch { myPage.value = null }
+}
+watch(isSignedIn, (s) => { if (s) loadMyPage() }, { immediate: true })
+const publicLink = computed(() => myPage.value?.current ? `/@${myPage.value.current}` : (username.value ? `/u/${username.value}` : null))
+
+async function savePage() {
+  pageError.value = ''
+  pageSaved.value = false
+  pageSaving.value = true
+  try {
+    const res = await $trpc.profile.setPage.mutate({ username: pageChoice.value || null })
+    if (myPage.value) myPage.value = { ...myPage.value, current: res.page }
+    pageSaved.value = true
+    const picked = myPage.value?.options.find(o => o.username === res.page)
+    useTrack().track('public_page_set', { cleared: !res.page, profile_type: picked?.type ?? null })
+  } catch (e: unknown) {
+    pageError.value = (e as { message?: string })?.message || 'Could not save. Please try again.'
+  } finally {
+    pageSaving.value = false
+  }
+}
+
 async function submitPassword() {
   pwError.value = ''
   pwSaved.value = false
@@ -146,8 +181,8 @@ async function submitDelete() {
       <div class="flex items-baseline justify-between">
         <h1 class="text-4xl text-foreground font-display">Settings</h1>
         <NuxtLink
-          v-if="username"
-          :to="`/u/${username}`"
+          v-if="publicLink"
+          :to="publicLink"
           class="inline-flex items-center gap-1 text-xs font-bold text-primary"
         >View public <ExternalLink class="w-3 h-3" aria-hidden="true" /></NuxtLink>
       </div>
@@ -241,6 +276,44 @@ async function submitDelete() {
         </Button>
       </form>
 
+      <!-- YOUR PAGE (#474): one handle per person -->
+      <template v-if="myPage?.options.length">
+        <h2 class="mt-12 text-lg font-bold text-foreground font-display">Your public page</h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Dancer, teacher, DJ, organiser — one link for all of you. Pick the page that is <span class="italic">you</span>:
+          your profile link opens it, and it shows your dancing and the other pages you run. Put that link in your Instagram bio.
+        </p>
+        <form class="mt-4 space-y-3" novalidate @submit.prevent="savePage">
+          <fieldset class="space-y-2">
+            <legend class="sr-only">Your public page</legend>
+            <label
+              v-for="o in myPage.options"
+              :key="o.username"
+              class="flex items-center gap-3 rounded-xl border border-border bg-card p-3 cursor-pointer has-[:checked]:border-primary"
+            >
+              <input v-model="pageChoice" type="radio" name="public-page" :value="o.username" class="accent-[var(--wd-red-600)]">
+              <span class="flex-1 min-w-0 text-sm">
+                <span class="block font-bold text-foreground truncate">{{ o.name }}</span>
+                <span class="block text-xs text-muted-foreground">wedance.vip/@{{ o.username }}</span>
+              </span>
+            </label>
+            <label class="flex items-center gap-3 rounded-xl border border-border bg-card p-3 cursor-pointer has-[:checked]:border-primary">
+              <input v-model="pageChoice" type="radio" name="public-page" value="" class="accent-[var(--wd-red-600)]">
+              <span class="flex-1 min-w-0 text-sm">
+                <span class="block font-bold text-foreground">Just my dancer profile</span>
+                <span v-if="username" class="block text-xs text-muted-foreground">wedance.vip/u/{{ username }}</span>
+              </span>
+            </label>
+          </fieldset>
+          <p class="text-xs text-muted-foreground">Schools, festivals and venues stay pages of their own — they have a team and their own Instagram.</p>
+          <p v-if="pageError" role="alert" class="text-sm font-bold text-primary">{{ pageError }}</p>
+          <p v-if="pageSaved" role="status" class="inline-flex items-center gap-1.5 text-sm font-bold text-wd-green-600"><Check class="w-4 h-4" aria-hidden="true" /> Saved</p>
+          <Button type="submit" variant="soft" size="lg" class="w-full h-12" :loading="pageSaving" :disabled="pageChoice === (myPage.current ?? '')">
+            {{ pageSaving ? 'Saving…' : 'Save' }}
+          </Button>
+        </form>
+      </template>
+
       <!-- CONNECTED APPS -->
       <h2 class="mt-12 text-lg font-bold text-foreground font-display">Connected apps</h2>
       <NuxtLink
@@ -280,8 +353,8 @@ async function submitDelete() {
       <h2 class="mt-12 text-lg font-bold text-primary font-display">Danger Zone</h2>
       <div class="mt-4 p-4 rounded-xl bg-wd-red-50 border border-destructive/40">
         <div class="flex gap-3">
-          <AlertTriangle class="w-5 h-5 flex-shrink-0 mt-0.5 text-primary" aria-hidden="true" />
-          <div class="flex-1">
+          <AlertTriangle class="w-5 h-5 shrink-0 mt-0.5 text-primary" aria-hidden="true" />
+          <div class="flex-1 min-w-0">
             <h3 class="font-bold text-sm mb-2 text-primary">Permanently delete your account</h3>
             <p class="text-xs mb-4 text-wd-red-900">
               This action cannot be undone. Your profile will be removed, your account deleted, and you will be signed out immediately.
@@ -301,7 +374,7 @@ async function submitDelete() {
               v-if="!showDeleteConfirm"
               variant="destructive"
               size="lg"
-              class="w-full rounded-full font-bold uppercase tracking-wider"
+              class="w-full px-4 sm:px-8 rounded-full font-bold uppercase tracking-wider"
               @click="showDeleteConfirm = true"
             >Delete my account</Button>
 
@@ -309,12 +382,12 @@ async function submitDelete() {
               <Field id="settings-delete-confirm" label="Confirm by typing your name" :error="deleteError || undefined">
                 <Input v-model="deleteConfirmInput" :placeholder="`Type: ${dancerName}`" autocomplete="off" />
               </Field>
-              <div class="flex gap-2">
+              <div class="flex flex-col gap-2 sm:flex-row">
                 <Button
                   type="button"
                   variant="outline-pill"
                   size="lg"
-                  class="flex-1"
+                  class="px-4 sm:px-8 sm:flex-1"
                   :disabled="deleteLoading"
                   @click="showDeleteConfirm = false; deleteConfirmInput = ''; deleteError = ''"
                 >Cancel</Button>
@@ -322,7 +395,7 @@ async function submitDelete() {
                   type="submit"
                   variant="destructive"
                   size="lg"
-                  class="flex-1 rounded-full font-bold uppercase tracking-wider"
+                  class="px-4 sm:px-8 sm:flex-1 rounded-full font-bold uppercase tracking-wider"
                   :loading="deleteLoading"
                   :disabled="deleteConfirmInput !== dancerName"
                 >{{ deleteLoading ? 'Deleting…' : 'Permanently delete' }}</Button>

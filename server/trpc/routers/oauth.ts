@@ -89,12 +89,14 @@ export const oauthRouter = router({
       requestToken: z.string().min(10).max(4096),
       scopes: z.array(z.string().max(40)).max(20),
       profileIds: z.array(z.string().uuid()).max(100).default([]),
+      // "All my pages": every page the dancer runs, including ones added later.
+      allProfiles: z.boolean().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
       ownAccount(ctx)
       try {
         const { redirect } = await approveConsent(ctx.db, {
-          token: input.requestToken, dancerId: ctx.dancerId, isAdmin: ctx.isAdmin, scopes: input.scopes, profileIds: input.profileIds, origin: originOf(ctx),
+          token: input.requestToken, dancerId: ctx.dancerId, isAdmin: ctx.isAdmin, scopes: input.scopes, profileIds: input.profileIds, allProfiles: input.allProfiles, origin: originOf(ctx),
         })
         return { redirect }
       } catch (e) { asTrpc(e) }
@@ -114,7 +116,7 @@ export const oauthRouter = router({
   connections: protectedProcedure.query(async ({ ctx }) => {
     ownAccount(ctx)
     const rows = await ctx.db.select({
-      id: oauthGrants.id, scopes: oauthGrants.scopes, profileIds: oauthGrants.profileIds, lastUsedAt: oauthGrants.lastUsedAt, createdAt: oauthGrants.createdAt,
+      id: oauthGrants.id, scopes: oauthGrants.scopes, profileIds: oauthGrants.profileIds, allProfiles: oauthGrants.allProfiles, lastUsedAt: oauthGrants.lastUsedAt, createdAt: oauthGrants.createdAt,
       clientName: oauthClients.name, clientUri: oauthClients.clientUri, logo: oauthClients.logoUri, clientId: oauthClients.id, kind: oauthClients.kind,
     })
       .from(oauthGrants).innerJoin(oauthClients, eq(oauthClients.id, oauthGrants.clientId))
@@ -128,6 +130,7 @@ export const oauthRouter = router({
       app: { name: r.clientName, uri: r.clientUri, logo: r.logo, domain: r.kind === 'cimd' ? new URL(r.clientId).host : null },
       scopes: (r.scopes as Scope[]).filter(s => s in SCOPE_INFO).map(scopeView),
       profiles: (r.profileIds as string[]).map(id => byId.get(id)).filter(Boolean),
+      allProfiles: !!r.allProfiles,
       lastUsedAt: r.lastUsedAt as Date | null,
       createdAt: r.createdAt as Date,
     }))

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import { Upload, X, Loader2 } from 'lucide-vue-next'
 
 const model = defineModel<string>({ default: '' })
@@ -85,7 +86,7 @@ function remove() {
     <!-- Preview -->
     <div v-if="model" class="relative w-fit">
       <img
-        :src="model"
+        :src="sizedImage(model, IMG.card)"
         alt="Profile photo"
         class="w-28 h-28 rounded-xl object-cover"
       >

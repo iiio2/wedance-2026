@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /my-plan — signed-in dashboard: the whole planning cascade.
  * Sections top-to-bottom follow the mental model that big motivates small:
@@ -2092,7 +2093,7 @@ function cardSummary(f: CatalogueEntry) {
             <div class="shrink-0">
               <img
                 v-if="f.logo"
-                :src="f.logo"
+                :src="sizedImage(f.logo, IMG.avatar)"
                 :alt="f.name"
                 class="w-12 h-12 rounded-full shadow-sm"
               >
@@ -2851,7 +2852,7 @@ function cardSummary(f: CatalogueEntry) {
 
               <!-- DANCER CARDS (any of the 3 dancer kinds) -->
               <template v-if="deckCurrent.kind === 'dancer-your-fest' || deckCurrent.kind === 'dancer-new-fest' || deckCurrent.kind === 'dancer-local'">
-                <img :src="deckCurrent.photo" :alt="deckCurrent.name" class="w-full h-64 object-cover" draggable="false">
+                <img :src="sizedImage(deckCurrent.photo, IMG.card)" :alt="deckCurrent.name" class="w-full h-64 object-cover" draggable="false">
                 <div class="p-5">
                   <div class="flex items-baseline justify-between gap-3">
                     <div class="text-xl font-black font-display text-foreground">

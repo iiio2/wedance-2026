@@ -23,7 +23,7 @@ const RESOURCE = `${ORIGIN}/mcp`
 const REDIRECT = 'https://client.example/callback'
 const tag = `oauth-${Date.now()}`
 const ids: Record<'alex' | 'mia' | 'admin', string> = {} as any
-const pages: Record<'montuno' | 'laclave' | 'foreign', { id: string; username: string }> = {} as any
+const pages: Record<'salsaclub' | 'laclave' | 'foreign', { id: string; username: string }> = {} as any
 const clientIds: string[] = []
 
 const pkce = () => {
@@ -72,7 +72,7 @@ describe.skipIf(!DATABASE_URL)('OAuth server (DB)', () => {
     ]).returning({ id: schema.dancers.id })
     ids.alex = rows[0].id; ids.mia = rows[1].id; ids.admin = rows[2].id
     const web = appRouter.createCaller({ db, dancerId: ids.alex, isAdmin: false } as any)
-    for (const [k, name] of [['montuno', 'Montuno'], ['laclave', 'La Clave']] as const) {
+    for (const [k, name] of [['salsaclub', 'Salsa Club'], ['laclave', 'La Clave']] as const) {
       const { username } = await web.business.create({ type: 'organizer', name: `${tag} ${name}`, city: 'Munich' })
       const [p] = await db.select({ id: schema.profiles.id }).from(schema.profiles).where(eq(schema.profiles.username, username))
       pages[k] = { id: p.id, username }
@@ -161,9 +161,9 @@ describe.skipIf(!DATABASE_URL)('OAuth server (DB)', () => {
       const v: any = await validateAuthorizeRequest(db, authParams(c.client_id, challenge, { scope: 'business:read' }), ORIGIN)
       const token = consentToken(v.request, ids.alex)
       await expect(approveConsent(db, { token, dancerId: ids.mia, isAdmin: false, scopes: ['business:read'], profileIds: [], origin: ORIGIN })).rejects.toThrow(/another account/)
-      const { grantId } = await approveConsent(db, { token, dancerId: ids.alex, isAdmin: false, scopes: ['business:read', 'business:publish'], profileIds: [pages.montuno.id, pages.foreign.id], origin: ORIGIN })
+      const { grantId } = await approveConsent(db, { token, dancerId: ids.alex, isAdmin: false, scopes: ['business:read', 'business:publish'], profileIds: [pages.salsaclub.id, pages.foreign.id], origin: ORIGIN })
       const [g] = await db.select().from(schema.oauthGrants).where(eq(schema.oauthGrants.id, grantId))
-      expect(g.profileIds).toEqual([pages.montuno.id]) // Mia's page dropped
+      expect(g.profileIds).toEqual([pages.salsaclub.id]) // Mia's page dropped
       expect(g.scopes).toEqual(['business:read']) // more than asked for is dropped
       expect(new URL(denyConsent({ token, dancerId: ids.alex, origin: ORIGIN }).redirect).searchParams.get('error')).toBe('access_denied')
     })
@@ -273,13 +273,13 @@ describe.skipIf(!DATABASE_URL)('OAuth server (DB)', () => {
 
   describe('grant enforcement inside tRPC', () => {
     it('an app acts only for the pages it was given', async () => {
-      const { t } = await tokensFor(ids.alex, ['business:publish'], [pages.montuno.id])
+      const { t } = await tokensFor(ids.alex, ['business:publish'], [pages.salsaclub.id])
       const app = await scopedCaller(t.access_token)
-      expect((await app.business.myProfiles()).managed.map((p: any) => p.username)).toEqual([pages.montuno.username])
-      await app.business.update({ username: pages.montuno.username, bio: 'From Claude' })
+      expect((await app.business.myProfiles()).managed.map((p: any) => p.username)).toEqual([pages.salsaclub.username])
+      await app.business.update({ username: pages.salsaclub.username, bio: 'From Claude' })
       await expect(app.business.update({ username: pages.laclave.username, bio: 'x' })).rejects.toThrow(/wasn’t given access/)
       await expect(app.businessTeam.team({ username: pages.laclave.username })).rejects.toThrow(/wasn’t given access/)
-      const { id } = await app.businessEvents.create({ hostUsername: pages.montuno.username, name: `${tag} Sunday class`, type: 'Course', date: '2031-03-02', startTime: '18:00' } as any)
+      const { id } = await app.businessEvents.create({ hostUsername: pages.salsaclub.username, name: `${tag} Sunday class`, type: 'Course', date: '2031-03-02', startTime: '18:00' } as any)
       await expect(app.businessEvents.create({ hostUsername: pages.laclave.username, name: `${tag} x`, type: 'Party', date: '2031-03-02', startTime: '20:00' } as any)).rejects.toThrow(/wasn’t given access/)
       // An event of a page that wasn't granted can't be managed either.
       const { id: other } = await appRouter.createCaller({ db, dancerId: ids.alex, isAdmin: false } as any).businessEvents.create({ hostUsername: pages.laclave.username, name: `${tag} La Clave night`, type: 'Party', date: '2031-03-05', startTime: '21:00' } as any)
@@ -291,23 +291,23 @@ describe.skipIf(!DATABASE_URL)('OAuth server (DB)', () => {
       expect((await web.business.myProfiles()).managed).toHaveLength(2)
     })
     it('publishing through tRPC needs business:publish, not just business:write', async () => {
-      const { t } = await tokensFor(ids.alex, ['business:write'], [pages.montuno.id])
+      const { t } = await tokensFor(ids.alex, ['business:write'], [pages.salsaclub.id])
       const app = await scopedCaller(t.access_token)
-      await expect(app.businessEvents.create({ hostUsername: pages.montuno.username, name: `${tag} live`, type: 'Party', date: '2031-04-01', startTime: '20:00', published: true } as any)).rejects.toThrow(/business:publish/)
-      const { id } = await app.businessEvents.create({ hostUsername: pages.montuno.username, name: `${tag} draft`, type: 'Party', date: '2031-04-01', startTime: '20:00' } as any)
+      await expect(app.businessEvents.create({ hostUsername: pages.salsaclub.username, name: `${tag} live`, type: 'Party', date: '2031-04-01', startTime: '20:00', published: true } as any)).rejects.toThrow(/business:publish/)
+      const { id } = await app.businessEvents.create({ hostUsername: pages.salsaclub.username, name: `${tag} draft`, type: 'Party', date: '2031-04-01', startTime: '20:00' } as any)
       const cur: any = await app.businessEvents.get({ id })
       await expect(app.businessEvents.update({ ...cur, id, published: true } as any)).rejects.toThrow(/business:publish/)
-      await expect(app.business.update({ username: pages.montuno.username, bio: 'x' })).rejects.toThrow(/business:publish/)
+      await expect(app.business.update({ username: pages.salsaclub.username, bio: 'x' })).rejects.toThrow(/business:publish/)
     })
   })
 
   describe('MCP tool calls', () => {
     it('publish tools: preview → confirm_token → commit, single use, audited', async () => {
-      const { t } = await tokensFor(ids.alex, ['business:publish'], [pages.montuno.id])
+      const { t } = await tokensFor(ids.alex, ['business:publish'], [pages.salsaclub.id])
       const auth = (await resolveAccessToken(db, t.access_token, RESOURCE))!
       const ctx: any = { db, dancerId: auth.dancerId, isAdmin: false, scopes: auth.scopes, grantedProfileIds: auth.grantedProfileIds, oauthClientId: auth.clientId, oauthGrantId: auth.grantId }
       const tc = { caller: appRouter.createCaller(ctx), ctx, origin: ORIGIN }
-      const created: any = await tc.caller.businessEvents.create({ hostUsername: pages.montuno.username, name: `${tag} Taster`, type: 'Workshop', date: '2031-05-04', startTime: '18:00' } as any)
+      const created: any = await tc.caller.businessEvents.create({ hostUsername: pages.salsaclub.username, name: `${tag} Taster`, type: 'Workshop', date: '2031-05-04', startTime: '18:00' } as any)
       const tool = TOOL_BY_NAME.get('publish_event')!
       const preview = await callTool(tool, { event_id: created.id }, tc)
       const text = preview.content[0]!.text
@@ -322,10 +322,10 @@ describe.skipIf(!DATABASE_URL)('OAuth server (DB)', () => {
       expect(again.content[0]!.text).toMatch(/already used/)
       const audit = await db.select().from(schema.mcpAudit).where(eq(schema.mcpAudit.grantId, auth.grantId))
       expect(audit.map((a: any) => a.result).sort()).toEqual(['denied', 'ok', 'preview'])
-      expect(audit.find((a: any) => a.result === 'ok').profileId).toBe(pages.montuno.id)
+      expect(audit.find((a: any) => a.result === 'ok').profileId).toBe(pages.salsaclub.id)
       expect(JSON.stringify(audit)).not.toContain(token)
       // The page's team sees what the app did.
-      const log = await appRouter.createCaller({ db, dancerId: ids.alex, isAdmin: false } as any).oauth.auditForProfile({ username: pages.montuno.username })
+      const log = await appRouter.createCaller({ db, dancerId: ids.alex, isAdmin: false } as any).oauth.auditForProfile({ username: pages.salsaclub.username })
       expect(log.some((l: any) => l.tool === 'publish_event' && l.result === 'ok')).toBe(true)
     })
     it('a tool outside the token’s scopes is refused even when called directly', async () => {

@@ -15,6 +15,7 @@ export function toBusinessEventInput(v: BusinessEventValues) {
     venueName: v.venueName || null,
     venueAddress: v.venueAddress || null,
     artists: v.artists,
+    coOrganizers: v.coOrganizers.map(c => (c.role?.trim() ? { username: c.username, role: c.role.trim() } : { username: c.username })),
     styles: v.styles,
     description: v.description,
     cover: v.cover || null,

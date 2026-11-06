@@ -77,8 +77,13 @@ export function parseClientMetadata(clientId: string, doc: unknown): ClientMetad
   const d = doc as Record<string, unknown>
   if (d.client_id !== clientId) throw new Error('client metadata client_id does not match its URL')
   if (d.client_secret !== undefined || d.client_secret_expires_at !== undefined) throw new Error('client metadata must not contain a client secret')
+  // We only take public clients here. The singular field is a preference; a
+  // client that also lists `none` among the methods it can use (ChatGPT prefers
+  // private_key_jwt but supports none) negotiates down to none against our
+  // advertised methods, since we offer no assertion-based auth.
   const auth = d.token_endpoint_auth_method ?? 'none'
-  if (auth !== 'none') throw new Error('client metadata documents are public clients: token_endpoint_auth_method must be none')
+  const supported = Array.isArray(d.token_endpoint_auth_methods_supported) ? d.token_endpoint_auth_methods_supported : []
+  if (auth !== 'none' && !supported.includes('none')) throw new Error('client metadata documents are public clients: token_endpoint_auth_method must be none')
   const uris = d.redirect_uris
   if (!Array.isArray(uris) || !uris.length || uris.length > 20) throw new Error('client metadata needs 1–20 redirect_uris')
   for (const r of uris) {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /@handle/book — book an artist or venue. Its own page so it can be linked
  * from their website, Instagram bio or email signature. Anyone can send one,
@@ -88,7 +89,7 @@ useHead(() => ({
 
       <template v-else>
         <NuxtLink :to="`/@${profile.username}`" class="flex items-center gap-4">
-          <img v-if="profile.photo" :src="profile.photo" :alt="profile.name" class="size-16 shrink-0 rounded-full object-cover border">
+          <img v-if="profile.photo" :src="sizedImage(profile.photo, IMG.avatar)" :alt="profile.name" class="size-16 shrink-0 rounded-full object-cover border">
           <div class="min-w-0">
             <p class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary font-sans">{{ profile.type === 'venue' ? 'Venue' : 'Artist' }}<template v-if="profile.city"> · {{ profile.city }}</template></p>
             <h1 class="text-3xl leading-tight">Book {{ profile.name }}</h1>

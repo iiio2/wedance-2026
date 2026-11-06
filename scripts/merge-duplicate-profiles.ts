@@ -16,7 +16,7 @@ import { neon, neonConfig } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
 import { sql } from 'drizzle-orm'
 import * as schema from '../server/database/schema'
-import { findDuplicates, mergeProfile, nameKey, type DupRow } from '../server/utils/mergeProfiles'
+import { findDuplicates, instagramHandles, mergeProfile, nameKey, type DupRow } from '../server/utils/mergeProfiles'
 
 const WRITE = process.argv.includes('--write')
 const dbUrl = process.env.DATABASE_URL
@@ -28,11 +28,12 @@ const db = drizzle(neon(dbUrl), { schema })
 const q = async (s: any) => { const r: any = await db.execute(s); return (r.rows ?? r) as any[] }
 
 const rows = (await q(sql`
-  select p.id, p.username, p.type, p.name, p.city_slug as "citySlug", p.claimed, p.address, p.source_ref as "sourceRef",
+  select p.id, p.username, p.type, p.name, p.socials, p.instagram_aliases as "instagramAliases", p.city_slug as "citySlug", p.claimed, p.address, p.source_ref as "sourceRef",
     coalesce(p.lat, nullif(p.source_ref->>'lat', '')::float) as lat, coalesce(p.lng, nullif(p.source_ref->>'lng', '')::float) as lng,
     exists (select 1 from profile_members m where m.profile_id = p.id) as managed,
     (select count(*)::int from events e where e.venue_username = p.username or e.organizer_username = p.username or e.host_profile_id = p.id or e.artists::jsonb ? p.username) as events
   from profiles p where p.status = 'visible' and p.type in ('venue', 'organizer', 'artist')`)) as DupRow[]
+for (const r of rows as any[]) r.instagram = instagramHandles(r)
 const cityKeys = new Set<string>((await q(sql`select slug, name from cities`)).flatMap((c: any) => [nameKey(c.slug), nameKey(c.name)]))
 const groups = findDuplicates(rows, cityKeys)
 const merges = groups.flatMap(g => g.others.filter(o => o.merge).map(o => ({ g, o })))
@@ -51,6 +52,9 @@ mkdirSync(dir, { recursive: true })
 const reviewFile = join(dir, `merge-profiles-review-${stamp}.txt`)
 writeFileSync(reviewFile, review.map(x => `${x.g.type}\t@${x.o.row.username} (${x.o.row.events} ev)\t→ @${x.g.keep.username} (${x.g.keep.events} ev)\t${x.o.reason}`).join('\n') + '\n')
 console.error(`review list: ${reviewFile}`)
+const mergeFile = join(dir, `merge-profiles-plan-${stamp}.txt`)
+writeFileSync(mergeFile, merges.map(x => `${x.g.type}\t@${x.o.row.username} "${x.o.row.name}" (${x.o.row.events} ev${x.o.row.claimed ? ', claimed' : ''})\t→ @${x.g.keep.username} "${x.g.keep.name}" (${x.g.keep.events} ev${x.g.keep.claimed ? ', claimed' : ''}${x.g.keep.managed ? ', run' : ''})\t${x.o.reason}`).join('\n') + '\n')
+console.error(`merge plan: ${mergeFile}`)
 
 if (WRITE) {
   // Backup: every row this run can change, before it changes.

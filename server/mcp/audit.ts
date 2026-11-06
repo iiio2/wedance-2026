@@ -10,7 +10,17 @@ import { hashArgs } from '../oauth/crypto'
 
 type Db = any
 
-export interface AuditWho { grantId: string | null; dancerId: string | null; clientId: string | null }
+export interface AuditWho {
+  grantId: string | null
+  dancerId: string | null
+  clientId: string | null
+  /** Where the call came from (server/mcp/caller.ts). */
+  clientApp?: string | null
+  userAgent?: string | null
+  country?: string | null
+}
+
+const origin = (w: AuditWho) => ({ clientApp: w.clientApp ?? null, userAgent: w.userAgent ?? null, country: w.country ?? null })
 
 /** The profile a call was for: its `profile`/`username` handle, or the host of its event. */
 export async function auditTarget(db: Db, args: Record<string, unknown>): Promise<{ target: string | null; profileId: string | null }> {
@@ -42,7 +52,7 @@ export async function writeAudit(db: Db, row: AuditWho & {
     await db.insert(mcpAudit).values({
       grantId: row.grantId, dancerId: row.dancerId, clientId: row.clientId, tool: row.tool, target, profileId,
       inputHash: hashArgs(row.args), result: row.result, errorCode: row.errorCode ?? null, latencyMs: Math.round(row.latencyMs),
-      confirmNonce: row.confirmNonce ?? null,
+      confirmNonce: row.confirmNonce ?? null, ...origin(row),
     })
   } catch (e) {
     console.error('[mcp] audit write failed', (e as Error).message)
@@ -58,7 +68,7 @@ export async function claimConfirmNonce(db: Db, who: AuditWho, tool: string, arg
     const { target, profileId } = await auditTarget(db, args)
     const [row] = await db.insert(mcpAudit).values({
       grantId: who.grantId, dancerId: who.dancerId, clientId: who.clientId, tool, target, profileId,
-      inputHash: hashArgs(args), result: 'ok', confirmNonce: nonce,
+      inputHash: hashArgs(args), result: 'ok', confirmNonce: nonce, ...origin(who),
     }).onConflictDoNothing({ target: mcpAudit.confirmNonce }).returning({ id: mcpAudit.id })
     return row?.id ?? null
   } catch {

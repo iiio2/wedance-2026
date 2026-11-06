@@ -6,6 +6,43 @@ const row = (o: Partial<DupRow>): DupRow => ({ id: `id${++n}`, username: `u${n}`
 const cities = new Set(['budapest', 'munich'])
 
 describe('findDuplicates', () => {
+  it('groups organizers with the same Instagram whatever the name, keeping the plain handle', () => {
+    const gs = findDuplicates([
+      row({ username: 'salsa-school', name: 'Salsa School', events: 4, instagram: ['salsaschool.official'] }),
+      row({ username: 'salsaschool.official2', name: 'salsaschool.official2', instagram: ['salsaschool.official'] }),
+    ], cities)
+    expect(gs).toHaveLength(1)
+    expect(gs[0]!.keep.username).toBe('salsa-school')
+    expect(gs[0]!.others.map(o => [o.row.username, o.merge, o.reason])).toEqual([['salsaschool.official2', true, 'same Instagram']])
+  })
+  it('sends two artists sharing an Instagram (a couple) and two claimed pages to review', () => {
+    const [a] = findDuplicates([
+      row({ type: 'artist', username: 'alexei-ramos', name: 'Alexei Ramos', events: 2, instagram: ['alexei.emilia'] }),
+      row({ type: 'artist', username: 'emilia-pedra', name: 'Emilia Pedra', events: 1, instagram: ['alexei.emilia'] }),
+    ], cities)
+    expect(a!.others[0]).toMatchObject({ merge: false, reason: 'same Instagram, two artists (a couple?)' })
+    const [c] = findDuplicates([
+      row({ username: 'one', name: 'One', claimed: true, instagram: ['shared.ig'] }),
+      row({ username: 'two', name: 'Two', claimed: true, instagram: ['shared.ig'] }),
+    ], cities)
+    expect(c!.others[0]).toMatchObject({ merge: false, reason: 'same Instagram, both claimed' })
+  })
+  it('keeps venues in different cities apart and ignores shared platform accounts', () => {
+    const [v] = findDuplicates([
+      row({ type: 'venue', username: 'club-muc', name: 'Club', instagram: ['club.chain'] }),
+      row({ type: 'venue', username: 'club-ber', name: 'Club Berlin', citySlug: 'berlin', instagram: ['club.chain'] }),
+    ], cities)
+    expect(v!.others[0]).toMatchObject({ merge: false, reason: 'same Instagram, venues in different cities' })
+    expect(findDuplicates([row({ username: 'x1', name: 'X One', instagram: ['wedance'] }), row({ username: 'y1', name: 'Y Two', instagram: ['wedance'] })], cities)).toEqual([])
+  })
+  it('never keeps a URL-encoded handle', () => {
+    const [g] = findDuplicates([row({ username: 'salsaaut%c3%a9ntica', name: 'Salsa Auténtica' }), row({ username: 'salsaautentica2022', name: 'Salsa Auténtica', events: 3 })], cities)
+    expect(g!.keep.username).toBe('salsaautentica2022')
+  })
+  it('does not group a name pair twice when they also share an Instagram', () => {
+    const gs = findDuplicates([row({ username: 'salon.cubano', events: 3, instagram: ['salon'] }), row({ username: 'salon.cubano2', instagram: ['salon'] })], cities)
+    expect(gs).toHaveLength(1)
+  })
   it('keeps the busiest copy and merges numbered and empty copies', () => {
     const [g] = findDuplicates([row({ username: 'salon.cubano2' }), row({ username: 'salon.cubano', events: 9 }), row({ username: 'salon.cubano3', events: 1 })], cities)
     expect(g!.keep.username).toBe('salon.cubano')
@@ -36,7 +73,7 @@ describe('findDuplicates', () => {
     expect(s!.others[0]).toMatchObject({ merge: false })
   })
   it('merges organizers whose handles differ only by punctuation', () => {
-    const [g] = findDuplicates([row({ name: 'DJ Lole', username: 'djlole', events: 209 }), row({ name: 'DJ Lole', username: 'dj.lole', events: 29 })], cities)
+    const [g] = findDuplicates([row({ name: 'DJ Max', username: 'djmax', events: 209 }), row({ name: 'DJ Max', username: 'dj.max', events: 29 })], cities)
     expect(g!.others[0]).toMatchObject({ merge: true, reason: 'same handle, other punctuation' })
   })
   it('leaves venues named after a city alone', () => {
@@ -59,7 +96,15 @@ describe('renameInEvent', () => {
       flyerOptions: { photos: { old: 'p.jpg' }, names: { old: 'Old' } },
       festival: { sessions: [{ artist: 'old', with: ['b', 'old'] }], videos: { old: 'v' } },
     }, 'old', 'new')
-    expect(r).toEqual({ artists: ['a', 'new', 'b'], flyerOptions: { photos: { new: 'p.jpg' }, names: { new: 'Old' } }, festival: { sessions: [{ artist: 'new', with: ['b', 'new'] }], videos: { new: 'v' } } })
+    expect(r).toEqual({ artists: ['a', 'new', 'b'], coOrganizers: [], flyerOptions: { photos: { new: 'p.jpg' }, names: { new: 'Old' } }, festival: { sessions: [{ artist: 'new', with: ['b', 'new'] }], videos: { new: 'v' } } })
+  })
+
+  it('renames a co-organiser and keeps each page once (#456)', () => {
+    const r = renameInEvent({
+      artists: [], flyerOptions: {}, festival: null,
+      coOrganizers: [{ username: 'new', role: 'host' }, { username: 'old', role: 'co-organiser' }, { username: 'x' }],
+    }, 'old', 'new')
+    expect(r.coOrganizers).toEqual([{ username: 'new', role: 'host' }, { username: 'x' }])
   })
 })
 

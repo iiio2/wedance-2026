@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /business/events/<id>/flyer — make the event's flyer. Starts from the event
  * editor, where the details (the words on the flyer) are checked.
@@ -466,7 +467,7 @@ const faces = computed(() => st.value?.pictured.length ?? 0)
         <p class="mt-1 text-sm text-muted-foreground">2–5 is best, any size, from your phone or computer.</p>
         <div class="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
           <div v-for="(u, i) in uploads" :key="u.url" class="relative">
-            <img :src="u.url" :alt="u.name" class="aspect-[4/5] w-full rounded-xl border object-cover">
+            <img :src="sizedImage(u.url, IMG.card)" :alt="u.name" class="aspect-[4/5] w-full rounded-xl border object-cover">
             <button type="button" class="absolute right-1 top-1 rounded-full bg-card/90 p-1" :aria-label="`Remove ${u.name}`" @click="uploads.splice(i, 1)"><X class="size-3.5" /></button>
           </div>
           <div v-for="n in uploading" :key="`up-${n}`" class="flex aspect-[4/5] items-center justify-center rounded-xl border bg-muted"><Loader2 class="size-5 animate-spin text-muted-foreground" aria-hidden="true" /></div>
@@ -510,7 +511,7 @@ const faces = computed(() => st.value?.pictured.length ?? 0)
           <div>
             <p class="text-xs font-bold text-muted-foreground">From your flyers</p>
             <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-1">
-              <img v-for="u in uploads.slice(0, 2)" :key="u.url" :src="u.url" alt="" class="w-full rounded-xl border">
+              <img v-for="u in uploads.slice(0, 2)" :key="u.url" :src="sizedImage(u.url, IMG.card)" alt="" class="w-full rounded-xl border">
             </div>
           </div>
         </div>
@@ -561,7 +562,7 @@ const faces = computed(() => st.value?.pictured.length ?? 0)
             <p class="text-sm font-bold">A flyer you like <span class="font-normal text-muted-foreground">(optional, anyone’s)</span></p>
             <p class="text-xs text-muted-foreground">For the mood only: its words and people aren’t copied.</p>
             <div class="mt-2 flex items-center gap-3">
-              <img v-if="liked" :src="liked" alt="The flyer you like" class="h-24 rounded-lg border">
+              <img v-if="liked" :src="sizedImage(liked, IMG.avatar)" alt="The flyer you like" class="h-24 rounded-lg border">
               <label class="flex h-24 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-input text-center text-[11px] text-muted-foreground has-[:focus-visible]:shadow-wd-focus">
                 <Loader2 v-if="likedUploading" class="size-4 animate-spin" aria-hidden="true" /><ImagePlus v-else class="size-4" aria-hidden="true" /> {{ liked ? 'Change' : 'Add' }}
                 <input type="file" accept="image/*" class="sr-only" @change="addLiked">
@@ -599,7 +600,7 @@ const faces = computed(() => st.value?.pictured.length ?? 0)
               :aria-pressed="picked.includes(d.id)"
               @click="pick(d.id)"
             >
-              <img :src="d.url!" :alt="d.lookName || 'Direction'" class="aspect-[9/16] w-full object-cover">
+              <img :src="sizedImage(d.url!, IMG.card)" :alt="d.lookName || 'Direction'" class="aspect-[9/16] w-full object-cover">
               <span class="flex items-center gap-1 p-2 text-sm font-bold"><Check v-if="picked.includes(d.id)" class="size-4 text-primary" aria-hidden="true" /> {{ d.lookName }}</span>
               <span v-if="d.status === 'checking'" class="flex items-center gap-1 px-2 pb-2 text-[11px] text-muted-foreground"><Loader2 class="size-3 animate-spin" aria-hidden="true" /> Checking the words…</span>
               <span v-else-if="d.check && !d.check.ok" class="flex items-center gap-1 px-2 pb-2 text-[11px] text-wd-amber-800"><AlertTriangle class="size-3" aria-hidden="true" /> {{ d.check.missing.length }} {{ d.check.missing.length === 1 ? 'line' : 'lines' }} unreadable</span>
@@ -647,7 +648,7 @@ const faces = computed(() => st.value?.pictured.length ?? 0)
           </div>
           <div class="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
             <figure class="mx-auto w-full max-w-sm">
-              <img :src="current.url!" alt="Instagram story flyer" class="w-full rounded-xl border">
+              <img :src="sizedImage(current.url!, IMG.large)" alt="Instagram story flyer" class="w-full rounded-xl border">
               <figcaption class="mt-1.5 text-xs"><span class="font-bold">Instagram story</span> <span class="text-muted-foreground">1080×1920</span><template v-if="current.notes"> · <span class="text-muted-foreground">changed: {{ current.notes }}</span></template></figcaption>
             </figure>
             <div class="grid content-start gap-4">
@@ -699,7 +700,7 @@ const faces = computed(() => st.value?.pictured.length ?? 0)
         <h2 class="font-display text-2xl font-bold">Use this look for {{ ev.host?.name || 'your events' }} from now on?</h2>
         <p class="mt-1 text-sm text-muted-foreground">Next time starts from it: you only change the details.</p>
         <div class="mt-4 flex items-center gap-4 rounded-2xl border bg-card p-4">
-          <img :src="current!.url!" alt="" class="h-28 rounded-lg border">
+          <img :src="sizedImage(current!.url!, IMG.large)" alt="" class="h-28 rounded-lg border">
           <Field id="look-name" label="Call this look" class="flex-1" :error="lookNameError ?? undefined">
             <Input v-model="look.name" @input="lookNameError = null" />
           </Field>

@@ -1,7 +1,7 @@
 /**
  * A profile's own website, managed on WeDance (RAZ-412): WeDance is the CMS
  * (the page's words, images, sections) and the CRM (who signed up on it). The
- * site itself (e.g. montuno.club) only renders what
+ * site itself (e.g. salsaclub.example) only renders what
  * GET /api/profiles/<username>/site returns and posts sign-ups to
  * POST /api/profiles/<username>/contacts. Events always come from the
  * profile's events on WeDance — a site never lists one by hand.
@@ -23,7 +23,7 @@ export type SectionKind = (typeof SECTION_KINDS)[number]
 
 /** What each kind is for, and which fields the editor shows for it. */
 export const SECTION_INFO: Record<SectionKind, { label: string; hint: string; fields: (keyof SiteSection)[]; items?: { label: string; fields: (keyof SiteItem)[] } }> = {
-  hero: { label: 'Hero', hint: 'The top of the page: a big title over a photo, with buttons.', fields: ['eyebrow', 'title', 'titleAccent', 'body', 'image', 'buttons'] },
+  hero: { label: 'Hero', hint: 'The top of the page: a big title over a photo or a silent background video, with buttons.', fields: ['eyebrow', 'title', 'titleAccent', 'body', 'image', 'video', 'buttons'] },
   text: { label: 'Text', hint: 'A heading and paragraphs, with up to four big numbers or words beside it.', fields: ['eyebrow', 'title', 'titleAccent', 'body', 'image', 'items', 'callout'], items: { label: 'Highlights', fields: ['title', 'body'] } },
   cards: { label: 'Cards', hint: 'A row of cards: offers, steps, stops, reasons. Optionally a video under them.', fields: ['eyebrow', 'title', 'titleAccent', 'body', 'items', 'video', 'callout'], items: { label: 'Cards', fields: ['tag', 'title', 'body', 'image', 'url'] } },
   events: { label: 'Events', hint: 'Your upcoming events on WeDance, each with a sign-up button. Edit the events themselves under Events.', fields: ['eyebrow', 'title', 'titleAccent', 'body', 'days', 'callout'] },
@@ -64,7 +64,7 @@ export type SiteSection = {
 }
 
 export type ProfileSite = {
-  /** The site's address, e.g. https://montuno.club (links in emails point there). */
+  /** The site's address, e.g. https://salsaclub.example (links in emails point there). */
   domain?: string
   /** First = default; texts fall back to it. */
   locales: string[]
@@ -72,6 +72,40 @@ export type ProfileSite = {
   /** The email someone gets after signing up on the site. */
   welcome?: { subject?: L10n; body?: L10n }
   sections: SiteSection[]
+  /**
+   * The look of a WeDance-hosted site (hosted websites v1): a preset from
+   * shared/utils/siteThemes.ts, optionally one accent colour and a heading
+   * font. Hand-built sites leave it out and keep their own look.
+   */
+  theme?: SiteThemeSettings
+  /** false = not shown on sites.wedance.vip yet (a draft); missing = published, as every site was before. */
+  published?: boolean
+  /** Who runs the site, for its Impressum (German law) and privacy page. */
+  legal?: SiteLegal
+}
+
+export type SiteThemeSettings = {
+  preset?: string
+  /** #rrggbb; buttons, small headings and highlights follow it. */
+  accent?: string
+  font?: string
+  logo?: string
+  favicon?: string
+}
+
+export type SiteLegal = {
+  /** Person or business responsible, as it should appear. */
+  name?: string
+  /** Street, postcode, city, country. */
+  address?: string
+  email?: string
+  phone?: string
+  /** USt-IdNr. / VAT id, if any. */
+  vatId?: string
+  /** Register court + number, if registered (e.g. "Amtsgericht München, HRB 12345"). */
+  register?: string
+  /** Responsible for the content (§ 18 MStV), when not the same person. */
+  responsible?: string
 }
 
 // --- validation (the editor and the API share it) ---------------------------
@@ -99,13 +133,31 @@ export const siteSectionSchema = z.object({
   items: z.array(item).max(24).optional(),
   callout: z.object({ title: l10n, body: l10n, button: button.optional() }).optional(),
 })
+const short = (n: number) => z.string().trim().max(n).optional()
+export const siteThemeSchema = z.object({
+  preset: z.string().max(40).optional(),
+  accent: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'A colour like #c9a227.').optional(),
+  font: z.string().max(40).optional(),
+  logo: url.optional(),
+  favicon: url.optional(),
+})
+export const siteLegalSchema = z.object({
+  name: short(200), address: short(400), email: short(200), phone: short(60),
+  vatId: short(40), register: short(200), responsible: short(300),
+})
 export const profileSiteSchema = z.object({
   domain: url.optional(),
   locales: z.array(z.string().min(2).max(12)).min(1).max(10),
   seo: z.object({ title: l10n, description: l10n, image: url.optional() }).optional(),
   welcome: z.object({ subject: l10n, body: l10n }).optional(),
   sections: z.array(siteSectionSchema).max(40),
+  theme: siteThemeSchema.optional(),
+  published: z.boolean().optional(),
+  legal: siteLegalSchema.optional(),
 })
+
+/** Shown on sites.wedance.vip: everything except an explicit draft. */
+export const isPublished = (site: Pick<ProfileSite, 'published'>) => site.published !== false
 
 // --- one language, for the site to render ------------------------------------
 

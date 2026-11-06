@@ -117,6 +117,84 @@ describe.skipIf(!DATABASE_URL)('MCP phase 2 (DB)', () => {
       expect((await org.businessEvents.get({ id: r.created[2]!.id })).startTime).toBe('19:00')
     })
 
+    it('MCP programme (#445): create_event and recurring_series store festival.sessions, never agenda', async () => {
+      const writer = await app(ids.org, ['business:write'], [pages.club.id])
+      const programme = [{ time: '20:00', type: 'class', title: 'Bachata beginners' }, { time: '21:00', type: 'party', title: 'Halloween party' }]
+      const one = json(await callTool(TOOL_BY_NAME.get('create_event')!, { profile: pages.club.username, name: `${tag} Halloween`, type: 'Party', date: futureThursday, start_time: '20:00', city: 'Munich', programme }, writer))
+      const [row] = await db.select().from(schema.events).where(eq(schema.events.id, one.id))
+      expect(row.agenda).toEqual([])
+      expect(row.festival.key).toBe(row.slug)
+      expect(row.festival.sessions).toMatchObject([{ date: futureThursday, time: '20:00', type: 'workshop' }, { date: futureThursday, time: '21:00', type: 'party', duration: 180 }])
+      // The editor and get_my_event read it as a programme.
+      expect((await web(ids.org).businessEvents.get({ id: one.id })).festival?.sessions).toHaveLength(2)
+      expect(json(await callTool(TOOL_BY_NAME.get('get_my_event')!, { event_id: one.id }, writer)).programme.map((s: any) => s.title.untrusted_text)).toEqual(['Bachata beginners', 'Halloween party'])
+
+      const series = json(await callTool(TOOL_BY_NAME.get('recurring_series')!, { profile: pages.club.username, name: `${tag} Weekly Social`, type: 'Party', date: futureThursday, start_time: '20:00', city: 'Munich', every: 'week', count: 2, agenda: [{ time: '20:00', what: 'Class' }] }, writer))
+      const rows = (await db.select().from(schema.events).where(eq(schema.events.seriesId, series.seriesId))).sort((a: any, b: any) => +a.startDate - +b.startDate)
+      expect(rows.map((e: any) => e.agenda)).toEqual([[], []])
+      expect(rows.map((e: any) => e.festival.sessions[0].date)).toEqual([futureThursday, plusDays(futureThursday, 7)])
+      expect(rows.map((e: any) => e.festival.key)).toEqual(rows.map((e: any) => e.slug))
+    })
+
+    it('event setup (#446): add_venue creates (then finds) a venue page; create_event returns the missing checklist', async () => {
+      const writer = await app(ids.org, ['business:read', 'business:write'], [pages.club.id])
+      const venue = { name: `${tag} Kulturhaus`, address: 'Heinz-Galinski-Straße 13', city: 'Munich', instagram: `@${tag.replace(/-/g, '_')}_venue` }
+      const made = json(await callTool(TOOL_BY_NAME.get('add_venue')!, venue, writer))
+      expect(made).toMatchObject({ type: 'venue', created: true, city: 'Munich' })
+      const [row] = await db.select().from(schema.profiles).where(eq(schema.profiles.username, made.venue_handle))
+      expect(row).toMatchObject({ type: 'venue', address: 'Heinz-Galinski-Straße 13', citySlug: 'munich' })
+      expect(row.socials[0].platform).toBe('instagram')
+      // Same Instagram, or the same name in the city without one: the existing page.
+      expect(json(await callTool(TOOL_BY_NAME.get('add_venue')!, venue, writer))).toMatchObject({ venue_handle: made.venue_handle, created: false })
+      expect(json(await callTool(TOOL_BY_NAME.get('add_venue')!, { ...venue, instagram: undefined, name: venue.name.toUpperCase() }, writer))).toMatchObject({ venue_handle: made.venue_handle, created: false })
+
+      try {
+        // Venue typed as text, a show without an artist: the checklist says what to do next.
+        const draft = json(await callTool(TOOL_BY_NAME.get('create_event')!, { profile: pages.club.username, name: `${tag} Boutique Halloween`, type: 'Party', date: futureThursday, start_time: '18:00', city: 'Munich', venue_name: 'Somewhere', programme: [{ time: '19:00', type: 'show', title: 'Burlesque show' }] }, writer))
+        const items = draft.missing.map((i: any) => i.item)
+        expect(items).toEqual(expect.arrayContaining(['Venue is not a WeDance page', 'Programme items without an artist', 'No line-up', 'No flyer yet', 'No ticket or registration link']))
+        // With the venue page and a registration link, those items go.
+        const after = json(await callTool(TOOL_BY_NAME.get('update_event')!, { event_id: draft.id, venue_handle: made.venue_handle, ticket_url: 'https://forms.gle/abc' }, writer))
+        const left = after.missing.map((i: any) => i.item)
+        expect(left).not.toContain('Venue is not a WeDance page')
+        expect(left).not.toContain('No ticket or registration link')
+        expect(left).toContain('No flyer yet')
+      } finally {
+        await db.delete(schema.events).where(eq(schema.events.venueUsername, made.venue_handle))
+        await db.delete(schema.profiles).where(eq(schema.profiles.id, row.id))
+      }
+    })
+
+    it('co-organisers (#456): stored with roles, named on the event, listed on their pages, no edit rights', async () => {
+      const writer = await app(ids.org, ['business:read', 'business:write'], [pages.club.id])
+      const draft = json(await callTool(TOOL_BY_NAME.get('create_event')!, {
+        profile: pages.club.username, name: `${tag} Co-organised`, type: 'Party', date: futureThursday, start_time: '20:00', city: 'Munich',
+        // The organiser itself and repeats are dropped.
+        co_organizers: [`@${pages.promoOrg.username}`, { handle: pages.artist.username, role: 'Host' }, pages.club.username, pages.promoOrg.username],
+      }, writer))
+      const mine = json(await callTool(TOOL_BY_NAME.get('get_my_event')!, { event_id: draft.id }, writer))
+      expect(mine.coOrganizers).toEqual([{ username: pages.promoOrg.username }, { username: pages.artist.username, role: 'Host' }])
+      // Not on WeDance: refused with a clear message.
+      const bad = await callTool(TOOL_BY_NAME.get('update_event')!, { event_id: draft.id, co_organizers: [`${tag}-nobody`] }, writer)
+      expect(bad.isError).toBe(true)
+      expect((bad.content[0] as any).text).toMatch(/Not on WeDance yet/)
+
+      await web(ids.org).businessEvents.update({ ...(await web(ids.org).businessEvents.get({ id: draft.id }) as any), id: draft.id, published: true, host: undefined, synced: undefined, recurring: undefined, archived: undefined, editedAt: undefined, timezone: undefined, missing: undefined, gaps: undefined, flyer: undefined } as any)
+      const pub: any = await web(null).events.get({ id: draft.id })
+      expect(pub.coOrganizers).toEqual([
+        { username: pages.promoOrg.username, name: `${tag} PromoOrg`, photo: null, type: 'organizer', role: 'Co-organiser' },
+        { username: pages.artist.username, name: `${tag} Artist`, photo: null, type: 'artist', role: 'Host' },
+      ])
+      expect(json(await callTool(TOOL_BY_NAME.get('get_event')!, { event: draft.id }, writer)).coOrganizers.map((c: any) => c.handle)).toEqual([pages.promoOrg.username, pages.artist.username])
+      // On each co-organiser's /@handle schedule…
+      expect((await web(null).events.byProfile({ username: pages.promoOrg.username })).map((e: any) => e.id)).toContain(draft.id)
+      // …in their business lists as "co-organise", but not editable by their team.
+      const theirs = (await web(ids.promo).businessEvents.list({ profile: pages.promoOrg.username })).upcoming.find((e: any) => e.id === draft.id)
+      expect(theirs).toMatchObject({ role: 'coorganizer', canEdit: false })
+      expect((await web(ids.promo).businessEvents.canEdit({ id: draft.id })).canEdit).toBe(false)
+      await expect(web(ids.promo).businessEvents.get({ id: draft.id })).rejects.toThrow()
+    })
+
     it('monthly: the same nth weekday', async () => {
       const r = await web(ids.org).businessEvents.seriesPreview({ hostUsername: pages.club.username, name: `${tag} Monthly`, ...template, date: '2031-01-19', every: 'month', count: 3, published: false } as any)
       expect(r.dates.map(d => d.date)).toEqual(['2031-01-19', '2031-02-16', '2031-03-16'])

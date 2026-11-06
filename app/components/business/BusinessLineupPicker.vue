@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * The event's line-up: a card per artist, collapsed. Edit opens "On this
  * event" (which photo the flyer uses, or "Name only") and their page — the
@@ -119,7 +120,7 @@ const waiting = (h: string) => {
       <li v-for="h in artists" :key="h" class="rounded-2xl border bg-card">
         <!-- Collapsed: who, and what's waiting on them -->
         <div class="flex flex-wrap items-center gap-3 p-3">
-          <img v-if="choice(h)" :src="choice(h)!" alt="" class="size-10 rounded-full object-cover">
+          <img v-if="choice(h)" :src="sizedImage(choice(h)!, IMG.avatar)" alt="" class="size-10 rounded-full object-cover">
           <span v-else class="flex size-10 items-center justify-center rounded-full bg-muted"><Type class="size-4 text-muted-foreground" aria-hidden="true" /></span>
           <div class="min-w-[10rem] flex-1">
             <p class="truncate text-sm font-bold">{{ nameOf(h) }}</p>
@@ -156,7 +157,7 @@ const waiting = (h: string) => {
                 :aria-pressed="choice(h) === url"
                 @click="pick(h, url)"
               >
-                <img :src="url" :alt="`${nameOf(h)}, photo ${i + 1}${isPending(h, url) ? ' (waiting for approval)' : ''}`" class="h-24 w-[4.5rem] object-cover">
+                <img :src="sizedImage(url, IMG.avatar)" :alt="`${nameOf(h)}, photo ${i + 1}${isPending(h, url) ? ' (waiting for approval)' : ''}`" class="h-24 w-[4.5rem] object-cover">
                 <Check v-if="choice(h) === url" class="absolute right-1 top-1 size-4 rounded-full bg-primary p-0.5 text-primary-foreground" aria-hidden="true" />
                 <Clock v-if="isPending(h, url)" class="absolute bottom-1 left-1 size-4 rounded-full bg-card p-0.5 text-wd-amber-800" aria-hidden="true" />
               </button>

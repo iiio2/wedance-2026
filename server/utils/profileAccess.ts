@@ -32,6 +32,22 @@ export function assertProfileGranted(ctx: GrantCtx, profileId: string) {
   }
 }
 
+/**
+ * "You don't manage this page", told apart from "this app wasn't given it"
+ * (#454): run it BEFORE assertProfileGranted, so a page the dancer isn't on
+ * the team of never gets "reconnect and tick", which can't help. Unclaimed
+ * pages say how to complete them instead.
+ */
+export async function notManagedError(db: Db, p: { id: string; username: string; claimed?: boolean | null }) {
+  const [m] = await db.select({ id: profileMembers.id }).from(profileMembers).where(eq(profileMembers.profileId, p.id)).limit(1)
+  return new TRPCError({
+    code: 'FORBIDDEN',
+    message: m || p.claimed
+      ? `You don’t manage this profile. Someone else runs @${p.username}, so reconnecting won’t help: ask its team to add you, or suggest changes from your event.`
+      : `You don’t manage this profile. Nobody has claimed @${p.username} yet: if you added it or it’s on one of your events, complete it (in a connected app: update_listed_profile); otherwise claim it on WeDance.`,
+  })
+}
+
 /** Keep only the rows whose profile the app may act for. */
 export function onlyGranted<T>(ctx: GrantCtx, rows: T[], idOf: (row: T) => string): T[] {
   if (!ctx.grantedProfileIds || ctx.isAdmin) return rows
@@ -60,9 +76,10 @@ export async function ownerCount(db: Db, profileId: string) {
 export async function requireOwner(ctx: { db: Db; dancerId: string; isAdmin?: boolean } & GrantCtx, username: string) {
   const p = await profileByHandle(ctx.db, username)
   if (ctx.isAdmin) return p
-  assertProfileGranted(ctx, p.id)
+  // Not an owner: reconnecting can't help, so say that first (#454).
   const m = await membershipOf(ctx.db, p.id, ctx.dancerId)
   if (m?.role !== 'owner') throw new TRPCError({ code: 'FORBIDDEN', message: 'Only owners can manage the team.' })
+  assertProfileGranted(ctx, p.id)
   return p
 }
 
@@ -99,9 +116,10 @@ export async function requireProfileRole(
   minimumRole: Role,
 ) {
   if (ctx.isAdmin) return
-  assertProfileGranted(ctx, profileId)
   const m = await membershipOf(ctx.db, profileId, ctx.dancerId)
-  if (!m || roleRank[m.role as Role] < roleRank[minimumRole]) {
+  if (!m) throw new TRPCError({ code: 'FORBIDDEN', message: `Requires ${minimumRole} role or higher on this profile. You don’t manage it, so reconnecting won’t help.` })
+  assertProfileGranted(ctx, profileId)
+  if (roleRank[m.role as Role] < roleRank[minimumRole]) {
     throw new TRPCError({ code: 'FORBIDDEN', message: `Requires ${minimumRole} role or higher on this profile.` })
   }
 }
@@ -110,7 +128,7 @@ export async function logAccess(db: Db, entry: {
   profileId: string
   actorId: string | null
   subjectId?: string | null
-  action: 'created' | 'requested' | 'approved' | 'rejected' | 'role_changed' | 'removed' | 'left'
+  action: 'created' | 'requested' | 'approved' | 'rejected' | 'role_changed' | 'removed' | 'left' | 'merged' | 'unmerged' | 'renamed'
   role?: string | null
   note?: string | null
 }) {

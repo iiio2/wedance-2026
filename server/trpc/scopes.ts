@@ -71,6 +71,8 @@ export const PROCEDURE_SCOPES: Record<string, Scope | null> = {
   'giveaway.enter': 'social:write',
   'cityVideo.vote': 'social:write',
   'profile.update': 'social:write',
+  'profile.myPage': 'social:write',
+  'profile.setPage': 'social:write',
   // Applying shares the dancer's message and email with the gig's poster, like inquiries.send.
   'gigs.applyTo': 'social:write',
 
@@ -78,6 +80,13 @@ export const PROCEDURE_SCOPES: Record<string, Scope | null> = {
   'business.myProfiles': 'business:read',
   'business.spaces': 'business:read',
   'business.get': 'business:read',
+  // The page's own website, WeDance as its CMS (RAZ-412).
+  'businessSite.get': 'business:read',
+  'businessSite.history': 'business:read',
+  'businessSite.version': 'business:read',
+  'businessSite.previewLink': 'business:read',
+  // Duplicate check before create_my_page (#458).
+  'business.findExisting': 'business:read',
   'businessEvents.list': 'business:read',
   'businessEvents.get': 'business:read',
   'businessEvents.inbox': 'business:read',
@@ -111,6 +120,13 @@ export const PROCEDURE_SCOPES: Record<string, Scope | null> = {
   'businessEvents.duplicate': 'business:write',
   'businessEvents.archive': 'business:write',
   'businessEvents.addFromInstagram': 'business:write',
+  // A new page the dancer runs; it joins the app's grant (server/oauth/grants.ts).
+  'business.create': 'business:write',
+  'businessEvents.addVenue': 'business:write',
+  // A draft from an Instagram post (#453); its pages and the event go through the procedures above.
+  'eventImport.fromInstagram': 'business:write',
+  // Completing an unclaimed page the dancer added or has on their events (#454); no grant needed.
+  'listedProfiles.update': 'business:write',
   'businessFlyers.make': 'business:write',
   'businessFlyers.directions': 'business:write',
   'businessFlyers.fix': 'business:write',
@@ -126,6 +142,12 @@ export const PROCEDURE_SCOPES: Record<string, Scope | null> = {
 
   // business:publish — goes public or reaches another person.
   'business.update': 'business:publish',
+  // update_my_site: goes live on the page's own website at once.
+  'businessSite.save': 'business:publish',
+  // restore_site_version: an earlier version goes live again.
+  'businessSite.restore': 'business:publish',
+  // merge_profiles (#458): moves a page's events, followers and team — publish, behind confirm.
+  'business.merge': 'business:publish',
   'artistInvites.link': 'business:publish',
   'artistInvites.notify': 'business:publish',
   'artistInvites.respond': 'business:publish',

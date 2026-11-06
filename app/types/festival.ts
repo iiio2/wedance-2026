@@ -25,6 +25,8 @@ export interface Festival {
   attendeeCount: number
   ticketUrl?: string
   tickets?: TicketOption[]
+  /** Who runs it: the organiser first, then its co-organisers (#456), each with a role label. */
+  organizers?: { username: string; name: string; role: string }[]
 }
 
 export interface Venue {
@@ -54,12 +56,14 @@ export interface Workshop {
   day: string
   room: string
   style: string
-  level: 'Beginner' | 'Intermediate' | 'Advanced'
+  /** Workshops only. */
+  level?: 'Beginner' | 'Intermediate' | 'Advanced'
   teacherId: string
   /** Who they teach it with (more line-up ids). */
   withIds?: string[]
   goingCount: number
-  type?: 'workshop' | 'party'
+  /** Missing = workshop (older mock data). */
+  type?: 'workshop' | 'party' | 'show' | 'concert' | 'doors' | 'other'
   venue?: string
   description?: string
 }

@@ -12,6 +12,7 @@ import * as fCubanFire from '~/data/mock-cuban-fire'
 import * as fCaribbean from '~/data/mock-caribbean-urban-fire'
 import * as fAguaPichi from '~/data/mock-agua-pichi'
 import type { CityEvent } from '~/types/city'
+import { SESSION_TYPE_LABEL, sessionEnd, sessionType } from '#shared/utils/programme'
 
 const CITIES = [
   { data: munich, cityName: munich.city.name },
@@ -39,12 +40,12 @@ function mapWorkshop(w: any, fest: any) {
   return {
     id: `f~${fest.festival.slug}~${w.id}`,
     title: w.title,
-    eventType: w.type === 'party' ? 'Party' : 'Workshop',
+    eventType: SESSION_TYPE_LABEL[sessionType(w.type)],
     styles: w.style ? [w.style] : [],
     artists: teacher ? [teacher.name] : [],
     eventDate: festivalDateFor(fest, w.day),
     startTime: w.time || null,
-    endTime: null,
+    endTime: sessionEnd(w),
     headcount: w.goingCount || null,
     message: null as string | null,
     // Parent festival so the event page can link back to it prominently.

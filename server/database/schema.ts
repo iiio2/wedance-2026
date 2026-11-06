@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, boolean, timestamp, date, unique, index, json, jsonb, doublePrecision, uniqueIndex, numeric, check } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, integer, boolean, timestamp, date, unique, index, json, jsonb, doublePrecision, uniqueIndex, numeric, check, primaryKey } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 // ---------------------------------------------------------------------------
@@ -43,6 +43,10 @@ export const dancers = pgTable('dancers', {
   // Privacy: when false the public profile is hidden from everyone but the
   // owner (getByUsername 404s for other viewers). Default public.
   profilePublic: boolean('profile_public').default(true),
+  // The page that IS this person (0059, #474): one of their own artist/organiser
+  // pages. When set, that /@handle is their public identity — /u/<username> and
+  // /@<username> forward to it, and it shows their dancer side.
+  pageProfileId: uuid('page_profile_id').unique().references((): any => profiles.id, { onDelete: 'set null' }),
   // Email + password auth (FirebaseScrypt, ported from wedance-v4). Empty string
   // default = "no password set" — a dancer created via magic-link/festival flow
   // has no credentials and cannot log in via password until they register one.
@@ -72,7 +76,19 @@ export const sessions = pgTable('sessions', {
   token: text('token').notNull().unique(),
   createdAt: timestamp('created_at').defaultNow(),
   expiresAt: timestamp('expires_at').notNull(),
-})
+}, (t) => [
+  index('sessions_dancer_id_idx').on(t.dancerId, t.createdAt),
+])
+
+// Days a user used WeDance while signed in (migration 0057): one row per user per
+// UTC day, written by createContext (server/utils/activeDays.ts). Backfilled from
+// sessions.created_at. Powers "days used" in Admin → Users.
+export const dancerActiveDays = pgTable('dancer_active_days', {
+  dancerId: uuid('dancer_id').notNull().references(() => dancers.id, { onDelete: 'cascade' }),
+  day: date('day').notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.dancerId, t.day] }),
+])
 
 export const festivals = pgTable('festivals', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -366,6 +382,10 @@ export const profiles = pgTable('profiles', {
   moderatorHandle: text('moderator_handle'),
   moderatorSince: integer('moderator_since'),
   socials: json('socials').$type<{ platform: string; url: string }[]>().default([]),
+  // Other Instagram accounts this business has had (migration 0056, #458): lowercased
+  // handles without @. The main one stays in `socials`; these only help dedupe find
+  // this page (v3 sync, add_profile_from_instagram, add_venue, create_my_page).
+  instagramAliases: jsonb('instagram_aliases').$type<string[]>().notNull().default([]),
   // Gallery for artists/venues; `photo` stays the hero (the one flyers and cards use).
   photos: jsonb('photos').$type<{ url: string }[]>().notNull().default([]),
   // Video links (YouTube embed URLs) on the artist's page (migration 0033).
@@ -381,6 +401,40 @@ export const profiles = pgTable('profiles', {
   // v4 imports: { v4ProfileId, firebaseId, v4Type }. v3 sync: { source: 'wedance-v3', sourceId, … }.
   sourceRef: jsonb('source_ref').$type<Record<string, unknown>>(),
 })
+
+// Who probably runs a page nobody manages yet (migration 0058), read from who can
+// edit it on wedance.vip (v3): their own account, Team Members, or its creator.
+// Leads for Admin → Users ("Make owner"), never access. scripts/import-page-owner-suggestions.ts.
+export const profileOwnerSuggestions = pgTable('profile_owner_suggestions', {
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  dancerId: uuid('dancer_id').notNull().references(() => dancers.id, { onDelete: 'cascade' }),
+  source: text('source').notNull().$type<'v3-own' | 'v3-team' | 'v3-creator'>(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.profileId, t.dancerId] }),
+  index('profile_owner_suggestions_dancer_idx').on(t.dancerId),
+])
+
+// A duplicate merged into the profile that stays (migration 0056, #458). The copy
+// is hidden with source_ref.mergedInto (so /@copy forwards); this row is the audit
+// trail and what an undo needs: the ids of every row moved, and the kept profile's
+// fields (and event line-ups) as they were before.
+export const profileMerges = pgTable('profile_merges', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  fromProfileId: uuid('from_profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  toProfileId: uuid('to_profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  fromUsername: text('from_username').notNull(),
+  toUsername: text('to_username').notNull(),
+  mergedBy: uuid('merged_by').references(() => dancers.id, { onDelete: 'set null' }),
+  mergedAt: timestamp('merged_at').defaultNow(),
+  moved: jsonb('moved').$type<Record<string, string[]>>().notNull().default({}),
+  before: jsonb('before').$type<Record<string, unknown>>().notNull().default({}),
+  undoneAt: timestamp('undone_at'),
+  undoneBy: uuid('undone_by').references(() => dancers.id, { onDelete: 'set null' }),
+}, (t) => [
+  index('profile_merges_from_idx').on(t.fromProfileId),
+  index('profile_merges_to_idx').on(t.toProfileId),
+])
 
 // Who manages a profile (hosting mode). Created when an admin approves a claim
 // or when a dancer creates a new profile. `claimed` on the profile mirrors
@@ -465,7 +519,7 @@ export const profileAccessLog = pgTable('profile_access_log', {
   profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
   actorId: uuid('actor_id').references(() => dancers.id, { onDelete: 'set null' }),
   subjectId: uuid('subject_id').references(() => dancers.id, { onDelete: 'set null' }),
-  action: text('action').notNull().$type<'created' | 'requested' | 'approved' | 'rejected' | 'role_changed' | 'removed' | 'left'>(),
+  action: text('action').notNull().$type<'created' | 'requested' | 'approved' | 'rejected' | 'role_changed' | 'removed' | 'left' | 'merged' | 'unmerged' | 'renamed'>(),
   role: text('role'),
   note: text('note'),
   createdAt: timestamp('created_at').defaultNow(),
@@ -807,6 +861,29 @@ export const attendances = pgTable('attendances', {
 ])
 
 // ---------------------------------------------------------------------------
+// Event RSVPs (RAZ-718, migration 0053): the organiser's poll as the RSVP. One
+// answer per dancer — or per anonymous browser (`guest_token`) until its magic
+// link confirms it — per event. `answer` buckets: shared/utils/rsvp.ts.
+// Unconfirmed rows (dancer_id NULL) count for 48 h; confirming moves the answer
+// onto the dancer and deletes the guest row.
+// ---------------------------------------------------------------------------
+export const eventRsvps = pgTable('event_rsvps', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  dancerId: uuid('dancer_id').references(() => dancers.id, { onDelete: 'cascade' }),
+  guestToken: text('guest_token'),
+  answer: text('answer').notNull().$type<'partner' | 'needLeader' | 'needFollower' | 'yes' | 'next'>(),
+  confirmedAt: timestamp('confirmed_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (t) => [
+  unique('event_rsvps_event_dancer').on(t.eventId, t.dancerId),
+  unique('event_rsvps_event_guest').on(t.eventId, t.guestToken),
+  index('event_rsvps_event_idx').on(t.eventId),
+  check('event_rsvps_dancer_or_guest', sql`num_nonnulls(${t.dancerId}, ${t.guestToken}) >= 1`),
+])
+
+// ---------------------------------------------------------------------------
 // Dancer goals (ADR-009, migration 0044). Goals were stored as plan_items with
 // item_type='goal' and the goal itself in metadata. Now they have their own
 // table with typed columns.
@@ -882,6 +959,9 @@ export const events = pgTable('events', {
   seriesId: text('series_id'),
   // Artist / teacher / DJ profile handles on this event (migration 0022).
   artists: jsonb('artists').$type<string[]>().default([]),
+  // Pages that run it with the organiser, each with an optional role label
+  // (migration 0060, #456). Credit only: no edit rights (that's the host's team).
+  coOrganizers: jsonb('co_organizers').$type<import('../../shared/utils/coOrganizers').CoOrganizer[]>().notNull().default([]),
   syncedAt: timestamp('synced_at'),
   updatedAt: timestamp('updated_at').defaultNow(),
   // Hosting mode (migration 0026): the profile that runs this event. Its
@@ -910,6 +990,7 @@ export const events = pgTable('events', {
   index('events_city_start_idx').on(t.citySlug, t.startDate),
   index('events_venue_username_idx').on(t.venueUsername),
   index('events_organizer_username_idx').on(t.organizerUsername),
+  index('events_co_organizers_gin').using('gin', sql`${t.coOrganizers} jsonb_path_ops`),
 ])
 
 export const festivalRideShares = pgTable('festival_ride_shares', {
@@ -1302,6 +1383,25 @@ export const profileSites = pgTable('profile_sites', {
   updatedBy: uuid('updated_by').references(() => dancers.id, { onDelete: 'set null' }),
 })
 
+// Every saved version of a profile's website (0062): what it was, who saved it,
+// from where (the web editor or an AI app over MCP), and what changed. A
+// restore saves an old version again as a new one, so it can be undone too.
+export const profileSiteVersions = pgTable('profile_site_versions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  content: jsonb('content').$type<import('../../shared/types/profileSite').ProfileSite>().notNull(),
+  savedAt: timestamp('saved_at').notNull().defaultNow(),
+  savedBy: uuid('saved_by').references(() => dancers.id, { onDelete: 'set null' }),
+  /** web | mcp | backfill */
+  via: text('via').notNull().default('web'),
+  /** For via=mcp: chatgpt, claude, cursor… */
+  clientApp: text('client_app'),
+  summary: jsonb('summary').$type<string[]>().notNull().default([]),
+  restoredFrom: uuid('restored_from'),
+}, (t) => [
+  index('profile_site_versions_profile_idx').on(t.profileId, t.savedAt),
+])
+
 // People who signed up on a profile's website (RAZ-412, migration 0045): the
 // profile's contacts on WeDance. One row per email per profile; signing up
 // again updates it. Linked to a dancer when the email has a WeDance account.
@@ -1352,6 +1452,8 @@ export const oauthClients = pgTable('oauth_clients', {
 
 // What a dancer allowed an app: scopes and the profiles it may act for. One
 // live grant per dancer + app; consenting again replaces scopes and profiles.
+// `allProfiles` ("All my pages", #457): every page the dancer is on the team
+// of, resolved per request, so pages gained later are covered too.
 // Revoking (settings → Connected apps, or refresh-token reuse) ends every token.
 export const oauthGrants = pgTable('oauth_grants', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -1359,9 +1461,12 @@ export const oauthGrants = pgTable('oauth_grants', {
   clientId: text('client_id').notNull().references(() => oauthClients.id, { onDelete: 'cascade' }),
   scopes: jsonb('scopes').$type<string[]>().notNull().default([]),
   profileIds: jsonb('profile_ids').$type<string[]>().notNull().default([]),
+  allProfiles: boolean('all_profiles').notNull().default(false),
   revokedAt: timestamp('revoked_at'),
   revokedReason: text('revoked_reason'),
   lastUsedAt: timestamp('last_used_at'),
+  // The MCP tool list this app was last served (tools/list): { version, names, at } (0061).
+  mcpToolsListed: jsonb('mcp_tools_listed').$type<import('../mcp/version').ListedTools>(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [
@@ -1405,7 +1510,8 @@ export const oauthTokens = pgTable('oauth_tokens', {
 // Every MCP tool call: who (grant / dancer / app), which tool, what for
 // (`target`: a profile handle or event id), a hash of the input (never the
 // input), the outcome and how long it took. `confirmNonce` makes a publish
-// confirmation single use.
+// confirmation single use. `clientApp` / `userAgent` / `country`: where the
+// call came from (server/mcp/caller.ts), set for anonymous calls too.
 export const mcpAudit = pgTable('mcp_audit', {
   id: uuid('id').primaryKey().defaultRandom(),
   grantId: uuid('grant_id').references(() => oauthGrants.id, { onDelete: 'set null' }),
@@ -1419,6 +1525,9 @@ export const mcpAudit = pgTable('mcp_audit', {
   errorCode: text('error_code'),
   latencyMs: integer('latency_ms'),
   confirmNonce: text('confirm_nonce').unique(),
+  clientApp: text('client_app'),
+  userAgent: text('user_agent'),
+  country: text('country'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (t) => [
   index('mcp_audit_grant_idx').on(t.grantId, t.createdAt),

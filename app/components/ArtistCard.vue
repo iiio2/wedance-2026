@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * ArtistCard — the face-forward artist card used on /artists and the
  * festival lineup. Shows photo, name, residence (pin) + origin (globe),
@@ -71,7 +72,7 @@ const langText = computed(() => accentText(props.accent, 0.078))
     <div class="relative aspect-square overflow-hidden" :style="{ background: accent + '12' }">
       <img
         v-if="artist.photo && !imgError"
-        :src="artist.photo"
+        :src="sizedImage(artist.photo, IMG.card)"
         :alt="artist.name"
         class="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.04]"
         @error="imgError = true"

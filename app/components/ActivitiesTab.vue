@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * ActivitiesTab — rides, rooms, dinners & activities around a festival.
  * V3 tropical style. Collapsible sections; same props/emits as before.
@@ -230,7 +231,7 @@ function badgeFor(key: string): string | null {
         <div v-if="rideShares.length" class="grid gap-1.5">
           <p class="text-eyebrow font-bold uppercase tracking-widest font-sans text-secondary">Others sharing rides</p>
           <div v-for="ride in rideShares" :key="ride.id" class="flex items-center gap-2.5 py-1.5 px-2 rounded-lg" style="background:color-mix(in srgb, var(--wd-brown-900) 2%, transparent);">
-            <img v-if="ride.dancerPhoto && !failedRidePhotos.has(ride.id)" :src="ride.dancerPhoto" :alt="ride.dancerName" class="w-8 h-8 rounded-full shrink-0 object-cover" @error="failedRidePhotos.add(ride.id)">
+            <img v-if="ride.dancerPhoto && !failedRidePhotos.has(ride.id)" :src="sizedImage(ride.dancerPhoto, IMG.avatar)" :alt="ride.dancerName" class="w-8 h-8 rounded-full shrink-0 object-cover" @error="failedRidePhotos.add(ride.id)">
             <span v-else class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-[11px] font-bold uppercase" style="background:color-mix(in srgb, var(--wd-cyan-600) 9.4%, transparent); color:var(--wd-cyan-600);">{{ initialOf(ride.dancerName) }}</span>
             <div class="min-w-0 flex-1 text-xs font-sans text-muted-foreground">
               <span class="font-bold text-foreground">{{ ride.dancerName }}</span>
@@ -287,7 +288,7 @@ function badgeFor(key: string): string | null {
         <div v-if="roommateOthers.length" class="grid gap-1.5">
           <p class="text-eyebrow font-bold uppercase tracking-widest font-sans text-secondary">Others looking for roommates</p>
           <div v-for="person in roommateOthers" :key="person.dancerId" class="flex items-center gap-2.5 py-1.5 px-2 rounded-lg" style="background:color-mix(in srgb, var(--wd-brown-900) 2%, transparent);">
-            <img v-if="person.photo" :src="person.photo" :alt="person.name" class="w-8 h-8 rounded-full shrink-0 object-cover">
+            <img v-if="person.photo" :src="sizedImage(person.photo, IMG.avatar)" :alt="person.name" class="w-8 h-8 rounded-full shrink-0 object-cover">
             <span v-else class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold" :style="{ background: 'color-mix(in srgb, var(--wd-green-600) 9.4%, transparent)', color: GREEN_CHIP }">{{ initialOf(person.name) }}</span>
             <div class="min-w-0 flex-1 text-xs font-sans text-muted-foreground">
               <component :is="person.username ? 'a' : 'span'" :href="person.username ? `/u/${person.username}` : undefined" class="font-bold text-foreground" :class="person.username ? 'underline underline-offset-2' : ''">{{ person.name }}</component>
@@ -439,7 +440,7 @@ function badgeFor(key: string): string | null {
                   <MessageCircle class="w-3 h-3" aria-hidden="true" /> Open group chat
                 </a>
                 <div v-if="dinner.groupMembers?.length" class="flex -space-x-1">
-                  <img v-for="m in dinner.groupMembers" :key="m.name" :src="m.photo" :alt="m.name" class="w-5 h-5 rounded-full border-2 border-white">
+                  <img v-for="m in dinner.groupMembers" :key="m.name" :src="sizedImage(m.photo, IMG.avatar)" :alt="m.name" class="w-5 h-5 rounded-full border-2 border-white">
                 </div>
               </div>
             </template>

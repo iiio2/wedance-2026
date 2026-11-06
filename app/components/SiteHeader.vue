@@ -4,8 +4,9 @@
  *
  * Desktop (sm+): brand · Festivals / Cities / Artists / Find your dance ·
  * My plan (badge) · AccountMenu (profile, year, settings, Business, sign out).
- * Phone: slim top bar, section chips on the Explore pages, and SiteTabBar
- * (Explore · Cities · My plan · Me). Chosen from /sketches/nav (prototype E).
+ * Phone: slim top bar (My plan icon + avatar-only AccountMenu when signed in),
+ * section chips on the Explore pages, and SiteTabBar (Explore · Cities ·
+ * My plan · Me). Chosen from /sketches/nav (prototype E).
  * The Business layout uses the same AccountMenu + SiteTabBar in business mode.
  */
 import { CalendarDays, MapPin, Sparkles, Users, Music } from 'lucide-vue-next'
@@ -60,17 +61,18 @@ const onPlan = computed(() => under('/my-plan') || under('/my-year'))
         <template v-if="appearsSignedIn">
           <NuxtLink
             to="/my-plan"
-            class="hidden sm:flex items-center gap-1.5 text-sm font-semibold transition-colors"
+            class="flex items-center gap-1.5 text-sm font-semibold transition-colors"
             :class="onPlan ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'"
+            aria-label="My plan"
           >
             <CalendarDays class="w-5 h-5" />
-            My plan
+            <span class="hidden sm:inline">My plan</span>
             <span
               v-if="planCount > 0"
               class="bg-primary text-primary-foreground text-[10px] font-bold min-w-4 h-4 rounded-full grid place-items-center px-1"
             >{{ planCount }}</span>
           </NuxtLink>
-          <AccountMenu mode="dance" class="hidden sm:block" />
+          <AccountMenu mode="dance" />
         </template>
         <template v-else>
           <NuxtLink to="/for-organizers" class="hidden sm:inline text-sm text-muted-foreground hover:text-foreground">For organizers</NuxtLink>

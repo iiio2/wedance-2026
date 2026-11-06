@@ -18,6 +18,7 @@ import { freeHandle } from '../../utils/handles'
 import { recordLinkAction } from '../../utils/trackedLinks'
 import { hoursBetween, trackServer } from '../../utils/posthog'
 import { isMagicLinkSignup } from '../../utils/magicLinkSignup'
+import { RSVP_ANSWERS } from '../../../shared/utils/rsvp'
 
 // FirebaseScrypt parameters, ported verbatim from wedance-v4
 // (server/api/auth/[...].ts). These MUST match v4 exactly so legacy user
@@ -69,6 +70,12 @@ export const authRouter = router({
       role: z.enum(['lead', 'follow', 'both']).optional(),
       city: z.string().optional(),
       purpose: z.enum(['login', 'recovery']).default('login'),
+      // The intent survives sign-up (RAZ-718): the link lands back on this
+      // same-site path, and /auth/verify replays the event poll answer `do`
+      // (folding in the unconfirmed answer of this browser, `guest`).
+      redirect: z.string().max(300).regex(/^\/(?![/\\])/).optional(),
+      do: z.enum(RSVP_ANSWERS).optional(),
+      guest: z.string().uuid().optional(),
     }))
     .mutation(async ({ ctx, input }): Promise<{ sent: boolean; accountExists?: boolean }> => {
       // Return { sent: true } whether or not the DB/email send succeeded, so
@@ -143,7 +150,12 @@ export const authRouter = router({
         const siteUrl = config.siteUrl || 'http://localhost:3000'
         const magicLinkUrl = input.purpose === 'recovery'
           ? `${siteUrl}/auth/verify?token=${magicToken}&mode=reset`
-          : `${siteUrl}/auth/verify?token=${magicToken}`
+          : `${siteUrl}/auth/verify?${new URLSearchParams({
+              token: magicToken,
+              ...(input.redirect ? { redirect: input.redirect } : {}),
+              ...(input.do ? { do: input.do } : {}),
+              ...(input.guest ? { guest: input.guest } : {}),
+            })}`
 
         try {
           if (input.purpose === 'recovery') {

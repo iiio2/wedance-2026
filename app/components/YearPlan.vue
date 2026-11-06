@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 import type { YearPlanFestival, YearStats } from '~/types/festival'
 import { Calendar, MapPin, Users, Ticket, Clock, ChevronRight, Share2, Sparkles, ExternalLink, Trophy, Globe, Music, Flame } from 'lucide-vue-next'
 import { WD } from '~/lib/brand'
@@ -260,7 +261,7 @@ const ticketStatusClass: Record<string, string> = {
             >
               <img
                 v-if="f.logo"
-                :src="f.logo"
+                :src="sizedImage(f.logo, IMG.avatar)"
                 :alt="f.name"
                 class="w-10 h-10 rounded-lg object-cover shrink-0"
               />
@@ -340,7 +341,7 @@ const ticketStatusClass: Record<string, string> = {
                   <template v-for="friend in f.friendsGoing.slice(0, 5)" :key="friend.name">
                     <img
                       v-if="friend.photo"
-                      :src="friend.photo"
+                      :src="sizedImage(friend.photo, IMG.avatar)"
                       :alt="friend.name"
                       class="w-6 h-6 rounded-full border-2 object-cover border-wd-cream"
                     />
@@ -381,7 +382,7 @@ const ticketStatusClass: Record<string, string> = {
         <div class="flex items-center gap-3">
           <img
             v-if="f.logo"
-            :src="f.logo"
+            :src="sizedImage(f.logo, IMG.avatar)"
             :alt="f.name"
             class="w-10 h-10 rounded-lg object-cover shrink-0 cursor-pointer"
             @click="emit('open-festival', f.slug)"

@@ -4,6 +4,7 @@ import { ACCESS_PREFIX, REFRESH_PREFIX, randomToken, sha256Hex, verifyPkce } fro
 import { ACCESS_TOKEN_TTL_S, REFRESH_TOKEN_TTL_S, isAdminClient, parseScopes, type Scope } from './config'
 import { OAuthError } from './errors'
 import type { Client } from './clients'
+import { memberProfileIds } from './authorize'
 
 /**
  * Tokens: code exchange, refresh rotation with reuse detection, revocation,
@@ -131,7 +132,7 @@ export async function resolveAccessToken(db: Db, token: string | null | undefine
   if (!token || !token.startsWith(ACCESS_PREFIX) || !expectedResource) return null
   const [row] = await db.select({
     kind: oauthTokens.kind, scopes: oauthTokens.scopes, resource: oauthTokens.resource, expiresAt: oauthTokens.expiresAt, revokedAt: oauthTokens.revokedAt,
-    grantId: oauthGrants.id, grantRevokedAt: oauthGrants.revokedAt, grantScopes: oauthGrants.scopes, profileIds: oauthGrants.profileIds,
+    grantId: oauthGrants.id, grantRevokedAt: oauthGrants.revokedAt, grantScopes: oauthGrants.scopes, profileIds: oauthGrants.profileIds, allProfiles: oauthGrants.allProfiles,
     clientId: oauthGrants.clientId, lastUsedAt: oauthGrants.lastUsedAt, dancerId: dancers.id, dancerIsAdmin: dancers.isAdmin,
   })
     .from(oauthTokens)
@@ -149,11 +150,14 @@ export async function resolveAccessToken(db: Db, token: string | null | undefine
   if (!row.lastUsedAt || now - new Date(row.lastUsedAt).getTime() > 5 * 60_000) {
     await db.update(oauthGrants).set({ lastUsedAt: new Date(now) }).where(eq(oauthGrants.id, row.grantId))
   }
+  // "All my pages": whatever the dancer is on the team of right now, so a page
+  // made or joined after connecting is covered without a reconnect (#457).
+  const grantedProfileIds = row.allProfiles ? await memberProfileIds(db, row.dancerId) : (row.profileIds as string[]) ?? []
   return {
     dancerId: row.dancerId,
     isAdmin: admin,
     scopes,
-    grantedProfileIds: (row.profileIds as string[]) ?? [],
+    grantedProfileIds,
     clientId: row.clientId,
     grantId: row.grantId,
   }

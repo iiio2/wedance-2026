@@ -91,9 +91,9 @@ const fmt = (d: Date | string | null) => d ? new Date(d).toLocaleString('en-GB',
               <li v-for="s in row.scopes" :key="s.id">{{ s.title }}</li>
             </ul>
           </div>
-          <div v-if="row.profiles.length" class="mt-3">
+          <div v-if="row.allProfiles || row.profiles.length" class="mt-3">
             <div class="text-eyebrow uppercase tracking-[0.3em] font-bold text-secondary">For</div>
-            <p class="mt-1 text-sm text-foreground">{{ row.profiles.map((p: any) => p.name).join(', ') }}</p>
+            <p class="mt-1 text-sm text-foreground">{{ row.allProfiles ? 'All my pages, including ones I add later' : row.profiles.map((p: any) => p.name).join(', ') }}</p>
           </div>
           <Button
             variant="destructive"

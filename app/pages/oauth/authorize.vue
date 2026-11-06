@@ -58,6 +58,17 @@ const consent = computed(() => info.value?.status === 'consent' ? info.value : n
 const businessPicked = computed(() => !!consent.value && ['business:read', 'business:write', 'business:publish'].some(s => picked.value[s]))
 const selectedScopes = computed(() => Object.entries(picked.value).filter(([, v]) => v).map(([k]) => k))
 const selectedProfiles = computed(() => Object.entries(profilePicked.value).filter(([, v]) => v).map(([k]) => k))
+// "All my pages" (#457): ticked = every page now and any added later; some = tri-state.
+// With no pages yet it's a plain opt-in for pages added later.
+const allWhenNone = ref(false)
+const allProfiles = computed({
+  get: () => consent.value?.profiles.length ? selectedProfiles.value.length === consent.value.profiles.length : allWhenNone.value,
+  set: (on: boolean) => {
+    allWhenNone.value = on
+    profilePicked.value = Object.fromEntries((consent.value?.profiles ?? []).map(p => [p.id, on]))
+  },
+})
+const someProfiles = computed(() => !allProfiles.value && selectedProfiles.value.length > 0)
 const profileTypeLabel: Record<string, string> = { organizer: 'Organizer', venue: 'Venue', artist: 'Artist', promoter: 'Promoter' }
 
 async function allow() {
@@ -69,6 +80,7 @@ async function allow() {
       requestToken: consent.value.requestToken,
       scopes: selectedScopes.value,
       profileIds: businessPicked.value ? selectedProfiles.value : [],
+      allProfiles: businessPicked.value && allProfiles.value,
     })
     useTrack().track('app_connected', { scopes: selectedScopes.value.length, business: businessPicked.value })
     window.location.replace(redirect)
@@ -170,9 +182,13 @@ function switchAccount() {
 
           <fieldset v-if="businessPicked" class="space-y-1">
             <legend class="text-sm font-bold text-foreground">For these pages</legend>
-            <p v-if="consent.profiles.length" class="text-xs text-muted-foreground">The app can only work on the pages you tick.</p>
-            <p v-else class="text-xs text-muted-foreground">You don’t run any business pages yet, so the business permissions won’t do anything.</p>
+            <p v-if="consent.profiles.length" class="text-xs text-muted-foreground">The app can only work on the pages you tick, or on all of them, including pages you add later.</p>
+            <p v-else class="text-xs text-muted-foreground">You don’t run any business pages yet. Pages the app makes for you are always covered; tick below to cover pages you add elsewhere too.</p>
             <div class="divide-y divide-border">
+              <Checkbox v-model="allProfiles" :indeterminate="someProfiles" class="w-full items-start py-2">
+                <span class="block font-bold text-foreground">All my pages</span>
+                <span class="block text-xs text-muted-foreground">{{ consent.profiles.length ? `All ${consent.profiles.length}, and pages you add later` : 'Pages you add later' }}</span>
+              </Checkbox>
               <Checkbox v-for="p in consent.profiles" :key="p.id" v-model="profilePicked[p.id]" class="w-full py-2">
                 <span class="font-bold text-foreground">{{ p.name }}</span>
                 <span class="text-xs text-muted-foreground"> · {{ profileTypeLabel[p.type] ?? p.type }} · @{{ p.username }} · {{ p.role }}</span>

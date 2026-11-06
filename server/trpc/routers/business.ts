@@ -2,13 +2,18 @@ import { z } from 'zod'
 import { eq, and, or, ilike, desc, inArray, sql } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import { router, publicProcedure, protectedProcedure, adminProcedure } from '../trpc'
-import { profiles, profileMembers, profileClaims, dancers, cities, events, bookableSpaces, bookingRequests } from '../../database/schema'
+import { profiles, profileMembers, profileClaims, dancers, cities, events, bookableSpaces, bookingRequests, profileMerges, profileSites } from '../../database/schema'
 import { WEEKDAYS } from '../../../shared/types/venueDetails'
 import { slugify, randomSuffix } from '../../utils/slug'
-import { parseInstagramHandle, instagramUrl } from '../../../shared/utils/instagram'
-import { grant, logAccess, assertProfileGranted, onlyGranted, type GrantCtx } from '../../utils/profileAccess'
+import { parseInstagramHandle, handleFromInstagram, instagramUrl } from '../../../shared/utils/instagram'
+import { handleError } from '../../../shared/utils/handle'
+import { grant, logAccess, assertProfileGranted, notManagedError, onlyGranted, type GrantCtx } from '../../utils/profileAccess'
 import { notifyDecision, notifyInfoRequired } from './businessTeam'
+import { addProfileToOwnGrant } from '../../oauth/grants'
 import { profileGroup, trackServer } from '../../utils/posthog'
+import { mergeProfile, moveHandleRefs, undoMerge } from '../../utils/mergeProfiles'
+import { findLikelyDuplicates, linksInstagramSql, notMerged } from '../../utils/profileDupes'
+import { scheduleInstagramImport } from '../../utils/instagram/profileImport'
 
 /**
  * Business mode — artists, venues and organizers managing their own profile.
@@ -55,22 +60,38 @@ export async function requireMember(ctx: { db: any; dancerId: string; isAdmin?: 
   const [p] = await ctx.db.select().from(profiles).where(eq(profiles.username, username))
   if (!p) throw new TRPCError({ code: 'NOT_FOUND', message: 'Profile not found.' })
   if (ctx.isAdmin) return p
-  assertProfileGranted(ctx, p.id)
   const [m] = await ctx.db
     .select({ role: profileMembers.role })
     .from(profileMembers)
     .where(and(eq(profileMembers.profileId, p.id), eq(profileMembers.dancerId, ctx.dancerId)))
-  if (!m) throw new TRPCError({ code: 'FORBIDDEN', message: 'You don’t manage this profile.' })
+  // Not on the team: say so, never "reconnect and tick" (#454).
+  if (!m) throw await notManagedError(ctx.db, p)
+  assertProfileGranted(ctx, p.id)
   return p
 }
 
+async function hasTeam(db: any, profileId: string) {
+  const [m] = await db.select({ id: profileMembers.id }).from(profileMembers).where(eq(profileMembers.profileId, profileId)).limit(1)
+  return !!m
+}
+
 // /@handle is shared by dancers and profiles, so a new handle must be free in both.
-async function handleTaken(db: any, handle: string) {
-  const [p] = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.username, handle))
+// One namespace: pages, dancers, and the old handles both keep for redirects.
+export async function handleTaken(db: any, handle: string) {
+  const h = handle.toLowerCase()
+  const [p] = await db.select({ id: profiles.id }).from(profiles)
+    .where(sql`lower(${profiles.username}) = ${h} or ${profiles.sourceRef}->'oldHandles' ? ${h}`).limit(1)
   if (p) return true
-  const [d] = await db.select({ id: dancers.id }).from(dancers).where(eq(dancers.username, handle))
+  const [d] = await db.select({ id: dancers.id }).from(dancers)
+    .where(sql`lower(${dancers.username}) = ${h} or ${dancers.oldUsernames} ? ${h}`).limit(1)
   return !!d
 }
+
+// A handle someone picks (create, rename): the Instagram-compatible rule in shared/utils/handle.ts.
+const chosenHandle = z.string().trim().toLowerCase().superRefine((h, c) => {
+  const err = handleError(h)
+  if (err) c.addIssue({ code: 'custom', message: err })
+})
 
 // City pickers save the canonical English name (CityCombobox); its slug lives in
 // `cities`. Fall back to slugify for a name the table doesn't know yet.
@@ -86,10 +107,29 @@ export async function citySlugFor(db: any, name: string | null) {
 // "id" inside the subquery would bind to m.id.
 const isManaged = sql<boolean>`exists (select 1 from "profile_members" m where m.profile_id = "profiles"."id")`
 
-// Profiles that link this Instagram account (www. / trailing slash / case vary in
-// imports). The one reliable "same account" signal we have.
-export const linksInstagram = (handle: string) =>
-  sql`${profiles.socials}::text ~* ${`instagram\\.com/${handle.replace(/\./g, '\\.')}/?"`}`
+// Profiles that link this Instagram account — their main one or an alias (#458) —
+// and aren't a copy merged into another page. The one reliable "same account" signal we have.
+export const linksInstagram = (handle: string) => sql`(${linksInstagramSql(handle)} and ${notMerged})`
+
+// Owners only (or admins): merging moves a page's team, events and followers.
+async function requireOwner(ctx: { db: any; dancerId: string; isAdmin?: boolean } & GrantCtx, username: string, doing = 'merge it') {
+  const p = await requireMember(ctx, username)
+  if (ctx.isAdmin) return p
+  const [m] = await ctx.db.select({ role: profileMembers.role }).from(profileMembers)
+    .where(and(eq(profileMembers.profileId, p.id), eq(profileMembers.dancerId, ctx.dancerId)))
+  if (m?.role !== 'owner') throw new TRPCError({ code: 'FORBIDDEN', message: `Only an owner of @${username} can ${doing}.` })
+  return p
+}
+
+// Pages this dancer owns, by id (for "can I merge that one too?").
+async function ownedIds(ctx: { db: any; dancerId: string } & GrantCtx) {
+  const rows = await ctx.db.select({ id: profileMembers.profileId }).from(profileMembers)
+    .where(and(eq(profileMembers.dancerId, ctx.dancerId), eq(profileMembers.role, 'owner')))
+  return new Set(onlyGranted(ctx, rows, (r: any) => r.id).map((r: any) => r.id as string))
+}
+
+const normalizeAliases = (list: string[], main: string | null) =>
+  [...new Set(list.map(a => parseInstagramHandle(a)).filter((h): h is string => !!h && h !== main))].slice(0, 10)
 
 export const businessRouter = router({
   // For the public /@handle page: show "Edit" to managers, "Claim" when unmanaged.
@@ -119,10 +159,15 @@ export const businessRouter = router({
         photo: profiles.photo,
         role: profileMembers.role,
         roles: profiles.roles,
+        // The page's own website when WeDance is its CMS (RAZ-412).
+        hasSite: sql<boolean>`${profileSites.profileId} IS NOT NULL`,
+        siteDomain: sql<string | null>`${profileSites.content}->>'domain'`,
       })
       .from(profileMembers)
       .innerJoin(profiles, eq(profiles.id, profileMembers.profileId))
-      .where(eq(profileMembers.dancerId, ctx.dancerId))
+      .leftJoin(profileSites, eq(profileSites.profileId, profiles.id))
+      // A merged copy keeps the members the kept page already had; it isn't a page to run.
+      .where(and(eq(profileMembers.dancerId, ctx.dancerId), notMerged))
       .orderBy(profiles.name)
     // A connected app sees only the profiles it was given.
     const managed = onlyGranted(ctx, managedRows, (r: any) => r.id).map(({ id: _id, roles, ...r }: any) => ({ ...r, influencer: r.type === 'promoter' && (roles ?? []).includes('influencer') }))
@@ -212,25 +257,93 @@ export const businessRouter = router({
   // "Is this already on WeDance?" while someone fills in Create — by handle,
   // Instagram account or exact name. Lets the form say "claim it" instead of
   // creating a duplicate.
+  // Instagram account (main or alias), similar name in the same city, or (venues)
+  // the same address (#458).
   findExisting: protectedProcedure
     .input(z.object({
       name: z.string().trim().max(120).optional(),
       handle: z.string().trim().max(60).optional(),
       instagram: z.string().trim().max(300).optional(),
+      city: z.string().trim().max(120).optional(),
+      type: z.enum(PROFILE_TYPES).optional(),
+      address: z.string().trim().max(300).optional(),
     }))
     .query(async ({ ctx, input }) => {
-      const ig = parseInstagramHandle(input.instagram)
-      const conds = [
-        input.handle ? eq(profiles.username, input.handle.toLowerCase()) : undefined,
-        ig ? linksInstagram(ig) : undefined,
-        input.name && input.name.length >= 3 ? sql`lower(${profiles.name}) = lower(${input.name})` : undefined,
-      ].filter(Boolean)
-      if (!conds.length) return []
-      return ctx.db
-        .select({ username: profiles.username, name: profiles.name, type: profiles.type, city: profiles.city, photo: profiles.photo, managed: isManaged })
-        .from(profiles)
-        .where(and(eq(profiles.status, 'visible'), or(...(conds as any[]))))
-        .limit(5)
+      const rows = await findLikelyDuplicates(ctx.db, {
+        name: input.name && input.name.length >= 3 ? input.name : null, handle: input.handle, instagram: input.instagram,
+        citySlug: input.city ? await citySlugFor(ctx.db, input.city) : null, type: input.type, address: input.address,
+      })
+      return rows.map(({ id: _id, address: _a, ...r }) => r)
+    }),
+
+  // "Possible duplicates" of a page I run (Business mode): same Instagram account,
+  // similar name in the same city, same address. `canMerge`: I own both (or I'm an admin).
+  duplicates: protectedProcedure
+    .input(z.object({ username: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const p = await requireMember(ctx, input.username)
+      const rows = await findLikelyDuplicates(ctx.db, {
+        name: p.name, instagram: [...((p.socials ?? []) as any[]).filter(s => s.platform?.toLowerCase() === 'instagram').map(s => s.url), ...((p.instagramAliases ?? []) as string[])],
+        citySlug: p.citySlug, type: p.type, address: p.address, lat: p.lat, lng: p.lng, excludeId: p.id, limit: 8,
+      })
+      const owned = ctx.isAdmin ? null : await ownedIds(ctx)
+      const iOwnThis = ctx.isAdmin || owned!.has(p.id)
+      return rows.map(({ id, ...r }) => ({ ...r, canMerge: iOwnThis && (ctx.isAdmin || owned!.has(id)) }))
+    }),
+
+  // Merge a duplicate into the page that stays (#458): every event, follower, team
+  // member, review, room, booking and link moves over, the copy's Instagram becomes
+  // an alias, and the copy is hidden — /@copy forwards to /@into. Owners of both
+  // pages, or admins. Recorded in profile_merges, so it can be undone.
+  merge: protectedProcedure
+    .input(z.object({ from: z.string().min(1).transform(h => h.replace(/^@/, '')), into: z.string().min(1).transform(h => h.replace(/^@/, '')) }))
+    .mutation(async ({ ctx, input }) => {
+      if (input.from.toLowerCase() === input.into.toLowerCase()) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Pick two different pages.' })
+      const into = await requireOwner(ctx, input.into)
+      const from = await requireOwner(ctx, input.from)
+      const merged = (p: any) => !!(p.sourceRef as any)?.mergedInto
+      if (merged(from)) throw new TRPCError({ code: 'CONFLICT', message: `@${from.username} was already merged into @${(from.sourceRef as any).mergedInto}.` })
+      if (merged(into) || into.status !== 'visible') throw new TRPCError({ code: 'BAD_REQUEST', message: `@${into.username} is hidden — merge into a visible page.` })
+      const r = await mergeProfile(ctx.db, { id: from.id, username: from.username }, { id: into.id, username: into.username }, { by: ctx.dancerId })
+      // The kept page is now run by whoever ran either one.
+      if (from.claimed && !into.claimed) await ctx.db.update(profiles).set({ claimed: true }).where(eq(profiles.id, into.id))
+      await logAccess(ctx.db, { profileId: into.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'merged', note: `@${from.username} merged into this page` })
+      await logAccess(ctx.db, { profileId: from.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'merged', note: `merged into @${into.username}` })
+      const moved = Object.values(r.touched).reduce((n, v) => n + v, 0)
+      trackServer(ctx, 'profile_merged', { profile: into.username, merged_profile: from.username, profile_type: into.type, same_type: from.type === into.type, moved, ...profileGroup(into.username) })
+      return { mergeId: r.mergeId, into: into.username, from: from.username, moved: r.touched, filled: r.filled }
+    }),
+
+  // Merges into this page (newest first) — what an undo picks from.
+  merges: protectedProcedure
+    .input(z.object({ username: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const p = await requireMember(ctx, input.username)
+      return ctx.db.select({
+        id: profileMerges.id, fromUsername: profileMerges.fromUsername, mergedAt: profileMerges.mergedAt,
+        undoneAt: profileMerges.undoneAt, by: dancers.name,
+      }).from(profileMerges).leftJoin(dancers, eq(dancers.id, profileMerges.mergedBy))
+        .where(eq(profileMerges.toProfileId, p.id)).orderBy(desc(profileMerges.mergedAt)).limit(20)
+    }),
+
+  // Undo a merge: everything recorded moves back and the copy shows again.
+  // Owners of the kept page, or admins.
+  undoMerge: protectedProcedure
+    .input(z.object({ mergeId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [m] = await ctx.db.select().from(profileMerges).where(eq(profileMerges.id, input.mergeId))
+      if (!m) throw new TRPCError({ code: 'NOT_FOUND', message: 'Merge not found.' })
+      if (m.undoneAt) throw new TRPCError({ code: 'CONFLICT', message: 'This merge was already undone.' })
+      const [into] = await ctx.db.select({ username: profiles.username }).from(profiles).where(eq(profiles.id, m.toProfileId))
+      await requireOwner(ctx, into!.username)
+      // A later merge of the kept page itself would be undone first.
+      const [later] = await ctx.db.select({ id: profileMerges.id }).from(profileMerges)
+        .where(and(eq(profileMerges.fromProfileId, m.toProfileId), sql`${profileMerges.undoneAt} IS NULL`)).limit(1)
+      if (later) throw new TRPCError({ code: 'CONFLICT', message: `@${into!.username} was itself merged since — undo that first.` })
+      const r = await undoMerge(ctx.db, m.id, ctx.dancerId)
+      await logAccess(ctx.db, { profileId: m.toProfileId, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'unmerged', note: `@${r.fromUsername} split off again` })
+      await logAccess(ctx.db, { profileId: m.fromProfileId, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'unmerged', note: `split off from @${r.toUsername}` })
+      return { restored: r.fromUsername }
     }),
 
   create: protectedProcedure
@@ -239,16 +352,33 @@ export const businessRouter = router({
       name: editableFields.name,
       city: editableFields.city.optional(),
       instagram: z.string().trim().max(300).optional(),
-      handle: z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/, 'Use 3–40 letters, numbers or dashes.').optional(),
+      handle: chosenHandle.optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const ig = input.instagram ? parseInstagramHandle(input.instagram) : null
       if (input.instagram && !ig) throw new TRPCError({ code: 'BAD_REQUEST', message: 'That doesn’t look like an Instagram link or handle.' })
       if (ig) {
-        const [dupe] = await ctx.db.select({ username: profiles.username, name: profiles.name }).from(profiles).where(linksInstagram(ig)).limit(1)
+        const [dupe] = await ctx.db.select({ id: profiles.id, username: profiles.username, name: profiles.name, sourceRef: profiles.sourceRef }).from(profiles).where(linksInstagram(ig)).limit(1)
+        // A page this dancer added from Instagram a moment ago (add_profile_from_instagram)
+        // that nobody runs yet: they made it, so it becomes theirs instead of a duplicate.
+        const src = dupe?.sourceRef as { source?: string; addedBy?: string } | null | undefined
+        if (dupe && src?.source === 'wedance-business' && src.addedBy === ctx.dancerId && !(await hasTeam(ctx.db, dupe.id))) {
+          const city = input.city?.trim() || null
+          await ctx.db.update(profiles)
+            .set({ type: input.type, name: input.name, ...(city ? { city, citySlug: await citySlugFor(ctx.db, city) } : {}) })
+            .where(eq(profiles.id, dupe.id))
+          await grant(ctx.db, dupe.id, ctx.dancerId, 'owner')
+          await logAccess(ctx.db, { profileId: dupe.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'created', role: 'owner', note: 'Took over a page they had added from Instagram.' })
+          await addProfileToOwnGrant(ctx, dupe.id)
+          trackServer(ctx, 'business_profile_created', { profile: dupe.username, profile_type: input.type, ...profileGroup(dupe.username) })
+          scheduleInstagramImport(ctx, [{ profileId: dupe.id, handle: ig, allowOwned: true }])
+          return { username: dupe.username as string }
+        }
         if (dupe) throw new TRPCError({ code: 'CONFLICT', message: `@${ig} already has a page on WeDance: ${dupe.name} (@${dupe.username}). Claim it or join its team instead.` })
       }
-      let handle = input.handle || slugify(input.name)
+      // Left empty: the Instagram handle as is (how people know them), else the name.
+      let handle = input.handle || (ig ? handleFromInstagram(ig) : '') || slugify(input.name)
+      if (!input.handle && handleError(handle)) handle = `${handle || 'page'}-${randomSuffix(4)}`
       if (await handleTaken(ctx.db, handle)) {
         if (input.handle) throw new TRPCError({ code: 'CONFLICT', message: `@${handle} is taken — if that page is yours, claim it instead.` })
         handle = `${slugify(input.name)}-${randomSuffix(4)}`
@@ -263,8 +393,40 @@ export const businessRouter = router({
         .returning({ id: profiles.id, username: profiles.username })
       await ctx.db.insert(profileMembers).values({ profileId: p!.id, dancerId: ctx.dancerId, role: 'owner' })
       await logAccess(ctx.db, { profileId: p!.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'created', role: 'owner' })
+      // Made through a connected app: that app may run it right away (#447).
+      await addProfileToOwnGrant(ctx, p!.id)
       trackServer(ctx, 'business_profile_created', { profile: p!.username, profile_type: input.type, ...profileGroup(p!.username) })
+      // Their own new page: empty fields from their Instagram, after the response (#452).
+      if (ig) scheduleInstagramImport(ctx, [{ profileId: p!.id, handle: ig, allowOwned: true }])
       return { username: p!.username }
+    }),
+
+  // An owner changes the page's address (/@old → /@new), e.g. to match its
+  // Instagram. The old handle keeps redirecting (source_ref.oldHandles →
+  // entity.movedTo) and stays this page's; events, line-ups and reviews that
+  // name the page by handle move along (moveHandleRefs, as in a merge).
+  renameHandle: protectedProcedure
+    .input(z.object({ username: z.string().min(1), handle: chosenHandle }))
+    .mutation(async ({ ctx, input }) => {
+      const p = await requireOwner(ctx, input.username, 'change its handle')
+      const from = p.username as string
+      const to = input.handle
+      if (to === from) return { username: from }
+      const own = (((p.sourceRef as any)?.oldHandles ?? []) as string[]).map(h => String(h).toLowerCase())
+      // Back to one of its own old handles (or a case change) is fine; any other handle in use is not.
+      if (to !== from.toLowerCase() && !own.includes(to) && await handleTaken(ctx.db, to))
+        throw new TRPCError({ code: 'CONFLICT', message: `@${to} is taken.` })
+      await moveHandleRefs(ctx.db, from, to)
+      const oldHandles = [...new Set([...own, from])].filter(h => h !== to)
+      await ctx.db.execute(sql`update profiles set username = ${to},
+        source_ref = coalesce(source_ref, '{}'::jsonb) || jsonb_build_object('oldHandles', ${JSON.stringify(oldHandles)}::jsonb)
+        where id = ${p.id}`)
+      // Copies merged into this page, and its merge history (undo moves refs by handle).
+      await ctx.db.execute(sql`update profiles set source_ref = jsonb_set(source_ref, '{mergedInto}', to_jsonb(${to}::text)) where source_ref->>'mergedInto' = ${from}`)
+      await ctx.db.execute(sql`update profile_merges set to_username = ${to} where to_username = ${from}`)
+      await ctx.db.execute(sql`update profile_merges set from_username = ${to} where from_username = ${from}`)
+      await logAccess(ctx.db, { profileId: p.id, actorId: ctx.dancerId, subjectId: ctx.dancerId, action: 'renamed', note: `@${from} → @${to}` })
+      return { username: to }
     }),
 
   get: protectedProcedure
@@ -281,6 +443,7 @@ export const businessRouter = router({
         photo: p.photo ?? null,
         photos: p.photos ?? [],
         socials: p.socials ?? [],
+        instagramAliases: (p.instagramAliases ?? []) as string[],
         address: p.address ?? '',
         floorType: p.floorType ?? '',
         venueType: p.venueType ?? '',
@@ -344,11 +507,18 @@ export const businessRouter = router({
       username: z.string().min(1),
       // Promoter pages only: the page posts content (an influencer).
       influencer: z.boolean().optional(),
+      // Other Instagram accounts of this business (#458); the main one is in socials.
+      instagramAliases: z.array(z.string().trim().min(1).max(300)).max(10).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const p = await requireMember(ctx, input.username)
-      const { username: _u, influencer, ...fields } = input
+      const { username: _u, influencer, instagramAliases, ...fields } = input
       const set: Record<string, unknown> = { ...fields }
+      if (instagramAliases !== undefined || fields.socials !== undefined) {
+        const socials = (fields.socials ?? p.socials ?? []) as { platform: string; url: string }[]
+        const main = parseInstagramHandle(socials.find(s => s.platform.toLowerCase() === 'instagram')?.url ?? null)
+        set.instagramAliases = normalizeAliases(instagramAliases ?? ((p.instagramAliases ?? []) as string[]), main)
+      }
       const type = fields.type ?? p.type
       if (influencer && type !== 'promoter') throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only promoter pages can be influencers.' })
       if (influencer !== undefined || type !== 'promoter') {

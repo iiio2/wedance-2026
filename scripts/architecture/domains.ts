@@ -19,7 +19,7 @@ export const DOMAINS: Domain[] = [
     id: 'identity',
     title: 'Identity & auth',
     summary: 'Dancer accounts, credentials and login sessions, and the apps (MCP assistants) dancers connect via OAuth.',
-    tables: ['dancers', 'sessions', 'oauthClients', 'oauthGrants', 'oauthCodes', 'oauthTokens', 'mcpAudit', 'mcpRateLimits'],
+    tables: ['dancers', 'sessions', 'dancerActiveDays', 'oauthClients', 'oauthGrants', 'oauthCodes', 'oauthTokens', 'mcpAudit', 'mcpRateLimits'],
   },
   {
     id: 'festivals',
@@ -36,14 +36,14 @@ export const DOMAINS: Domain[] = [
   {
     id: 'events',
     title: 'Events & plans',
-    summary: 'Dated public events (v4 archive + live v3 mirror), their flyers and the hosts\' saved flyer looks, each dancer\'s week/year plan, and the unified attendance model.',
-    tables: ['events', 'planItems', 'discoverSwipes', 'attendances', 'dancerGoals', 'brandLooks', 'eventFlyers', 'eventPosts', 'aiUsage'],
+    summary: 'Dated public events (v4 archive + live v3 mirror), their flyers and the hosts\' saved flyer looks, each dancer\'s week/year plan, the unified attendance model, and the organiser\'s RSVP poll.',
+    tables: ['events', 'planItems', 'discoverSwipes', 'attendances', 'eventRsvps', 'dancerGoals', 'brandLooks', 'eventFlyers', 'eventPosts', 'aiUsage'],
   },
   {
     id: 'directory',
     title: 'Profiles & cities',
     summary: 'Venue / artist / organiser profiles under /@handle, canonical cities, follows and the per-city community-group directory.',
-    tables: ['profiles', 'profileMembers', 'profileClaims', 'profileAccessLog', 'profileSuggestions', 'profileInvites', 'follows', 'legacyFollows', 'profileAffiliations', 'handles', 'organizerSubscriptions', 'networkLinks', 'profileSites', 'profileContacts', 'cities', 'communityGroups', 'communityGroupReports'],
+    tables: ['profiles', 'profileMembers', 'profileClaims', 'profileMerges', 'profileAccessLog', 'profileSuggestions', 'profileOwnerSuggestions', 'profileInvites', 'follows', 'legacyFollows', 'profileAffiliations', 'handles', 'organizerSubscriptions', 'networkLinks', 'profileSites', 'profileSiteVersions', 'profileContacts', 'cities', 'communityGroups', 'communityGroupReports'],
   },
   {
     id: 'booking',

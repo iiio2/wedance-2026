@@ -16,6 +16,7 @@ import sharp from 'sharp'
 import type { PostKind } from '../../../shared/utils/posts'
 import { paintWithRetries, readText, fetchImage, IMAGE_MODEL, type InlineImage } from './gemini'
 import { faceGrid } from './grid'
+import { programmePostItems, programmePostLine } from '../../../shared/utils/programme'
 import { withAi } from '../aiUsage'
 
 /**
@@ -80,7 +81,7 @@ export async function flyerSource(db: any, ev: any, post: Post = null) {
     kind,
     artist,
     passes: ((ev.festival?.passes ?? []) as any[]).filter(x => x.name).map(x => `${x.name} · ${x.price} €`),
-    programme: sessions.filter(x => x.type !== 'party').slice(0, 6).map(x => [`${short(x.date)} ${x.time}`, x.title, [x.artist, ...(x.with ?? [])].filter(Boolean).map(nameOf).join(' & ')].filter(Boolean).join(' · ')),
+    programme: programmePostItems(sessions).slice(0, 6).map(x => programmePostLine(x, short(x.date), [x.artist, ...(x.with ?? [])].filter(Boolean).map(nameOf).join(' & '))),
     name: ev.name ?? '',
     startDate: ev.startDate,
     endDate: ev.endDate,

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * /business — business home. "What needs me" across every profile I manage, then
- * the next 14 days (events I run + line-ups I'm in). Data: businessEvents.inbox.
+ * /business — business home. "What needs me" across the profiles I manage (sidebar
+ * switcher filters), then the next 14 days (events I run + line-ups I'm in).
+ * Data: businessEvents.inbox.
  */
 import { ArrowRight, Plus, Search, CalendarDays } from 'lucide-vue-next'
 import { eventLocalTime, eventLocalWeekday, eventLocalDate } from '#shared/utils/eventTime'
@@ -10,23 +11,29 @@ definePageMeta({ layout: 'business' })
 useHead({ title: 'Business | WeDance' })
 
 const { $trpc } = useNuxtApp()
+const businessProfile = useBusinessProfile()
 type Inbox = Awaited<ReturnType<typeof $trpc.businessEvents.inbox.query>>
 const data = ref<Inbox | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 
+// Switching profiles quickly: only the latest request may fill the page.
+let latest = 0
 async function load() {
+  const run = ++latest
   loading.value = true
   error.value = null
   try {
-    data.value = await $trpc.businessEvents.inbox.query()
+    const res = await $trpc.businessEvents.inbox.query(businessProfile.value ? { profile: businessProfile.value } : undefined)
+    if (run === latest) data.value = res
   } catch (e: any) {
-    error.value = e?.message || 'Could not load your inbox.'
+    if (run === latest) error.value = e?.message || 'Could not load your inbox.'
   } finally {
-    loading.value = false
+    if (run === latest) loading.value = false
   }
 }
 onMounted(load)
+watch(businessProfile, load)
 
 const toneOf: Record<string, 'warning' | 'info' | 'danger' | 'neutral'> = { draft: 'warning', missing: 'warning', claim: 'neutral', join: 'info' }
 const kindLabel: Record<string, string> = { draft: 'Draft', missing: 'Missing details', claim: 'Claim', join: 'Join request', booking: 'Booking' }
@@ -119,6 +126,7 @@ function dayLabel(iso: string | Date, tz: string | null) {
                 <p class="truncate text-sm font-bold">{{ e.name }}</p>
                 <div class="mt-1 flex flex-wrap gap-1.5">
                   <AdminStatus v-if="e.role === 'lineup'" tone="info">You’re in the line-up</AdminStatus>
+                  <AdminStatus v-else-if="e.role === 'coorganizer'" tone="info">You co-organise it</AdminStatus>
                   <AdminStatus v-else-if="e.role === 'venue'" tone="info">At your venue</AdminStatus>
                   <AdminStatus v-else-if="e.role === 'organizer'" tone="info">You organize it</AdminStatus>
                   <AdminStatus v-else-if="!e.published" tone="warning">Draft</AdminStatus>

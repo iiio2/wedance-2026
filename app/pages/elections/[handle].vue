@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /elections/<handle> — the moderator election for a free/OpenAir commons
  * (epic G800). Open verifiable ballot: candidates propose guidelines, the
@@ -216,7 +217,7 @@ onMounted(resolve)
         <div class="space-y-3">
           <div v-for="c in candidates" :key="c.id" class="rounded-2xl bg-card border p-5" :class="c.id===election.winnerCandidateId ? 'border-success/35' : 'border-primary/20'">
             <div class="flex items-start gap-3">
-              <img v-if="c.photo" :src="c.photo" :alt="c.name" class="size-11 rounded-full object-cover border-2 border-primary/20">
+              <img v-if="c.photo" :src="sizedImage(c.photo, IMG.avatar)" :alt="c.name" class="size-11 rounded-full object-cover border-2 border-primary/20">
               <div v-else class="size-11 rounded-full flex items-center justify-center text-white font-bold bg-linear-135/srgb from-wd-red-600 to-wd-orange-500">{{ initialOf(c.name) }}</div>
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
@@ -288,7 +289,7 @@ onMounted(resolve)
         <div class="rounded-2xl bg-card border border-primary/20 divide-y divide-primary/20">
           <div v-for="(v, i) in ledger" :key="i" class="flex items-center gap-3 px-4 py-2.5 text-sm">
             <template v-if="v.voter">
-              <img v-if="v.voter.photo" :src="v.voter.photo" class="size-6 rounded-full object-cover" :alt="v.voter.name">
+              <img v-if="v.voter.photo" :src="sizedImage(v.voter.photo, IMG.avatar)" class="size-6 rounded-full object-cover" :alt="v.voter.name">
               <div v-else class="size-6 rounded-full flex items-center justify-center text-eyebrow text-white font-bold bg-secondary">{{ initialOf(v.voter.name) }}</div>
               <span class="text-foreground">{{ v.voter.name }}</span>
             </template>

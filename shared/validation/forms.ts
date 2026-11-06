@@ -4,6 +4,7 @@
  * the server would reject, with a readable message instead of a zod dump.
  */
 import * as v from 'valibot'
+import { parseInstagramLink } from '../utils/instagram'
 import { DANCE_LEVELS } from '../utils/styleLevelMix'
 import {
   DANCE_ROLES,
@@ -13,10 +14,13 @@ import {
   newPassword,
   notCollected,
   optionalEmail,
+  optionalHandle,
+  optionalInstagram,
   optionalIsoDate,
   optionalIsoTime,
   optionalText,
   optionalWebUrl,
+  requiredHandle,
   requiredText,
   trimmedText,
   webUrl,
@@ -36,6 +40,11 @@ export const RegisterSchema = v.object({
 })
 
 export const RecoverySchema = v.object({
+  email: email(),
+})
+
+/** Event poll (RAZ-718): the answer already counts, the email only confirms it. */
+export const RsvpEmailSchema = v.object({
   email: email(),
 })
 
@@ -338,3 +347,29 @@ export const GiveawaySchema = v.pipe(
     ['endsAt'],
   ),
 )
+
+// ── Business (business.create) ───────────────────────────────────────────────
+
+export const BusinessCreateSchema = v.object({
+  type: v.picklist(['artist', 'venue', 'organizer', 'promoter']),
+  instagram: optionalInstagram(),
+  name: v.pipe(requiredText('Add a name.'), v.maxLength(120, 'Keep the name under 120 characters.')),
+  city: optionalText(120),
+  handle: optionalHandle(),
+})
+
+export const RenameHandleSchema = v.object({
+  handle: requiredHandle('Pick a handle.'),
+})
+
+// ── Business (eventImport.fromInstagram) ─────────────────────────────────────
+
+/** "Paste an Instagram post" on the new-event page (#453): a post or reel link, not a page. */
+export const InstagramPostImportSchema = v.object({
+  url: v.pipe(
+    v.string(), v.trim(), v.nonEmpty('Paste the link of the post.'), v.maxLength(500, 'That link is too long.'),
+    v.check(s => !!parseInstagramLink(s), 'Paste an Instagram link, like instagram.com/p/…'),
+    v.check(s => parseInstagramLink(s)?.kind !== 'profile', 'That’s a page, not a post: open the event’s post and copy its link.'),
+  ),
+  profile: v.pipe(v.string(), v.nonEmpty('Pick who runs this event.')),
+})

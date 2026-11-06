@@ -52,6 +52,10 @@ Auto-deploys on push to `main` via Vercel + GitHub integration.
   `const result = validate(); if (!result.success) return` and send `result.data`. Each input
   gets `v-bind="fieldAttrs('field', 'x-field-error')"` plus `<FieldError id="x-field-error" :message="errors.field" />`,
   so a failed submit flags every invalid field at once. `<form>`s get `novalidate`.
+- Images: every `<img>` showing a stored photo/flyer/cover uses
+  `:src="sizedImage(url, IMG.avatar|card|large|hero)"` (`shared/utils/image.ts`; `AvatarImage` does it
+  itself). Raw Cloudinary originals (3.5 MB flyer PNGs) used 64 GB/month and got the account switched off
+  (Nov 2026). Download buttons keep the original URL.
 
 ## Data (migrated from v4 — 2026-07-15)
 
@@ -66,6 +70,13 @@ from wedance-v4 (Postgres) via `scripts/migrate/`, idempotent + reversible
   source (v3 Firestore ends 2022), so "this week"/upcoming feeds have no real data
   until organizers create events going forward.
 - **667 follow edges → `follows`**.
+- **Page teams were NOT migrated** (only 8 of 6,426 v4 pages have one). Leads live in
+  `profile_owner_suggestions` (0058), read from wedance.vip (v3, live — v4 was only the import
+  snapshot) with v3's own edit rule (`use/auth.js` `can`): `v3-own` (the page is their account),
+  `v3-team` (Team Members), `v3-creator` (created it, only if they created ≤5 pages — heavy
+  creators list other people's venues). `scripts/import-page-owner-suggestions.ts` (dry-run default,
+  `--write`, `:runQuery` only). Shown in Admin → Users ("Make owner" → `admin.addPageOwner`, emails
+  "You now manage …"; "Not them" → `admin.dismissSuggestion`). Never in the claims queue.
 **Update 2026-10-04:** the "no upcoming events" note above is obsolete — wedance.vip
 (v3 Firestore `posts`, type `event`) is actively maintained (~1,300 upcoming events,
 ~1,000 of them in Munich). They are mirrored into `events` by the v3 sync below.
@@ -108,8 +119,9 @@ firebase-admin). Code: `scripts/sync-v3-events.ts` (CLI) + `server/utils/v3Event
   (`shared/utils/eventTime.ts`). Festival/Congress/Weekender → `is_festival`.
 - **Shown on:** `/cities/[city]` (this-week calendar, "Coming up", festivals) and
   `/events/[id]` via the `events` tRPC router.
-- **Profiles (since 0022):** the same run also syncs the venues, organisers and
-  artists behind those events (`server/utils/v3ProfileSync.ts`) and links each event
+- **Profiles (since 0022):** the same run also syncs **every visible v3 business page** — venues,
+  organisers, fan pages (→ organizer), artists, in any city, with or without events
+  (`--events-only` = just the pages behind events) — (`server/utils/v3ProfileSync.ts`) and links each event
   (`venue_username`, `organizer_username`, `artists[]`), which feeds the city page's
   "Who's on the floor" tabs and the schedule on `/@handle`. Dedupe order — people:
   v3 profile id (`source_ref.firebaseId` from the v4 migration) → handle → name+city;
@@ -118,12 +130,49 @@ firebase-admin). Code: `scripts/sync-v3-events.ts` (CLI) + `server/utils/v3Event
   classes → ≤75 m from a venue this sync created. Unmatched venues are created
   (address-only ones are named after the street). Claimed profiles are never
   written; other unclaimed rows only get EMPTY fields filled; rows this sync created
-  (`source_ref.source='wedance-v3'`) follow v3. Only `visibility: Public` v3 profiles
-  are copied, and only public fields (name, handle, photo, bio, social links, city,
+  (`source_ref.source='wedance-v3'`) follow v3. As on wedance.vip, only `Members` /
+  `Unlisted` hide a v3 page (no visibility = public); only public fields (name, handle, photo, bio, social links, city,
   styles, venue address) — never email/phone. Rollback:
   `DELETE FROM profiles WHERE source_ref->>'source'='wedance-v3'` (after clearing the
   event links: `UPDATE events SET venue_username=NULL, artists='[]' WHERE source='wedance-v3'`).
   Display check: `bun e2e/synced-profiles.check.ts <venueHandle> <organiserHandle>`.
+  Instagram accounts (main in `socials` + `profiles.instagram_aliases`) also match people.
+
+## wedance.vip → 2026 user sync
+
+`bun run sync:v3-users` (dry-run default, `--write`, `--json`) mirrors wedance.vip accounts into
+`dancers` — the v4 migration stopped ~April 2026. Code: `scripts/sync-v3-users.ts` +
+`server/utils/v3UserSync.ts` (`planUsers`, unit-tested). Read only: Firebase Auth `accounts:batchGet`
++ Firestore `:runQuery`. Match by v3 id (`source_ref.firebaseId`) then email; new people get name /
+photo / bio / city / Instagram from their v3 profile, their v3 sign-up date, no handle, and
+`source_ref.source='wedance-v3'`; existing people only get EMPTY fields + their v3 id (never the
+`source` tag, never a new name or password). **Passwords:** Google returns `REDACTED` hashes unless
+the service account has the "Firebase Authentication Admin" role — until then new people sign in by
+magic link; re-running fills hashes only where a dancer has none. Rollback (new people only):
+`DELETE FROM dancers WHERE source_ref->>'source'='wedance-v3' AND NOT EXISTS (SELECT 1 FROM sessions s WHERE s.dancer_id=dancers.id)`.
+
+## Duplicate profiles (#458)
+
+- **Merge:** Business → a page → "Duplicates" (`BusinessDuplicates.vue`) or MCP `merge_profiles` →
+  `business.merge` (owners of both pages, or admins). `server/utils/mergeProfiles.ts` `mergeProfile`
+  moves every profile reference (`PROFILE_REFS` — a unit test fails when a new profile FK isn't listed;
+  rows that would clash stay on the copy, nothing is deleted), handle refs (events venue/organizer/
+  line-up, reviews), fills the kept page's empty fields, turns the copy's Instagram into an alias, and
+  hides the copy with `source_ref.mergedInto` (`entity.movedTo` → `/@old` 301s to `/@kept`).
+  Audit + undo: `profile_merges` (moved row ids, kept page before) → `business.undoMerge`.
+- **Instagram aliases:** `profiles.instagram_aliases` (lowercased handles; main stays in `socials`).
+  `linksInstagram()` (business.ts) matches both and skips merged copies — used by create,
+  `addFromInstagram`, `addVenue`, search; the v3 sync indexes them too.
+- **Duplicate warning:** `server/utils/profileDupes.ts` `findLikelyDuplicates` (same Instagram,
+  handle, similar name in the same city — "Bar Buena Vista" ≈ "Buena Vista Bar" — same address or
+  ≤75 m for venues) behind `business.findExisting` (Create form), `business.duplicates`, `addVenue`
+  and MCP `create_my_page` (returns `possible_duplicates` unless `create_anyway`).
+- Bulk clean-up of obvious copies: `scripts/merge-duplicate-profiles.ts` (dry-run default).
+- **Handles = Instagram:** a chosen page handle follows `shared/utils/handle.ts` `handleError` — `[a-z0-9._-]`,
+  3–40, no dot/dash at either end, no "..", not `RESERVED_HANDLES`, not ending like a file (`.png`, `.js`…). Used by
+  `business.create` / `business.renameHandle` (zod) and the forms (valibot `optionalHandle` / `requiredHandle`).
+  `handleFromInstagram` keeps the Instagram handle as is. Rename (Business → page → Handle, owners) keeps the old
+  handle in `source_ref.oldHandles` (→ `entity.movedTo` redirect) and moves handle refs via `moveHandleRefs`.
 - **Env:** `DATABASE_URL` (target — check it before `--write`; the Vercel-pulled `.env`
   is PRODUCTION), `WEDANCE_V3_SERVICE_ACCOUNT` (JSON) or `WEDANCE_V3_SERVICE_ACCOUNT_FILE`
   (default `~/Secrets/wedance.json`).
@@ -152,6 +201,39 @@ bun run dev:db-proxy          # Neon-HTTP-compatible proxy on :4444
 # .env: DATABASE_URL=postgresql://dev:dev@localhost:5441/wedance
 #       NEON_FETCH_ENDPOINT=http://localhost:4444/sql
 ```
+
+## Instagram profile import (Apify, #452)
+
+Pages added from an Instagram handle (`businessEvents.addFromInstagram`, `addVenue` with
+`instagram`, `business.create` / MCP `create_my_page`) are filled from that account's public
+profile **after the response** (`ctx.waitUntil`): name (only while it is still the handle),
+photo (re-hosted on Cloudinary `wedance-2026/profiles`, never hot-linked), bio, bio link as a
+`website`/social link, city (when it matches `cities`) and, for venues, the business address.
+Empty fields only; claimed/managed pages are never written (except the dancer's own new page from
+`business.create`). Handles added within ~1.5 s share one actor run. Each attempt is stored in
+`source_ref.instagram_import = { at, ok, handle, fields | error }`.
+
+- Code: `server/utils/instagram/apify.ts` (generic `runActor(actorId, input)` + `fetchInstagramProfiles`,
+  per-handle cache — reuse it for post imports), `server/utils/instagram/profileImport.ts`
+  (fill rules, batching), `server/utils/rehostImage.ts` (Cloudinary, shared with `update_listed_profile`).
+- **Env:** `APIFY_TOKEN` (Vercel production). Unset = silent no-op (logged once). Actor:
+  `apify~instagram-profile-scraper` via `run-sync-get-dataset-items`.
+- **Backfill:** `bun scripts/backfill-instagram-profiles.ts` (lists candidates) → `--fetch` (calls
+  Apify, writes nothing) → `--write [--limit N] [--handles a,b]`. Needs `APIFY_TOKEN`, the Cloudinary
+  keys and `DATABASE_URL` — check the target before `--write`.
+
+## Event from an Instagram post (#453)
+
+Paste the link of an organiser's post or reel → a complete DRAFT: MCP `import_from_instagram` and the
+"Paste an Instagram post" field on `/business/events/new`, both → `eventImport.fromInstagram`
+(`server/trpc/routers/eventImport.ts`). Post via Apify `apify~instagram-scraper`
+(`server/utils/instagram/post.ts`, `APIFY_TOKEN`) → Gemini reads the caption into fields
+(`server/utils/instagram/eventExtract.ts`, `GEMINI_API_KEY`) → line-up / venue through
+`addFromInstagram` / `addVenue` (so #452 fills them) → `businessEvents.create`; cover = the post's
+picture re-hosted. The caption is untrusted: quoted to the model as data, the answer bounded by a JSON
+schema and checked again (handles must be in the post, links written in the caption). The post's
+organisers are kept in `events.source_ref.instagram.organizers` — TODO(#456) link them as co-organisers.
+The same post for the same page returns the existing draft. Missing env → a clear error, no crash.
 
 ## Analytics (PostHog)
 
@@ -220,7 +302,8 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `follow` / `unfollow` | `/@handle`, `PromoterProfile` (profiles); `FestivalView` shared plan (dancer) | `target`, `profile`, `profile_type`, `surface` |
 | `whos_going_profile_opened` | `GoingSection` face tap | `item_type`, `item_id` |
 | `going_visibility_changed` | `GoingSection` share toggle | `share`, `item_type`, `item_id` |
-| `wave_sent` / `wave_retracted` | `GoingSection`, `DiscoverDancers` | `festival`, `surface` |
+| `wave_sent` / `wave_retracted` | `GoingSection`, `DiscoverDancers`, `EventRsvpPoll` pairing (sent only) | `festival`, `surface` |
+| `rsvp_answered` | `EventRsvpPoll` (event poll tap — signed out it's saved unconfirmed) | `answer` (partner / needLeader / needFollower / yes / next), `signed_in`, `surface`, `event_id` |
 | `discover_deck_joined` | `DiscoverDancers` "show me" | `item_type`, `item_id`, `was_going` |
 | `hangout_created` | `FestivalView`, `my-plan` | `kind`, `surface`, `event_id` / `event_linked` |
 | `hangout_rsvp` | `FestivalView`, `my-plan` | `going`, `surface`, `hangout_id` |
@@ -229,7 +312,10 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `ask_locals_post` · `video_submit` · `video_vote` · `city_battle_vote` | city components | `city`, … |
 | `review_submitted` · `giveaway_entered` · `election_nominated` | `ReviewsSection` · `GiveawayCard` · `elections/[handle]` | target ids |
 | `event_created` / `event_published` | `business/events/new.vue`; publish = draft→live in `business/events/[id]` | `event_id`, `is_festival`, `city`, `style`, `published` |
+| `event_imported` | `business/events/new.vue` "Paste an Instagram post" (#453) | `event_id`, `source` (instagram), `created` (false = this post's draft already existed), `lineup`, `has_cover` |
 | `business_profile_created` | `business/new.vue` | `profile`, `profile_type`, `from_instagram` |
+| `public_page_set` | `settings/index.vue` "Your public page" (one handle per person, #474) | `cleared`, `profile_type` |
+| `profile_merged` | `BusinessDuplicates` (Business → page → Duplicates) | `profile` (kept), `merged_profile`, `moved` |
 | `profile_claim_started` / `team_join_started` | `business/claim.vue` (form opened) | `profile`, `kind` |
 | `profile_claim_requested` / `team_join_requested` | `business/claim.vue` (sent) | `profile`, `kind`, `evidence_type` |
 | `profile_claimed` | `confirm/[token].vue` (invite link) | `via`, `new_account` |
@@ -250,14 +336,18 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `server_login_completed` | `auth.login`, `auth.verifyMagicLink` | `method` |
 | `server_onboarding_completed` | `auth.completeOnboarding` | `intent` |
 | `server_event_created` | `businessEvents.create`, `businessEvents.createSeries` | `event_id`, `is_festival`, `host_type`, `city`, `published`, `series_id`, `dates` |
+| `server_event_imported` | `eventImport.fromInstagram` (web + MCP `import_from_instagram`; the draft itself also fires `server_event_created`) | `event_id`, `source` (instagram), `kind` (post / reel), `lineup`, `organizers`, `has_venue_page`, `has_cover`, `has_ticket`, `sessions`, `$groups` |
 | `server_event_published` | `create`/`createSeries` with `published`, `update` draft→live, `publishSeries` | `event_id`, `is_festival`, `series_id`, `dates` |
 | `server_booking_request_submitted` | `booking.request` (was server_booking_requested until 2026-10-20) | `booking_id`, `signed_in` |
 | `server_booking_inquiry_sent` | `inquiries.send` (was server_inquiry_sent until 2026-10-20) | `inquiry_id`, `profile`, `delivered`, `signed_in` |
 | `server_event_inquiry_submitted` | `feedback.inquiry` | `event_type`, `city` |
 | `server_festival_draft_submitted` | `festival.submitDraft` (server only) | `submission_id`, `festival`, `signed_in` |
 | `server_profile_claim_requested` / `server_team_join_requested` | `businessTeam.requestAccess`, `business.requestClaim` | `profile`, `profile_type`, `kind`, `evidence_type` |
-| `server_profile_claimed` | `business.decideClaim` approve (claimant's id), `artistInvites.claim` | `profile`, `via` (review / invite) |
+| `server_profile_claimed` | `business.decideClaim` approve (claimant's id), `artistInvites.claim`, `admin.addPageOwner` | `profile`, `via` (review / invite / admin — an admin made them owner in Admin → Users) |
 | `server_business_profile_created` | `business.create` | `profile`, `profile_type` |
+| `server_profile_merged` | `business.merge` (web + MCP `merge_profiles`) | `profile` (kept), `merged_profile`, `profile_type`, `same_type`, `moved`, `$groups` |
+| `server_rsvp_answered` | `rsvp.answer` (signed out → unconfirmed; signed in → confirmed at once) | `event_id`, `answer`, `signed_in`, `confirmed`, `$groups` |
+| `server_rsvp_confirmed` | `rsvp.answer` signed in, folding in this browser's / magic link's unconfirmed answer | `event_id`, `answer`, `hours_to_confirm`, `$groups` |
 | `server_festival_joined` | `festivalSignup.join` | `festival` |
 | `server_ticket_checkout_started` | `festivalSignup.ticketCheckout`, `festivalSignup.createCheckoutSession` | `festival`, `tickets`, `referral` |
 | `server_subscription_checkout_started` | `organizerSubscription.createCheckout` | `plan`, `profile_type` |
@@ -272,8 +362,9 @@ mix the two in one count. Server events also carry `$lib: 'wedance-server'` and 
 | `server_promo_kit_opened` | `referral.promoKit` | `event_id`, `profile_type`, `manager`, `has_link`, `has_flyer`, `painting`, `language`, `$groups` |
 | `server_venue_ask_sent` / `server_venue_ask_booked` / `server_venue_ask_unbooked` | `venueAsks.ask` / `book` / `unbook` | `event_id`, `venue`, `updated`, `guests`, `needs_count`, `venue_managed`, `$groups` |
 | `server_checked_in` | `attendance.checkIn` (door, organiser's id) | `event_id`, `is_festival`, `$groups` |
-| `server_site_saved` | `businessSite.save` | `profile`, `profile_type`, `first_save`, `sections`, `locales`, `$groups` |
+| `server_site_saved` | `businessSite.save`, `businessSite.restore` (not when nothing changed) | `profile`, `profile_type`, `first_save`, `sections`, `locales`, `restored`, `$groups` |
 | `server_member_role_set` | `businessTeam.setRole` (role actually changed) | `profile`, `profile_type`, `from_role`, `role`, `self`, `$groups` |
+| `server_mcp_tool_called` | every MCP tool call (`server/mcp/server.ts` `callTool`), signed in or anonymous | `tool`, `result` (ok / error / preview / denied), `error_code`, `client_app` (chatgpt / claude / cursor / … — `server/mcp/caller.ts`; not `app`, which is the project filter), `country` (Vercel geo, ISO-2), `anonymous`, `latency_ms`, `channel: mcp` |
 | `server_account_deleted` | `auth.deleteAccount` — **anonymous**, no person profile | `days_since_signup` |
 | `server_ticket_purchased` | Stripe webhook `checkout.session.completed` (festival checkout; not on redelivery) · TicketTailor webhook, first of `order.created`/`order.completed` per order | `festival`, `provider` (stripe / tickettailor), `product` (ticket / social_unlock), `tickets`, `amount` (cents), `currency`, `$revenue` (major units), `$currency`, `referral`, `referral_code` (promoter tracked-link code), `discount` (cents) |
 | `server_ticket_checkout_expired` | Stripe webhook `checkout.session.expired` (festival checkout) | `festival`, `provider`, `product`, `tickets`, `referral`, `referral_code` |

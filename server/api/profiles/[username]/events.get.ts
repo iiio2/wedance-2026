@@ -5,7 +5,7 @@ export type { ProfileFeedEvent } from '../../../utils/profileFeed'
 
 /**
  * Public feed of a profile's upcoming events, for the profile's own website
- * (e.g. montuno.club reads /api/profiles/montunoclub/events). The events a
+ * (e.g. salsaclub.example reads /api/profiles/salsaclub/events). The events a
  * profile runs (host) or organizes, published and not over, soonest first —
  * so the website shows exactly what the profile shows on WeDance, and every
  * row links back to WeDance for sign-up.

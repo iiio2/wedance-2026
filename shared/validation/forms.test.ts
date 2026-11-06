@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   bookingRequestSchema,
+  BusinessCreateSchema,
   ChangePasswordSchema,
   CommunityGroupSchema,
   deleteAccountSchema,
@@ -11,6 +12,7 @@ import {
   onboardingDetailsSchema,
   ProfileSettingsSchema,
   RegisterSchema,
+  RenameHandleSchema,
   ReportProblemSchema,
   ResetPasswordSchema,
   RidePostSchema,
@@ -205,5 +207,37 @@ describe('date-window schemas', () => {
       styles: 'Salsa, Bachata,', source: '', verified: false,
     })
     expect(result.success && result.data.styles).toEqual(['Salsa', 'Bachata'])
+  })
+})
+
+describe('BusinessCreateSchema', () => {
+  const base = { type: 'artist', instagram: '', name: 'Caliente Nights', city: '', handle: '' }
+
+  it('keeps an Instagram-style handle as typed, lowercased', () => {
+    const r = validateForm(BusinessCreateSchema, { ...base, instagram: 'https://www.instagram.com/caliente.nights/', handle: '@Caliente.Nights' })
+    expect(r.success && r.data).toMatchObject({ instagram: 'caliente.nights', handle: 'caliente.nights', city: undefined })
+  })
+
+  it('leaves a blank handle out', () => {
+    const r = validateForm(BusinessCreateSchema, base)
+    expect(r.success && r.data.handle).toBeUndefined()
+  })
+
+  it('flags a bad handle and a bad Instagram link with their own messages', () => {
+    const r = validateForm(BusinessCreateSchema, { ...base, instagram: 'two words', handle: 'flyer.png' })
+    expect(r.success).toBe(false)
+    if (r.success) return
+    expect(r.fieldErrors.instagram).toMatch(/instagram\.com/)
+    expect(r.fieldErrors.handle).toMatch(/file name/)
+    expect(validateForm(BusinessCreateSchema, { ...base, handle: 'admin' }).success).toBe(false)
+    expect(validateForm(BusinessCreateSchema, { ...base, handle: 'a..b' }).success).toBe(false)
+  })
+})
+
+describe('RenameHandleSchema', () => {
+  it('requires a valid handle', () => {
+    expect(errorOf(validateForm(RenameHandleSchema, { handle: ' ' }))).toBe('Pick a handle.')
+    const r = validateForm(RenameHandleSchema, { handle: 'Salsa_Munich' })
+    expect(r.success && r.data.handle).toBe('salsa_munich')
   })
 })

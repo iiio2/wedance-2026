@@ -98,8 +98,9 @@ export async function memberProfileIds(db: Db, dancerId: string, among?: string[
 /**
  * Consent given: record the grant (one live grant per dancer + app; the new
  * consent replaces scopes and profiles) and mint a single-use code.
+ * `allProfiles` ("All my pages") covers every page the dancer runs, now and later.
  */
-export async function approveConsent(db: Db, input: { token: string; dancerId: string; isAdmin: boolean; scopes: string[]; profileIds: string[]; origin: string }, now = Date.now()) {
+export async function approveConsent(db: Db, input: { token: string; dancerId: string; isAdmin: boolean; scopes: string[]; profileIds: string[]; allProfiles?: boolean; origin: string }, now = Date.now()) {
   const p = readConsentToken(input.token, input.dancerId, now)
   const client = await resolveClient(db, p.c)
   if (!client || !redirectUriRegistered(client.redirectUris as string[], p.r)) throw new OAuthError('invalid_client', 'The app changed its registration. Start connecting it again.')
@@ -107,16 +108,17 @@ export async function approveConsent(db: Db, input: { token: string; dancerId: s
   let scopes = parseScopes(input.scopes.join(' ')).filter(s => p.sc.includes(s))
   if (!(input.isAdmin && isAdminClient(client.id))) scopes = scopes.filter(s => s !== 'admin')
   const business = BUSINESS_SCOPES.some(s => hasScope(scopes, s))
-  const profileIds = business ? await memberProfileIds(db, input.dancerId, [...new Set(input.profileIds)]) : []
+  const allProfiles = business && !!input.allProfiles
+  const profileIds = !business ? [] : await memberProfileIds(db, input.dancerId, allProfiles ? undefined : [...new Set(input.profileIds)])
   const at = new Date(now)
   const [existing] = await db.select({ id: oauthGrants.id }).from(oauthGrants)
     .where(and(eq(oauthGrants.dancerId, input.dancerId), eq(oauthGrants.clientId, client.id), isNull(oauthGrants.revokedAt)))
   let grantId: string
   if (existing) {
-    await db.update(oauthGrants).set({ scopes, profileIds, updatedAt: at }).where(eq(oauthGrants.id, existing.id))
+    await db.update(oauthGrants).set({ scopes, profileIds, allProfiles, updatedAt: at }).where(eq(oauthGrants.id, existing.id))
     grantId = existing.id
   } else {
-    const [g] = await db.insert(oauthGrants).values({ dancerId: input.dancerId, clientId: client.id, scopes, profileIds }).returning({ id: oauthGrants.id })
+    const [g] = await db.insert(oauthGrants).values({ dancerId: input.dancerId, clientId: client.id, scopes, profileIds, allProfiles }).returning({ id: oauthGrants.id })
     grantId = g!.id
   }
   const code = randomToken(CODE_PREFIX)

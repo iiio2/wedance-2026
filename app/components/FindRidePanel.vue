@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * FindRidePanel — inline ride-share listing + offer form for a festival.
  * Shown inside the my-plan expanded card when the user clicks "Find a ride".
@@ -123,7 +124,7 @@ function onPhotoError(rideId: string) {
           >
             <img
               v-if="ride.dancerPhoto && !failedPhotos.has(ride.id)"
-              :src="ride.dancerPhoto"
+              :src="sizedImage(ride.dancerPhoto, IMG.avatar)"
               :alt="ride.dancerName"
               class="w-7 h-7 rounded-full shrink-0 object-cover"
               @error="onPhotoError(ride.id)"

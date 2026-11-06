@@ -27,6 +27,7 @@ import { followRouter } from './routers/follow'
 import { businessRouter } from './routers/business'
 import { businessEventsRouter } from './routers/businessEvents'
 import { businessFlyersRouter } from './routers/businessFlyers'
+import { listedProfilesRouter } from './routers/listedProfiles'
 import { artistInvitesRouter } from './routers/artistInvites'
 import { venueAsksRouter } from './routers/venueAsks'
 import { inquiriesRouter } from './routers/inquiries'
@@ -36,9 +37,11 @@ import { businessSiteRouter } from './routers/businessSite'
 import { businessTeamRouter } from './routers/businessTeam'
 import { businessNetworkRouter } from './routers/businessNetwork'
 import { waveRouter } from './routers/wave'
+import { rsvpRouter } from './routers/rsvp'
 import { organizerSubscriptionRouter } from './routers/organizerSubscription'
 import { attendanceRouter } from './routers/attendance'
 import { oauthRouter } from './routers/oauth'
+import { eventImportRouter } from './routers/eventImport'
 
 export const appRouter = router({
   auth: authRouter,
@@ -67,7 +70,9 @@ export const appRouter = router({
   follow: followRouter,
   business: businessRouter,
   businessEvents: businessEventsRouter,
+  eventImport: eventImportRouter,
   businessFlyers: businessFlyersRouter,
+  listedProfiles: listedProfilesRouter,
   artistInvites: artistInvitesRouter,
   venueAsks: venueAsksRouter,
   inquiries: inquiriesRouter,
@@ -78,6 +83,7 @@ export const appRouter = router({
   businessNetwork: businessNetworkRouter,
   roommate: roommateRouter,
   wave: waveRouter,
+  rsvp: rsvpRouter,
   organizerSubscription: organizerSubscriptionRouter,
   attendance: attendanceRouter,
   oauth: oauthRouter,

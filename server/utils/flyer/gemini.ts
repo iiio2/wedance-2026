@@ -4,6 +4,7 @@
  */
 import sharp from 'sharp'
 import { logAiCall, aiLabel } from '../aiUsage'
+import { sizedImage, IMG } from '../../../shared/utils/image'
 
 const API = 'https://generativelanguage.googleapis.com/v1beta/models'
 export const IMAGE_MODEL = 'gemini-3.1-flash-image-preview'
@@ -120,17 +121,38 @@ export async function readText(image: InlineImage): Promise<string[]> {
   try { return JSON.parse(text).lines ?? [] } catch { return [] }
 }
 
+/**
+ * Structured data out of text (#453: an event out of an Instagram caption).
+ * `system` holds the rules; `text` is the material, which may be untrusted —
+ * the JSON schema bounds what can come back, and callers validate it again.
+ */
+export async function extractJson<T>(system: string, text: string, schema: unknown, purpose: string): Promise<T | null> {
+  const json = await call(TEXT_MODEL, {
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: 'user', parts: [{ text }] }],
+    generationConfig: { responseMimeType: 'application/json', responseSchema: schema, temperature: 0 },
+  }, purpose)
+  const out = (json?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text ?? '').join('')
+  try { return JSON.parse(out) as T } catch { return null }
+}
+
+export const textModelEnabled = () => !!useRuntimeConfig().geminiApiKey
+
 export async function writeText(prompt: string): Promise<string> {
   const json = await call(TEXT_MODEL, { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7 } }, aiLabel() ?? 'text')
   return (json?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text ?? '').join('').trim()
 }
 
-/** Fetch a photo URL as an inline image (line-up reference photos). */
+/**
+ * Fetch a photo URL as an inline image (line-up reference photos, the style
+ * reference, the flyer being changed). A Cloudinary picture comes compressed at
+ * up to 1080 px wide — the size Gemini paints at — not as the 3.5 MB PNG.
+ */
 export async function fetchImage(url: string): Promise<InlineImage | null> {
   try {
     // Photos stored as site paths ("/people/silvio.jpg", the festival imports).
     const abs = url.startsWith('/') ? `${(useRuntimeConfig().siteUrl || 'https://2026.wedance.vip').replace(/\/$/, '')}${url}` : url
-    const res = await fetch(abs)
+    const res = await fetch(sizedImage(abs, IMG.large))
     if (!res.ok) return null
     return await asInline(Buffer.from(await res.arrayBuffer()))
   } catch {

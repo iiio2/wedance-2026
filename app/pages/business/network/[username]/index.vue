@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /business/network/<handle> — edit a profile you manage: details, photos (one is the main
- * photo used on cards and flyers), links, and venue details for venues.
+ * photo used on cards and flyers), links (with the business's other Instagram accounts),
+ * venue details for venues, its handle, and duplicates to merge into this page.
  */
-import { ExternalLink, Star, Trash2, Check, Users, Palette, Inbox, Globe, Contact } from 'lucide-vue-next'
+import { ExternalLink, Star, Trash2, Check, Users, Palette, Inbox, Globe, Contact, X } from 'lucide-vue-next'
+import { parseInstagramHandle } from '#shared/utils/instagram'
 import type { VenueDetailsValue } from '~/components/business/BusinessVenueDetails.vue'
 import type { Room } from '~/components/business/BusinessVenueRooms.vue'
 
@@ -21,6 +24,8 @@ const error = ref<string | null>(null)
 const form = reactive({
   name: '', city: '', bio: '', styles: [] as string[],
   instagram: '', website: '', facebook: '',
+  // Other Instagram accounts this business has had (#458): they help find this page, never shown.
+  instagramAliases: [] as string[],
   photo: null as string | null,
   photos: [] as { url: string }[],
   // Promoter pages: this promoter is an influencer (their deliverable is content).
@@ -41,8 +46,14 @@ function socialOf(p: Profile, platform: string) {
   return p.socials.find(s => s.platform.toLowerCase() === platform)?.url ?? ''
 }
 
-async function load() {
-  loading.value = true
+// New handle: the editor moves to its new address (the old one now redirects).
+async function onRenamed(handle: string) {
+  await navigateTo(`/business/network/${handle}`, { replace: true })
+}
+
+// quiet: refresh in place (after a merge) without unmounting the page.
+async function load(quiet = false) {
+  if (!quiet) loading.value = true
   error.value = null
   try {
     const p = await $trpc.business.get.query({ username: username.value })
@@ -50,6 +61,7 @@ async function load() {
     Object.assign(form, {
       name: p.name, city: p.city, bio: p.bio, styles: [...p.styles],
       instagram: socialOf(p, 'instagram'), website: socialOf(p, 'website'), facebook: socialOf(p, 'facebook'),
+      instagramAliases: [...p.instagramAliases],
       photo: p.photo,
       // Older profiles only have the single photo — show it in the gallery.
       photos: p.photos.length ? [...p.photos] : (p.photo ? [{ url: p.photo }] : []),
@@ -69,7 +81,7 @@ async function load() {
     loading.value = false
   }
 }
-onMounted(load)
+onMounted(() => load())
 useHead(() => ({ title: `${loaded.value?.name ?? 'Profile'} | Business | WeDance` }))
 
 // Each upload lands in newPhoto; move it into the gallery.
@@ -79,6 +91,22 @@ watch(newPhoto, (url) => {
   if (!form.photo) form.photo = url
   newPhoto.value = ''
 })
+const newAlias = ref('')
+const aliasError = ref<string | undefined>()
+function addAlias() {
+  const h = parseInstagramHandle(newAlias.value)
+  aliasError.value = h ? undefined : 'Paste a link like instagram.com/name, or @name.'
+  if (!h) return
+  if (h !== parseInstagramHandle(form.instagram) && !form.instagramAliases.includes(h)) form.instagramAliases.push(h)
+  newAlias.value = ''
+}
+// Swap: this alias becomes the main account, the main one becomes an alias.
+function makeMainInstagram(h: string) {
+  const main = parseInstagramHandle(form.instagram)
+  form.instagramAliases = [...form.instagramAliases.filter(a => a !== h), ...(main ? [main] : [])]
+  form.instagram = `https://instagram.com/${h}`
+}
+
 function removePhoto(url: string) {
   form.photos = form.photos.filter(p => p.url !== url)
   if (form.photo === url) form.photo = form.photos[0]?.url ?? null
@@ -108,6 +136,7 @@ async function save() {
       bio: form.bio,
       styles: form.styles,
       socials,
+      instagramAliases: form.instagramAliases,
       photo: form.photo,
       photos: form.photos,
       ...(profileType.value === 'promoter' ? { influencer: form.influencer } : {}),
@@ -216,7 +245,7 @@ const photoHint = computed(() => loaded.value?.type === 'artist'
           <p class="mt-1 text-sm text-muted-foreground">{{ photoHint }}</p>
           <div v-if="form.photos.length" class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div v-for="ph in form.photos" :key="ph.url" class="rounded-xl border overflow-hidden bg-muted">
-              <img :src="ph.url" alt="" class="aspect-square w-full object-cover">
+              <img :src="sizedImage(ph.url, IMG.card)" alt="" class="aspect-square w-full object-cover">
               <div class="flex items-center justify-between gap-1 p-1.5 bg-card">
                 <AdminStatus v-if="form.photo === ph.url" tone="success"><Star class="size-3" aria-hidden="true" /> Main</AdminStatus>
                 <Button v-else type="button" size="sm" variant="ghost" class="h-7 px-2 text-xs" @click="form.photo = ph.url">Make main</Button>
@@ -242,6 +271,23 @@ const photoHint = computed(() => loaded.value?.type === 'artist'
               <Input v-model="form.facebook" placeholder="Link" />
             </Field>
           </div>
+          <div class="mt-5">
+            <p class="text-sm font-bold">Other Instagram accounts</p>
+            <p class="text-xs text-muted-foreground">Accounts this business used before or runs too. They aren’t shown on your page; they stop WeDance from making a second page for them.</p>
+            <ul v-if="form.instagramAliases.length" class="mt-2 flex flex-wrap gap-2">
+              <li v-for="a in form.instagramAliases" :key="a" class="inline-flex items-center gap-1 rounded-full border py-1 pl-3 pr-1 text-sm">
+                @{{ a }}
+                <Button type="button" size="sm" variant="ghost" class="h-6 px-2 text-xs" @click="makeMainInstagram(a)">Make main</Button>
+                <Button type="button" size="icon-sm" variant="ghost" class="size-6" :aria-label="`Remove @${a}`" @click="form.instagramAliases = form.instagramAliases.filter(x => x !== a)"><X /></Button>
+              </li>
+            </ul>
+            <div class="mt-2 flex flex-wrap items-start gap-2">
+              <Field id="edit-ig-alias" label="Add an account" :error="aliasError" class="min-w-[12rem] flex-1 max-w-sm">
+                <Input v-model="newAlias" placeholder="@old_handle or link" autocomplete="off" @keydown.enter.prevent="addAlias" />
+              </Field>
+              <Button type="button" variant="outline-pill" size="pill-sm" class="mt-7" :disabled="!newAlias.trim()" @click="addAlias">Add</Button>
+            </div>
+          </div>
         </section>
 
         <template v-if="loaded.type === 'venue'">
@@ -256,6 +302,10 @@ const photoHint = computed(() => loaded.value?.type === 'artist'
           <span v-else-if="savedAt && !saving" class="inline-flex items-center gap-1 text-sm text-wd-green-700"><Check class="size-4" aria-hidden="true" /> Saved</span>
         </div>
       </form>
+
+      <BusinessHandle :username="loaded.username" :instagram="socialOf(loaded, 'instagram')" class="mt-8" @renamed="onRenamed" />
+
+      <BusinessDuplicates :username="loaded.username" :name="loaded.name" class="mt-8" @merged="load(true)" />
     </template>
   </div>
 </template>

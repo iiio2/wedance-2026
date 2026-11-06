@@ -1,0 +1,47 @@
+[
+  {
+    "inputUrl": "https://www.instagram.com/dj_salsero_test",
+    "id": "1234567890",
+    "username": "dj_salsero_test",
+    "url": "https://www.instagram.com/dj_salsero_test",
+    "fullName": "DJ Salsero 🎧",
+    "biography": "Salsa & timba DJ from Munich.\nBookings via DM.",
+    "externalUrl": "https://linktr.ee/djsalsero",
+    "externalUrlShimmed": "https://l.instagram.com/?u=https%3A%2F%2Flinktr.ee%2Fdjsalsero",
+    "externalUrls": [{ "title": "", "lynx_url": "https://l.instagram.com/?u=x", "url": "https://linktr.ee/djsalsero", "link_type": "external" }],
+    "followersCount": 1520,
+    "followsCount": 410,
+    "hasChannel": false,
+    "highlightReelCount": 3,
+    "isBusinessAccount": false,
+    "joinedRecently": false,
+    "businessCategoryName": "None",
+    "private": false,
+    "verified": false,
+    "profilePicUrl": "https://scontent.cdninstagram.com/v/t51/small.jpg",
+    "profilePicUrlHD": "https://scontent.cdninstagram.com/v/t51/hd.jpg",
+    "igtvVideoCount": 0,
+    "relatedProfiles": [],
+    "latestIgtvVideos": [],
+    "postsCount": 87,
+    "latestPosts": []
+  },
+  {
+    "inputUrl": "https://www.instagram.com/galerie_test_venue",
+    "id": "987654321",
+    "username": "galerie_test_venue",
+    "fullName": "Galerie Test",
+    "biography": "Kunst, Tanz & Musik.",
+    "externalUrl": "https://galerie-test.de/",
+    "isBusinessAccount": true,
+    "businessCategoryName": "Art Gallery",
+    "businessAddress": { "street_address": "Musterstraße 5", "zip_code": "80331", "city_name": "Munich, Germany", "region_name": "", "country_code": "DE" },
+    "private": false,
+    "profilePicUrl": "https://scontent.cdninstagram.com/v/t51/venue.jpg"
+  },
+  {
+    "url": "https://www.instagram.com/no_such_account_test",
+    "error": "not_found",
+    "errorDescription": "Page not found"
+  }
+]

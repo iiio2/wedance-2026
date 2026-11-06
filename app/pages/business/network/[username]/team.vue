@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sizedImage, IMG } from '#shared/utils/image'
 /**
  * /business/network/<handle>/team — who manages this profile. Owners approve
  * join requests, change roles and titles, remove people, and see the history.
@@ -73,7 +74,7 @@ const remove = (m: Team['members'][number]) =>
   }, m.me ? 'You left the team.' : `${m.name} was removed.`)
 
 const roleOptions = [{ label: 'Owner — edits and manages the team', value: 'owner' }, { label: 'Editor — edits the profile and events', value: 'editor' }]
-const actionLabel: Record<string, string> = { created: 'created the profile', requested: 'asked for access', approved: 'approved', rejected: 'declined', role_changed: 'changed the role of', removed: 'removed', left: 'left' }
+const actionLabel: Record<string, string> = { created: 'created the profile', requested: 'asked for access', approved: 'approved', rejected: 'declined', role_changed: 'changed the role of', removed: 'removed', left: 'left', merged: 'merged pages:', unmerged: 'undid a merge:' }
 const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '')
 </script>
 
@@ -117,7 +118,7 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
         <p v-if="!team.members.length" class="mt-3 rounded-2xl border bg-card p-4 text-sm text-muted-foreground">Nobody manages this page. Its owner can claim it from an organizer’s invite link or “Is this you? Claim this page” on <NuxtLink :to="`/@${team.profile.username}`" class="font-bold text-foreground hover:underline">/@{{ team.profile.username }}</NuxtLink>.</p>
         <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
           <div v-for="m in team.members" :key="m.dancerId" class="flex flex-wrap items-center gap-3 rounded-2xl border bg-card p-4">
-            <img v-if="m.photo" :src="m.photo" alt="" class="size-10 rounded-full object-cover">
+            <img v-if="m.photo" :src="sizedImage(m.photo, IMG.avatar)" alt="" class="size-10 rounded-full object-cover">
             <div v-else class="size-10 rounded-full bg-muted" />
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-bold">{{ m.name }}<span v-if="m.me" class="font-normal text-muted-foreground"> (you)</span></p>
@@ -174,6 +175,7 @@ const fmt = (d: string | Date | null) => (d ? new Date(d).toLocaleDateString('en
             <template v-if="h.subjectName && h.subjectName !== h.actorName"> <span class="text-foreground">{{ h.subjectName }}</span></template>
             <template v-else-if="h.subjectName && h.action === 'removed'"> themselves</template>
             <template v-if="h.role"> ({{ h.role }}<template v-if="h.note && h.action !== 'role_changed'">, {{ h.note }}</template>)</template>
+            <template v-else-if="h.note && (h.action === 'merged' || h.action === 'unmerged')"> {{ h.note }}</template>
           </li>
         </ul>
       </section>
